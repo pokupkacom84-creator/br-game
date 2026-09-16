@@ -1,23 +1,40 @@
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><title>Test</title></head>
-<body style="background:#111;color:#fff;font-family:sans-serif;padding:20px">
-<h2>Тест JS в WebView</h2>
-<div id="out">Если увидишь это — HTML грузится</div>
-<button onclick="testClick()" style="padding:20px;font-size:20px">НАЖМИ МЕНЯ</button>
-<script>
-  window.onerror = function(msg, url, line){
-    document.getElementById('out').innerHTML += '<br>❌ ОШИБКА: ' + msg + ' @ строка ' + line;
-  };
-  document.getElementById('out').innerHTML += '<br>✅ JS выполнился';
-  document.getElementById('out').innerHTML += '<br>User-Agent: ' + navigator.userAgent;
-
-  function testClick(){
-    document.getElementById('out').innerHTML += '<br>🖱️ Клик работает!';
-  }
-</script>
-</body>
-</html></style>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>BR 2D Online</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui, sans-serif; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0a0f14;
+    touch-action:none; user-select:none; -webkit-user-select:none;
+    -webkit-tap-highlight-color:transparent; }
+  canvas { display:block; }
+  .overlay { position:fixed; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:14px; z-index:10;
+    background:radial-gradient(circle at center, #16202b 0%, #0a0f14 100%);
+    padding:24px; text-align:center; }
+  .hidden { display:none !important; }
+  h1 { color:#fff; font-size:26px; letter-spacing:2px; margin-bottom:8px; }
+  button { padding:14px 28px; border:none; border-radius:10px; font-size:15px;
+    font-weight:bold; letter-spacing:1px; cursor:pointer; min-width:220px;
+    transition:transform 0.1s; }
+  button:active { transform:scale(0.96); }
+  #btnBots { background:#4895ef; color:#fff; }
+  #btnOnline { background:#06d6a0; color:#002a1e; }
+  input { padding:12px 16px; border:2px solid #2b3a47; background:#101820;
+    color:#fff; border-radius:8px; font-size:16px; text-align:center;
+    letter-spacing:3px; text-transform:uppercase; width:220px; outline:none; }
+  input:focus { border-color:#06d6a0; }
+  .divider { color:#5c6b7a; font-size:12px; letter-spacing:2px; margin:4px 0; }
+  #lobbyError { color:#ef476f; font-size:13px; min-height:18px; }
+  #waitingRoom { color:#06d6a0; font-size:20px; font-weight:bold;
+    letter-spacing:4px; margin-top:8px; }
+  .sub { color:#8899a8; font-size:12px; }
+  .spinner { width:40px; height:40px; border:4px solid #2b3a47;
+    border-top-color:#06d6a0; border-radius:50%; animation:spin 0.8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -35,6 +52,927 @@
 
 <!-- ЗАГРУЗКА -->
 <div id="connecting" class="overlay hidden">
+  <div class="spinner"></div>
+  <div class="sub">Подключение к серверу...</div>
+</div>
+
+<!-- ОЖИДАНИЕ -->
+<div id="waiting" class="overlay hidden">
+  <div class="sub">Код комнаты для друзей:</div>
+  <div id="waitingRoom">------</div>
+  <div class="sub" style="margin-top:20px">Старт через <span id="countdown">5</span>с</div>
+</div>
+
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<script>
+(() => {
+'use strict';
+
+/* ====== ТВОЙ FIREBASE CONFIG (уже подставлен) ====== */
+const firebaseConfig = {
+  apiKey: "AIzaSyB0uaLhHrYjWblrCBLTPx7mF_OmUhhld70",
+  authDomain: "br-game-1f919.firebaseapp.com",
+  databaseURL: "https://br-game-1f919-default-rtdb.firebaseio.com",
+  projectId: "br-game-1f919",
+  storageBucket: "br-game-1f919.firebasestorage.app",
+  messagingSenderId: "758598814466",
+  appId: "1:758598814466:web:85779913ac960b18a2901b"
+};
+/* =================================================== */
+
+/* ============ SETUP ============ */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+function resize(){
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ============ CONST ============ */
+const WORLD = 3200;
+const ZONE_START_R = 1500;
+const ZONE_END_R = 120;
+const ZONE_SHRINK = 22;
+const ZONE_DPS = 7;
+const BOTS_COUNT = 29;
+const JOY_R = 80;
+const PLAYER_SPEED = 190;
+const SYNC_INTERVAL = 90;
+const INTERP_SPEED = 14;
+
+const WEAPONS = {
+  pistol:  { name:'PISTOL',  dmg:12, rate:0.28, spread:0.06, speed:750,  ammo:12, reload:1.1, color:'#ffd166', pellets:1 },
+  smg:     { name:'SMG',     dmg:9,  rate:0.09, spread:0.11, speed:820,  ammo:30, reload:1.4, color:'#06d6a0', pellets:1 },
+  shotgun: { name:'SHOTGUN', dmg:8,  rate:0.85, spread:0.30, speed:650,  ammo:6,  reload:1.8, color:'#ef476f', pellets:6 },
+  rifle:   { name:'RIFLE',   dmg:24, rate:0.5,  spread:0.02, speed:1050, ammo:15, reload:1.6, color:'#4cc9f0', pellets:1 },
+};
+const WEAPON_KEYS = Object.keys(WEAPONS);
+
+/* ============ STATE ============ */
+let player, bots, bullets, loot, particles, killFeed, zone;
+let cam = { x:0, y:0 };
+let gameState = 'menu';
+let time = 0, aliveCount = 0;
+const rand = (a,b) => a + Math.random()*(b-a);
+
+let netMode = 'offline';
+let myUid = null;
+let roomId = null;
+let remotePlayers = new Map();
+let listeners = [];
+let lastSync = 0;
+let myName = 'PLAYER';
+
+let db = null, auth = null;
+function initFirebase(){
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db = firebase.database();
+}
+
+/* ============ ENTITY ============ */
+function makeEntity(x, y, isBot, name){
+  return {
+    x, y, r:16, hp:100, maxHp:100, angle:0,
+    isBot, name, uid:null,
+    speed: PLAYER_SPEED,
+    weapon: WEAPONS.pistol, weaponKey: 'pistol',
+    ammo: WEAPONS.pistol.ammo, reloading:0, fireCd:0,
+    alive:true, kills:0,
+    wanderAngle: rand(0, Math.PI*2), wanderTimer:0,
+    targetX: x, targetY: y, targetAngle: 0,
+  };
+}
+
+function resetGame(){
+  player = makeEntity(WORLD/2 + rand(-100,100), WORLD/2 + rand(-100,100), false, 'YOU');
+  bots = [];
+  if (netMode === 'offline'){
+    for (let i = 0; i < BOTS_COUNT; i++){
+      const b = makeEntity(rand(220, WORLD-220), rand(220, WORLD-220), true, 'Bot'+Math.floor(rand(10,999)));
+      b.speed = rand(140, 175);
+      const wk = WEAPON_KEYS[Math.floor(Math.random()*WEAPON_KEYS.length)];
+      b.weapon = WEAPONS[wk]; b.weaponKey = wk; b.ammo = b.weapon.ammo;
+      bots.push(b);
+    }
+  }
+  bullets = []; loot = []; particles = []; killFeed = [];
+  if (netMode === 'offline') for (let i = 0; i < 55; i++) spawnLoot();
+  zone = { x: WORLD/2, y: WORLD/2, r: ZONE_START_R, targetR: ZONE_END_R };
+  time = 0;
+  gameState = 'playing';
+  updateAlive();
+}
+
+function updateAlive(){
+  let n = player && player.alive ? 1 : 0;
+  if (netMode === 'online'){
+    for (const e of remotePlayers.values()) if (e.alive) n++;
+  } else {
+    for (const b of bots) if (b.alive) n++;
+  }
+  aliveCount = n;
+}
+
+function spawnLoot(){
+  const r = Math.random();
+  if (r < 0.22) loot.push({ x: rand(120, WORLD-120), y: rand(120, WORLD-120), type:'health', r:12 });
+  else {
+    const wk = WEAPON_KEYS[Math.floor(Math.random()*WEAPON_KEYS.length)];
+    loot.push({ x: rand(120, WORLD-120), y: rand(120, WORLD-120), type:'weapon', weaponKey: wk, r:14 });
+  }
+}
+
+function killEntity(ent, killer){
+  if (!ent.alive) return;
+  ent.alive = false;
+  if (killer && killer !== ent) killer.kills++;
+
+  loot.push({ x: ent.x, y: ent.y, type:'weapon', weaponKey: ent.weaponKey, r:14 });
+  if (Math.random() < 0.6) loot.push({ x: ent.x + rand(-28,28), y: ent.y + rand(-28,28), type:'health', r:12 });
+
+  const kname = killer ? killer.name : 'ZONE';
+  killFeed.push({ text: `${kname} → ${ent.name}`, t: 4 });
+  if (killFeed.length > 4) killFeed.shift();
+
+  for (let i = 0; i < 12; i++)
+    particles.push({ x:ent.x, y:ent.y, vx: rand(-120,120), vy: rand(-120,120), life: 0.6, color:'#ff5a5a' });
+
+  if (netMode === 'online' && ent.uid === myUid && db) {
+    db.ref(`rooms/${roomId}/players/${myUid}`).update({ alive:false, hp:0 });
+  }
+}
+
+/* ============ INPUT ============ */
+const joyL = { active:false, id:null, ox:0, oy:0, x:0, y:0 };
+const joyR = { active:false, id:null, ox:0, oy:0, x:0, y:0 };
+const keys = {};
+const mouse = { x:0, y:0, down:false };
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (gameState === 'won' || gameState === 'lost'){ backToMenu(); return; }
+  if (gameState !== 'playing') return;
+  for (const t of e.changedTouches){
+    if (t.clientX < W/2 && joyL.id === null){
+      joyL.id = t.identifier; joyL.ox = t.clientX; joyL.oy = t.clientY;
+      joyL.x = t.clientX; joyL.y = t.clientY; joyL.active = true;
+    } else if (t.clientX >= W/2 && joyR.id === null){
+      joyR.id = t.identifier; joyR.ox = t.clientX; joyR.oy = t.clientY;
+      joyR.x = t.clientX; joyR.y = t.clientY; joyR.active = true;
+    }
+  }
+}, { passive:false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches){
+    if (t.identifier === joyL.id){ joyL.x = t.clientX; joyL.y = t.clientY; }
+    if (t.identifier === joyR.id){ joyR.x = t.clientX; joyR.y = t.clientY; }
+  }
+}, { passive:false });
+
+function endTouch(e){
+  for (const t of e.changedTouches){
+    if (t.identifier === joyL.id){ joyL.active=false; joyL.id=null; }
+    if (t.identifier === joyR.id){ joyR.active=false; joyR.id=null; }
+  }
+}
+canvas.addEventListener('touchend', endTouch);
+canvas.addEventListener('touchcancel', endTouch);
+
+addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
+addEventListener('keyup',   e => { keys[e.key.toLowerCase()] = false; });
+canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+canvas.addEventListener('mousedown', () => {
+  if (gameState === 'won' || gameState === 'lost'){ backToMenu(); return; }
+  if (gameState === 'playing') mouse.down = true;
+});
+canvas.addEventListener('mouseup', () => { mouse.down = false; });
+
+/* ============ LOBBY UI ============ */
+const lobbyEl    = document.getElementById('lobby');
+const connectEl  = document.getElementById('connecting');
+const waitingEl  = document.getElementById('waiting');
+const roomInput  = document.getElementById('roomInput');
+const errorEl    = document.getElementById('lobbyError');
+const waitRoomEl = document.getElementById('waitingRoom');
+const countdownEl = document.getElementById('countdown');
+
+document.getElementById('btnBots').onclick = () => {
+  netMode = 'offline';
+  lobbyEl.classList.add('hidden');
+  resetGame();
+};
+
+document.getElementById('btnOnline').onclick = async () => {
+  errorEl.textContent = '';
+  let code = roomInput.value.trim().toUpperCase();
+  if (code && !/^[A-Z0-9]{4,8}$/.test(code)){
+    errorEl.textContent = 'Код: 4-8 символов (A-Z, 0-9)';
+    return;
+  }
+  try {
+    lobbyEl.classList.add('hidden');
+    connectEl.classList.remove('hidden');
+    if (!db) initFirebase();
+    const cred = await auth.signInAnonymously();
+    myUid = cred.user.uid;
+    myName = 'P' + myUid.substring(0, 4).toUpperCase();
+
+    if (!code) code = 'R' + Math.random().toString(36).substring(2, 7).toUpperCase();
+    roomId = code;
+
+    await joinRoom();
+
+    connectEl.classList.add('hidden');
+    waitingEl.classList.remove('hidden');
+    waitRoomEl.textContent = code;
+
+    let cd = 5;
+    countdownEl.textContent = cd;
+    const iv = setInterval(() => {
+      cd--;
+      countdownEl.textContent = cd;
+      if (cd <= 0){
+        clearInterval(iv);
+        waitingEl.classList.add('hidden');
+        netMode = 'online';
+        resetGame();
+      }
+    }, 1000);
+  } catch (err){
+    connectEl.classList.add('hidden');
+    lobbyEl.classList.remove('hidden');
+    errorEl.textContent = 'Ошибка: ' + (err.message || err.code);
+    console.error(err);
+  }
+};
+
+function backToMenu(){
+  for (const l of listeners){
+    try { l.ref.off(l.type, l.cb); } catch(e){}
+  }
+  listeners = [];
+  remotePlayers.clear();
+  if (netMode === 'online' && db && roomId && myUid){
+    db.ref(`rooms/${roomId}/players/${myUid}`).remove();
+  }
+  gameState = 'menu';
+  lobbyEl.classList.remove('hidden');
+  roomInput.value = '';
+}
+
+/* ============ NETWORK ============ */
+async function joinRoom(){
+  if (!player) player = makeEntity(WORLD/2, WORLD/2, false, myName);
+  const me = {
+    x: Math.round(player.x),
+    y: Math.round(player.y),
+    angle: 0, hp: 100, weapon: 'pistol', alive: true,
+    name: myName,
+    joinedAt: firebase.database.ServerValue.TIMESTAMP,
+  };
+
+  const myRef = db.ref(`rooms/${roomId}/players/${myUid}`);
+  await myRef.set(me);
+  myRef.onDisconnect().remove();
+
+  const playersRef = db.ref(`rooms/${roomId}/players`);
+  const pCb = playersRef.on('value', snap => {
+    const data = snap.val() || {};
+    const seen = new Set();
+    for (const uid in data){
+      if (uid === myUid) continue;
+      seen.add(uid);
+      const p = data[uid];
+      let e = remotePlayers.get(uid);
+      if (!e){
+        e = makeEntity(p.x, p.y, false, p.name || uid.substring(0,4));
+        e.uid = uid;
+        e.x = e.targetX = p.x;
+        e.y = e.targetY = p.y;
+        e.angle = e.targetAngle = p.angle || 0;
+        e.hp = p.hp != null ? p.hp : 100;
+        e.weaponKey = p.weapon || 'pistol';
+        e.weapon = WEAPONS[e.weaponKey] || WEAPONS.pistol;
+        e.alive = p.alive !== false;
+        remotePlayers.set(uid, e);
+      } else {
+        e.targetX = p.x; e.targetY = p.y;
+        e.targetAngle = p.angle || 0;
+        e.hp = p.hp != null ? p.hp : e.hp;
+        e.weaponKey = p.weapon || e.weaponKey;
+        e.weapon = WEAPONS[e.weaponKey] || e.weapon;
+        const wasAlive = e.alive;
+        e.alive = p.alive !== false;
+        if (wasAlive && !e.alive){
+          killFeed.push({ text: `${e.name} устранён`, t: 4 });
+          if (killFeed.length > 4) killFeed.shift();
+        }
+        e.name = p.name || e.name;
+      }
+    }
+    for (const uid of [...remotePlayers.keys()]){
+      if (!seen.has(uid)){
+        const gone = remotePlayers.get(uid);
+        if (gone && gone.alive) killFeed.push({ text: `${gone.name} покинул игру`, t: 4 });
+        remotePlayers.delete(uid);
+      }
+    }
+    updateAlive();
+    if (gameState === 'playing' && player.alive && aliveCount === 1){
+      gameState = 'won';
+    }
+  });
+  listeners.push({ ref: playersRef, type: 'value', cb: pCb });
+
+  const shotsRef = db.ref(`rooms/${roomId}/shots`).limitToLast(50);
+  const sCb = shotsRef.on('child_added', snap => {
+    const s = snap.val();
+    if (!s || s.uid === myUid) { snap.ref.remove(); return; }
+    const w = WEAPONS[s.weaponKey] || WEAPONS.pistol;
+    const p = w.pellets || 1;
+    for (let i = 0; i < p; i++){
+      const a = s.angle + rand(-w.spread, w.spread);
+      bullets.push({
+        x: s.x, y: s.y,
+        vx: Math.cos(a)*w.speed, vy: Math.sin(a)*w.speed,
+        dmg: 0, owner: null, life: 1.0, color: w.color, visual: true,
+      });
+    }
+    snap.ref.remove();
+  });
+  listeners.push({ ref: shotsRef, type: 'child_added', cb: sCb });
+
+  const dmgRef = db.ref(`rooms/${roomId}/damage/${myUid}`);
+  const dCb = dmgRef.on('child_added', snap => {
+    const d = snap.val();
+    if (d && player.alive){
+      player.hp -= d.amount;
+      if (player.hp <= 0){
+        player.hp = 0;
+        killEntity(player, { name: d.byName || 'ENEMY', kills:0, uid:null, alive:true });
+        gameState = 'lost';
+      }
+    }
+    snap.ref.remove();
+  });
+  listeners.push({ ref: dmgRef, type: 'child_added', cb: dCb });
+}
+
+function syncMyState(){
+  if (netMode !== 'online' || !db || !player || !player.alive) return;
+  db.ref(`rooms/${roomId}/players/${myUid}`).update({
+    x: Math.round(player.x),
+    y: Math.round(player.y),
+    angle: Math.round(player.angle * 100) / 100,
+    hp: Math.round(player.hp),
+    weapon: player.weaponKey,
+    alive: player.alive,
+  });
+}
+
+function sendShot(x, y, angle, weaponKey){
+  if (netMode !== 'online' || !db) return;
+  db.ref(`rooms/${roomId}/shots`).push({
+    uid: myUid, x: Math.round(x), y: Math.round(y),
+    angle: Math.round(angle*100)/100, weaponKey,
+  });
+}
+
+function sendDamage(targetUid, amount){
+  if (netMode !== 'online' || !db) return;
+  db.ref(`rooms/${roomId}/damage/${targetUid}`).push({
+    amount, by: myUid, byName: myName,
+  });
+}
+
+/* ============ COMBAT ============ */
+function tryFire(ent, dt){
+  if (ent.fireCd > 0 || ent.reloading > 0) return;
+  if (ent.ammo <= 0){ ent.reloading = ent.weapon.reload; return; }
+  const w = ent.weapon;
+  const p = w.pellets || 1;
+  for (let i = 0; i < p; i++){
+    const a = ent.angle + rand(-w.spread, w.spread);
+    bullets.push({
+      x: ent.x + Math.cos(ent.angle)*(ent.r + 6),
+      y: ent.y + Math.sin(ent.angle)*(ent.r + 6),
+      vx: Math.cos(a)*w.speed, vy: Math.sin(a)*w.speed,
+      dmg: w.dmg, owner: ent, life: 1.2, color: w.color,
+    });
+  }
+  ent.ammo--;
+  ent.fireCd = w.rate;
+  for (let i = 0; i < 3; i++)
+    particles.push({
+      x: ent.x + Math.cos(ent.angle)*(ent.r+10),
+      y: ent.y + Math.sin(ent.angle)*(ent.r+10),
+      vx: Math.cos(ent.angle)*rand(50,150) + rand(-40,40),
+      vy: Math.sin(ent.angle)*rand(50,150) + rand(-40,40),
+      life: 0.15, color: w.color
+    });
+
+  if (netMode === 'online' && ent === player)
+    sendShot(ent.x, ent.y, ent.angle, ent.weaponKey);
+}
+
+/* ============ UPDATE ============ */
+function updatePlayer(dt){
+  if (!player.alive) return;
+  let dx = 0, dy = 0;
+  if (joyL.active){
+    const jx = joyL.x - joyL.ox, jy = joyL.y - joyL.oy;
+    const d = Math.hypot(jx, jy);
+    if (d > 8){
+      const k = Math.min(1, d / JOY_R);
+      dx = jx/d * k; dy = jy/d * k;
+    }
+  }
+  if (keys['w'] || keys['arrowup'])    dy -= 1;
+  if (keys['s'] || keys['arrowdown'])  dy += 1;
+  if (keys['a'] || keys['arrowleft'])  dx -= 1;
+  if (keys['d'] || keys['arrowright']) dx += 1;
+  const m = Math.hypot(dx, dy);
+  if (m > 1){ dx /= m; dy /= m; }
+  player.x += dx * player.speed * dt;
+  player.y += dy * player.speed * dt;
+  player.x = Math.max(player.r, Math.min(WORLD - player.r, player.x));
+  player.y = Math.max(player.r, Math.min(WORLD - player.r, player.y));
+
+  let wantFire = false;
+  if (joyR.active){
+    const jx = joyR.x - joyR.ox, jy = joyR.y - joyR.oy;
+    const d = Math.hypot(jx, jy);
+    if (d > 15){
+      player.angle = Math.atan2(jy, jx);
+      wantFire = true;
+    }
+  }
+  if (mouse.down){
+    const psx = player.x - cam.x, psy = player.y - cam.y;
+    player.angle = Math.atan2(mouse.y - psy, mouse.x - psx);
+    wantFire = true;
+  }
+  if (wantFire) tryFire(player, dt);
+
+  if (player.fireCd > 0) player.fireCd -= dt;
+  if (player.reloading > 0){
+    player.reloading -= dt;
+    if (player.reloading <= 0) player.ammo = player.weapon.ammo;
+  }
+}
+
+function updateBot(b, dt){
+  if (!b.alive) return;
+  let target = null, minD = 700;
+  if (player.alive){
+    const d = Math.hypot(player.x - b.x, player.y - b.y);
+    if (d < minD){ minD = d; target = player; }
+  }
+  for (const o of bots){
+    if (o === b || !o.alive) continue;
+    const d = Math.hypot(o.x - b.x, o.y - b.y);
+    if (d < minD){ minD = d; target = o; }
+  }
+  const zdx = zone.x - b.x, zdy = zone.y - b.y;
+  const zdist = Math.hypot(zdx, zdy);
+  const outside = zdist > zone.r - 150;
+
+  let mx = 0, my = 0;
+  if (target && minD < 500 && !outside){
+    const ang = Math.atan2(target.y - b.y, target.x - b.x);
+    b.angle = ang;
+    if (minD > 220){ mx = Math.cos(ang); my = Math.sin(ang); }
+    else if (minD < 130){ mx = -Math.cos(ang); my = -Math.sin(ang); }
+    else {
+      const s = Math.sin(time*2 + b.wanderAngle);
+      mx = Math.cos(ang + Math.PI/2) * s;
+      my = Math.sin(ang + Math.PI/2) * s;
+    }
+    tryFire(b, dt);
+  } else if (outside){
+    b.angle = Math.atan2(zdy, zdx);
+    mx = zdx/zdist; my = zdy/zdist;
+  } else {
+    b.wanderTimer -= dt;
+    if (b.wanderTimer <= 0){ b.wanderAngle = rand(0, Math.PI*2); b.wanderTimer = rand(1.2, 3.5); }
+    b.angle = b.wanderAngle;
+    mx = Math.cos(b.wanderAngle) * 0.7;
+    my = Math.sin(b.wanderAngle) * 0.7;
+  }
+  const m = Math.hypot(mx, my);
+  if (m > 1){ mx /= m; my /= m; }
+  b.x += mx * b.speed * dt;
+  b.y += my * b.speed * dt;
+  b.x = Math.max(b.r, Math.min(WORLD - b.r, b.x));
+  b.y = Math.max(b.r, Math.min(WORLD - b.r, b.y));
+  if (b.fireCd > 0) b.fireCd -= dt;
+  if (b.reloading > 0){ b.reloading -= dt; if (b.reloading <= 0) b.ammo = b.weapon.ammo; }
+}
+
+function updateRemotePlayers(dt){
+  if (netMode !== 'online') return;
+  const k = 1 - Math.exp(-INTERP_SPEED * dt);
+  for (const e of remotePlayers.values()){
+    if (!e.alive) continue;
+    e.x += (e.targetX - e.x) * k;
+    e.y += (e.targetY - e.y) * k;
+    let da = e.targetAngle - e.angle;
+    while (da >  Math.PI) da -= Math.PI*2;
+    while (da < -Math.PI) da += Math.PI*2;
+    e.angle += da * k;
+  }
+}
+
+function updateBullets(dt){
+  for (let i = bullets.length - 1; i >= 0; i--){
+    const b = bullets[i];
+    b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
+    if (b.life <= 0 || b.x < 0 || b.x > WORLD || b.y < 0 || b.y > WORLD){
+      bullets.splice(i, 1); continue;
+    }
+    if (b.visual) continue;
+
+    let hit = false;
+    const targets = [player];
+    if (netMode === 'offline') targets.push(...bots);
+    else for (const e of remotePlayers.values()) targets.push(e);
+
+    for (const t of targets){
+      if (!t.alive || t === b.owner) continue;
+      if (Math.hypot(t.x - b.x, t.y - b.y) < t.r + 4){
+        if (netMode === 'online' && t.uid){
+          sendDamage(t.uid, b.dmg);
+        } else {
+          t.hp -= b.dmg;
+          if (t.hp <= 0) killEntity(t, b.owner);
+        }
+        for (let k = 0; k < 4; k++)
+          particles.push({ x: b.x, y: b.y, vx: rand(-100,100), vy: rand(-100,100), life: 0.3, color:'#ffd166' });
+        hit = true;
+        break;
+      }
+    }
+    if (hit) bullets.splice(i, 1);
+  }
+}
+
+function updateLoot(){
+  if (!player.alive) return;
+  for (let i = loot.length - 1; i >= 0; i--){
+    const l = loot[i];
+    if (Math.hypot(player.x - l.x, player.y - l.y) < player.r + l.r + 6){
+      if (l.type === 'health'){
+        if (player.hp >= player.maxHp) continue;
+        player.hp = Math.min(player.maxHp, player.hp + 40);
+        loot.splice(i, 1);
+      } else {
+        if (player.weaponKey === l.weaponKey) continue;
+        player.weapon = WEAPONS[l.weaponKey];
+        player.weaponKey = l.weaponKey;
+        player.ammo = player.weapon.ammo;
+        player.reloading = 0;
+        loot.splice(i, 1);
+      }
+    }
+  }
+}
+
+function updateZone(dt){
+  if (netMode === 'online'){
+    const uids = [myUid, ...remotePlayers.keys()].filter(Boolean).sort();
+    if (uids[0] === myUid){
+      zone.r = Math.max(ZONE_END_R, zone.r - ZONE_SHRINK * dt);
+      db.ref(`rooms/${roomId}/zone`).set({ x: zone.x, y: zone.y, r: Math.round(zone.r) });
+    }
+  } else {
+    zone.r = Math.max(ZONE_END_R, zone.r - ZONE_SHRINK * dt);
+  }
+
+  if (player.alive){
+    const d = Math.hypot(player.x - zone.x, player.y - zone.y);
+    if (d > zone.r){
+      player.hp -= ZONE_DPS * dt;
+      if (player.hp <= 0) killEntity(player, null);
+    }
+  }
+  if (netMode === 'offline'){
+    for (const b of bots){
+      if (!b.alive) continue;
+      const d = Math.hypot(b.x - zone.x, b.y - zone.y);
+      if (d > zone.r){ b.hp -= ZONE_DPS * dt; if (b.hp <= 0) killEntity(b, null); }
+    }
+  }
+}
+
+function updateParticles(dt){
+  for (let i = particles.length - 1; i >= 0; i--){
+    const p = particles[i];
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.vx *= 0.92; p.vy *= 0.92;
+    p.life -= dt;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+  for (let i = killFeed.length - 1; i >= 0; i--){
+    killFeed[i].t -= dt;
+    if (killFeed[i].t <= 0) killFeed.splice(i, 1);
+  }
+}
+
+/* ============ CAMERA ============ */
+function updateCamera(){
+  const focus = player && player.alive ? player : { x: zone.x, y: zone.y };
+  cam.x = focus.x - W/2;
+  cam.y = focus.y - H/2;
+  if (W < WORLD) cam.x = Math.max(0, Math.min(WORLD - W, cam.x));
+  if (H < WORLD) cam.y = Math.max(0, Math.min(WORLD - H, cam.y));
+}
+
+/* ============ RENDER ============ */
+function drawGrid(){
+  const step = 100;
+  const x0 = Math.floor(cam.x / step) * step;
+  const y0 = Math.floor(cam.y / step) * step;
+  ctx.strokeStyle = 'rgba(255,255,255,0.045)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = x0; x < cam.x + W + step; x += step){
+    ctx.moveTo(x - cam.x, 0); ctx.lineTo(x - cam.x, H);
+  }
+  for (let y = y0; y < cam.y + H + step; y += step){
+    ctx.moveTo(0, y - cam.y); ctx.lineTo(W, y - cam.y);
+  }
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,80,80,0.5)';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(-cam.x, -cam.y, WORLD, WORLD);
+}
+
+function drawZone(){
+  const sx = zone.x - cam.x, sy = zone.y - cam.y;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(-100, -100, W + 200, H + 200);
+  ctx.arc(sx, sy, zone.r, 0, Math.PI*2, true);
+  ctx.fillStyle = 'rgba(120,20,30,0.28)';
+  ctx.fill();
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(sx, sy, zone.r, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(255,80,120,0.85)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+
+function drawLoot(){
+  for (const l of loot){
+    const sx = l.x - cam.x, sy = l.y - cam.y;
+    if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) continue;
+    ctx.save(); ctx.translate(sx, sy);
+    if (l.type === 'health'){
+      ctx.fillStyle = '#06d6a0';
+      ctx.beginPath(); ctx.arc(0, 0, l.r, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(-6, -2, 12, 4); ctx.fillRect(-2, -6, 4, 12);
+    } else {
+      ctx.fillStyle = WEAPONS[l.weaponKey].color;
+      ctx.fillRect(-12, -6, 24, 12);
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillRect(-4, -6, 8, 12);
+    }
+    ctx.restore();
+  }
+}
+
+function drawEntity(ent, color){
+  if (!ent.alive) return;
+  const sx = ent.x - cam.x, sy = ent.y - cam.y;
+  if (sx < -50 || sx > W + 50 || sy < -50 || sy > H + 50) return;
+  ctx.save();
+  ctx.translate(sx, sy); ctx.rotate(ent.angle);
+  ctx.beginPath(); ctx.arc(0, 0, ent.r, 0, Math.PI*2);
+  ctx.fillStyle = color; ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = '#0a0f14'; ctx.stroke();
+  ctx.fillStyle = '#111';
+  ctx.fillRect(ent.r - 4, -3, 20, 6);
+  ctx.fillStyle = ent.weapon.color;
+  ctx.fillRect(ent.r + 10, -2, 4, 4);
+  ctx.restore();
+
+  if (ent.hp < ent.maxHp){
+    const bw = 34;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(sx - bw/2, sy - ent.r - 13, bw, 5);
+    const ratio = Math.max(0, ent.hp / ent.maxHp);
+    ctx.fillStyle = ratio > 0.5 ? '#06d6a0' : ratio > 0.25 ? '#ffd166' : '#ef476f';
+    ctx.fillRect(sx - bw/2, sy - ent.r - 13, bw * ratio, 5);
+  }
+  if (ent.name && ent !== player){
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(ent.name, sx, sy - ent.r - 18);
+  }
+}
+
+function drawBullets(){
+  for (const b of bullets){
+    const sx = b.x - cam.x, sy = b.y - cam.y;
+    if (sx < -10 || sx > W + 10 || sy < -10 || sy > H + 10) continue;
+    ctx.beginPath(); ctx.arc(sx, sy, 3, 0, Math.PI*2);
+    ctx.fillStyle = b.color; ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx - b.vx * 0.012, sy - b.vy * 0.012);
+    ctx.strokeStyle = b.color; ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1;
+  }
+}
+
+function drawParticles(){
+  for (const p of particles){
+    const sx = p.x - cam.x, sy = p.y - cam.y;
+    if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
+    ctx.globalAlpha = Math.max(0, p.life * 2);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(sx - 2, sy - 2, 4, 4);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawJoystick(joy){
+  if (!joy.active) return;
+  ctx.beginPath(); ctx.arc(joy.ox, joy.oy, JOY_R, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fill();
+  let dx = joy.x - joy.ox, dy = joy.y - joy.oy;
+  const d = Math.hypot(dx, dy);
+  if (d > JOY_R){ dx = dx/d*JOY_R; dy = dy/d*JOY_R; }
+  ctx.beginPath(); ctx.arc(joy.ox + dx, joy.oy + dy, 30, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill();
+}
+
+function drawHUD(){
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(16, 16, 200, 26);
+  const hp = Math.max(0, player.hp) / player.maxHp;
+  ctx.fillStyle = hp > 0.5 ? '#06d6a0' : hp > 0.25 ? '#ffd166' : '#ef476f';
+  ctx.fillRect(18, 18, 196 * hp, 22);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('HP ' + Math.max(0, Math.round(player.hp)), 24, 34);
+
+  ctx.textAlign = 'center'; ctx.font = 'bold 22px sans-serif'; ctx.fillStyle = '#fff';
+  ctx.fillText('ALIVE: ' + aliveCount, W/2, 36);
+  ctx.font = '12px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  ctx.fillText('KILLS: ' + player.kills, W/2, 54);
+
+  ctx.textAlign = 'right'; ctx.font = 'bold 16px sans-serif';
+  ctx.fillStyle = player.weapon.color;
+  ctx.fillText(player.weapon.name, W - 20, H - 60);
+  ctx.font = 'bold 20px sans-serif'; ctx.fillStyle = '#fff';
+  if (player.reloading > 0) ctx.fillText('RELOAD...', W - 20, H - 32);
+  else ctx.fillText(player.ammo + ' / ' + player.weapon.ammo, W - 20, H - 32);
+
+  ctx.textAlign = 'right'; ctx.font = '12px sans-serif';
+  killFeed.forEach((k, i) => {
+    ctx.globalAlpha = Math.min(1, k.t);
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fillText(k.text, W - 16, 100 + i * 18);
+  });
+  ctx.globalAlpha = 1;
+
+  const mm = 90, mx = W - mm - 16, my = 16;
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(mx, my, mm, mm);
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.strokeRect(mx, my, mm, mm);
+  const kx = mm / WORLD;
+  ctx.beginPath();
+  ctx.arc(mx + zone.x*kx, my + zone.y*kx, zone.r*kx, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(255,80,120,0.8)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  if (netMode === 'online'){
+    for (const e of remotePlayers.values()){
+      if (!e.alive) continue;
+      ctx.fillStyle = '#e63946';
+      ctx.fillRect(mx + e.x*kx - 1, my + e.y*kx - 1, 3, 3);
+    }
+  } else {
+    for (const b of bots){
+      if (!b.alive) continue;
+      ctx.fillStyle = '#e63946';
+      ctx.fillRect(mx + b.x*kx - 1, my + b.y*kx - 1, 3, 3);
+    }
+  }
+  if (player.alive){
+    ctx.fillStyle = '#4895ef';
+    ctx.fillRect(mx + player.x*kx - 2, my + player.y*kx - 2, 5, 5);
+  }
+
+  if (netMode === 'online' && roomId){
+    ctx.textAlign = 'left'; ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = 'rgba(6,214,160,0.9)';
+    ctx.fillText('ROOM: ' + roomId, 16, 60);
+  }
+}
+
+function drawEndScreen(){
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = 'center';
+  if (gameState === 'won'){
+    ctx.fillStyle = '#06d6a0';
+    ctx.font = 'bold 48px sans-serif';
+    ctx.fillText('ПОБЕДА!', W/2, H/2 - 30);
+  } else {
+    ctx.fillStyle = '#ef476f';
+    ctx.font = 'bold 48px sans-serif';
+    ctx.fillText('ПОРАЖЕНИЕ', W/2, H/2 - 30);
+  }
+  ctx.fillStyle = '#fff';
+  ctx.font = '18px sans-serif';
+  ctx.fillText('Убийств: ' + player.kills, W/2, H/2 + 20);
+  ctx.fillText('Место: #' + aliveCount, W/2, H/2 + 46);
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillStyle = '#4cc9f0';
+  ctx.fillText('ТАПНИ, ЧТОБЫ ВЕРНУТЬСЯ В МЕНЮ', W/2, H/2 + 100);
+}
+
+/* ============ MAIN LOOP ============ */
+let last = performance.now();
+function loop(now){
+  let dt = (now - last) / 1000;
+  last = now;
+  if (dt > 0.05) dt = 0.05;
+
+  if (gameState === 'playing' && player){
+    time += dt;
+    updatePlayer(dt);
+    if (netMode === 'offline') for (const b of bots) updateBot(b, dt);
+    else updateRemotePlayers(dt);
+    updateBullets(dt);
+    updateLoot();
+    updateZone(dt);
+    updateParticles(dt);
+    updateAlive();
+    if (netMode === 'offline'){
+      if (!player.alive) gameState = 'lost';
+      else if (aliveCount === 1) gameState = 'won';
+    } else {
+      if (!player.alive) gameState = 'lost';
+    }
+
+    if (now - lastSync > SYNC_INTERVAL){
+      lastSync = now;
+      syncMyState();
+    }
+  } else if (player){
+    updateParticles(dt);
+  }
+
+  if (player) updateCamera();
+
+  ctx.fillStyle = '#0d141c';
+  ctx.fillRect(0, 0, W, H);
+
+  if (player){
+    drawGrid(); drawZone(); drawLoot();
+    if (netMode === 'offline'){
+      for (const b of bots) drawEntity(b, '#e63946');
+    } else {
+      for (const e of remotePlayers.values()) drawEntity(e, '#e63946');
+    }
+    drawEntity(player, '#4895ef');
+    drawBullets(); drawParticles();
+
+    if (gameState === 'playing'){
+      drawJoystick(joyL); drawJoystick(joyR);
+      drawHUD();
+    } else if (gameState === 'won' || gameState === 'lost'){
+      drawEndScreen();
+    }
+  }
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html><div id="connecting" class="overlay hidden">
   <div class="spinner"></div>
   <div class="sub">Подключение к серверу...</div>
 </div>
