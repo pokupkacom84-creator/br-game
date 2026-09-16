@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <script>
 (function () {
     try {
@@ -785,7 +788,7 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
                     <span>Сбросить</span>
                 </button>
             </div>
-            <div class="setting-row"><div class="setting-label"><div class="name">Версия</div><div class="desc">Текущая сборка</div></div><span style="color:var(--text-muted);font-size:12px;">3.6</span></div>
+            <div class="setting-row"><div class="setting-label"><div class="name">Версия</div><div class="desc">Текущая сборка</div></div><span style="color:var(--text-muted);font-size:12px;">3.8</span></div>
         </div>
     </div>
 
@@ -1011,6 +1014,7 @@ let rtdb = null;
 let currentUser = null;
 let currentUsername = null;
 let authMode = 'login';
+let justSignedUp = false;
 
 try {
     if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
@@ -1143,7 +1147,7 @@ function getYesterday() {
 function streakMultiplier(streak) { return Math.min(1 + Math.min(streak, 100) * 0.02, 3.0); }
 
 // ============================================================
-//  ANTI-SPAM + PERSISTENT DAILY BUDGET  ← ИСПРАВЛЕНО
+//  ANTI-SPAM + PERSISTENT DAILY BUDGET
 // ============================================================
 const xpCooldowns = {};
 const DAILY_BUDGET_KEY = 'vpn_daily_budget_v1';
@@ -1182,7 +1186,7 @@ function resetDailyBudgetIfNeeded() {
     const today = getToday();
     if (dailyBudget.date !== today) {
         dailyBudget = emptyDailyBudget();
-        saveDailyBudget(); // fire-and-forget
+        saveDailyBudget();
     }
 }
 
@@ -1197,7 +1201,7 @@ function tryEarnXp(actionKey, amount, opts = {}) {
         const max = opts.dailyMax || Infinity;
         if (used + amount > max) return false;
         dailyBudget[opts.dailyKey] = used + amount;
-        saveDailyBudget(); // сохраняем в IDB
+        saveDailyBudget();
     }
 
     xpCooldowns[actionKey] = now;
@@ -1239,13 +1243,12 @@ async function xpOnAddFavorite(raw) {
     await addXpDirect(3, 'favorite');
 }
 
-// ← ИСПРАВЛЕНО: сохраняем протоколы в IDB
 async function xpOnCopyKey(raw) {
     resetDailyBudgetIfNeeded();
     const proto = detectProtocol(raw);
     if (!dailyBudget.protocols[proto]) {
         dailyBudget.protocols[proto] = true;
-        await saveDailyBudget(); // ⬅️ сохраняем флаг СРАЗУ, до XP
+        await saveDailyBudget();
         const count = Object.keys(dailyBudget.protocols).length;
         await addXpDirect(15, 'new-protocol');
         showToast('+15 XP · Новый протокол ' + proto.toUpperCase());
@@ -1401,12 +1404,14 @@ async function signIn() {
     const email = document.getElementById('authEmail').value.trim();
     const password = document.getElementById('authPassword').value;
     if (!email || !password) { showAuthError('Введите email и пароль'); return; }
+    justSignedUp = false;
     try { await firebaseAuth.signInWithEmailAndPassword(email, password); }
     catch (e) {
         if (e.code === 'auth/network-request-failed') { showOfflineScreen(); return; }
         showAuthError(authErrorText(e.code));
     }
 }
+
 async function signUp() {
     clearAuthError();
     if (!navigator.onLine) { showOfflineScreen(); return; }
@@ -1418,17 +1423,22 @@ async function signUp() {
     if (nickname.length < 2) { showAuthError('Никнейм слишком короткий'); return; }
     if (!email || !password) { showAuthError('Введите email и пароль'); return; }
     if (password.length < 6) { showAuthError('Пароль минимум 6 символов'); return; }
+
+    justSignedUp = true;
     try {
         const cred = await firebaseAuth.createUserWithEmailAndPassword(email, password);
         await cred.user.updateProfile({ displayName: nickname });
         currentUser = firebaseAuth.currentUser;
         updateProfileUI();
         await xpOnRegister();
+        console.log('[SignUp] аккаунт создан, прогресс будет перенесён');
     } catch (e) {
+        justSignedUp = false;
         if (e.code === 'auth/network-request-failed') { showOfflineScreen(); return; }
         showAuthError(authErrorText(e.code));
     }
 }
+
 async function resetPassword() {
     clearAuthError();
     if (!navigator.onLine) { showOfflineScreen(); return; }
@@ -1441,16 +1451,25 @@ async function resetPassword() {
         showAuthError(authErrorText(e.code));
     }
 }
+
+// ⬇ ВЫХОД БЕЗ ПОДТВЕРЖДЕНИЯ
 async function signOut() {
-    if (!firebaseReady || !currentUser) { document.getElementById('authScreen').classList.remove('hidden'); return; }
-    if (!confirm('Выйти из аккаунта? Прогресс сохранён в облаке.')) return;
+    if (!firebaseReady || !currentUser) {
+        document.getElementById('authScreen').classList.remove('hidden');
+        return;
+    }
+    // Показываем индикатор
+    showToast('Выход...');
     try {
-        await saveProgressToCloud(true);
+        // Сохраняем прогресс в облако перед выходом
+        try { await saveProgressToCloud(true); } catch (e) { console.warn('[SignOut] save error:', e); }
         await firebaseAuth.signOut();
         currentUsername = null;
         document.getElementById('authScreen').classList.remove('hidden');
-        showToast('Вы вышли. Прогресс сохранён в облаке');
-    } catch (e) { showToast('Ошибка выхода: ' + e.message); }
+        setTimeout(() => showToast('Вы вышли. Прогресс сохранён в облаке'), 300);
+    } catch (e) {
+        showToast('Ошибка выхода: ' + e.message);
+    }
 }
 
 // ============================================================
@@ -2238,16 +2257,16 @@ function buildKeyCard(k, isFav, delay = 0) {
     '</div>';
 }
 
-// ← ИСПРАВЛЕНО: кнопка отзывов рендерится ВСЕГДА
 function buildReviewsButton(encodedRaw) {
     let raw = '';
     try { raw = decodeURIComponent(atob(encodedRaw)); } catch (e) { raw = ''; }
     const h = raw ? simpleHash(raw) : '';
     const r = h ? reviewCache[h] : null;
+    const disabled = (!rtdb || !firebaseReady) ? ' disabled style="opacity:.5"' : '';
 
     if (!r || !r.count) {
         return '<button class="reviews-btn" data-hash="' + h +
-            '" onclick="openReviewModal(\'' + encodedRaw + '\')">' +
+            '" onclick="openReviewModal(\'' + encodedRaw + '\')"' + disabled + '>' +
             '<span class="stars">☆☆☆☆☆</span>' +
             '<span class="label">Отзывы</span>' +
             '<span class="count">· пока нет</span>' +
@@ -2257,7 +2276,7 @@ function buildReviewsButton(encodedRaw) {
     let stars = '';
     for (let i = 1; i <= 5; i++) stars += (i <= full ? '★' : '☆');
     return '<button class="reviews-btn" data-hash="' + h +
-        '" onclick="openReviewModal(\'' + encodedRaw + '\')">' +
+        '" onclick="openReviewModal(\'' + encodedRaw + '\')"' + disabled + '>' +
         '<span class="stars">' + stars + '</span>' +
         '<span class="rating-num">' + r.avg.toFixed(1) + '</span>' +
         '<span class="label">Отзывы</span>' +
@@ -2322,8 +2341,8 @@ function renderFavorites() {
     setTimeout(refreshVisibleRatings, 50);
 }
 
+// ⬇ БЕЗ confirm() — просто очищаем
 function clearFavorites() {
-    if (!confirm('Удалить все избранные ключи?')) return;
     document.querySelectorAll('#favList .key-card').forEach((c, i) => {
         setTimeout(() => c.classList.add('removing'), i * 40);
     });
@@ -2354,8 +2373,8 @@ function refreshStatsUI() {
     document.getElementById('statFavs').textContent = favorites.length;
     document.getElementById('statProtocols').textContent = new Set(allKeys.map(k => k.protocol)).size;
 }
+// ⬇ БЕЗ confirm() — просто сбрасываем
 async function resetAll() {
-    if (!confirm('Удалить все данные приложения? Это также очистит прогресс в облаке.')) return;
     try { localStorage.clear(); } catch (e) {}
     await idbClearAll();
     favorites = [];
@@ -2364,7 +2383,7 @@ async function resetAll() {
     settings = { ...DEFAULT_SETTINGS };
     lastKeysHash = null;
     pendingUpdate = null;
-    dailyBudget = emptyDailyBudget(); // сброс антиспама
+    dailyBudget = emptyDailyBudget();
     hideUpdateBanner();
     updateNavBadge(false);
     applySettingsToUI();
@@ -2551,7 +2570,7 @@ async function broadcastHash(hash) {
 }
 
 // ============================================================
-//  REVIEWS / RATINGS  ← ИСПРАВЛЕНО
+//  REVIEWS / RATINGS
 // ============================================================
 const REVIEWS_PATH = 'vpnkeys/reviews';
 let reviewCache = {};
@@ -2559,39 +2578,61 @@ let currentReviewKey = null;
 let myRating = 0;
 
 function handleReviewsSnapshot(snap) {
-    const data = snap.val() || {};
-    reviewCache = {};
-    const uid = currentUser ? currentUser.uid : null;
+    try {
+        const data = snap.val() || {};
+        reviewCache = {};
+        const uid = currentUser ? currentUser.uid : null;
 
-    for (const keyHash in data) {
-        const items = data[keyHash];
-        if (!items || typeof items !== 'object') continue;
-        const list = Object.keys(items).map(k => ({ uid: k, ...items[k] }));
-        list.sort((a, b) => (b.ts || 0) - (a.ts || 0));
-        const count = list.length;
-        const avg = count ? list.reduce((s, x) => s + (Number(x.rating) || 0), 0) / count : 0;
-        const userRating = uid && items[uid] ? Number(items[uid].rating) : 0;
-        reviewCache[keyHash] = { avg, count, items: list, userRating };
+        for (const keyHash in data) {
+            const items = data[keyHash];
+            if (!items || typeof items !== 'object') continue;
+            const list = Object.keys(items).map(k => ({ uid: k, ...items[k] }));
+            list.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+            const count = list.length;
+            const avg = count ? list.reduce((s, x) => s + (Number(x.rating) || 0), 0) / count : 0;
+            const userRating = uid && items[uid] ? Number(items[uid].rating) : 0;
+            reviewCache[keyHash] = { avg, count, items: list, userRating };
+        }
+        console.log('[Reviews] snapshot, keys:', Object.keys(reviewCache).length);
+        refreshVisibleRatings();
+        if (currentReviewKey) renderReviewContent();
+    } catch (e) {
+        console.error('[Reviews] handle error:', e);
     }
-    console.log('[Reviews] snapshot, keys:', Object.keys(reviewCache).length);
-    refreshVisibleRatings();
-    if (currentReviewKey) renderReviewContent();
 }
 
 function initReviews() {
     if (!rtdb || !firebaseReady) {
-        console.warn('[Reviews] rtdb/firebaseReady false — skip listener');
+        console.warn('[Reviews] SKIP: rtdb =', !!rtdb, ', firebaseReady =', firebaseReady);
         return;
     }
     try { rtdb.ref(REVIEWS_PATH).off('value'); } catch (e) {}
+    try { rtdb.ref(REVIEWS_PATH).keepSynced(true); } catch (e) {}
+
     rtdb.ref(REVIEWS_PATH).on('value',
-        (snap) => handleReviewsSnapshot(snap),
-        (err) => console.warn('[Reviews] listen error:', err)
+        (snap) => { console.log('[Reviews] 👉 snapshot'); handleReviewsSnapshot(snap); },
+        (err) => {
+            console.error('[Reviews] ❌ LISTEN ERROR:', err);
+            if (String(err).includes('permission')) {
+                console.error('❌ Правила Firebase блокируют чтение reviews!');
+            }
+        }
     );
-    console.log('[Reviews] listener attached');
+    console.log('[Reviews] ✅ listener attached to', REVIEWS_PATH);
+    fetchReviewsOnce();
 }
 
-// ← ИСПРАВЛЕНО: добавляет кнопку если нет, заменяет если есть
+async function fetchReviewsOnce() {
+    if (!rtdb || !firebaseReady) return;
+    try {
+        const snap = await rtdb.ref(REVIEWS_PATH).once('value');
+        console.log('[Reviews] 🎯 once()');
+        handleReviewsSnapshot(snap);
+    } catch (e) {
+        console.error('[Reviews] ❌ once() error:', e.message || e);
+    }
+}
+
 function refreshVisibleRatings() {
     const cards = document.querySelectorAll('.key-card');
     for (const card of cards) {
@@ -2607,9 +2648,9 @@ function refreshVisibleRatings() {
     }
 }
 
-function openReviewModal(encodedRaw) {
+async function openReviewModal(encodedRaw) {
     if (!rtdb || !firebaseReady) {
-        showToast('Отзывы недоступны — нет связи');
+        showToast('⚠ Firebase не готов');
         return;
     }
     let raw;
@@ -2629,6 +2670,8 @@ function openReviewModal(encodedRaw) {
     renderReviewStars();
     renderReviewContent();
     document.getElementById('reviewModal').classList.add('show');
+
+    await fetchReviewsOnce();
 }
 
 function closeReviewModal() {
@@ -2697,18 +2740,32 @@ async function submitReview() {
     const handle = displayHandleForReviews();
     const nickname = currentUser.displayName || (currentUser.email || '').split('@')[0] || 'Пользователь';
 
+    const btn = document.getElementById('reviewSubmitBtn');
+    const oldText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Отправка...';
+
     try {
         await rtdb.ref(REVIEWS_PATH + '/' + currentReviewKey.hash + '/' + currentUser.uid).set({
             rating: myRating, text, handle, nickname, ts: Date.now()
         });
+        console.log('[Reviews] ✅ записано');
         showToast('Спасибо за оценку!');
         vibrate(20);
         playCopySound();
+
+        await new Promise(r => setTimeout(r, 500));
+        await fetchReviewsOnce();
+
         const prev = reviewCache[currentReviewKey.hash] && reviewCache[currentReviewKey.hash].userRating;
         if (!prev) addXpDirect(5, 'review').catch(() => {});
         closeReviewModal();
     } catch (e) {
+        console.error('[Reviews] submit error:', e);
         showToast('Ошибка: ' + (e.message || e.code || ''));
+    } finally {
+        btn.disabled = false;
+        btn.textContent = oldText;
     }
 }
 
@@ -2787,7 +2844,7 @@ async function initAppAfterAuth() {
     appInitialized = true;
 
     await loadFromStorage();
-    await loadDailyBudget(); // ← грузим антиспам-бюджет
+    await loadDailyBudget();
 
     if (currentUser && rtdb) {
         await loadProgressFromCloud(true);
@@ -2833,6 +2890,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                     refreshStreakUI();
                     renderFavorites();
                 }
+
+                if (justSignedUp) {
+                    justSignedUp = false;
+                    setTimeout(async () => {
+                        try {
+                            await saveProgressToCloud(true);
+                            console.log('[SignUp] ✅ локальный прогресс сохранён в новый аккаунт');
+                            showToast('Прогресс перенесён в новый аккаунт');
+                        } catch (e) {
+                            console.warn('[SignUp] save error:', e);
+                        }
+                    }, 500);
+                }
             } else {
                 currentUser = null;
                 currentUsername = null;
@@ -2840,10 +2910,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('authScreen').classList.remove('hidden');
             }
             initAppAfterAuth();
-            // Перевешиваем листенер отзывов с актуальным currentUser
             if (rtdb && firebaseReady) {
                 initReviews();
-                // После подписки — обновим кнопки (вдруг были без userRating)
                 setTimeout(refreshVisibleRatings, 300);
             }
         });
@@ -2852,7 +2920,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateProfileUI();
         initAppAfterAuth();
     }
-    console.log('[VPN Keys] v3.6 — persistent anti-spam + reviews fix');
+    console.log('[VPN Keys] v3.8 — no confirm dialogs');
 });
 </script>
 </body>
