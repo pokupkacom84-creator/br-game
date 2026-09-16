@@ -5,48 +5,104 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Free VPN Keys</title>
     <style>
+        :root {
+            --bg: #0f0f13;
+            --card: #1a1a22;
+            --card-border: #2a2a35;
+            --text: #e0e0e0;
+            --text-dim: #888;
+            --text-muted: #555;
+            --accent: #6c5ce7;
+            --accent-light: #a29bfe;
+            --nav-bg: #14141a;
+        }
+
+        body.light {
+            --bg: #f5f5f7;
+            --card: #ffffff;
+            --card-border: #e0e0e5;
+            --text: #1a1a22;
+            --text-dim: #666;
+            --text-muted: #999;
+            --nav-bg: #ffffff;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            height: 100%;
         }
 
         body {
-            background: #0f0f13;
-            color: #e0e0e0;
-            min-height: 100vh;
-            padding: 16px;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: background 0.2s, color 0.2s;
         }
 
-        .header {
+        /* ============ ВЕРХНЯЯ ЧАСТЬ ============ */
+        .app-header {
+            padding: 14px 16px 10px;
             text-align: center;
-            padding: 20px 0 16px;
+            background: var(--bg);
+            flex-shrink: 0;
         }
 
-        .header h1 {
-            font-size: 22px;
+        .app-header h1 {
+            font-size: 20px;
             font-weight: 700;
-            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 6px;
         }
 
-        .header p {
-            font-size: 13px;
-            color: #888;
+        .app-header p {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-top: 2px;
         }
 
+        /* ============ КОНТЕНТ (скроллится) ============ */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 16px 16px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ============ ОБЩИЕ ЭЛЕМЕНТЫ ============ */
         .status-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: #1a1a22;
+            background: var(--card);
             border-radius: 12px;
-            padding: 12px 16px;
-            margin-bottom: 16px;
-            font-size: 13px;
+            padding: 10px 14px;
+            margin-bottom: 12px;
+            font-size: 12px;
+            border: 1px solid var(--card-border);
         }
 
         .status-dot {
@@ -72,31 +128,29 @@
             align-items: center;
             justify-content: center;
             gap: 6px;
-            padding: 10px 20px;
+            padding: 10px 18px;
             border: none;
             border-radius: 10px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s;
         }
 
+        .btn:active { transform: scale(0.97); }
+
         .btn-primary {
-            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
             color: #fff;
         }
 
-        .btn-primary:active { transform: scale(0.96); }
-
         .btn-secondary {
-            background: #2d2d3a;
-            color: #ccc;
+            background: var(--card-border);
+            color: var(--text-dim);
         }
 
-        .btn-secondary:active { background: #3d3d4a; }
-
         .btn-sm {
-            padding: 10px 12px;
+            padding: 9px 12px;
             font-size: 13px;
             border-radius: 8px;
         }
@@ -104,11 +158,72 @@
         .controls {
             display: flex;
             gap: 8px;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
 
         .controls .btn { flex: 1; }
 
+        /* Поиск */
+        .search-box {
+            position: relative;
+            margin-bottom: 10px;
+        }
+
+        .search-box input {
+            width: 100%;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 10px 14px 10px 36px;
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+        }
+
+        .search-box input:focus { border-color: var(--accent); }
+
+        .search-box::before {
+            content: '🔍';
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 13px;
+            opacity: 0.6;
+        }
+
+        /* Фильтры протоколов */
+        .filter-chips {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            margin-bottom: 12px;
+            scrollbar-width: none;
+        }
+
+        .filter-chips::-webkit-scrollbar { display: none; }
+
+        .chip {
+            flex-shrink: 0;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            color: var(--text-dim);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .chip.active {
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            color: #fff;
+            border-color: transparent;
+        }
+
+        /* ============ КАРТОЧКИ КЛЮЧЕЙ ============ */
         .key-list {
             display: flex;
             flex-direction: column;
@@ -116,18 +231,21 @@
         }
 
         .key-card {
-            background: #1a1a22;
+            background: var(--card);
             border-radius: 14px;
-            padding: 14px 16px;
-            border: 1px solid #2a2a35;
-            transition: border-color 0.2s;
+            padding: 14px;
+            border: 1px solid var(--card-border);
             position: relative;
-            overflow: hidden;
         }
 
-        .key-card:active { border-color: #6c5ce7; }
+        .key-card .card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
 
-        .key-card .protocol-badge {
+        .protocol-badge {
             display: inline-block;
             padding: 2px 8px;
             border-radius: 6px;
@@ -135,7 +253,6 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 8px;
         }
 
         .protocol-badge.vless { background: #00b89433; color: #00b894; }
@@ -144,17 +261,33 @@
         .protocol-badge.ss { background: #fdcb6e33; color: #fdcb6e; }
         .protocol-badge.hysteria { background: #a29bfe33; color: #a29bfe; }
 
-        .key-card .key-name {
+        .fav-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 2px 6px;
+            line-height: 1;
+            opacity: 0.35;
+            transition: opacity 0.15s, transform 0.15s;
+        }
+
+        .fav-btn.active {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .key-name {
             font-size: 13px;
-            color: #aaa;
+            color: var(--text-dim);
             margin-bottom: 6px;
             word-break: break-all;
             line-height: 1.4;
         }
 
-        .key-card .key-preview {
+        .key-preview {
             font-size: 11px;
-            color: #555;
+            color: var(--text-muted);
             font-family: 'Courier New', monospace;
             white-space: nowrap;
             overflow: hidden;
@@ -162,41 +295,250 @@
             margin-bottom: 10px;
         }
 
-        .key-card .card-actions {
+        .card-actions {
             display: flex;
             gap: 8px;
         }
 
-        .key-card .card-actions .btn {
+        .card-actions .btn { flex: 1; }
+
+        /* ============ НАСТРОЙКИ ============ */
+        .settings-section {
+            background: var(--card);
+            border-radius: 14px;
+            padding: 4px 0;
+            margin-bottom: 14px;
+            border: 1px solid var(--card-border);
+        }
+
+        .settings-title {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            padding: 14px 16px 6px;
+            font-weight: 700;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--card-border);
+            gap: 12px;
+        }
+
+        .setting-row:last-child { border-bottom: none; }
+
+        .setting-label {
             flex: 1;
         }
 
+        .setting-label .name {
+            font-size: 14px;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .setting-label .desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Переключатель */
+        .switch {
+            position: relative;
+            width: 44px;
+            height: 26px;
+            flex-shrink: 0;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: #444;
+            border-radius: 26px;
+            transition: 0.2s;
+        }
+
+        .slider::before {
+            content: '';
+            position: absolute;
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: 0.2s;
+        }
+
+        .switch input:checked + .slider {
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+        }
+
+        .switch input:checked + .slider::before {
+            transform: translateX(18px);
+        }
+
+        .select-input, .text-input {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 13px;
+            outline: none;
+            max-width: 55%;
+        }
+
+        .text-input { width: 55%; }
+
+        .select-input:focus, .text-input:focus { border-color: var(--accent); }
+
+        /* ============ ПРОФИЛЬ ============ */
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 14px;
+        }
+
+        .avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .profile-info .name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .profile-info .sub {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ============ НИЖНЕЕ МЕНЮ ============ */
+        .bottom-nav {
+            display: flex;
+            background: var(--nav-bg);
+            border-top: 1px solid var(--card-border);
+            flex-shrink: 0;
+            padding-bottom: env(safe-area-inset-bottom, 0);
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 4px 12px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.15s;
+            font-family: inherit;
+        }
+
+        .nav-item .icon {
+            font-size: 20px;
+            margin-bottom: 3px;
+            transition: transform 0.15s;
+        }
+
+        .nav-item .label {
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .nav-item.active {
+            color: var(--accent-light);
+        }
+
+        .nav-item.active .icon {
+            transform: scale(1.1);
+        }
+
+        /* ============ ВСПОМОГАТЕЛЬНОЕ ============ */
         .empty-state {
             text-align: center;
-            padding: 60px 20px;
-            color: #555;
+            padding: 50px 20px;
+            color: var(--text-muted);
         }
 
         .empty-state .icon {
-            font-size: 48px;
-            margin-bottom: 12px;
+            font-size: 42px;
+            margin-bottom: 10px;
         }
 
         .empty-state p {
-            font-size: 14px;
+            font-size: 13px;
             line-height: 1.5;
         }
 
         .toast {
             position: fixed;
-            bottom: 30px;
+            bottom: 90px;
             left: 50%;
             transform: translateX(-50%) translateY(80px);
             background: #2d2d3a;
             color: #fff;
-            padding: 12px 24px;
+            padding: 12px 22px;
             border-radius: 12px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
             box-shadow: 0 8px 30px rgba(0,0,0,0.5);
             opacity: 0;
@@ -215,16 +557,16 @@
         .loader {
             display: none;
             justify-content: center;
-            padding: 40px;
+            padding: 30px;
         }
 
         .loader.active { display: flex; }
 
         .spinner {
-            width: 36px;
-            height: 36px;
-            border: 3px solid #2d2d3a;
-            border-top-color: #6c5ce7;
+            width: 34px;
+            height: 34px;
+            border: 3px solid var(--card-border);
+            border-top-color: var(--accent);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
@@ -237,8 +579,8 @@
             background: #e1705515;
             border: 1px solid #e1705540;
             border-radius: 10px;
-            padding: 12px 16px;
-            font-size: 13px;
+            padding: 12px 14px;
+            font-size: 12px;
             color: #e17055;
             margin-bottom: 12px;
             display: none;
@@ -246,14 +588,14 @@
 
         .error-msg.show { display: block; }
 
-        .footer {
+        .footer-note {
             text-align: center;
-            padding: 24px 0 12px;
+            padding: 18px 0 10px;
             font-size: 11px;
-            color: #444;
+            color: var(--text-muted);
         }
 
-        .footer a { color: #6c5ce7; text-decoration: none; }
+        .footer-note a { color: var(--accent); text-decoration: none; }
 
         #copyHelper {
             position: fixed;
@@ -265,88 +607,340 @@
 </head>
 <body>
 
-    <div class="header">
-        <h1>🔑 Free VPN Keys</h1>
-        <p>Бесплатные конфигурации</p>
+    <!-- ============ ШАПКА ============ -->
+    <div class="app-header">
+        <h1 id="pageTitle">🔑 Free VPN Keys</h1>
+        <p id="pageSubtitle">Бесплатные конфигурации</p>
     </div>
 
-    <div class="status-bar">
-        <div>
-            <span class="status-dot" id="statusDot"></span>
-            <span id="statusText">Готов к загрузке</span>
+    <!-- ============ ОСНОВНОЙ КОНТЕНТ ============ -->
+    <div class="content" id="content">
+
+        <!-- ===== ВКЛАДКА: ГЛАВНОЕ ===== -->
+        <div class="tab-pane active" id="tab-main">
+
+            <div class="status-bar">
+                <div>
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText">Готов к загрузке</span>
+                </div>
+                <span id="keyCount" style="color:var(--accent);font-weight:600;">0</span>
+            </div>
+
+            <div class="error-msg" id="errorMsg"></div>
+
+            <div class="controls">
+                <button class="btn btn-primary" id="fetchBtn" onclick="fetchKeys()">
+                    ⬇ Загрузить
+                </button>
+                <button class="btn btn-secondary" onclick="clearKeys()">
+                    🗑 Очистить
+                </button>
+            </div>
+
+            <div class="search-box" id="searchWrap" style="display:none;">
+                <input type="text" id="searchInput" placeholder="Поиск по имени сервера..." oninput="applyFilters()">
+            </div>
+
+            <div class="filter-chips" id="filterChips" style="display:none;">
+                <button class="chip active" data-filter="all" onclick="setFilter('all', this)">Все</button>
+                <button class="chip" data-filter="vless" onclick="setFilter('vless', this)">VLESS</button>
+                <button class="chip" data-filter="hysteria" onclick="setFilter('hysteria', this)">Hysteria</button>
+                <button class="chip" data-filter="vmess" onclick="setFilter('vmess', this)">VMESS</button>
+                <button class="chip" data-filter="trojan" onclick="setFilter('trojan', this)">Trojan</button>
+                <button class="chip" data-filter="ss" onclick="setFilter('ss', this)">SS</button>
+            </div>
+
+            <div class="loader" id="loader">
+                <div class="spinner"></div>
+            </div>
+
+            <div class="key-list" id="keyList">
+                <div class="empty-state" id="emptyState">
+                    <div class="icon">📡</div>
+                    <p>Нажмите «Загрузить»,<br>чтобы получить бесплатные ключи</p>
+                </div>
+            </div>
+
+            <div class="footer-note">
+                Источник: <a href="https://github.com/AvenCores/goida-vpn-configs" target="_blank">AvenCores / goida-vpn-configs</a>
+            </div>
         </div>
-        <span id="keyCount" style="color:#6c5ce7;font-weight:600;">0</span>
-    </div>
 
-    <div class="error-msg" id="errorMsg"></div>
+        <!-- ===== ВКЛАДКА: НАСТРОЙКИ ===== -->
+        <div class="tab-pane" id="tab-settings">
 
-    <div class="controls">
-        <button class="btn btn-primary" id="fetchBtn" onclick="fetchKeys()">
-            ⬇ Загрузить ключи
-        </button>
-        <button class="btn btn-secondary" id="clearBtn" onclick="clearKeys()">
-            🗑 Очистить
-        </button>
-    </div>
+            <div class="settings-title">Общие</div>
+            <div class="settings-section">
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <div class="name">Авто-загрузка</div>
+                        <div class="desc">Загружать ключи при запуске</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="optAutoLoad" onchange="saveSettings()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <div class="name">Сохранять ключи</div>
+                        <div class="desc">Не терять список при перезапуске</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="optSaveKeys" onchange="saveSettings()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <div class="name">Светлая тема</div>
+                        <div class="desc">Меняет цветовую схему</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="optLightTheme" onchange="toggleTheme()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
 
-    <div class="loader" id="loader">
-        <div class="spinner"></div>
-    </div>
+            <div class="settings-title">Источник ключей</div>
+            <div class="settings-section">
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <div class="name">Репозиторий</div>
+                        <div class="desc">Откуда брать конфигурации</div>
+                    </div>
+                    <select class="select-input" id="optSource" onchange="saveSettings()">
+                        <option value="26">goida-vpn-configs / 26.txt</option>
+                        <option value="20">goida-vpn-configs / 20.txt</option>
+                        <option value="10">goida-vpn-configs / 10.txt</option>
+                        <option value="custom">Свой URL…</option>
+                    </select>
+                </div>
+                <div class="setting-row" id="customUrlRow" style="display:none;">
+                    <div class="setting-label">
+                        <div class="name">Свой URL</div>
+                        <div class="desc">Прямая ссылка на .txt файл</div>
+                    </div>
+                    <input type="text" class="text-input" id="optCustomUrl" placeholder="https://…" onchange="saveSettings()">
+                </div>
+            </div>
 
-    <div class="key-list" id="keyList">
-        <div class="empty-state" id="emptyState">
-            <div class="icon">📡</div>
-            <p>Нажмите «Загрузить ключи»,<br>чтобы получить бесплатные конфигурации</p>
+            <div class="settings-title">Данные</div>
+            <div class="settings-section">
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <div class="name">Очистить кэш</div>
+                        <div class="desc">Удаляет сохранённые ключи и статистику</div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="resetAll()">Сбросить</button>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <div class="name">Версия</div>
+                        <div class="desc">Free VPN Keys v2.0</div>
+                    </div>
+                    <span style="color:var(--text-muted);font-size:12px;">2.0</span>
+                </div>
+            </div>
         </div>
+
+        <!-- ===== ВКЛАДКА: ПРОФИЛЬ ===== -->
+        <div class="tab-pane" id="tab-profile">
+
+            <div class="profile-header">
+                <div class="avatar">👤</div>
+                <div class="profile-info">
+                    <div class="name">Гость</div>
+                    <div class="sub">Локальный профиль</div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="statLoaded">0</div>
+                    <div class="stat-label">Загружено</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statCopied">0</div>
+                    <div class="stat-label">Скопировано</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statFavs">0</div>
+                    <div class="stat-label">В избранном</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statProtocols">0</div>
+                    <div class="stat-label">Протоколов</div>
+                </div>
+            </div>
+
+            <div class="settings-title">⭐ Избранные ключи</div>
+            <div class="key-list" id="favList">
+                <div class="empty-state">
+                    <div class="icon">⭐</div>
+                    <p>Пока нет избранных ключей.<br>Нажмите на звёздочку в карточке ключа.</p>
+                </div>
+            </div>
+
+            <div class="settings-section" style="margin-top:14px;">
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <div class="name">Очистить избранное</div>
+                        <div class="desc">Удалить все сохранённые ключи</div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="clearFavorites()">Очистить</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <div class="footer">
-        Источник: <a href="https://github.com/AvenCores/goida-vpn-configs" target="_blank">AvenCores / goida-vpn-configs</a>
-        <br>Ключи публичные и могут быть нестабильны
-    </div>
+    <!-- ============ НИЖНЕЕ МЕНЮ ============ -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" data-tab="main" onclick="switchTab('main', this)">
+            <span class="icon">🏠</span>
+            <span class="label">Главное</span>
+        </button>
+        <button class="nav-item" data-tab="settings" onclick="switchTab('settings', this)">
+            <span class="icon">⚙️</span>
+            <span class="label">Настройки</span>
+        </button>
+        <button class="nav-item" data-tab="profile" onclick="switchTab('profile', this)">
+            <span class="icon">👤</span>
+            <span class="label">Профиль</span>
+        </button>
+    </nav>
 
     <div class="toast" id="toast"></div>
     <textarea id="copyHelper" readonly></textarea>
 
     <script>
     // ============================================================
-    //  ИСТОЧНИК КОНФИГУРАЦИЙ
+    //  КОНСТАНТЫ
     // ============================================================
-    const SOURCE_URL = 'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/main/githubmirror/26.txt';
+    const BASE_URL = 'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/main/githubmirror/';
 
+    const DEFAULT_SETTINGS = {
+        autoLoad: true,
+        saveKeys: true,
+        lightTheme: false,
+        source: '26',
+        customUrl: ''
+    };
+
+    // ============================================================
+    //  СОСТОЯНИЕ
+    // ============================================================
     let allKeys = [];
+    let filteredKeys = [];
+    let currentFilter = 'all';
+    let favorites = []; // массив raw-ключей
+    let settings = { ...DEFAULT_SETTINGS };
+    let stats = { loaded: 0, copied: 0 };
     let isFetching = false;
 
+    // ============================================================
+    //  ХРАНИЛИЩЕ
+    // ============================================================
+    function loadFromStorage() {
+        try {
+            const s = localStorage.getItem('vpn_settings');
+            if (s) settings = { ...DEFAULT_SETTINGS, ...JSON.parse(s) };
+
+            const f = localStorage.getItem('vpn_favorites');
+            if (f) favorites = JSON.parse(f);
+
+            const st = localStorage.getItem('vpn_stats');
+            if (st) stats = { ...stats, ...JSON.parse(st) };
+
+            const k = localStorage.getItem('vpn_keys');
+            if (k && settings.saveKeys) allKeys = JSON.parse(k);
+        } catch (e) { console.warn('Storage error', e); }
+    }
+
+    function saveSettings() {
+        settings.autoLoad = document.getElementById('optAutoLoad').checked;
+        settings.saveKeys = document.getElementById('optSaveKeys').checked;
+        settings.lightTheme = document.getElementById('optLightTheme').checked;
+        settings.source = document.getElementById('optSource').value;
+        settings.customUrl = document.getElementById('optCustomUrl').value.trim();
+
+        // Показываем/скрываем поле custom URL
+        document.getElementById('customUrlRow').style.display =
+            settings.source === 'custom' ? 'flex' : 'none';
+
+        try {
+            localStorage.setItem('vpn_settings', JSON.stringify(settings));
+        } catch (e) {}
+    }
+
+    function applySettingsToUI() {
+        document.getElementById('optAutoLoad').checked = settings.autoLoad;
+        document.getElementById('optSaveKeys').checked = settings.saveKeys;
+        document.getElementById('optLightTheme').checked = settings.lightTheme;
+        document.getElementById('optSource').value = settings.source;
+        document.getElementById('optCustomUrl').value = settings.customUrl;
+        document.getElementById('customUrlRow').style.display =
+            settings.source === 'custom' ? 'flex' : 'none';
+
+        document.body.classList.toggle('light', settings.lightTheme);
+    }
+
+    function saveFavorites() {
+        try { localStorage.setItem('vpn_favorites', JSON.stringify(favorites)); } catch (e) {}
+    }
+
+    function saveStats() {
+        try { localStorage.setItem('vpn_stats', JSON.stringify(stats)); } catch (e) {}
+    }
+
+    function saveKeysToStorage() {
+        if (!settings.saveKeys) {
+            try { localStorage.removeItem('vpn_keys'); } catch (e) {}
+            return;
+        }
+        try { localStorage.setItem('vpn_keys', JSON.stringify(allKeys)); } catch (e) {}
+    }
+
+    // ============================================================
+    //  УТИЛИТЫ
+    // ============================================================
     function showToast(msg, duration = 2200) {
-        const toast = document.getElementById('toast');
-        toast.textContent = msg;
-        toast.classList.add('show');
-        clearTimeout(toast._timer);
-        toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        clearTimeout(t._timer);
+        t._timer = setTimeout(() => t.classList.remove('show'), duration);
     }
 
     function copyToClipboard(text) {
+        const done = () => {
+            showToast('✅ Скопировано');
+            stats.copied++;
+            saveStats();
+            refreshStatsUI();
+        };
         if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(() => {
-                showToast('✅ Скопировано');
-            }).catch(() => fallbackCopy(text));
+            navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
         } else {
-            fallbackCopy(text);
+            fallbackCopy(text, done);
         }
     }
 
-    function fallbackCopy(text) {
-        const helper = document.getElementById('copyHelper');
-        helper.value = text;
-        helper.select();
-        helper.setSelectionRange(0, 99999);
+    function fallbackCopy(text, cb) {
+        const h = document.getElementById('copyHelper');
+        h.value = text;
+        h.select();
+        h.setSelectionRange(0, 99999);
         try {
             document.execCommand('copy');
-            showToast('✅ Скопировано');
+            cb && cb();
         } catch (e) {
             showToast('❌ Не удалось скопировать');
         }
-        helper.value = '';
+        h.value = '';
     }
 
     function detectProtocol(link) {
@@ -361,208 +955,350 @@
 
     function extractName(link) {
         try {
-            const hashIndex = link.lastIndexOf('#');
-            if (hashIndex !== -1) {
-                const name = decodeURIComponent(link.substring(hashIndex + 1));
-                if (name) return name;
+            const i = link.lastIndexOf('#');
+            if (i !== -1) {
+                const n = decodeURIComponent(link.substring(i + 1));
+                if (n) return n;
             }
-            const match = link.match(/@([^:\/?#]+)/);
-            if (match) return match[1];
+            const m = link.match(/@([^:\/?#]+)/);
+            if (m) return m[1];
         } catch (e) {}
         return 'Сервер';
     }
 
-    function truncate(str, len = 60) {
-        return str.length > len ? str.substring(0, len) + '...' : str;
+    function truncate(s, len = 60) {
+        return s.length > len ? s.substring(0, len) + '...' : s;
     }
 
     function esc(s) {
-        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     function tryBase64Decode(str) {
         const clean = str.replace(/\s/g, '');
         if (!/^[A-Za-z0-9+/=]+$/.test(clean)) return null;
         if (clean.length < 20) return null;
-
         try {
-            const decoded = atob(clean);
-            if (/vless:\/\/|vmess:\/\/|trojan:\/\/|ss:\/\/|hysteria:\/\//i.test(decoded)) {
-                return decoded;
-            }
+            const d = atob(clean);
+            if (/vless:\/\/|vmess:\/\/|trojan:\/\/|ss:\/\/|hysteria:\/\//i.test(d)) return d;
             return null;
-        } catch (e) {
-            return null;
+        } catch (e) { return null; }
+    }
+
+    // ============================================================
+    //  НАВИГАЦИЯ
+    // ============================================================
+    function switchTab(tab, el) {
+        // Переключаем активные классы
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('active');
+
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        if (el) el.classList.add('active');
+
+        // Меняем заголовок
+        const titles = {
+            main: ['🔑 Free VPN Keys', 'Бесплатные конфигурации'],
+            settings: ['⚙️ Настройки', 'Приложение'],
+            profile: ['👤 Профиль', 'Избранное и статистика']
+        };
+        document.getElementById('pageTitle').textContent = titles[tab][0];
+        document.getElementById('pageSubtitle').textContent = titles[tab][1];
+
+        // Сброс скролла
+        document.getElementById('content').scrollTop = 0;
+
+        if (tab === 'profile') refreshStatsUI();
+    }
+
+    // ============================================================
+    //  ФИЛЬТРЫ И ПОИСК
+    // ============================================================
+    function setFilter(f, el) {
+        currentFilter = f;
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        if (el) el.classList.add('active');
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+        filteredKeys = allKeys.filter(k => {
+            if (currentFilter !== 'all' && k.protocol !== currentFilter) return false;
+            if (q && !k.name.toLowerCase().includes(q) && !k.raw.toLowerCase().includes(q)) return false;
+            return true;
+        });
+        renderKeys();
+    }
+
+    // ============================================================
+    //  ЗАГРУЗКА КЛЮЧЕЙ
+    // ============================================================
+    function getSourceUrl() {
+        if (settings.source === 'custom') {
+            return settings.customUrl || BASE_URL + '26.txt';
         }
+        return BASE_URL + settings.source + '.txt';
     }
 
     async function fetchKeys() {
         if (isFetching) return;
         isFetching = true;
 
-        const fetchBtn = document.getElementById('fetchBtn');
+        const btn = document.getElementById('fetchBtn');
         const loader = document.getElementById('loader');
-        const errorMsg = document.getElementById('errorMsg');
-        const statusDot = document.getElementById('statusDot');
-        const statusText = document.getElementById('statusText');
+        const errEl = document.getElementById('errorMsg');
+        const dot = document.getElementById('statusDot');
+        const st = document.getElementById('statusText');
 
-        fetchBtn.disabled = true;
-        fetchBtn.textContent = '⏳ Загрузка...';
+        btn.disabled = true;
+        btn.textContent = '⏳ Загрузка...';
         loader.classList.add('active');
-        errorMsg.classList.remove('show');
-        statusDot.className = 'status-dot';
-        statusText.textContent = 'Загрузка...';
+        errEl.classList.remove('show');
+        dot.className = 'status-dot';
+        st.textContent = 'Загрузка...';
 
         try {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 20000);
+            const url = getSourceUrl();
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), 20000);
 
-            const resp = await fetch(SOURCE_URL, { signal: controller.signal });
-            clearTimeout(timeout);
+            const resp = await fetch(url, { signal: ctrl.signal });
+            clearTimeout(t);
 
-            if (!resp.ok) {
-                throw new Error(`HTTP ${resp.status}`);
-            }
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
             let text = await resp.text();
 
             if (!/vless:\/\/|vmess:\/\/|trojan:\/\/|ss:\/\/|hysteria:\/\//i.test(text)) {
-                const decoded = tryBase64Decode(text);
-                if (decoded) {
-                    console.log('[VPN] Обнаружен Base64, декодируем...');
-                    text = decoded;
-                }
+                const d = tryBase64Decode(text);
+                if (d) text = d;
             }
 
             const lines = text.split(/\r?\n/);
             const collected = [];
-
             for (const line of lines) {
-                const trimmed = line.trim();
-                if (!trimmed) continue;
-
-                const proto = detectProtocol(trimmed);
-                if (proto === 'unknown') continue;
-
-                collected.push({
-                    raw: trimmed,
-                    protocol: proto,
-                    name: extractName(trimmed)
-                });
+                const s = line.trim();
+                if (!s) continue;
+                const p = detectProtocol(s);
+                if (p === 'unknown') continue;
+                collected.push({ raw: s, protocol: p, name: extractName(s) });
             }
 
             const seen = new Set();
             const unique = [];
             for (const k of collected) {
-                if (!seen.has(k.raw)) {
-                    seen.add(k.raw);
-                    unique.push(k);
-                }
+                if (!seen.has(k.raw)) { seen.add(k.raw); unique.push(k); }
             }
 
             allKeys = unique;
+            stats.loaded += allKeys.length;
+            saveStats();
+            saveKeysToStorage();
 
             loader.classList.remove('active');
-            fetchBtn.disabled = false;
-            fetchBtn.textContent = '⬇ Загрузить ключи';
+            btn.disabled = false;
+            btn.textContent = '⬇ Загрузить';
             isFetching = false;
 
             if (allKeys.length === 0) {
-                statusDot.className = 'status-dot err';
-                statusText.textContent = 'Ключи не найдены';
-                errorMsg.textContent = 'Файл загружен, но в нём не найдено ни одной поддерживаемой конфигурации.';
-                errorMsg.classList.add('show');
-                renderKeys();
+                dot.className = 'status-dot err';
+                st.textContent = 'Ключи не найдены';
+                errEl.textContent = 'Файл загружен, но ключей не найдено.';
+                errEl.classList.add('show');
+                updateUIVisibility();
                 return;
             }
 
-            statusDot.className = 'status-dot ok';
-            statusText.textContent = 'Загружено';
-            renderKeys();
+            dot.className = 'status-dot ok';
+            st.textContent = 'Загружено';
+            updateUIVisibility();
+            applyFilters();
+            renderFavorites();
             showToast(`✅ Загружено ${allKeys.length} ключей`);
 
         } catch (e) {
-            console.error('[VPN] Ошибка загрузки:', e);
+            console.error(e);
             loader.classList.remove('active');
-            fetchBtn.disabled = false;
-            fetchBtn.textContent = '⬇ Загрузить ключи';
+            btn.disabled = false;
+            btn.textContent = '⬇ Загрузить';
             isFetching = false;
-
-            statusDot.className = 'status-dot err';
-            statusText.textContent = 'Ошибка загрузки';
-            errorMsg.textContent = 'Не удалось загрузить файл: ' + (e.name === 'AbortError' ? 'превышено время ожидания' : e.message);
-            errorMsg.classList.add('show');
-            renderKeys();
+            dot.className = 'status-dot err';
+            st.textContent = 'Ошибка';
+            errEl.textContent = 'Не удалось загрузить: ' + (e.name === 'AbortError' ? 'тайм-аут' : e.message);
+            errEl.classList.add('show');
+            updateUIVisibility();
         }
     }
 
+    function updateUIVisibility() {
+        const has = allKeys.length > 0;
+        document.getElementById('searchWrap').style.display = has ? 'block' : 'none';
+        document.getElementById('filterChips').style.display = has ? 'flex' : 'none';
+        document.getElementById('keyCount').textContent = allKeys.length;
+    }
+
+    // ============================================================
+    //  РЕНДЕР КЛЮЧЕЙ
+    // ============================================================
     function renderKeys() {
         const list = document.getElementById('keyList');
-        const countEl = document.getElementById('keyCount');
-
-        countEl.textContent = allKeys.length;
-
-        if (allKeys.length === 0) {
+        if (filteredKeys.length === 0) {
             list.innerHTML = `
-                <div class="empty-state" id="emptyState">
-                    <div class="icon">📡</div>
-                    <p>Нажмите «Загрузить ключи»,<br>чтобы получить бесплатные конфигурации</p>
+                <div class="empty-state">
+                    <div class="icon">🔍</div>
+                    <p>Ничего не найдено</p>
                 </div>`;
             return;
         }
 
-        const order = { vless: 0, hysteria: 1, vmess: 2, trojan: 3, ss: 4 };
-        const sorted = [...allKeys].sort((a, b) => (order[a.protocol] ?? 9) - (order[b.protocol] ?? 9));
-
         let html = '';
-        for (let i = 0; i < sorted.length; i++) {
-            const k = sorted[i];
-            const protoClass = k.protocol;
-            const protoLabel = k.protocol.toUpperCase();
-
-            // ТУТ БЫЛА УБРАНА КНОПКА "КОПИРОВАТЬ ДЛЯ HAPP"
-            // Теперь только одна кнопка "Скопировать"
+        for (let i = 0; i < filteredKeys.length; i++) {
+            const k = filteredKeys[i];
+            const isFav = favorites.includes(k.raw);
             html += `
-                <div class="key-card" data-index="${i}">
-                    <span class="protocol-badge ${protoClass}">${protoLabel}</span>
+                <div class="key-card">
+                    <div class="card-top">
+                        <span class="protocol-badge ${k.protocol}">${k.protocol.toUpperCase()}</span>
+                        <button class="fav-btn ${isFav ? 'active' : ''}" onclick="toggleFavorite('${btoa(encodeURIComponent(k.raw))}')">⭐</button>
+                    </div>
                     <div class="key-name">${esc(k.name)}</div>
                     <div class="key-preview">${esc(truncate(k.raw, 70))}</div>
                     <div class="card-actions">
-                        <button class="btn btn-primary btn-sm" onclick="copyKey(${i})">📋 Скопировать</button>
+                        <button class="btn btn-primary btn-sm" onclick="copyKeyByRaw('${btoa(encodeURIComponent(k.raw))}')">📋 Скопировать</button>
                     </div>
                 </div>`;
         }
-
         list.innerHTML = html;
     }
 
-    function copyKey(index) {
-        const sorted = getSortedKeys();
-        const k = sorted[index];
-        if (k) copyToClipboard(k.raw);
+    function copyKeyByRaw(encoded) {
+        const raw = decodeURIComponent(atob(encoded));
+        copyToClipboard(raw);
     }
 
-    function getSortedKeys() {
-        const order = { vless: 0, hysteria: 1, vmess: 2, trojan: 3, ss: 4 };
-        return [...allKeys].sort((a, b) => (order[a.protocol] ?? 9) - (order[b.protocol] ?? 9));
+    function toggleFavorite(encoded) {
+        const raw = decodeURIComponent(atob(encoded));
+        const idx = favorites.indexOf(raw);
+        if (idx === -1) {
+            favorites.push(raw);
+            showToast('⭐ Добавлено в избранное');
+        } else {
+            favorites.splice(idx, 1);
+            showToast('Убрано из избранного');
+        }
+        saveFavorites();
+        applyFilters();
+        renderFavorites();
+    }
+
+    function renderFavorites() {
+        const list = document.getElementById('favList');
+        if (favorites.length === 0) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">⭐</div>
+                    <p>Пока нет избранных ключей.<br>Нажмите на звёздочку в карточке ключа.</p>
+                </div>`;
+            return;
+        }
+
+        let html = '';
+        for (const raw of favorites) {
+            const proto = detectProtocol(raw);
+            const name = extractName(raw);
+            html += `
+                <div class="key-card">
+                    <div class="card-top">
+                        <span class="protocol-badge ${proto}">${proto.toUpperCase()}</span>
+                        <button class="fav-btn active" onclick="toggleFavorite('${btoa(encodeURIComponent(raw))}')">⭐</button>
+                    </div>
+                    <div class="key-name">${esc(name)}</div>
+                    <div class="key-preview">${esc(truncate(raw, 70))}</div>
+                    <div class="card-actions">
+                        <button class="btn btn-primary btn-sm" onclick="copyKeyByRaw('${btoa(encodeURIComponent(raw))}')">📋 Скопировать</button>
+                    </div>
+                </div>`;
+        }
+        list.innerHTML = html;
+    }
+
+    function clearFavorites() {
+        if (!confirm('Удалить все избранные ключи?')) return;
+        favorites = [];
+        saveFavorites();
+        applyFilters();
+        renderFavorites();
+        refreshStatsUI();
+        showToast('Избранное очищено');
     }
 
     function clearKeys() {
         allKeys = [];
+        filteredKeys = [];
         document.getElementById('keyList').innerHTML = `
             <div class="empty-state">
                 <div class="icon">📡</div>
-                <p>Нажмите «Загрузить ключи»,<br>чтобы получить бесплатные конфигурации</p>
+                <p>Нажмите «Загрузить»,<br>чтобы получить бесплатные ключи</p>
             </div>`;
-        document.getElementById('keyCount').textContent = '0';
         document.getElementById('statusDot').className = 'status-dot';
         document.getElementById('statusText').textContent = 'Готов к загрузке';
         document.getElementById('errorMsg').classList.remove('show');
+        updateUIVisibility();
+        try { localStorage.removeItem('vpn_keys'); } catch (e) {}
         showToast('🗑 Список очищен');
     }
 
+    function refreshStatsUI() {
+        document.getElementById('statLoaded').textContent = stats.loaded;
+        document.getElementById('statCopied').textContent = stats.copied;
+        document.getElementById('statFavs').textContent = favorites.length;
+        const protos = new Set(allKeys.map(k => k.protocol));
+        document.getElementById('statProtocols').textContent = protos.size;
+    }
+
+    function resetAll() {
+        if (!confirm('Удалить все данные приложения (ключи, избранное, статистику)?')) return;
+        try {
+            localStorage.removeItem('vpn_keys');
+            localStorage.removeItem('vpn_favorites');
+            localStorage.removeItem('vpn_stats');
+            localStorage.removeItem('vpn_settings');
+        } catch (e) {}
+        favorites = [];
+        stats = { loaded: 0, copied: 0 };
+        allKeys = [];
+        settings = { ...DEFAULT_SETTINGS };
+        applySettingsToUI();
+        clearKeys();
+        renderFavorites();
+        refreshStatsUI();
+        showToast('✅ Все данные сброшены');
+    }
+
+    function toggleTheme() {
+        settings.lightTheme = document.getElementById('optLightTheme').checked;
+        document.body.classList.toggle('light', settings.lightTheme);
+        saveSettings();
+    }
+
+    // ============================================================
+    //  ИНИЦИАЛИЗАЦИЯ
+    // ============================================================
     document.addEventListener('DOMContentLoaded', () => {
-        console.log('[Free VPN Keys] Источник:', SOURCE_URL);
+        loadFromStorage();
+        applySettingsToUI();
+        updateUIVisibility();
+        applyFilters();
+        renderFavorites();
+        refreshStatsUI();
+
+        // Авто-загрузка при старте
+        if (settings.autoLoad && allKeys.length === 0) {
+            setTimeout(fetchKeys, 300);
+        }
+        console.log('[Free VPN Keys] v2.0 loaded');
     });
     </script>
 </body>
