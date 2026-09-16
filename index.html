@@ -283,22 +283,26 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
 .avatar-preview { width:96px; height:96px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent-light)); display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:36px; font-weight:700; color:#fff; }
 .avatar-preview img { width:100%; height:100%; object-fit:cover; }
 
-/* ============ FIX: скрытый input без display:none (иначе WebView блокирует клик) ============ */
-.visually-hidden {
-    position: absolute !important;
-    width: 1px !important;
-    height: 1px !important;
-    padding: 0 !important;
-    margin: -1px !important;
-    overflow: hidden !important;
-    clip: rect(0,0,0,0) !important;
-    white-space: nowrap !important;
-    border: 0 !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
+/* ============ FIX: прозрачный input поверх кнопки ============ */
+.file-input-wrapper {
+    position: relative;
+    width: 100%;
+    margin-bottom: 8px;
 }
-label.btn { cursor: pointer; -webkit-user-select: none; user-select: none; }
-label.btn:active { transform: scale(.97); }
+.file-input-wrapper .btn {
+    width: 100%;
+    pointer-events: none; /* клик уходит на input поверх */
+}
+.file-input-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 10;
+    /* НЕ display:none, НЕ visibility:hidden, НЕ clip */
+}
 </style>
 </head>
 <body>
@@ -387,16 +391,23 @@ label.btn:active { transform: scale(.97); }
             <div class="avatar-preview" id="avatarPreview">?</div>
         </div>
 
-        <!-- ВАЖНО: label + for=... работают в любом WebView, onclick на кнопке — нет -->
-        <label class="btn btn-primary btn-full" for="avatarInput" style="margin-bottom:8px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            <span>Выбрать из галереи</span>
-        </label>
+        <!-- Галерея: прозрачный input поверх кнопки -->
+        <div class="file-input-wrapper">
+            <button class="btn btn-primary btn-full" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <span>Выбрать из галереи</span>
+            </button>
+            <input type="file" id="avatarInput" accept="image/*" class="file-input-overlay">
+        </div>
 
-        <label class="btn btn-primary btn-full" for="cameraInput" style="margin-bottom:8px;background:linear-gradient(135deg,#0984e3,#74b9ff);">
-            <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            <span>Сделать фото</span>
-        </label>
+        <!-- Камера: тоже прозрачный input, но с capture (может не работать в WebView — тогда откроется обычный выбор) -->
+        <div class="file-input-wrapper">
+            <button class="btn btn-primary btn-full" type="button" style="background:linear-gradient(135deg,#0984e3,#74b9ff);">
+                <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <span>Сделать фото</span>
+            </button>
+            <input type="file" id="cameraInput" accept="image/*" capture="environment" class="file-input-overlay">
+        </div>
 
         <button class="btn btn-danger btn-full" id="removeAvatarBtn" onclick="removeAvatar()">
             <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
@@ -647,10 +658,6 @@ label.btn:active { transform: scale(.97); }
 
 <div class="toast" id="toast"></div>
 <textarea id="copyHelper" readonly></textarea>
-
-<!-- Скрытые input'ы для галереи и камеры (класс visually-hidden, НЕ display:none) -->
-<input type="file" id="avatarInput" accept="image/*" class="visually-hidden">
-<input type="file" id="cameraInput" accept="image/*" capture="user" class="visually-hidden">
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -1996,7 +2003,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateProfileUI();
     }
     document.getElementById('wheelFab').classList.add('show');
-    console.log('[VPN Keys] v2.5 + avatar gallery (label fix) loaded');
+    console.log('[VPN Keys] v2.5 + avatar overlay input fix loaded');
 });
 </script>
 </body>
