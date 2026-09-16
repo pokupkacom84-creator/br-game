@@ -308,21 +308,10 @@
     // ============================================================
     //  ИСТОЧНИК КОНФИГУРАЦИЙ
     // ============================================================
-    // Используется единственный файл из репозитория AvenCores.
-    // Если файл в Base64 — он будет автоматически декодирован.
-    // ============================================================
-
     const SOURCE_URL = 'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/main/githubmirror/26.txt';
 
-    // ============================================================
-    //  ГЛОБАЛЬНОЕ СОСТОЯНИЕ
-    // ============================================================
     let allKeys = [];
     let isFetching = false;
-
-    // ============================================================
-    //  УТИЛИТЫ
-    // ============================================================
 
     function showToast(msg, duration = 2200) {
         const toast = document.getElementById('toast');
@@ -356,9 +345,6 @@
         helper.value = '';
     }
 
-    /**
-     * Определяет протокол по префиксу ссылки.
-     */
     function detectProtocol(link) {
         const l = link.toLowerCase().trim();
         if (l.startsWith('vless://')) return 'vless';
@@ -390,20 +376,13 @@
         return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    /**
-     * Пытается декодировать строку из Base64.
-     * Возвращает декодированный текст или null, если это не Base64.
-     */
     function tryBase64Decode(str) {
         const clean = str.replace(/\s/g, '');
-        // Проверяем, похоже ли на Base64
         if (!/^[A-Za-z0-9+/=]+$/.test(clean)) return null;
         if (clean.length < 20) return null;
 
         try {
-            // atob доступен в WebView
             const decoded = atob(clean);
-            // Проверяем, содержит ли результат известные протоколы
             if (/vless:\/\/|vmess:\/\/|trojan:\/\/|ss:\/\/|hysteria:\/\//i.test(decoded)) {
                 return decoded;
             }
@@ -412,10 +391,6 @@
             return null;
         }
     }
-
-    // ============================================================
-    //  ЗАГРУЗКА КЛЮЧЕЙ
-    // ============================================================
 
     async function fetchKeys() {
         if (isFetching) return;
@@ -447,7 +422,6 @@
 
             let text = await resp.text();
 
-            // Пробуем декодировать Base64, если обычный парсинг не находит ключей
             if (!/vless:\/\/|vmess:\/\/|trojan:\/\/|ss:\/\/|hysteria:\/\//i.test(text)) {
                 const decoded = tryBase64Decode(text);
                 if (decoded) {
@@ -456,7 +430,6 @@
                 }
             }
 
-            // Парсим построчно
             const lines = text.split(/\r?\n/);
             const collected = [];
 
@@ -474,7 +447,6 @@
                 });
             }
 
-            // Дедупликация
             const seen = new Set();
             const unique = [];
             for (const k of collected) {
@@ -519,10 +491,6 @@
             renderKeys();
         }
     }
-
-    // ============================================================
-    //  ОТОБРАЖЕНИЕ
-    // ============================================================
 
     function renderKeys() {
         const list = document.getElementById('keyList');
