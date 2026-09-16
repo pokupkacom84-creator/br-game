@@ -283,25 +283,16 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
 .avatar-preview { width:96px; height:96px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent-light)); display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:36px; font-weight:700; color:#fff; }
 .avatar-preview img { width:100%; height:100%; object-fit:cover; }
 
-/* ============ FIX: прозрачный input поверх кнопки ============ */
-.file-input-wrapper {
-    position: relative;
-    width: 100%;
-    margin-bottom: 8px;
-}
-.file-input-wrapper .btn {
-    width: 100%;
-    pointer-events: none; /* клик уходит на input поверх */
-}
+/* ============ FILE INPUT (прозрачный поверх кнопки) ============ */
+.file-input-wrapper { position: relative; width: 100%; margin-bottom: 8px; }
+.file-input-wrapper .btn { width: 100%; pointer-events: none; }
 .file-input-overlay {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
     opacity: 0;
     cursor: pointer;
     z-index: 10;
-    /* НЕ display:none, НЕ visibility:hidden, НЕ clip */
+    font-size: 100px;
 }
 </style>
 </head>
@@ -391,7 +382,6 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
             <div class="avatar-preview" id="avatarPreview">?</div>
         </div>
 
-        <!-- Галерея: прозрачный input поверх кнопки -->
         <div class="file-input-wrapper">
             <button class="btn btn-primary btn-full" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -400,7 +390,6 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
             <input type="file" id="avatarInput" accept="image/*" class="file-input-overlay">
         </div>
 
-        <!-- Камера: тоже прозрачный input, но с capture (может не работать в WebView — тогда откроется обычный выбор) -->
         <div class="file-input-wrapper">
             <button class="btn btn-primary btn-full" type="button" style="background:linear-gradient(135deg,#0984e3,#74b9ff);">
                 <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -756,7 +745,6 @@ async function migrateFromLocalStorage() {
         } catch (e) {}
     }
     await idbSet('_migrated_v2', true);
-    console.log('[IDB] Миграция из localStorage завершена');
 }
 
 // ============================================================
@@ -785,7 +773,6 @@ try {
         firebaseAuth = firebase.auth();
         try { firebaseStorage = firebase.storage(); } catch (e) { console.warn('[Storage]', e.message); }
         firebaseReady = true;
-        console.log('[Firebase] OK');
     }
 } catch (e) { console.warn('[Firebase]', e.message); }
 
@@ -967,7 +954,8 @@ function blobToDataURL(blob) {
 }
 
 async function handleAvatarFile(file) {
-    if (!file) return;
+    if (!file) { console.warn('[AVATAR] файл не получен'); return; }
+    console.log('[AVATAR] файл:', file.name, file.type, file.size);
     if (!file.type.startsWith('image/')) { showToast('Выберите изображение'); return; }
     if (file.size > 8 * 1024 * 1024) { showToast('Файл больше 8 МБ'); return; }
 
@@ -990,13 +978,10 @@ async function handleAvatarFile(file) {
                 currentUser = firebaseAuth.currentUser;
             } catch (err) {
                 console.warn('[Avatar upload]', err);
-                showToast('Сохранено локально, облако недоступно');
             }
         }
 
         updateProfileUI();
-        const previewEl = document.getElementById('avatarPreview');
-        if (previewEl) previewEl.innerHTML = `<img src="${dataUrl}" alt="">`;
         showToast('Аватар обновлён');
     } catch (err) {
         console.error('[Avatar]', err);
@@ -1005,12 +990,14 @@ async function handleAvatarFile(file) {
 }
 
 document.getElementById('avatarInput').addEventListener('change', async (e) => {
+    console.log('[AVATAR] change сработал, файлов:', e.target.files.length);
     const file = e.target.files && e.target.files[0];
     e.target.value = '';
     await handleAvatarFile(file);
 });
 
 document.getElementById('cameraInput').addEventListener('change', async (e) => {
+    console.log('[AVATAR-CAM] change сработал, файлов:', e.target.files.length);
     const file = e.target.files && e.target.files[0];
     e.target.value = '';
     await handleAvatarFile(file);
@@ -1019,9 +1006,7 @@ document.getElementById('cameraInput').addEventListener('change', async (e) => {
 async function removeAvatar() {
     if (!confirm('Удалить аватар?')) return;
     closeAvatarModal();
-
     await removeLocalAvatar();
-
     if (currentUser) {
         try {
             if (firebaseStorage) {
@@ -1032,7 +1017,6 @@ async function removeAvatar() {
             currentUser = firebaseAuth.currentUser;
         } catch (e) { console.warn('[Avatar remove]', e); }
     }
-
     updateProfileUI();
     showToast('Аватар удалён');
 }
@@ -2003,7 +1987,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateProfileUI();
     }
     document.getElementById('wheelFab').classList.add('show');
-    console.log('[VPN Keys] v2.5 + avatar overlay input fix loaded');
+    console.log('[VPN Keys] v2.5 avatar fix loaded');
 });
 </script>
 </body>
