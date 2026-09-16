@@ -63,7 +63,6 @@
   <div class="sub" style="margin-top:20px">Старт через <span id="countdown">5</span>с</div>
 </div>
 
-<!-- Firebase SDK (compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -72,7 +71,7 @@
 (() => {
 'use strict';
 
-/* ====== ТВОЙ FIREBASE CONFIG (уже подставлен) ====== */
+/* ====== ТВОЙ FIREBASE CONFIG ====== */
 const firebaseConfig = {
   apiKey: "AIzaSyB0uaLhHrYjWblrCBLTPx7mF_OmUhhld70",
   authDomain: "br-game-1f919.firebaseapp.com",
@@ -82,7 +81,7 @@ const firebaseConfig = {
   messagingSenderId: "758598814466",
   appId: "1:758598814466:web:85779913ac960b18a2901b"
 };
-/* =================================================== */
+/* ================================== */
 
 /* ============ SETUP ============ */
 const canvas = document.getElementById('c');
@@ -107,8 +106,11 @@ const ZONE_DPS = 7;
 const BOTS_COUNT = 29;
 const JOY_R = 80;
 const PLAYER_SPEED = 190;
-const SYNC_INTERVAL = 90;
+const SYNC_INTERVAL = 100;      // мс между записью своей позиции
 const INTERP_SPEED = 14;
+const START_DELAY = 6000;       // мс до старта матча (обратный отсчёт)
+const SHOT_MAX_AGE = 2500;      // мс — старые выстрелы игнорируем
+const LOOT_COUNT = 60;
 
 const WEAPONS = {
   pistol:  { name:'PISTOL',  dmg:12, rate:0.28, spread:0.06, speed:750,  ammo:12, reload:1.1, color:'#ffd166', pellets:1 },
@@ -117,6 +119,21 @@ const WEAPONS = {
   rifle:   { name:'RIFLE',   dmg:24, rate:0.5,  spread:0.02, speed:1050, ammo:15, reload:1.6, color:'#4cc9f0', pellets:1 },
 };
 const WEAPON_KEYS = Object.keys(WEAPONS);
+
+/* ============ ДЕТЕРМИНИРОВАННЫЙ РАНДОМ ============ */
+function hashStr(s){
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function mulberry32(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
 
 /* ============ STATE ============ */
 let player, bots, bullets, loot, particles, killFeed, zone;
@@ -134,8 +151,18 @@ let lastSync = 0;
 let myName = 'PLAYER';
 
 let db = null, auth = null;
+
+/* серверное время */
+let serverOffset = 0;
+const serverNow = () => Date.now() + serverOffset;
+
+/* онлайн-состояние матча */
+let matchStartAt = 0;
+let takenLoot = new Set();
+let sawOthers = false;
+
 function initFirebase(){
-  firebase.initializeApp(firebaseConfig);
+  if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
   db = firebase.database();
 }
@@ -154,8 +181,26 @@ function makeEntity(x, y, isBot, name){
   };
 }
 
+function spawnPointFor(uid){
+  const h = hashStr((roomId || '') + uid);
+  const ang = ((h % 1024) / 1024) * Math.PI * 2;
+  const rad = 250 + ((h >>> 10) % 700);
+  return { x: WORLD/2 + Math.cos(ang)*rad, y: WORLD/2 + Math.sin(ang)*rad };
+}
+
 function resetGame(){
-  player = makeEntity(WORLD/2 + rand(-100,100), WORLD/2 + rand(-100,100), false, 'YOU');
+  let px, py;
+  if (netMode === 'online'){
+    const sp = spawnPointFor(myUid);
+    px = sp.x; py = sp.y;
+  } else {
+    px = WORLD/2 + rand(-100,100);
+    py = WORLD/2 + rand(-100,100);
+  }
+
+  player = makeEntity(px, py, false, myName);
+  player.uid = myUid;
+
   bots = [];
   if (netMode === 'offline'){
     for (let i = 0; i < BOTS_COUNT; i++){
@@ -166,8 +211,14 @@ function resetGame(){
       bots.push(b);
     }
   }
+
   bullets = []; loot = []; particles = []; killFeed = [];
-  if (netMode === 'offline') for (let i = 0; i < 55; i++) spawnLoot();
+  sawOthers = false;
+  takenLoot = new Set();
+
+  if (netMode === 'offline') spawnLootRandom(55);
+  else spawnLootSeeded(roomId, LOOT_COUNT);
+
   zone = { x: WORLD/2, y: WORLD/2, r: ZONE_START_R, targetR: ZONE_END_R };
   time = 0;
   gameState = 'playing';
@@ -175,7 +226,7 @@ function resetGame(){
 }
 
 function updateAlive(){
-  let n = player && player.alive ? 1 : 0;
+  let n = (player && player.alive) ? 1 : 0;
   if (netMode === 'online'){
     for (const e of remotePlayers.values()) if (e.alive) n++;
   } else {
@@ -184,22 +235,54 @@ function updateAlive(){
   aliveCount = n;
 }
 
-function spawnLoot(){
-  const r = Math.random();
-  if (r < 0.22) loot.push({ x: rand(120, WORLD-120), y: rand(120, WORLD-120), type:'health', r:12 });
-  else {
-    const wk = WEAPON_KEYS[Math.floor(Math.random()*WEAPON_KEYS.length)];
-    loot.push({ x: rand(120, WORLD-120), y: rand(120, WORLD-120), type:'weapon', weaponKey: wk, r:14 });
+function spawnLootRandom(n){
+  for (let i = 0; i < n; i++){
+    const id = 'L' + i;
+    if (Math.random() < 0.22)
+      loot.push({ id, x: rand(120, WORLD-120), y: rand(120, WORLD-120), type:'health', r:12 });
+    else {
+      const wk = WEAPON_KEYS[Math.floor(Math.random()*WEAPON_KEYS.length)];
+      loot.push({ id, x: rand(120, WORLD-120), y: rand(120, WORLD-120), type:'weapon', weaponKey: wk, r:14 });
+    }
+  }
+}
+
+/* одинаковый лут у всех игроков комнаты */
+function spawnLootSeeded(seed, n){
+  const rnd = mulberry32(hashStr('loot:' + seed));
+  for (let i = 0; i < n; i++){
+    const id = 'L' + i;
+    const roll = rnd();
+    const x = 120 + rnd() * (WORLD - 240);
+    const y = 120 + rnd() * (WORLD - 240);
+    if (takenLoot.has(id)) continue;
+    if (roll < 0.22){
+      loot.push({ id, x, y, type:'health', r:12 });
+    } else {
+      const wk = WEAPON_KEYS[Math.floor(rnd()*WEAPON_KEYS.length)];
+      loot.push({ id, x, y, type:'weapon', weaponKey: wk, r:14 });
+    }
+  }
+}
+
+function removeLootById(id){
+  const s = String(id);
+  for (let i = loot.length - 1; i >= 0; i--){
+    if (String(loot[i].id) === s) loot.splice(i, 1);
   }
 }
 
 function killEntity(ent, killer){
-  if (!ent.alive) return;
+  if (!ent || !ent.alive) return;
   ent.alive = false;
-  if (killer && killer !== ent) killer.kills++;
+  if (killer && killer !== ent) killer.kills = (killer.kills || 0) + 1;
 
-  loot.push({ x: ent.x, y: ent.y, type:'weapon', weaponKey: ent.weaponKey, r:14 });
-  if (Math.random() < 0.6) loot.push({ x: ent.x + rand(-28,28), y: ent.y + rand(-28,28), type:'health', r:12 });
+  /* лут с трупа только в оффлайне (в онлайне лут общий и детерминированный) */
+  if (netMode === 'offline'){
+    loot.push({ id:'D'+Math.random(), x: ent.x, y: ent.y, type:'weapon', weaponKey: ent.weaponKey, r:14 });
+    if (Math.random() < 0.6)
+      loot.push({ id:'D'+Math.random(), x: ent.x + rand(-28,28), y: ent.y + rand(-28,28), type:'health', r:12 });
+  }
 
   const kname = killer ? killer.name : 'ZONE';
   killFeed.push({ text: `${kname} → ${ent.name}`, t: 4 });
@@ -208,8 +291,9 @@ function killEntity(ent, killer){
   for (let i = 0; i < 12; i++)
     particles.push({ x:ent.x, y:ent.y, vx: rand(-120,120), vy: rand(-120,120), life: 0.6, color:'#ff5a5a' });
 
-  if (netMode === 'online' && ent.uid === myUid && db) {
-    db.ref(`rooms/${roomId}/players/${myUid}`).update({ alive:false, hp:0 });
+  /* сообщаем серверу о своей смерти */
+  if (netMode === 'online' && ent === player && db && roomId && myUid){
+    db.ref(`rooms/${roomId}/players/${myUid}`).update({ alive:false, hp:0 }).catch(()=>{});
   }
 }
 
@@ -269,6 +353,8 @@ const errorEl    = document.getElementById('lobbyError');
 const waitRoomEl = document.getElementById('waitingRoom');
 const countdownEl = document.getElementById('countdown');
 
+let countdownTimer = null;
+
 document.getElementById('btnBots').onclick = () => {
   netMode = 'offline';
   lobbyEl.classList.add('hidden');
@@ -282,16 +368,39 @@ document.getElementById('btnOnline').onclick = async () => {
     errorEl.textContent = 'Код: 4-8 символов (A-Z, 0-9)';
     return;
   }
+
   try {
     lobbyEl.classList.add('hidden');
     connectEl.classList.remove('hidden');
+
     if (!db) initFirebase();
     const cred = await auth.signInAnonymously();
     myUid = cred.user.uid;
     myName = 'P' + myUid.substring(0, 4).toUpperCase();
 
+    /* серверное время (чтобы у всех был одинаковый отсчёт) */
+    serverOffset = await new Promise(res => {
+      const to = setTimeout(() => res(0), 2000);
+      db.ref('.info/serverTimeOffset').once('value', s => {
+        clearTimeout(to); res(s.val() || 0);
+      }, () => { clearTimeout(to); res(0); });
+    });
+
     if (!code) code = 'R' + Math.random().toString(36).substring(2, 7).toUpperCase();
     roomId = code;
+
+    /* мета комнаты: общий старт матча */
+    const metaRef = db.ref(`rooms/${roomId}/meta`);
+    const first = await metaRef.once('value');
+    if (!first.val() || !first.val().startAt){
+      await metaRef.transaction(cur => {
+        if (cur === null) return { startAt: Date.now() + serverOffset + START_DELAY };
+        return undefined; // уже создано кем-то другим — отменяем
+      });
+    }
+    const metaSnap = await metaRef.once('value');
+    const meta = metaSnap.val() || {};
+    matchStartAt = meta.startAt || (Date.now() + serverOffset + START_DELAY);
 
     await joinRoom();
 
@@ -299,49 +408,71 @@ document.getElementById('btnOnline').onclick = async () => {
     waitingEl.classList.remove('hidden');
     waitRoomEl.textContent = code;
 
-    let cd = 5;
-    countdownEl.textContent = cd;
-    const iv = setInterval(() => {
-      cd--;
-      countdownEl.textContent = cd;
-      if (cd <= 0){
-        clearInterval(iv);
-        waitingEl.classList.add('hidden');
-        netMode = 'online';
-        resetGame();
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((matchStartAt - serverNow()) / 1000));
+      countdownEl.textContent = left;
+      if (left <= 0){
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+        startOnlineMatch();
       }
-    }, 1000);
+    };
+    tick();
+    countdownTimer = setInterval(tick, 120);
+
   } catch (err){
     connectEl.classList.add('hidden');
     lobbyEl.classList.remove('hidden');
-    errorEl.textContent = 'Ошибка: ' + (err.message || err.code);
+    errorEl.textContent = 'Ошибка: ' + (err.message || err.code || err);
     console.error(err);
   }
 };
 
+function startOnlineMatch(){
+  waitingEl.classList.add('hidden');
+  netMode = 'online';
+  resetGame();
+  player.uid = myUid;
+  player.name = myName;
+
+  /* мгновенно публикуем своё состояние */
+  db.ref(`rooms/${roomId}/players/${myUid}`).update({
+    x: Math.round(player.x), y: Math.round(player.y),
+    hp: 100, weapon: 'pistol', alive: true, name: myName, kills: 0,
+  }).catch(()=>{});
+
+  setupGameListeners();
+}
+
 function backToMenu(){
+  if (countdownTimer){ clearInterval(countdownTimer); countdownTimer = null; }
+  waitingEl.classList.add('hidden');
+  connectEl.classList.add('hidden');
+
   for (const l of listeners){
     try { l.ref.off(l.type, l.cb); } catch(e){}
   }
   listeners = [];
   remotePlayers.clear();
+  takenLoot = new Set();
+
   if (netMode === 'online' && db && roomId && myUid){
-    db.ref(`rooms/${roomId}/players/${myUid}`).remove();
+    db.ref(`rooms/${roomId}/players/${myUid}`).remove().catch(()=>{});
   }
+
+  netMode = 'offline';
   gameState = 'menu';
   lobbyEl.classList.remove('hidden');
   roomInput.value = '';
 }
 
-/* ============ NETWORK ============ */
+/* ============ NETWORK: присутствие в комнате ============ */
 async function joinRoom(){
-  if (!player) player = makeEntity(WORLD/2, WORLD/2, false, myName);
+  const sp = spawnPointFor(myUid);
   const me = {
-    x: Math.round(player.x),
-    y: Math.round(player.y),
-    angle: 0, hp: 100, weapon: 'pistol', alive: true,
+    x: Math.round(sp.x), y: Math.round(sp.y),
+    angle: 0, hp: 100, weapon: 'pistol', alive: true, kills: 0,
     name: myName,
-    joinedAt: firebase.database.ServerValue.TIMESTAMP,
   };
 
   const myRef = db.ref(`rooms/${roomId}/players/${myUid}`);
@@ -352,10 +483,13 @@ async function joinRoom(){
   const pCb = playersRef.on('value', snap => {
     const data = snap.val() || {};
     const seen = new Set();
+
     for (const uid in data){
       if (uid === myUid) continue;
       seen.add(uid);
       const p = data[uid];
+      if (!p || typeof p.x !== 'number') continue;
+
       let e = remotePlayers.get(uid);
       if (!e){
         e = makeEntity(p.x, p.y, false, p.name || uid.substring(0,4));
@@ -369,41 +503,51 @@ async function joinRoom(){
         e.alive = p.alive !== false;
         remotePlayers.set(uid, e);
       } else {
-        e.targetX = p.x; e.targetY = p.y;
+        e.targetX = p.x;
+        e.targetY = p.y;
         e.targetAngle = p.angle || 0;
         e.hp = p.hp != null ? p.hp : e.hp;
         e.weaponKey = p.weapon || e.weaponKey;
         e.weapon = WEAPONS[e.weaponKey] || e.weapon;
         const wasAlive = e.alive;
         e.alive = p.alive !== false;
-        if (wasAlive && !e.alive){
+        if (wasAlive && !e.alive && gameState === 'playing'){
           killFeed.push({ text: `${e.name} устранён`, t: 4 });
           if (killFeed.length > 4) killFeed.shift();
         }
         e.name = p.name || e.name;
       }
     }
+
     for (const uid of [...remotePlayers.keys()]){
       if (!seen.has(uid)){
         const gone = remotePlayers.get(uid);
-        if (gone && gone.alive) killFeed.push({ text: `${gone.name} покинул игру`, t: 4 });
+        if (gone && gone.alive && gameState === 'playing'){
+          killFeed.push({ text: `${gone.name} покинул игру`, t: 4 });
+          if (killFeed.length > 4) killFeed.shift();
+        }
         remotePlayers.delete(uid);
       }
     }
     updateAlive();
-    if (gameState === 'playing' && player.alive && aliveCount === 1){
-      gameState = 'won';
-    }
   });
   listeners.push({ ref: playersRef, type: 'value', cb: pCb });
+}
 
+/* ============ NETWORK: игровые каналы ============ */
+function setupGameListeners(){
+  /* --- выстрелы --- */
   const shotsRef = db.ref(`rooms/${roomId}/shots`).limitToLast(50);
   const sCb = shotsRef.on('child_added', snap => {
     const s = snap.val();
-    if (!s || s.uid === myUid) { snap.ref.remove(); return; }
+    snap.ref.remove().catch(()=>{});
+    if (!s || !bullets) return;
+    if (s.uid === myUid) return;
+    if (serverNow() - (s.t || 0) > SHOT_MAX_AGE) return;   // старьё — игнор
+
     const w = WEAPONS[s.weaponKey] || WEAPONS.pistol;
-    const p = w.pellets || 1;
-    for (let i = 0; i < p; i++){
+    const n = w.pellets || 1;
+    for (let i = 0; i < n; i++){
       const a = s.angle + rand(-w.spread, w.spread);
       bullets.push({
         x: s.x, y: s.y,
@@ -411,24 +555,45 @@ async function joinRoom(){
         dmg: 0, owner: null, life: 1.0, color: w.color, visual: true,
       });
     }
-    snap.ref.remove();
   });
   listeners.push({ ref: shotsRef, type: 'child_added', cb: sCb });
 
+  /* --- урон по мне --- */
   const dmgRef = db.ref(`rooms/${roomId}/damage/${myUid}`);
   const dCb = dmgRef.on('child_added', snap => {
     const d = snap.val();
-    if (d && player.alive){
-      player.hp -= d.amount;
-      if (player.hp <= 0){
-        player.hp = 0;
-        killEntity(player, { name: d.byName || 'ENEMY', kills:0, uid:null, alive:true });
-        gameState = 'lost';
+    snap.ref.remove().catch(()=>{});
+    if (!d || !player || !player.alive || gameState !== 'playing') return;
+
+    player.hp -= d.amount;
+    if (player.hp <= 0){
+      player.hp = 0;
+      killEntity(player, { name: d.byName || 'ENEMY' });
+      gameState = 'lost';
+      /* начисляем фраг убийце */
+      if (d.by){
+        db.ref(`rooms/${roomId}/players/${d.by}/kills`)
+          .transaction(v => (v || 0) + 1).catch(()=>{});
       }
     }
-    snap.ref.remove();
   });
   listeners.push({ ref: dmgRef, type: 'child_added', cb: dCb });
+
+  /* --- мои фраги (их пишет жертва) --- */
+  const myKillsRef = db.ref(`rooms/${roomId}/players/${myUid}/kills`);
+  const kCb = myKillsRef.on('value', s => {
+    if (player) player.kills = s.val() || 0;
+  });
+  listeners.push({ ref: myKillsRef, type: 'value', cb: kCb });
+
+  /* --- подобранный лут --- */
+  const takenRef = db.ref(`rooms/${roomId}/taken`);
+  const tCb = takenRef.on('child_added', snap => {
+    const id = String(snap.key);
+    takenLoot.add(id);
+    removeLootById(id);
+  });
+  listeners.push({ ref: takenRef, type: 'child_added', cb: tCb });
 }
 
 function syncMyState(){
@@ -440,22 +605,25 @@ function syncMyState(){
     hp: Math.round(player.hp),
     weapon: player.weaponKey,
     alive: player.alive,
-  });
+  }).catch(()=>{});
 }
 
 function sendShot(x, y, angle, weaponKey){
-  if (netMode !== 'online' || !db) return;
+  if (netMode !== 'online' || !db || !player || !player.alive) return;
   db.ref(`rooms/${roomId}/shots`).push({
-    uid: myUid, x: Math.round(x), y: Math.round(y),
-    angle: Math.round(angle*100)/100, weaponKey,
-  });
+    uid: myUid,
+    x: Math.round(x), y: Math.round(y),
+    angle: Math.round(angle*100)/100,
+    weaponKey,
+    t: serverNow(),
+  }).catch(()=>{});
 }
 
 function sendDamage(targetUid, amount){
   if (netMode !== 'online' || !db) return;
   db.ref(`rooms/${roomId}/damage/${targetUid}`).push({
-    amount, by: myUid, byName: myName,
-  });
+    amount, by: myUid, byName: myName, t: serverNow(),
+  }).catch(()=>{});
 }
 
 /* ============ COMBAT ============ */
@@ -464,6 +632,7 @@ function tryFire(ent, dt){
   if (ent.ammo <= 0){ ent.reloading = ent.weapon.reload; return; }
   const w = ent.weapon;
   const p = w.pellets || 1;
+
   for (let i = 0; i < p; i++){
     const a = ent.angle + rand(-w.spread, w.spread);
     bullets.push({
@@ -475,6 +644,7 @@ function tryFire(ent, dt){
   }
   ent.ammo--;
   ent.fireCd = w.rate;
+
   for (let i = 0; i < 3; i++)
     particles.push({
       x: ent.x + Math.cos(ent.angle)*(ent.r+10),
@@ -506,6 +676,7 @@ function updatePlayer(dt){
   if (keys['d'] || keys['arrowright']) dx += 1;
   const m = Math.hypot(dx, dy);
   if (m > 1){ dx /= m; dy /= m; }
+
   player.x += dx * player.speed * dt;
   player.y += dy * player.speed * dt;
   player.x = Math.max(player.r, Math.min(WORLD - player.r, player.x));
@@ -603,7 +774,7 @@ function updateBullets(dt){
     if (b.life <= 0 || b.x < 0 || b.x > WORLD || b.y < 0 || b.y > WORLD){
       bullets.splice(i, 1); continue;
     }
-    if (b.visual) continue;
+    if (b.visual) continue;              // чужие пули — только визуал
 
     let hit = false;
     const targets = [player];
@@ -611,10 +782,10 @@ function updateBullets(dt){
     else for (const e of remotePlayers.values()) targets.push(e);
 
     for (const t of targets){
-      if (!t.alive || t === b.owner) continue;
+      if (!t || !t.alive || t === b.owner) continue;
       if (Math.hypot(t.x - b.x, t.y - b.y) < t.r + 4){
         if (netMode === 'online' && t.uid){
-          sendDamage(t.uid, b.dmg);
+          sendDamage(t.uid, b.dmg);       // урон применяет жертва
         } else {
           t.hp -= b.dmg;
           if (t.hp <= 0) killEntity(t, b.owner);
@@ -633,39 +804,46 @@ function updateLoot(){
   if (!player.alive) return;
   for (let i = loot.length - 1; i >= 0; i--){
     const l = loot[i];
-    if (Math.hypot(player.x - l.x, player.y - l.y) < player.r + l.r + 6){
-      if (l.type === 'health'){
-        if (player.hp >= player.maxHp) continue;
-        player.hp = Math.min(player.maxHp, player.hp + 40);
-        loot.splice(i, 1);
-      } else {
-        if (player.weaponKey === l.weaponKey) continue;
-        player.weapon = WEAPONS[l.weaponKey];
-        player.weaponKey = l.weaponKey;
-        player.ammo = player.weapon.ammo;
-        player.reloading = 0;
-        loot.splice(i, 1);
+    if (Math.hypot(player.x - l.x, player.y - l.y) >= player.r + l.r + 6) continue;
+
+    if (l.type === 'health'){
+      if (player.hp >= player.maxHp) continue;
+      player.hp = Math.min(player.maxHp, player.hp + 40);
+    } else {
+      if (player.weaponKey === l.weaponKey) continue;
+      player.weapon = WEAPONS[l.weaponKey];
+      player.weaponKey = l.weaponKey;
+      player.ammo = player.weapon.ammo;
+      player.reloading = 0;
+    }
+
+    /* сообщаем всем, что предмет забрали */
+    if (netMode === 'online' && l.id != null){
+      const id = String(l.id);
+      if (!takenLoot.has(id)){
+        takenLoot.add(id);
+        db.ref(`rooms/${roomId}/taken/${id}`).set(true).catch(()=>{});
       }
     }
+    loot.splice(i, 1);
   }
 }
 
 function updateZone(dt){
   if (netMode === 'online'){
-    const uids = [myUid, ...remotePlayers.keys()].filter(Boolean).sort();
-    if (uids[0] === myUid){
-      zone.r = Math.max(ZONE_END_R, zone.r - ZONE_SHRINK * dt);
-      db.ref(`rooms/${roomId}/zone`).set({ x: zone.x, y: zone.y, r: Math.round(zone.r) });
-    }
+    /* зона вычисляется у всех одинаково от общего времени старта —
+       никаких записей в базу */
+    const elapsed = Math.max(0, (serverNow() - matchStartAt) / 1000);
+    zone.r = Math.max(ZONE_END_R, ZONE_START_R - ZONE_SHRINK * elapsed);
   } else {
     zone.r = Math.max(ZONE_END_R, zone.r - ZONE_SHRINK * dt);
   }
 
-  if (player.alive){
+  if (player && player.alive){
     const d = Math.hypot(player.x - zone.x, player.y - zone.y);
     if (d > zone.r){
       player.hp -= ZONE_DPS * dt;
-      if (player.hp <= 0) killEntity(player, null);
+      if (player.hp <= 0){ player.hp = 0; killEntity(player, null); }
     }
   }
   if (netMode === 'offline'){
@@ -693,7 +871,7 @@ function updateParticles(dt){
 
 /* ============ CAMERA ============ */
 function updateCamera(){
-  const focus = player && player.alive ? player : { x: zone.x, y: zone.y };
+  const focus = (player && player.alive) ? player : { x: zone.x, y: zone.y };
   cam.x = focus.x - W/2;
   cam.y = focus.y - H/2;
   if (W < WORLD) cam.x = Math.max(0, Math.min(WORLD - W, cam.x));
@@ -904,7 +1082,7 @@ function drawEndScreen(){
   ctx.fillStyle = '#fff';
   ctx.font = '18px sans-serif';
   ctx.fillText('Убийств: ' + player.kills, W/2, H/2 + 20);
-  ctx.fillText('Место: #' + aliveCount, W/2, H/2 + 46);
+  ctx.fillText('Место: #' + Math.max(1, aliveCount), W/2, H/2 + 46);
   ctx.font = 'bold 16px sans-serif';
   ctx.fillStyle = '#4cc9f0';
   ctx.fillText('ТАПНИ, ЧТОБЫ ВЕРНУТЬСЯ В МЕНЮ', W/2, H/2 + 100);
@@ -927,11 +1105,14 @@ function loop(now){
     updateZone(dt);
     updateParticles(dt);
     updateAlive();
+
     if (netMode === 'offline'){
       if (!player.alive) gameState = 'lost';
       else if (aliveCount === 1) gameState = 'won';
     } else {
+      if (aliveCount > 1) sawOthers = true;
       if (!player.alive) gameState = 'lost';
+      else if (sawOthers && aliveCount === 1) gameState = 'won';
     }
 
     if (now - lastSync > SYNC_INTERVAL){
