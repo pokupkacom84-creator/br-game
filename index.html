@@ -15,6 +15,8 @@
             --accent: #6c5ce7;
             --accent-light: #a29bfe;
             --nav-bg: #14141a;
+            --skeleton: #25252f;
+            --skeleton-hi: #30303d;
         }
 
         body.light {
@@ -25,12 +27,12 @@
             --text-dim: #666;
             --text-muted: #999;
             --nav-bg: #ffffff;
+            --skeleton: #ececf0;
+            --skeleton-hi: #f5f5f8;
         }
 
         * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+            margin: 0; padding: 0; box-sizing: border-box;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
@@ -46,48 +48,138 @@
             transition: background 0.2s, color 0.2s;
         }
 
-        /* ===== БАННЕР ОБНОВЛЕНИЙ ===== */
-        .update-banner {
-            display: none;
+        /* ============ AUTH SCREEN ============ */
+        .auth-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 5000;
+            display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 10px 14px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-light));
-            color: #fff;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            animation: slideDown 0.3s ease;
+            justify-content: center;
+            padding: 20px;
+            transition: opacity 0.3s, visibility 0.3s;
         }
 
-        .update-banner.show { display: flex; }
+        .auth-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
 
-        .update-banner svg {
-            width: 18px;
-            height: 18px;
+        .auth-card {
+            width: 100%;
+            max-width: 380px;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 32px 24px;
+        }
+
+        .auth-logo {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .auth-logo svg {
+            width: 32px;
+            height: 32px;
             stroke: #fff;
             fill: none;
-            flex-shrink: 0;
+            stroke-width: 2;
         }
 
-        .update-banner .close-banner {
-            margin-left: auto;
+        .auth-card h2 {
+            font-size: 22px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+
+        .auth-sub {
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .auth-input {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 13px 16px;
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+            margin-bottom: 12px;
+            font-family: inherit;
+            transition: border-color 0.15s;
+        }
+
+        .auth-input:focus { border-color: var(--accent); }
+
+        .auth-btn {
+            width: 100%;
+            padding: 13px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 10px;
+            font-family: inherit;
+            transition: transform 0.15s;
+        }
+
+        .auth-btn:active { transform: scale(0.98); }
+
+        .auth-btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            color: #fff;
+        }
+
+        .auth-btn-secondary {
+            background: var(--card-border);
+            color: var(--text);
+        }
+
+        .auth-link {
+            display: block;
+            width: 100%;
             background: none;
             border: none;
-            color: #fff;
-            font-size: 16px;
-            line-height: 1;
-            padding: 4px 8px;
+            color: var(--accent-light);
+            font-size: 13px;
+            padding: 8px;
             cursor: pointer;
-            opacity: 0.75;
+            text-align: center;
+            font-family: inherit;
         }
 
-        @keyframes slideDown {
-            from { transform: translateY(-100%); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+        .auth-link:hover { text-decoration: underline; }
+
+        .auth-error {
+            background: #e1705515;
+            border: 1px solid #e1705540;
+            color: #e17055;
+            font-size: 12px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            display: none;
         }
 
-        /* ===== ШАПКА ===== */
+        .auth-error.show { display: block; }
+
+        /* ============ ШАПКА ============ */
         .app-header {
             padding: 16px 16px 12px;
             text-align: center;
@@ -114,23 +206,24 @@
             margin-top: 3px;
         }
 
-        /* ===== КОНТЕНТ ===== */
+        /* ============ КОНТЕНТ ============ */
         .content {
             flex: 1;
             overflow-y: auto;
             padding: 0 16px 16px;
             -webkit-overflow-scrolling: touch;
+            position: relative;
         }
 
         .tab-pane { display: none; }
-        .tab-pane.active { display: block; animation: fadeIn 0.2s ease; }
+        .tab-pane.active { display: block; }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(4px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
-        /* ===== ОБЩИЕ ЭЛЕМЕНТЫ ===== */
+        /* ============ ОБЩИЕ ============ */
         .status-bar {
             display: flex;
             align-items: center;
@@ -144,8 +237,7 @@
         }
 
         .status-dot {
-            width: 8px;
-            height: 8px;
+            width: 8px; height: 8px;
             border-radius: 50%;
             background: #fdcb6e;
             margin-right: 8px;
@@ -172,7 +264,7 @@
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.15s;
+            transition: transform 0.15s;
             font-family: inherit;
         }
 
@@ -198,23 +290,10 @@
             gap: 8px;
             margin-bottom: 12px;
         }
-
         .controls .btn { flex: 1; }
 
-        .btn-ping {
-            background: var(--card);
-            border: 1px solid var(--card-border);
-            color: var(--accent-light);
-            flex: 0 0 44px !important;
-            padding: 10px !important;
-        }
-        .btn-ping svg { stroke: var(--accent-light); }
-
         /* Поиск */
-        .search-box {
-            position: relative;
-            margin-bottom: 10px;
-        }
+        .search-box { position: relative; margin-bottom: 10px; }
 
         .search-box input {
             width: 100%;
@@ -231,37 +310,11 @@
 
         .search-box svg {
             position: absolute;
-            left: 12px;
-            top: 50%;
+            left: 12px; top: 50%;
             transform: translateY(-50%);
-            width: 16px;
-            height: 16px;
+            width: 16px; height: 16px;
             stroke: var(--text-muted);
             pointer-events: none;
-        }
-
-        /* Сортировка */
-        .sort-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-
-        .sort-row label {
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        .sort-row select {
-            background: var(--card);
-            border: 1px solid var(--card-border);
-            color: var(--text);
-            border-radius: 8px;
-            padding: 6px 10px;
-            font-size: 12px;
-            outline: none;
-            font-family: inherit;
         }
 
         /* Фильтры */
@@ -273,7 +326,6 @@
             margin-bottom: 12px;
             scrollbar-width: none;
         }
-
         .filter-chips::-webkit-scrollbar { display: none; }
 
         .chip {
@@ -296,7 +348,7 @@
             border-color: transparent;
         }
 
-        /* ===== КАРТОЧКИ КЛЮЧЕЙ ===== */
+        /* ============ КАРТОЧКИ ============ */
         .key-list {
             display: flex;
             flex-direction: column;
@@ -309,6 +361,20 @@
             padding: 14px;
             border: 1px solid var(--card-border);
             position: relative;
+            animation: cardIn 0.3s ease both;
+        }
+
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(12px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .key-card.removing {
+            animation: cardOut 0.3s ease forwards;
+        }
+
+        @keyframes cardOut {
+            to { opacity: 0; transform: scale(0.85); }
         }
 
         .key-card .card-top {
@@ -334,31 +400,6 @@
         .protocol-badge.ss { background: #fdcb6e33; color: #fdcb6e; }
         .protocol-badge.hysteria { background: #a29bfe33; color: #a29bfe; }
 
-        /* Пинг-индикатор */
-        .ping-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 3px 8px;
-            border-radius: 6px;
-            font-size: 10px;
-            font-weight: 700;
-            background: var(--card-border);
-            color: var(--text-dim);
-        }
-
-        .ping-badge .ping-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: currentColor;
-        }
-
-        .ping-badge.good { background: #00b89433; color: #00b894; }
-        .ping-badge.medium { background: #fdcb6e33; color: #fdcb6e; }
-        .ping-badge.bad { background: #e1705533; color: #e17055; }
-        .ping-badge.loading { background: var(--accent-light); color: #fff; opacity: 0.7; }
-
         .fav-btn {
             margin-left: auto;
             background: none;
@@ -371,8 +412,7 @@
         }
 
         .fav-btn svg {
-            width: 20px;
-            height: 20px;
+            width: 20px; height: 20px;
             stroke: var(--text-dim);
             fill: none;
             transition: fill 0.15s, stroke 0.15s;
@@ -402,7 +442,33 @@
         .card-actions { display: flex; gap: 8px; }
         .card-actions .btn { flex: 1; }
 
-        /* ===== НАСТРОЙКИ ===== */
+        /* ============ SKELETON ============ */
+        .skeleton-card {
+            background: var(--card);
+            border-radius: 14px;
+            padding: 14px;
+            border: 1px solid var(--card-border);
+        }
+
+        .sk-line {
+            height: 12px;
+            border-radius: 6px;
+            background: linear-gradient(90deg, var(--skeleton) 0%, var(--skeleton-hi) 50%, var(--skeleton) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            margin-bottom: 10px;
+        }
+
+        .sk-short { width: 30%; }
+        .sk-mid { width: 60%; }
+        .sk-long { width: 90%; }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ============ НАСТРОЙКИ ============ */
         .settings-section {
             background: var(--card);
             border-radius: 14px;
@@ -428,30 +494,17 @@
             border-bottom: 1px solid var(--card-border);
             gap: 12px;
         }
-
         .setting-row:last-child { border-bottom: none; }
 
         .setting-label { flex: 1; }
-
-        .setting-label .name {
-            font-size: 14px;
-            color: var(--text);
-            font-weight: 500;
-        }
-
-        .setting-label .desc {
-            font-size: 11px;
-            color: var(--text-muted);
-            margin-top: 2px;
-        }
+        .setting-label .name { font-size: 14px; color: var(--text); font-weight: 500; }
+        .setting-label .desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
         .switch {
             position: relative;
-            width: 44px;
-            height: 26px;
+            width: 44px; height: 26px;
             flex-shrink: 0;
         }
-
         .switch input { opacity: 0; width: 0; height: 0; }
 
         .slider {
@@ -466,10 +519,8 @@
         .slider::before {
             content: '';
             position: absolute;
-            height: 20px;
-            width: 20px;
-            left: 3px;
-            bottom: 3px;
+            height: 20px; width: 20px;
+            left: 3px; bottom: 3px;
             background: #fff;
             border-radius: 50%;
             transition: 0.2s;
@@ -492,10 +543,9 @@
             max-width: 55%;
             font-family: inherit;
         }
-
         .select-input:focus { border-color: var(--accent); }
 
-        /* Выбор акцента */
+        /* Акцентный цвет */
         .accent-picker {
             display: flex;
             gap: 10px;
@@ -504,22 +554,15 @@
         }
 
         .accent-dot {
-            width: 32px;
-            height: 32px;
+            width: 32px; height: 32px;
             border-radius: 50%;
             border: 2px solid transparent;
             cursor: pointer;
             transition: transform 0.15s, border-color 0.15s;
             position: relative;
         }
-
         .accent-dot:active { transform: scale(0.9); }
-
-        .accent-dot.active {
-            border-color: var(--text);
-            transform: scale(1.1);
-        }
-
+        .accent-dot.active { border-color: var(--text); transform: scale(1.1); }
         .accent-dot.active::after {
             content: '✓';
             position: absolute;
@@ -533,7 +576,7 @@
             text-shadow: 0 1px 2px rgba(0,0,0,0.4);
         }
 
-        /* ===== ПРОФИЛЬ ===== */
+        /* ============ ПРОФИЛЬ ============ */
         .profile-header {
             display: flex;
             align-items: center;
@@ -546,29 +589,29 @@
         }
 
         .avatar {
-            width: 56px;
-            height: 56px;
+            width: 56px; height: 56px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--accent), var(--accent-light));
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
         }
-
         .avatar svg { width: 28px; height: 28px; stroke: #fff; fill: none; stroke-width: 2; }
 
+        .profile-info { flex: 1; overflow: hidden; }
         .profile-info .name {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
             color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-
-        .profile-info .sub {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 3px;
-        }
+        .profile-info .sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
 
         .stats-grid {
             display: grid;
@@ -601,7 +644,7 @@
             letter-spacing: 0.5px;
         }
 
-        /* ===== НИЖНЕЕ МЕНЮ ===== */
+        /* ============ НИЖНЕЕ МЕНЮ ============ */
         .bottom-nav {
             display: flex;
             background: var(--nav-bg);
@@ -628,8 +671,7 @@
         }
 
         .nav-item .icon {
-            width: 22px;
-            height: 22px;
+            width: 22px; height: 22px;
             margin-bottom: 3px;
             stroke: currentColor;
             fill: none;
@@ -643,8 +685,7 @@
 
         .nav-badge {
             position: absolute;
-            top: 6px;
-            right: 50%;
+            top: 6px; right: 50%;
             transform: translateX(18px);
             background: #e17055;
             color: #fff;
@@ -658,10 +699,81 @@
             align-items: center;
             justify-content: center;
         }
-
         .nav-badge.show { display: inline-flex; }
 
-        /* ===== ВСПОМОГАТЕЛЬНОЕ ===== */
+        /* ============ BACK TO TOP ============ */
+        .back-to-top {
+            position: fixed;
+            bottom: 88px;
+            right: 16px;
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: opacity 0.25s, visibility 0.25s, transform 0.25s;
+            z-index: 100;
+        }
+
+        .back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .back-to-top:active { transform: scale(0.9); }
+        .back-to-top svg {
+            width: 20px; height: 20px;
+            stroke: #fff; fill: none; stroke-width: 2.5;
+        }
+
+        /* ============ ОБНОВЛЕНИЕ БАННЕР ============ */
+        .update-banner {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            animation: slideDown 0.3s ease;
+        }
+        .update-banner.show { display: flex; }
+
+        .update-banner svg {
+            width: 18px; height: 18px;
+            stroke: #fff; fill: none;
+            flex-shrink: 0;
+        }
+
+        .update-banner .close-banner {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 16px;
+            line-height: 1;
+            padding: 4px 8px;
+            cursor: pointer;
+            opacity: 0.75;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* ============ ВСПОМОГАТЕЛЬНОЕ ============ */
         .empty-state {
             text-align: center;
             padding: 50px 20px;
@@ -669,8 +781,7 @@
         }
 
         .empty-state .big-icon {
-            width: 48px;
-            height: 48px;
+            width: 48px; height: 48px;
             stroke: var(--text-muted);
             fill: none;
             stroke-width: 1.6;
@@ -680,11 +791,12 @@
 
         .empty-state p { font-size: 13px; line-height: 1.5; }
 
+        /* ============ TOAST ============ */
         .toast {
             position: fixed;
-            bottom: 90px;
+            bottom: -100px;
             left: 50%;
-            transform: translateX(-50%) translateY(80px);
+            transform: translateX(-50%);
             background: #2d2d3a;
             color: #fff;
             padding: 12px 22px;
@@ -692,37 +804,19 @@
             font-size: 13px;
             font-weight: 500;
             box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-            opacity: 0;
-            transition: all 0.3s ease;
             z-index: 999;
             pointer-events: none;
             max-width: 90vw;
             text-align: center;
+            transition: bottom 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55),
+                        opacity 0.3s;
+            opacity: 0;
         }
 
         .toast.show {
+            bottom: 90px;
             opacity: 1;
-            transform: translateX(-50%) translateY(0);
         }
-
-        .loader {
-            display: none;
-            justify-content: center;
-            padding: 30px;
-        }
-
-        .loader.active { display: flex; }
-
-        .spinner {
-            width: 34px;
-            height: 34px;
-            border: 3px solid var(--card-border);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
 
         .error-msg {
             background: #e1705515;
@@ -734,7 +828,6 @@
             margin-bottom: 12px;
             display: none;
         }
-
         .error-msg.show { display: block; }
 
         #copyHelper {
@@ -747,7 +840,31 @@
 </head>
 <body>
 
-    <!-- Баннер новых ключей -->
+    <!-- ============ ЭКРАН АВТОРИЗАЦИИ ============ -->
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/>
+                    <path d="M9 12l2 2 4-4"/>
+                </svg>
+            </div>
+            <h2>Добро пожаловать</h2>
+            <p class="auth-sub">Войдите, чтобы синхронизировать избранное</p>
+
+            <div class="auth-error" id="authError"></div>
+
+            <input type="email" class="auth-input" id="authEmail" placeholder="Email" autocomplete="email">
+            <input type="password" class="auth-input" id="authPassword" placeholder="Пароль" autocomplete="current-password">
+
+            <button class="auth-btn auth-btn-primary" onclick="signIn()">Войти</button>
+            <button class="auth-btn auth-btn-secondary" onclick="signUp()">Создать аккаунт</button>
+            <button class="auth-link" onclick="resetPassword()">Забыли пароль?</button>
+            <button class="auth-link" onclick="continueAsGuest()">Продолжить как гость</button>
+        </div>
+    </div>
+
+    <!-- ============ БАННЕР ============ -->
     <div class="update-banner" id="updateBanner" onclick="applyPendingUpdate()">
         <svg viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/>
@@ -756,7 +873,7 @@
         <button class="close-banner" onclick="event.stopPropagation(); hideUpdateBanner();">✕</button>
     </div>
 
-    <!-- Шапка -->
+    <!-- ============ ШАПКА ============ -->
     <div class="app-header">
         <h1 id="pageTitle">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -768,7 +885,7 @@
         <p id="pageSubtitle">Бесплатные конфигурации</p>
     </div>
 
-    <!-- Контент -->
+    <!-- ============ КОНТЕНТ ============ -->
     <div class="content" id="content">
 
         <!-- ===== ГЛАВНОЕ ===== -->
@@ -793,11 +910,6 @@
                     </svg>
                     <span>Загрузить</span>
                 </button>
-                <button class="btn btn-ping" id="pingBtn" onclick="pingAll()" title="Проверить скорость">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-                    </svg>
-                </button>
                 <button class="btn btn-secondary" onclick="clearKeys()">
                     <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="3 6 5 6 21 6"/>
@@ -814,15 +926,6 @@
                 <input type="text" id="searchInput" placeholder="Поиск по имени сервера..." oninput="applyFilters()">
             </div>
 
-            <div class="sort-row" id="sortRow" style="display:none;">
-                <label>Сортировка:</label>
-                <select id="sortSelect" onchange="changeSort()">
-                    <option value="default">По умолчанию</option>
-                    <option value="speed">По скорости</option>
-                    <option value="name">По имени</option>
-                </select>
-            </div>
-
             <div class="filter-chips" id="filterChips" style="display:none;">
                 <button class="chip active" data-filter="all" onclick="setFilter('all', this)">Все</button>
                 <button class="chip" data-filter="vless" onclick="setFilter('vless', this)">VLESS</button>
@@ -830,10 +933,6 @@
                 <button class="chip" data-filter="vmess" onclick="setFilter('vmess', this)">VMESS</button>
                 <button class="chip" data-filter="trojan" onclick="setFilter('trojan', this)">Trojan</button>
                 <button class="chip" data-filter="ss" onclick="setFilter('ss', this)">SS</button>
-            </div>
-
-            <div class="loader" id="loader">
-                <div class="spinner"></div>
             </div>
 
             <div class="key-list" id="keyList">
@@ -901,16 +1000,6 @@
                 </div>
                 <div class="setting-row">
                     <div class="setting-label">
-                        <div class="name">Уведомления о новых ключах</div>
-                        <div class="desc">Показывать баннер и бейдж</div>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="optNotify" onchange="saveSettings()">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div class="setting-row">
-                    <div class="setting-label">
                         <div class="name">Сохранять ключи</div>
                         <div class="desc">Не терять список при перезапуске</div>
                     </div>
@@ -918,6 +1007,37 @@
                         <input type="checkbox" id="optSaveKeys" onchange="saveSettings()">
                         <span class="slider"></span>
                     </label>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <div class="name">Звук копирования</div>
+                        <div class="desc">Короткий сигнал при копировании</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="optSound" onchange="saveSettings()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="settings-title">Уведомления</div>
+            <div class="settings-section">
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <div class="name">Уведомления о новых ключах</div>
+                        <div class="desc">Показывать баннер и системное уведомление</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="optNotify" onchange="onNotifyToggle()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <div class="name">Системные уведомления</div>
+                        <div class="desc">Разрешить Android-уведомления</div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="requestNotificationPermission()">Разрешить</button>
                 </div>
             </div>
 
@@ -936,30 +1056,12 @@
                 </div>
             </div>
 
-            <div class="settings-title">Обновления</div>
-            <div class="settings-section">
-                <div class="setting-row">
-                    <div class="setting-label">
-                        <div class="name">Проверить сейчас</div>
-                        <div class="desc" id="lastCheckText">Ещё не проверялось</div>
-                    </div>
-                    <button class="btn btn-secondary btn-sm" onclick="checkForUpdates(true)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="23 4 23 10 17 10"/>
-                            <polyline points="1 20 1 14 7 14"/>
-                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-                        </svg>
-                        <span>Проверить</span>
-                    </button>
-                </div>
-            </div>
-
             <div class="settings-title">Данные</div>
             <div class="settings-section">
                 <div class="setting-row">
                     <div class="setting-label">
                         <div class="name">Очистить кэш</div>
-                        <div class="desc">Удаляет сохранённые ключи и статистику</div>
+                        <div class="desc">Удаляет ключи, избранное и статистику</div>
                     </div>
                     <button class="btn btn-secondary btn-sm" onclick="resetAll()">
                         <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -974,7 +1076,7 @@
                         <div class="name">Версия</div>
                         <div class="desc">Текущая сборка</div>
                     </div>
-                    <span style="color:var(--text-muted);font-size:12px;">2.2</span>
+                    <span style="color:var(--text-muted);font-size:12px;">2.3</span>
                 </div>
             </div>
         </div>
@@ -983,15 +1085,15 @@
         <div class="tab-pane" id="tab-profile">
 
             <div class="profile-header">
-                <div class="avatar">
+                <div class="avatar" id="profileAvatar">
                     <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                         <circle cx="12" cy="7" r="4"/>
                     </svg>
                 </div>
                 <div class="profile-info">
-                    <div class="name">Гость</div>
-                    <div class="sub">Локальный профиль</div>
+                    <div class="name" id="profileName">Гость</div>
+                    <div class="sub" id="profileSub">Локальный профиль</div>
                 </div>
             </div>
 
@@ -1009,8 +1111,8 @@
                     <div class="stat-label">В избранном</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value" id="statFastest">—</div>
-                    <div class="stat-label">Быстрейший</div>
+                    <div class="stat-value" id="statProtocols">0</div>
+                    <div class="stat-label">Протоколов</div>
                 </div>
             </div>
 
@@ -1038,10 +1140,27 @@
                         <span>Очистить</span>
                     </button>
                 </div>
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <div class="name">Выйти из аккаунта</div>
+                        <div class="desc" id="logoutDesc">Вы не авторизованы</div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="signOut()">
+                        <span>Выйти</span>
+                    </button>
+                </div>
             </div>
         </div>
 
     </div>
+
+    <!-- Кнопка Наверх -->
+    <button class="back-to-top" id="backToTop" onclick="scrollToTop()">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="19" x2="12" y2="5"/>
+            <polyline points="5 12 12 5 19 12"/>
+        </svg>
+    </button>
 
     <!-- Нижнее меню -->
     <nav class="bottom-nav">
@@ -1072,14 +1191,176 @@
     <div class="toast" id="toast"></div>
     <textarea id="copyHelper" readonly></textarea>
 
+    <!-- Firebase SDK (compat-версия) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
     <script>
+    // ============================================================
+    //  FIREBASE CONFIG
+    // ============================================================
+    const firebaseConfig = {
+        apiKey: "AIzaSyAfNoV7tt_6eP1gRQxLc4Yk5FJzwVxDMQw",
+        authDomain: "game-cd07d.firebaseapp.com",
+        databaseURL: "https://game-cd07d-default-rtdb.firebaseio.com",
+        projectId: "game-cd07d",
+        storageBucket: "game-cd07d.firebasestorage.app",
+        messagingSenderId: "1001558545053",
+        appId: "1:1001558545053:web:fc60d548ff751b0dd13a74",
+        measurementId: "G-WS3H5W90C8"
+    };
+
+    let firebaseReady = false;
+    let firebaseAuth = null;
+    let currentUser = null;
+
+    try {
+        if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+            firebase.initializeApp(firebaseConfig);
+            firebaseAuth = firebase.auth();
+            firebaseReady = true;
+            console.log('[Firebase] Инициализирован');
+        } else {
+            console.warn('[Firebase] Конфиг не заполнен — режим «Гость»');
+        }
+    } catch (e) {
+        console.warn('[Firebase] Ошибка инициализации:', e.message);
+    }
+
+    // ============================================================
+    //  AUTH
+    // ============================================================
+    function showAuthError(msg, isSuccess = false) {
+        const el = document.getElementById('authError');
+        el.textContent = msg;
+        el.classList.add('show');
+        if (isSuccess) {
+            el.style.color = '#00b894';
+            el.style.background = '#00b89415';
+            el.style.borderColor = '#00b89440';
+        } else {
+            el.style.color = '#e17055';
+            el.style.background = '#e1705515';
+            el.style.borderColor = '#e1705540';
+        }
+    }
+
+    function clearAuthError() {
+        const el = document.getElementById('authError');
+        el.classList.remove('show');
+        el.style.color = '';
+        el.style.background = '';
+        el.style.borderColor = '';
+    }
+
+    function authErrorText(code) {
+        const map = {
+            'auth/invalid-email': 'Неверный формат email',
+            'auth/user-not-found': 'Пользователь не найден',
+            'auth/wrong-password': 'Неверный пароль',
+            'auth/email-already-in-use': 'Email уже используется',
+            'auth/weak-password': 'Пароль должен быть минимум 6 символов',
+            'auth/network-request-failed': 'Нет соединения с сетью',
+            'auth/too-many-requests': 'Слишком много попыток, попробуйте позже',
+            'auth/invalid-credential': 'Неверный email или пароль',
+            'auth/unauthorized-domain': 'Домен не авторизован в Firebase',
+            'auth/operation-not-allowed': 'Email/Password не включён в Firebase'
+        };
+        return map[code] || ('Ошибка: ' + code);
+    }
+
+    async function signIn() {
+        clearAuthError();
+        if (!firebaseReady) { showAuthError('Firebase не настроен. Используйте режим «Гость».'); return; }
+        const email = document.getElementById('authEmail').value.trim();
+        const password = document.getElementById('authPassword').value;
+        if (!email || !password) { showAuthError('Введите email и пароль'); return; }
+        try {
+            await firebaseAuth.signInWithEmailAndPassword(email, password);
+        } catch (e) {
+            showAuthError(authErrorText(e.code));
+        }
+    }
+
+    async function signUp() {
+        clearAuthError();
+        if (!firebaseReady) { showAuthError('Firebase не настроен. Используйте режим «Гость».'); return; }
+        const email = document.getElementById('authEmail').value.trim();
+        const password = document.getElementById('authPassword').value;
+        if (!email || !password) { showAuthError('Введите email и пароль'); return; }
+        if (password.length < 6) { showAuthError('Пароль должен быть минимум 6 символов'); return; }
+        try {
+            await firebaseAuth.createUserWithEmailAndPassword(email, password);
+        } catch (e) {
+            showAuthError(authErrorText(e.code));
+        }
+    }
+
+    async function resetPassword() {
+        clearAuthError();
+        if (!firebaseReady) { showAuthError('Firebase не настроен.'); return; }
+        const email = document.getElementById('authEmail').value.trim();
+        if (!email) { showAuthError('Введите email для сброса пароля'); return; }
+        try {
+            await firebaseAuth.sendPasswordResetEmail(email);
+            showAuthError('Письмо для сброса отправлено на ' + email, true);
+        } catch (e) {
+            showAuthError(authErrorText(e.code));
+        }
+    }
+
+    function continueAsGuest() {
+        currentUser = null;
+        document.getElementById('authScreen').classList.add('hidden');
+        updateProfileUI();
+        initAppAfterAuth();
+    }
+
+    async function signOut() {
+        if (!firebaseReady || !currentUser) {
+            document.getElementById('authScreen').classList.remove('hidden');
+            return;
+        }
+        try {
+            await firebaseAuth.signOut();
+            document.getElementById('authScreen').classList.remove('hidden');
+        } catch (e) {
+            showToast('Ошибка выхода: ' + e.message);
+        }
+    }
+
+    function updateProfileUI() {
+        const nameEl = document.getElementById('profileName');
+        const subEl = document.getElementById('profileSub');
+        const avatarEl = document.getElementById('profileAvatar');
+        const logoutDesc = document.getElementById('logoutDesc');
+
+        if (currentUser) {
+            nameEl.textContent = currentUser.email.split('@')[0] || 'Пользователь';
+            subEl.textContent = currentUser.email;
+            avatarEl.innerHTML = (currentUser.email[0] || '?').toUpperCase();
+            avatarEl.style.fontSize = '22px';
+            avatarEl.style.fontWeight = '700';
+            logoutDesc.textContent = 'Вы вошли как ' + currentUser.email;
+        } else {
+            nameEl.textContent = 'Гость';
+            subEl.textContent = 'Локальный профиль';
+            avatarEl.innerHTML = `
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>`;
+            logoutDesc.textContent = 'Вы не авторизованы';
+        }
+    }
+
     // ============================================================
     //  КОНФИГ
     // ============================================================
     const SOURCES = {
-        '26': { url: 'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/main/githubmirror/26.txt', label: 'VPN PACK 1' },
-        '20': { url: 'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/main/githubmirror/20.txt', label: 'VPN PACK 2' },
-        '10': { url: 'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/main/githubmirror/10.txt', label: 'VPN PACK 3' }
+        '26': 'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/main/githubmirror/26.txt',
+        '20': 'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/main/githubmirror/20.txt',
+        '10': 'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/main/githubmirror/10.txt'
     };
 
     const ACCENTS = {
@@ -1092,13 +1373,13 @@
     };
 
     const CHECK_INTERVAL_MS = 5 * 60 * 1000;
-    const PING_TIMEOUT_MS = 2500;
 
     const DEFAULT_SETTINGS = {
         autoLoad: true,
         autoCheck: true,
         notify: true,
         saveKeys: true,
+        sound: true,
         lightTheme: false,
         accent: 'violet',
         source: '26'
@@ -1110,17 +1391,14 @@
     let allKeys = [];
     let filteredKeys = [];
     let currentFilter = 'all';
-    let currentSort = 'default';
     let favorites = [];
     let settings = { ...DEFAULT_SETTINGS };
     let stats = { loaded: 0, copied: 0 };
     let isFetching = false;
     let lastKeysHash = null;
-    let lastCheckTime = 0;
     let checkTimer = null;
-    let keyPings = {};         // {raw: ms | null}
-    let isPinging = false;
-    let pendingUpdate = null;  // { keys: [], hash: '' }
+    let pendingUpdate = null;
+    let appInitialized = false;
 
     // ============================================================
     //  ХРАНИЛИЩЕ
@@ -1129,24 +1407,14 @@
         try {
             const s = localStorage.getItem('vpn_settings');
             if (s) settings = { ...DEFAULT_SETTINGS, ...JSON.parse(s) };
-
             const f = localStorage.getItem('vpn_favorites');
             if (f) favorites = JSON.parse(f);
-
             const st = localStorage.getItem('vpn_stats');
             if (st) stats = { ...stats, ...JSON.parse(st) };
-
             const k = localStorage.getItem('vpn_keys');
             if (k && settings.saveKeys) allKeys = JSON.parse(k);
-
             const h = localStorage.getItem('vpn_hash');
             if (h) lastKeysHash = h;
-
-            const t = localStorage.getItem('vpn_last_check');
-            if (t) lastCheckTime = parseInt(t) || 0;
-
-            const p = localStorage.getItem('vpn_pings');
-            if (p) keyPings = JSON.parse(p);
         } catch (e) {}
     }
 
@@ -1155,6 +1423,7 @@
         settings.autoCheck = document.getElementById('optAutoCheck').checked;
         settings.notify = document.getElementById('optNotify').checked;
         settings.saveKeys = document.getElementById('optSaveKeys').checked;
+        settings.sound = document.getElementById('optSound').checked;
         settings.lightTheme = document.getElementById('optLightTheme').checked;
         settings.source = document.getElementById('optSource').value;
         try { localStorage.setItem('vpn_settings', JSON.stringify(settings)); } catch (e) {}
@@ -1166,51 +1435,20 @@
         document.getElementById('optAutoCheck').checked = settings.autoCheck;
         document.getElementById('optNotify').checked = settings.notify;
         document.getElementById('optSaveKeys').checked = settings.saveKeys;
+        document.getElementById('optSound').checked = settings.sound;
         document.getElementById('optLightTheme').checked = settings.lightTheme;
         document.getElementById('optSource').value = settings.source;
         document.body.classList.toggle('light', settings.lightTheme);
         applyAccent(settings.accent);
-        updateLastCheckText();
     }
 
     function saveFavorites() { try { localStorage.setItem('vpn_favorites', JSON.stringify(favorites)); } catch (e) {} }
     function saveStats() { try { localStorage.setItem('vpn_stats', JSON.stringify(stats)); } catch (e) {} }
-
     function saveKeysToStorage() {
         if (!settings.saveKeys) { try { localStorage.removeItem('vpn_keys'); } catch (e) {} return; }
         try { localStorage.setItem('vpn_keys', JSON.stringify(allKeys)); } catch (e) {}
     }
-
     function saveHash(h) { lastKeysHash = h; try { localStorage.setItem('vpn_hash', h); } catch (e) {} }
-
-    function saveCheckTime(t) {
-        lastCheckTime = t;
-        try { localStorage.setItem('vpn_last_check', String(t)); } catch (e) {}
-        updateLastCheckText();
-    }
-
-    function savePings() {
-        try {
-            // Ограничиваем размер, храним только для существующих ключей
-            const trimmed = {};
-            for (const k of allKeys) {
-                if (keyPings[k.raw] !== undefined) trimmed[k.raw] = keyPings[k.raw];
-            }
-            keyPings = trimmed;
-            localStorage.setItem('vpn_pings', JSON.stringify(keyPings));
-        } catch (e) {}
-    }
-
-    function updateLastCheckText() {
-        const el = document.getElementById('lastCheckText');
-        if (!el) return;
-        if (!lastCheckTime) {
-            el.textContent = 'Ещё не проверялось';
-        } else {
-            const d = new Date(lastCheckTime);
-            el.textContent = 'Последняя: ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-        }
-    }
 
     // ============================================================
     //  ТЕМА / АКЦЕНТ
@@ -1219,9 +1457,7 @@
         const c = ACCENTS[name] || ACCENTS.violet;
         document.documentElement.style.setProperty('--accent', c[0]);
         document.documentElement.style.setProperty('--accent-light', c[1]);
-        document.querySelectorAll('.accent-dot').forEach(d => {
-            d.classList.toggle('active', d.dataset.accent === name);
-        });
+        document.querySelectorAll('.accent-dot').forEach(d => d.classList.toggle('active', d.dataset.accent === name));
     }
 
     function setAccent(name) {
@@ -1238,6 +1474,37 @@
     }
 
     // ============================================================
+    //  УВЕДОМЛЕНИЯ
+    // ============================================================
+    function onNotifyToggle() {
+        settings.notify = document.getElementById('optNotify').checked;
+        saveSettings();
+        if (settings.notify) requestNotificationPermission();
+        else { hideUpdateBanner(); updateNavBadge(false); }
+    }
+
+    function requestNotificationPermission() {
+        try {
+            if (!('Notification' in window)) { showToast('Системные уведомления не поддерживаются'); return; }
+            if (Notification.permission === 'granted') { showToast('Уведомления уже разрешены'); return; }
+            if (Notification.permission === 'denied') { showToast('Разрешите уведомления в настройках Android'); return; }
+            Notification.requestPermission().then(p => {
+                if (p === 'granted') showToast('Уведомления разрешены');
+                else showToast('Уведомления отклонены');
+            });
+        } catch (e) { showToast('Ошибка запроса разрешения'); }
+    }
+
+    function sendSystemNotification(title, body) {
+        try {
+            if (!settings.notify) return;
+            if (!('Notification' in window)) return;
+            if (Notification.permission !== 'granted') return;
+            new Notification(title, { body: body, icon: '/icon.png', badge: '/icon.png' });
+        } catch (e) {}
+    }
+
+    // ============================================================
     //  УТИЛИТЫ
     // ============================================================
     function showToast(msg, duration = 2200) {
@@ -1248,9 +1515,30 @@
         t._timer = setTimeout(() => t.classList.remove('show'), duration);
     }
 
+    function playCopySound() {
+        if (!settings.sound) return;
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.06);
+            gain.gain.setValueAtTime(0.08, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.13);
+        } catch (e) {}
+    }
+
     function copyToClipboard(text) {
         const done = () => {
             showToast('Скопировано');
+            playCopySound();
             stats.copied++;
             saveStats();
             refreshStatsUI();
@@ -1289,23 +1577,6 @@
             if (m) return m[1];
         } catch (e) {}
         return 'Сервер';
-    }
-
-    function extractHost(key) {
-        try {
-            if (key.protocol === 'vmess') {
-                const b64 = key.raw.replace(/^vmess:\/\//i, '').trim();
-                // Может быть с padding или без
-                let clean = b64.replace(/-/g, '+').replace(/_/g, '/');
-                while (clean.length % 4) clean += '=';
-                const json = JSON.parse(atob(clean));
-                if (json.add && json.port) return { host: json.add, port: parseInt(json.port) };
-                return null;
-            }
-            const m = key.raw.match(/@([^:\/?#]+):(\d+)/);
-            if (m) return { host: m[1], port: parseInt(m[2]) };
-        } catch (e) {}
-        return null;
     }
 
     function truncate(s, len = 60) {
@@ -1357,6 +1628,59 @@
     }
 
     // ============================================================
+    //  CONFETTI
+    // ============================================================
+    function launchConfetti() {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9999';
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            document.body.appendChild(canvas);
+            const ctx = canvas.getContext('2d');
+            const colors = ['#6c5ce7', '#a29bfe', '#fdcb6e', '#00b894', '#e17055', '#e84393', '#74b9ff'];
+            const particles = [];
+            const cx = window.innerWidth / 2;
+            const cy = window.innerHeight / 2;
+            for (let i = 0; i < 50; i++) {
+                particles.push({
+                    x: cx + (Math.random() - 0.5) * 60,
+                    y: cy + (Math.random() - 0.5) * 60,
+                    vx: (Math.random() - 0.5) * 14,
+                    vy: (Math.random() - 0.5) * 14 - 5,
+                    size: Math.random() * 6 + 3,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    rotation: Math.random() * 360,
+                    rotSpeed: (Math.random() - 0.5) * 24
+                });
+            }
+            let frame = 0;
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let alive = false;
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.32;
+                    p.vx *= 0.99;
+                    p.rotation += p.rotSpeed;
+                    if (p.y < canvas.height + 30) alive = true;
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rotation * Math.PI / 180);
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                    ctx.restore();
+                });
+                frame++;
+                if (alive && frame < 100) requestAnimationFrame(draw);
+                else canvas.remove();
+            }
+            draw();
+        } catch (e) {}
+    }
+
+    // ============================================================
     //  НАВИГАЦИЯ
     // ============================================================
     function switchTab(tab, el) {
@@ -1373,21 +1697,17 @@
         document.getElementById('pageTitle').querySelector('span').textContent = titles[tab][0];
         document.getElementById('pageSubtitle').textContent = titles[tab][1];
         document.getElementById('content').scrollTop = 0;
+        document.getElementById('backToTop').classList.remove('show');
         if (tab === 'profile') refreshStatsUI();
     }
 
     // ============================================================
-    //  ФИЛЬТРЫ / СОРТИРОВКА
+    //  ФИЛЬТРЫ
     // ============================================================
     function setFilter(f, el) {
         currentFilter = f;
         document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
         if (el) el.classList.add('active');
-        applyFilters();
-    }
-
-    function changeSort() {
-        currentSort = document.getElementById('sortSelect').value;
         applyFilters();
     }
 
@@ -1398,145 +1718,28 @@
             if (q && !k.name.toLowerCase().includes(q) && !k.raw.toLowerCase().includes(q)) return false;
             return true;
         });
-
-        if (currentSort === 'speed') {
-            filteredKeys.sort((a, b) => {
-                const pa = keyPings[a.raw], pb = keyPings[b.raw];
-                if (pa == null && pb == null) return 0;
-                if (pa == null) return 1;
-                if (pb == null) return -1;
-                return pa - pb;
-            });
-        } else if (currentSort === 'name') {
-            filteredKeys.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-        }
         renderKeys();
-    }
-
-    // ============================================================
-    //  ПИНГ
-    // ============================================================
-    function pingHost(host, port) {
-        return new Promise((resolve) => {
-            const start = performance.now();
-            let resolved = false;
-            const done = (val) => {
-                if (resolved) return;
-                resolved = true;
-                resolve(val);
-            };
-            const timeout = setTimeout(() => done(null), PING_TIMEOUT_MS);
-
-            // Используем fetch с no-cors — самый дешёвый способ
-            const ctrl = new AbortController();
-            const t2 = setTimeout(() => ctrl.abort(), PING_TIMEOUT_MS + 200);
-
-            fetch(`https://${host}:${port}/?_=${Date.now()}`, {
-                mode: 'no-cors',
-                cache: 'no-store',
-                signal: ctrl.signal,
-                redirect: 'manual'
-            }).then(() => {
-                clearTimeout(timeout); clearTimeout(t2);
-                done(Math.round(performance.now() - start));
-            }).catch((e) => {
-                clearTimeout(timeout); clearTimeout(t2);
-                // CORS-ошибка = соединение установлено
-                if (e.name !== 'AbortError') {
-                    done(Math.round(performance.now() - start));
-                } else {
-                    done(null);
-                }
-            });
-
-            // Fallback — картинка
-            const img = new Image();
-            img.onload = img.onerror = () => {
-                clearTimeout(timeout); clearTimeout(t2);
-                done(Math.round(performance.now() - start));
-            };
-            setTimeout(() => { img.src = `https://${host}:${port}/favicon.ico?_=${Date.now()}`; }, 50);
-        });
-    }
-
-    async function pingKey(key) {
-        const hp = extractHost(key);
-        if (!hp) return null;
-        try {
-            return await pingHost(hp.host, hp.port);
-        } catch (e) { return null; }
-    }
-
-    async function pingAll() {
-        if (isPinging || allKeys.length === 0) return;
-        isPinging = true;
-        const btn = document.getElementById('pingBtn');
-        btn.style.opacity = '0.5';
-        showToast('Проверка скорости...', 1500);
-
-        // Сбрасываем и показываем лоадер на карточках
-        keyPings = {};
-        renderKeys();
-
-        // Ограничиваем параллельность: 10 в очереди
-        const CONCURRENCY = 10;
-        const queue = [...allKeys];
-        let completed = 0;
-
-        async function worker() {
-            while (queue.length) {
-                const key = queue.shift();
-                if (!key) break;
-                const ms = await pingKey(key);
-                keyPings[key.raw] = ms;
-                completed++;
-                if (completed % 20 === 0 || completed === allKeys.length) {
-                    savePings();
-                    updatePingUI();
-                }
-            }
-        }
-
-        const workers = [];
-        for (let i = 0; i < Math.min(CONCURRENCY, allKeys.length); i++) workers.push(worker());
-        await Promise.all(workers);
-
-        savePings();
-        isPinging = false;
-        btn.style.opacity = '1';
-        renderKeys();
-        refreshStatsUI();
-
-        const ok = Object.values(keyPings).filter(v => v != null).length;
-        showToast(`Проверено: ${ok} из ${allKeys.length}`, 2500);
-    }
-
-    function updatePingUI() {
-        // Обновляем только бейджи пинга без полного ре-рендера
-        document.querySelectorAll('.key-card').forEach(card => {
-            const raw = card.dataset.raw;
-            if (!raw) return;
-            const badge = card.querySelector('.ping-badge');
-            if (!badge) return;
-            const ms = keyPings[raw];
-            badge.className = 'ping-badge ' + pingClass(ms);
-            badge.innerHTML = `<span class="ping-dot"></span>${ms == null ? '—' : ms + ' мс'}`;
-        });
-    }
-
-    function pingClass(ms) {
-        if (ms == null) return '';
-        if (ms < 100) return 'good';
-        if (ms < 300) return 'medium';
-        return 'bad';
     }
 
     // ============================================================
     //  ЗАГРУЗКА
     // ============================================================
     function getSourceUrl() {
-        const s = SOURCES[settings.source] || SOURCES['26'];
-        return s.url;
+        return SOURCES[settings.source] || SOURCES['26'];
+    }
+
+    function showSkeletons() {
+        const list = document.getElementById('keyList');
+        let html = '';
+        for (let i = 0; i < 5; i++) {
+            html += `
+                <div class="skeleton-card">
+                    <div class="sk-line sk-short"></div>
+                    <div class="sk-line sk-long"></div>
+                    <div class="sk-line sk-mid"></div>
+                </div>`;
+        }
+        list.innerHTML = html;
     }
 
     async function fetchKeys() {
@@ -1544,20 +1747,19 @@
         isFetching = true;
 
         const btn = document.getElementById('fetchBtn');
-        const loader = document.getElementById('loader');
         const errEl = document.getElementById('errorMsg');
         const dot = document.getElementById('statusDot');
         const st = document.getElementById('statusText');
 
         btn.disabled = true;
         btn.querySelector('span').textContent = 'Загрузка...';
-        loader.classList.add('active');
         errEl.classList.remove('show');
         dot.className = 'status-dot';
         st.textContent = 'Загрузка...';
+        showSkeletons();
 
         try {
-            const url = getSourceUrl() + (getSourceUrl().includes('?') ? '&' : '?') + 't=' + Date.now();
+            const url = getSourceUrl() + '?t=' + Date.now();
             const ctrl = new AbortController();
             const t = setTimeout(() => ctrl.abort(), 20000);
             const resp = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
@@ -1567,12 +1769,10 @@
             const text = await resp.text();
             allKeys = parseKeys(text);
             saveHash(simpleHash(text));
-            saveCheckTime(Date.now());
             stats.loaded = allKeys.length;
             saveStats();
             saveKeysToStorage();
 
-            loader.classList.remove('active');
             btn.disabled = false;
             btn.querySelector('span').textContent = 'Загрузить';
             isFetching = false;
@@ -1594,7 +1794,6 @@
             showToast(`Загружено ${allKeys.length} ключей`);
 
         } catch (e) {
-            loader.classList.remove('active');
             btn.disabled = false;
             btn.querySelector('span').textContent = 'Загрузить';
             isFetching = false;
@@ -1603,37 +1802,35 @@
             errEl.textContent = 'Не удалось загрузить: ' + (e.name === 'AbortError' ? 'тайм-аут' : e.message);
             errEl.classList.add('show');
             updateUIVisibility();
+            renderKeys();
         }
     }
 
     // ============================================================
-    //  ПРОВЕРКА ОБНОВЛЕНИЙ + УВЕДОМЛЕНИЯ
+    //  ПРОВЕРКА ОБНОВЛЕНИЙ
     // ============================================================
-    async function checkForUpdates(manual = false) {
+    async function checkForUpdates() {
         if (isFetching) return;
         try {
-            const url = getSourceUrl() + (getSourceUrl().includes('?') ? '&' : '?') + 't=' + Date.now();
+            const url = getSourceUrl() + '?t=' + Date.now();
             const ctrl = new AbortController();
             const t = setTimeout(() => ctrl.abort(), 15000);
             const resp = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
             clearTimeout(t);
-            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            if (!resp.ok) return;
 
             const text = await resp.text();
             const newHash = simpleHash(text);
-            saveCheckTime(Date.now());
 
             if (lastKeysHash && newHash !== lastKeysHash) {
                 const parsed = parseKeys(text);
                 const oldCount = allKeys.length;
 
-                // Сохраняем как ожидающее обновление (если пользователь не отключил уведомления)
                 if (settings.notify) {
-                    pendingUpdate = { keys: parsed, hash: newHash, count: parsed.length, old: oldCount };
+                    pendingUpdate = { keys: parsed, hash: newHash };
                     showUpdateBanner(`Доступны новые ключи: ${parsed.length}`);
-                    triggerSystemNotification(parsed.length);
+                    sendSystemNotification('VPN Keys', `Доступны новые ключи: ${parsed.length}`);
                 } else {
-                    // Тихая замена
                     allKeys = parsed;
                     saveHash(newHash);
                     stats.loaded = allKeys.length;
@@ -1642,23 +1839,16 @@
                     updateUIVisibility();
                     applyFilters();
                     renderFavorites();
-                    if (manual) showToast(`Обновлено: ${oldCount} → ${allKeys.length}`);
                 }
             } else if (!lastKeysHash) {
                 saveHash(newHash);
-                if (manual) showToast('Данные актуальны');
-            } else {
-                if (manual) showToast('Обновлений нет');
             }
-        } catch (e) {
-            if (manual) showToast('Не удалось проверить: ' + e.message, 3000);
-        }
+        } catch (e) {}
     }
 
     function showUpdateBanner(text) {
-        const b = document.getElementById('updateBanner');
         document.getElementById('updateBannerText').textContent = text;
-        b.classList.add('show');
+        document.getElementById('updateBanner').classList.add('show');
         updateNavBadge(true);
     }
 
@@ -1666,19 +1856,14 @@
         document.getElementById('updateBanner').classList.remove('show');
     }
 
-    function updateNavBadge(show, count = 0) {
+    function updateNavBadge(show) {
         const badge = document.getElementById('navBadge');
-        if (show) {
-            badge.textContent = count > 0 ? count : '•';
-            badge.classList.add('show');
-        } else {
-            badge.classList.remove('show');
-        }
+        if (show) { badge.textContent = '•'; badge.classList.add('show'); }
+        else badge.classList.remove('show');
     }
 
     function applyPendingUpdate() {
         if (!pendingUpdate) return;
-        const oldCount = allKeys.length;
         allKeys = pendingUpdate.keys;
         saveHash(pendingUpdate.hash);
         stats.loaded = allKeys.length;
@@ -1690,40 +1875,18 @@
         updateUIVisibility();
         applyFilters();
         renderFavorites();
-        showToast(`Обновлено: ${oldCount} → ${allKeys.length}`);
-    }
-
-    function triggerSystemNotification(count) {
-        // Попытка использовать Notification API
-        try {
-            if (!('Notification' in window)) return;
-            if (Notification.permission === 'granted') {
-                new Notification('VPN Keys', {
-                    body: `Доступны новые ключи: ${count}`,
-                    icon: '/icon.png'
-                });
-            } else if (Notification.permission !== 'denied') {
-                Notification.requestPermission().then(p => {
-                    if (p === 'granted') {
-                        new Notification('VPN Keys', { body: `Доступны новые ключи: ${count}` });
-                    }
-                });
-            }
-        } catch (e) { /* WebView может не поддерживать */ }
+        showToast('Обновлено');
     }
 
     function scheduleAutoCheck() {
         if (checkTimer) clearInterval(checkTimer);
-        if (settings.autoCheck) {
-            checkTimer = setInterval(() => checkForUpdates(false), CHECK_INTERVAL_MS);
-        }
+        if (settings.autoCheck) checkTimer = setInterval(checkForUpdates, CHECK_INTERVAL_MS);
     }
 
     function updateUIVisibility() {
         const has = allKeys.length > 0;
         document.getElementById('searchWrap').style.display = has ? 'block' : 'none';
         document.getElementById('filterChips').style.display = has ? 'flex' : 'none';
-        document.getElementById('sortRow').style.display = has ? 'flex' : 'none';
         document.getElementById('keyCount').textContent = allKeys.length;
     }
 
@@ -1754,24 +1917,22 @@
             return;
         }
         let html = '';
-        for (const k of filteredKeys) html += buildKeyCard(k);
+        for (let i = 0; i < filteredKeys.length; i++) {
+            const k = filteredKeys[i];
+            const delay = Math.min(i * 30, 600);
+            html += buildKeyCard(k, false, delay);
+        }
         list.innerHTML = html;
     }
 
-    function buildKeyCard(k) {
-        const isFavored = favorites.includes(k.raw);
+    function buildKeyCard(k, isFav, delay = 0) {
+        const isFavored = isFav || favorites.includes(k.raw);
         const enc = btoa(encodeURIComponent(k.raw));
-        const ms = keyPings[k.raw];
-        const pClass = pingClass(ms);
-        const pText = isPinging && ms === undefined ? '…' : (ms == null ? '—' : ms + ' мс');
-        const rawAttr = esc(k.raw);
-
         return `
-            <div class="key-card" data-raw="${rawAttr.replace(/"/g, '&quot;')}">
+            <div class="key-card" data-raw="${esc(k.raw)}" style="animation-delay:${delay}ms">
                 <div class="card-top">
                     <span class="protocol-badge ${k.protocol}">${k.protocol.toUpperCase()}</span>
-                    <span class="ping-badge ${pClass}"><span class="ping-dot"></span>${pText}</span>
-                    <button class="fav-btn ${isFavored ? 'active' : ''}" onclick="toggleFavorite('${enc}')">
+                    <button class="fav-btn ${isFavored ? 'active' : ''}" onclick="toggleFavorite('${enc}', this)">
                         <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
                             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                         </svg>
@@ -1787,40 +1948,37 @@
                         </svg>
                         <span>Скопировать</span>
                     </button>
-                    <button class="btn btn-secondary btn-sm" onclick="pingOne('${enc}')" style="flex:0 0 44px;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-                        </svg>
-                    </button>
                 </div>
             </div>`;
-    }
-
-    async function pingOne(encoded) {
-        let raw;
-        try { raw = decodeURIComponent(atob(encoded)); } catch (e) { return; }
-        const key = allKeys.find(k => k.raw === raw);
-        if (!key) return;
-        showToast('Проверка...', 800);
-        const ms = await pingKey(key);
-        keyPings[key.raw] = ms;
-        savePings();
-        updatePingUI();
     }
 
     function copyKeyByRaw(encoded) {
         try { copyToClipboard(decodeURIComponent(atob(encoded))); } catch (e) {}
     }
 
-    function toggleFavorite(encoded) {
+    function toggleFavorite(encoded, btnEl) {
         let raw;
         try { raw = decodeURIComponent(atob(encoded)); } catch (e) { return; }
         const idx = favorites.indexOf(raw);
-        if (idx === -1) { favorites.push(raw); showToast('Добавлено в избранное'); }
-        else { favorites.splice(idx, 1); showToast('Убрано из избранного'); }
+
+        if (idx === -1) {
+            favorites.push(raw);
+            showToast('Добавлено в избранное');
+            playCopySound();
+            launchConfetti();
+            if (btnEl) btnEl.classList.add('active');
+        } else {
+            favorites.splice(idx, 1);
+            showToast('Убрано из избранного');
+            if (btnEl) {
+                const card = btnEl.closest('.key-card');
+                if (card) {
+                    card.classList.add('removing');
+                    setTimeout(() => { applyFilters(); renderFavorites(); }, 300);
+                } else { applyFilters(); renderFavorites(); }
+            } else { applyFilters(); renderFavorites(); }
+        }
         saveFavorites();
-        applyFilters();
-        renderFavorites();
         refreshStatsUI();
     }
 
@@ -1837,29 +1995,33 @@
             return;
         }
         let html = '';
-        for (const raw of favorites) {
+        for (let i = 0; i < favorites.length; i++) {
+            const raw = favorites[i];
             const proto = detectProtocol(raw);
             const name = extractName(raw);
-            html += buildKeyCard({ raw, protocol: proto, name });
+            html += buildKeyCard({ raw, protocol: proto, name }, true, Math.min(i * 30, 400));
         }
         list.innerHTML = html;
     }
 
     function clearFavorites() {
         if (!confirm('Удалить все избранные ключи?')) return;
-        favorites = [];
-        saveFavorites();
-        applyFilters();
-        renderFavorites();
-        refreshStatsUI();
-        showToast('Избранное очищено');
+        document.querySelectorAll('#favList .key-card').forEach((c, i) => {
+            setTimeout(() => c.classList.add('removing'), i * 40);
+        });
+        setTimeout(() => {
+            favorites = [];
+            saveFavorites();
+            applyFilters();
+            renderFavorites();
+            refreshStatsUI();
+            showToast('Избранное очищено');
+        }, 400);
     }
 
     function clearKeys() {
         allKeys = [];
         filteredKeys = [];
-        keyPings = {};
-        savePings();
         updateUIVisibility();
         renderKeys();
         document.getElementById('statusDot').className = 'status-dot';
@@ -1873,30 +2035,21 @@
         document.getElementById('statLoaded').textContent = stats.loaded;
         document.getElementById('statCopied').textContent = stats.copied;
         document.getElementById('statFavs').textContent = favorites.length;
-
-        // Быстрейший
-        let fastest = null;
-        let fastestMs = Infinity;
-        for (const k of allKeys) {
-            const ms = keyPings[k.raw];
-            if (ms != null && ms < fastestMs) { fastestMs = ms; fastest = k; }
-        }
-        document.getElementById('statFastest').textContent = fastest ? fastestMs + ' мс' : '—';
+        const protos = new Set(allKeys.map(k => k.protocol));
+        document.getElementById('statProtocols').textContent = protos.size;
     }
 
     function resetAll() {
-        if (!confirm('Удалить все данные приложения (ключи, избранное, статистику)?')) return;
+        if (!confirm('Удалить все данные приложения?')) return;
         try {
-            ['vpn_keys', 'vpn_favorites', 'vpn_stats', 'vpn_settings', 'vpn_hash', 'vpn_last_check', 'vpn_pings']
+            ['vpn_keys', 'vpn_favorites', 'vpn_stats', 'vpn_settings', 'vpn_hash']
                 .forEach(k => localStorage.removeItem(k));
         } catch (e) {}
         favorites = [];
         stats = { loaded: 0, copied: 0 };
         allKeys = [];
-        keyPings = {};
         settings = { ...DEFAULT_SETTINGS };
         lastKeysHash = null;
-        lastCheckTime = 0;
         pendingUpdate = null;
         hideUpdateBanner();
         updateNavBadge(false);
@@ -1908,9 +2061,24 @@
     }
 
     // ============================================================
+    //  SCROLL / BACK TO TOP
+    // ============================================================
+    function scrollToTop() {
+        document.getElementById('content').scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    document.getElementById('content').addEventListener('scroll', function () {
+        const btn = document.getElementById('backToTop');
+        if (this.scrollTop > 400) btn.classList.add('show');
+        else btn.classList.remove('show');
+    });
+
+    // ============================================================
     //  ИНИЦИАЛИЗАЦИЯ
     // ============================================================
-    document.addEventListener('DOMContentLoaded', () => {
+    function initAppAfterAuth() {
+        if (appInitialized) return;
+        appInitialized = true;
         loadFromStorage();
         applySettingsToUI();
         updateUIVisibility();
@@ -1922,8 +2090,28 @@
         if (settings.autoLoad && allKeys.length === 0) {
             setTimeout(fetchKeys, 300);
         } else if (settings.autoCheck) {
-            setTimeout(() => checkForUpdates(false), 1500);
+            setTimeout(checkForUpdates, 1500);
         }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (firebaseReady) {
+            firebaseAuth.onAuthStateChanged(user => {
+                if (user) {
+                    currentUser = user;
+                    document.getElementById('authScreen').classList.add('hidden');
+                    updateProfileUI();
+                    initAppAfterAuth();
+                } else {
+                    currentUser = null;
+                    updateProfileUI();
+                    document.getElementById('authScreen').classList.remove('hidden');
+                }
+            });
+        } else {
+            updateProfileUI();
+        }
+        console.log('[VPN Keys] v2.3 loaded');
     });
     </script>
 </body>
