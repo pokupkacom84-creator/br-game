@@ -76,7 +76,7 @@ body.animated-bg .content,
 body.animated-bg .bottom-nav,
 body.animated-bg .update-banner { position: relative; z-index: 1; }
 
-/* ============ DUST PARTICLES ============ */
+/* ============ DUST ============ */
 .dust-layer {
     position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
     opacity: 0; transition: opacity .4s;
@@ -84,7 +84,6 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
 body.dust-on .dust-layer { opacity: 1; }
 .dust-particle {
     position: absolute;
-    width: 3px; height: 3px;
     border-radius: 50%;
     background: var(--accent-light);
     box-shadow: 0 0 6px var(--accent);
@@ -110,7 +109,7 @@ body.dust-on .dust-layer { opacity: 1; }
     will-change: width, height;
 }
 
-/* ============ OFFLINE SCREEN ============ */
+/* ============ OFFLINE ============ */
 .offline-screen { position:fixed; inset:0; background:var(--bg); z-index:7000; display:flex; align-items:center; justify-content:center; padding:20px; transition:opacity .3s,visibility .3s; }
 .offline-screen.hidden { opacity:0; visibility:hidden; pointer-events:none; }
 .offline-card { width:100%; max-width:340px; background:var(--card-solid); border:1px solid var(--card-border); border-radius:20px; padding:32px 24px; text-align:center; }
@@ -191,25 +190,16 @@ body.dust-on .dust-layer { opacity: 1; }
 .chip { flex-shrink:0; padding:6px 12px; border-radius:20px; background:var(--card); backdrop-filter:blur(10px); border:1px solid var(--card-border); color:var(--text-dim); font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; font-family:inherit; }
 .chip.active { background:linear-gradient(135deg,var(--accent),var(--accent-light)); color:#fff; border-color:transparent; }
 
-/* ============ CARDS (GLASSMORPHISM) ============ */
+/* ============ CARDS ============ */
 .key-list { display:flex; flex-direction:column; gap:10px; }
 .key-card {
     background: var(--card);
     backdrop-filter: blur(16px) saturate(140%);
     -webkit-backdrop-filter: blur(16px) saturate(140%);
-    border-radius:14px;
-    padding:14px;
-    border: 1px solid var(--card-border);
+    border-radius:14px; padding:14px; border: 1px solid var(--card-border);
     box-shadow: 0 4px 20px rgba(0,0,0,.15);
-    animation:cardIn .32s ease both;
-    position:relative;
-    overflow:hidden;
+    animation:cardIn .32s ease both; position:relative; overflow:hidden;
     transition: border-color .2s, transform .18s, box-shadow .25s;
-}
-.key-card::before {
-    content:''; position:absolute; inset:0; pointer-events:none;
-    background: linear-gradient(135deg, rgba(255,255,255,.06) 0%, transparent 40%);
-    opacity:1;
 }
 @media (hover:hover) {
     .key-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 26px rgba(108,92,231,.2); }
@@ -233,10 +223,7 @@ body.dust-on .dust-layer { opacity: 1; }
 .card-actions { display:flex; gap:8px; }
 .card-actions .btn { flex:1; }
 
-.load-more-indicator {
-    display:none;
-    text-align:center; padding:16px; color:var(--text-muted); font-size:12px; font-weight:600;
-}
+.load-more-indicator { display:none; text-align:center; padding:16px; color:var(--text-muted); font-size:12px; font-weight:600; }
 .load-more-indicator.show { display:block; }
 .load-more-indicator .spinner-sm {
     width:18px; height:18px; display:inline-block; vertical-align:middle; margin-right:8px;
@@ -316,6 +303,7 @@ body.dust-on .dust-layer { opacity: 1; }
 }
 .level-badge .lv-label { font-size:9px; font-weight:700; letter-spacing:1px; opacity:.85; }
 .level-badge .lv-num { font-size:26px; font-weight:900; line-height:1; margin-top:-2px; }
+.level-badge.maxed { background: linear-gradient(135deg, #fdcb6e, #ffeaa7); box-shadow: 0 6px 24px rgba(253,203,110,.6); }
 .level-info { flex:1; min-width:0; position: relative; z-index:1; }
 .level-name { font-size:15px; font-weight:800; color:var(--text); margin-bottom:8px; letter-spacing:.3px; }
 .level-progress {
@@ -337,6 +325,41 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
 @keyframes progressShine { 0%{transform:translateX(-100%);} 100%{transform:translateX(100%);} }
 .level-xp { font-size:11px; color:var(--text-muted); font-weight:600; }
 .level-xp b { color: var(--accent-light); }
+
+/* ============ STREAK CARD ============ */
+.streak-card {
+    display:flex; align-items:center; gap:14px;
+    background: linear-gradient(135deg, rgba(225,112,85,.18), rgba(253,203,110,.08));
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(225,112,85,.32);
+    border-radius:16px; padding:14px 16px; margin-bottom:14px;
+    position: relative; overflow: hidden;
+}
+.streak-card::after {
+    content:''; position:absolute; inset:-40%;
+    background: radial-gradient(circle at 70% 30%, rgba(253,203,110,.24), transparent 50%);
+    animation: levelGlow 5s ease-in-out infinite;
+    pointer-events:none;
+}
+.streak-fire {
+    width:52px; height:52px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:30px;
+    background: linear-gradient(135deg, #e17055, #fdcb6e);
+    border-radius: 14px;
+    box-shadow: 0 6px 20px rgba(225,112,85,.5);
+    z-index:1;
+    animation: fireFlicker 1.8s ease-in-out infinite;
+}
+@keyframes fireFlicker {
+    0%,100% { transform: scale(1) rotate(0deg); }
+    50%     { transform: scale(1.08) rotate(-3deg); }
+}
+.streak-info { flex:1; min-width:0; position:relative; z-index:1; }
+.streak-title { font-size:14px; font-weight:800; color:var(--text); margin-bottom:4px; letter-spacing:.3px; }
+.streak-title b { color: #fdcb6e; font-size: 17px; }
+.streak-sub { font-size:11px; color:var(--text-dim); font-weight:600; }
+.streak-sub b { color: var(--accent-light); }
 
 .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
 .stat-card { background:var(--card); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border:1px solid var(--card-border); border-radius:14px; padding:16px; text-align:center; }
@@ -434,11 +457,31 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
 .levelup-badge .lv-label { font-size:10px; font-weight:700; letter-spacing:2px; opacity:.85; }
 .levelup-modal h3 { font-size:22px; font-weight:900; background:linear-gradient(135deg,var(--accent),var(--accent-light)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:6px; }
 .levelup-modal .modal-sub { font-size:13px; margin-bottom:6px; }
+.levelup-rewards { display:flex; justify-content:center; gap:8px; margin:14px 0 6px; flex-wrap:wrap; }
+.levelup-rewards .chip { cursor:default; font-size:11px; }
+
+/* ============ MILESTONE MODAL ============ */
+.milestone-modal .modal { text-align:center; padding:30px 24px; }
+.milestone-fire {
+    width:110px; height:110px; margin:0 auto 16px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:60px;
+    background: linear-gradient(135deg, #e17055, #fdcb6e);
+    border-radius: 28px;
+    box-shadow: 0 12px 44px rgba(225,112,85,.6);
+    animation: levelUpPop .6s cubic-bezier(.34,1.56,.64,1);
+}
+.milestone-modal h3 { font-size:22px; font-weight:900; color:#fdcb6e; margin-bottom:6px; }
+.milestone-modal .modal-sub { font-size:13px; }
+.milestone-xp {
+    font-size:32px; font-weight:900; margin:14px 0 6px;
+    background: linear-gradient(135deg,#e17055,#fdcb6e);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
 </style>
 </head>
 <body>
 
-<!-- ============ DUST LAYER ============ -->
 <div class="dust-layer" id="dustLayer"></div>
 
 <!-- ============ OFFLINE SCREEN ============ -->
@@ -478,7 +521,7 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
     <div class="splash-spinner"></div>
 </div>
 
-<!-- ============ AUTH SCREEN ============ -->
+<!-- ============ AUTH ============ -->
 <div class="auth-screen hidden" id="authScreen">
     <div class="auth-card">
         <div class="auth-logo">
@@ -538,9 +581,23 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
         </div>
         <h3>Новый уровень!</h3>
         <p class="modal-sub" id="levelUpName">Ученик</p>
+        <div class="levelup-rewards" id="levelUpRewards"></div>
         <p class="modal-sub" style="color:var(--text-dim);">Продолжайте копить XP и открывайте новые уровни.</p>
         <div class="modal-actions">
             <button class="btn btn-primary btn-full" onclick="closeLevelUp()">Круто!</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ MILESTONE MODAL ============ -->
+<div class="modal-overlay milestone-modal" id="milestoneModal">
+    <div class="modal">
+        <div class="milestone-fire">🔥</div>
+        <h3 id="milestoneTitle">Streak 7 дней!</h3>
+        <p class="modal-sub" id="milestoneSub">Вы держитесь неделю подряд</p>
+        <div class="milestone-xp" id="milestoneXp">+150 XP</div>
+        <div class="modal-actions">
+            <button class="btn btn-primary btn-full" onclick="closeMilestone()">Продолжить</button>
         </div>
     </div>
 </div>
@@ -670,7 +727,7 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
                     <span>Сбросить</span>
                 </button>
             </div>
-            <div class="setting-row"><div class="setting-label"><div class="name">Версия</div><div class="desc">Текущая сборка</div></div><span style="color:var(--text-muted);font-size:12px;">3.0</span></div>
+            <div class="setting-row"><div class="setting-label"><div class="name">Версия</div><div class="desc">Текущая сборка</div></div><span style="color:var(--text-muted);font-size:12px;">3.1</span></div>
         </div>
     </div>
 
@@ -687,7 +744,7 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
         </div>
 
         <div class="level-card">
-            <div class="level-badge">
+            <div class="level-badge" id="levelBadge">
                 <div class="lv-label">LV</div>
                 <div class="lv-num" id="levelNumber">1</div>
             </div>
@@ -696,7 +753,15 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
                 <div class="level-progress">
                     <div class="level-progress-bar" id="levelProgressBar"></div>
                 </div>
-                <div class="level-xp"><b id="currentXp">0</b> / <span id="nextXp">100</span> XP</div>
+                <div class="level-xp"><b id="currentXp">0</b> / <span id="nextXp">50</span> XP</div>
+            </div>
+        </div>
+
+        <div class="streak-card">
+            <div class="streak-fire">🔥</div>
+            <div class="streak-info">
+                <div class="streak-title">Streak: <b id="streakCount">0</b> дн.</div>
+                <div class="streak-sub">Рекорд: <span id="streakMax">0</span> · Множитель: <b>×<span id="streakMult">1.00</span></b></div>
             </div>
         </div>
 
@@ -776,10 +841,8 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
 <div class="toast" id="toast"></div>
 <textarea id="copyHelper" readonly></textarea>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 
 <script>
 // ============================================================
@@ -794,7 +857,7 @@ if ('serviceWorker' in navigator) {
 }
 
 // ============================================================
-//  INDEXEDDB WRAPPER
+//  INDEXEDDB
 // ============================================================
 const DB_NAME = 'vpnkeys';
 const DB_VERSION = 1;
@@ -858,7 +921,7 @@ async function idbClearAll() {
     } catch (e) {}
 }
 async function migrateFromLocalStorage() {
-    const migrated = await idbGet('_migrated_v3');
+    const migrated = await idbGet('_migrated_v4');
     if (migrated) return;
     const keys = ['vpn_keys', 'vpn_favorites', 'vpn_stats', 'vpn_settings', 'vpn_hash'];
     for (const k of keys) {
@@ -867,7 +930,7 @@ async function migrateFromLocalStorage() {
             if (v) await idbSet(k, JSON.parse(v));
         } catch (e) {}
     }
-    await idbSet('_migrated_v3', true);
+    await idbSet('_migrated_v4', true);
 }
 
 // ============================================================
@@ -935,15 +998,13 @@ function explodeWave(x, y, color) {
 }
 
 // ============================================================
-//  DUST PARTICLES
+//  DUST
 // ============================================================
-let dustTimer = null;
 function initDust() {
     const layer = document.getElementById('dustLayer');
     layer.innerHTML = '';
     if (!settings.dust) return;
-    const count = 22;
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < 22; i++) {
         const p = document.createElement('div');
         p.className = 'dust-particle';
         const size = 2 + Math.random() * 3;
@@ -964,48 +1025,116 @@ function applyDust() {
 
 // ============================================================
 //  LEVEL SYSTEM
+//  Формула: Level = floor(sqrt(totalXP / 50)) + 1
+//  XP для уровня N = 50 * (N-1)^2
+//  Максимум — 100 уровень (требует 490 050 XP)
 // ============================================================
-const LEVEL_NAMES = [
-    'Новичок',      // 1
-    'Ученик',       // 2
-    'Пользователь', // 3
-    'Опытный',      // 4
-    'Продвинутый',  // 5
-    'Эксперт',      // 6
-    'Мастер',       // 7
-    'Гуру',         // 8
-    'Легенда',      // 9
-    'Мифический'    // 10+
+const MAX_LEVEL = 100;
+
+const BASE_NAMES = [
+    'Новичок', 'Ученик', 'Практик', 'Знаток', 'Опытный',
+    'Продвинутый', 'Эксперт', 'Мастер', 'Гуру', 'Легенда',
+    'Мифический', 'Хранитель', 'Провидец', 'Архимаг', 'Повелитель',
+    'Владыка', 'Титан', 'Полубог', 'Бог VPN', 'Абсолют'
 ];
 
-// XP required to REACH a level: level N needs 100*(N-1)^2 XP
+const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII','XXVIII','XXIX','XXX','XXXI','XXXII','XXXIII','XXXIV','XXXV','XXXVI','XXXVII','XXXVIII','XXXIX','XL','XLI','XLII','XLIII','XLIV','XLV','XLVI','XLVII','XLVIII','XLIX','L','LI','LII','LIII','LIV','LV','LVI','LVII','LVIII','LIX','LX','LXI','LXII','LXIII','LXIV','LXV','LXVI','LXVII','LXVIII','LXIX','LXX','LXXI','LXXII','LXXIII','LXXIV','LXXV','LXXVI','LXXVII','LXXVIII','LXXIX','LXXX'];
+
+// XP для ДОСТИЖЕНИЯ уровня N (суммарно)
 function xpForLevel(n) {
     if (n <= 1) return 0;
-    return 100 * Math.pow(n - 1, 2);
+    return 50 * Math.pow(n - 1, 2);
 }
+// Какой уровень при текущем XP
 function levelForXp(xp) {
-    let lvl = 1;
-    while (xpForLevel(lvl + 1) <= xp && lvl < 999) lvl++;
-    return lvl;
+    if (xp <= 0) return 1;
+    const lvl = Math.floor(Math.sqrt(xp / 50)) + 1;
+    return Math.min(lvl, MAX_LEVEL);
 }
+// Название уровня
 function levelName(n) {
-    return LEVEL_NAMES[Math.min(n - 1, LEVEL_NAMES.length - 1)];
+    if (n <= BASE_NAMES.length) return BASE_NAMES[n - 1];
+    const last = BASE_NAMES[BASE_NAMES.length - 1];
+    const tier = n - BASE_NAMES.length;
+    if (tier <= ROMAN.length) return last + ' ' + ROMAN[tier - 1];
+    return last + ' +' + tier;
 }
-
-const XP_REWARDS = {
-    loadKeys: 10,
-    copy: 5,
-    favorite: 3,
-    unfavorite: 0,
-    daily: 20,
-    register: 50,
-    firstLoad: 15
+// Разблокировки на уровнях
+const LEVEL_REWARDS = {
+    5:   ['🎨', 'Новый акцентный цвет'],
+    10:  ['🏅', 'Бейдж «Легенда»'],
+    25:  ['💎', 'Эксклюзивная тема'],
+    50:  ['👑', 'Титул «Мастер»'],
+    75:  ['🌟', 'Особый значок'],
+    100: ['♾',  'Максимальный уровень']
 };
 
-async function addXp(amount, reason) {
+// ============================================================
+//  STREAK SYSTEM
+// ============================================================
+const STREAK_MILESTONES = [
+    { days: 3,   xp: 50,    emoji: '🔥', title: 'Streak 3 дня!',   sub: 'Первая искра постоянства' },
+    { days: 7,   xp: 150,   emoji: '🔥', title: 'Streak 7 дней!',  sub: 'Целая неделя подряд' },
+    { days: 14,  xp: 300,   emoji: '🔥', title: 'Streak 14 дней!', sub: 'Две недели без пропусков' },
+    { days: 30,  xp: 800,   emoji: '💥', title: 'Streak 30 дней!', sub: 'Целый месяц подряд!' },
+    { days: 60,  xp: 2000,  emoji: '⚡', title: 'Streak 60 дней!', sub: 'Два месяца — мощно!' },
+    { days: 100, xp: 5000,  emoji: '🌟', title: 'Streak 100 дней!', sub: 'Сотня дней подряд!' },
+    { days: 365, xp: 20000, emoji: '👑', title: 'Streak 365 дней!', sub: 'ГОД подряд — Легенда!' }
+];
+
+function getToday() {
+    return new Date().toISOString().slice(0, 10);
+}
+function getYesterday() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+}
+function streakMultiplier(streak) {
+    // +2% за каждый день, максимум ×3.0 при 100 днях
+    return Math.min(1 + Math.min(streak, 100) * 0.02, 3.0);
+}
+
+// ============================================================
+//  ANTI-SPAM (cooldowns + суточные лимиты)
+// ============================================================
+const xpCooldowns = {};
+let dailyBudget = { date: '', favorites: 0, favoritesXp: 0, loads: 0, loadsXp: 0, protocols: {}, bonus3: false };
+
+function resetDailyBudgetIfNeeded() {
+    const today = getToday();
+    if (dailyBudget.date !== today) {
+        dailyBudget = { date: today, favorites: 0, favoritesXp: 0, loads: 0, loadsXp: 0, protocols: {}, bonus3: false };
+    }
+}
+
+// Общая проверка: можно ли начислить XP за действие?
+function tryEarnXp(actionKey, amount, opts = {}) {
+    const now = Date.now();
+    const cooldown = opts.cooldown || 60000;
+    if (now - (xpCooldowns[actionKey] || 0) < cooldown) return false;
+
+    if (opts.dailyKey) {
+        resetDailyBudgetIfNeeded();
+        const used = dailyBudget[opts.dailyKey] || 0;
+        const max = opts.dailyMax || Infinity;
+        if (used + amount > max) return false;
+        dailyBudget[opts.dailyKey] = used + amount;
+    }
+
+    xpCooldowns[actionKey] = now;
+    return true;
+}
+
+// ============================================================
+//  XP ACTIONS
+// ============================================================
+async function addXpDirect(amount, reason) {
     if (!amount || amount <= 0) return;
     const oldXp = stats.xp || 0;
     const oldLevel = levelForXp(oldXp);
+    if (oldLevel >= MAX_LEVEL) return; // уже максимум
+
     stats.xp = oldXp + amount;
     const newLevel = levelForXp(stats.xp);
     saveStats();
@@ -1015,41 +1144,147 @@ async function addXp(amount, reason) {
         vibrate([30, 60, 30, 60, 30]);
     }
 }
+
+// Действия, приносящие XP (с анти-спамом)
+async function xpOnLoadKeys() {
+    if (!tryEarnXp('load', 10, { cooldown: 3 * 60 * 1000, dailyKey: 'loadsXp', dailyMax: 30 })) return;
+    await addXpDirect(10, 'load');
+}
+async function xpOnFirstLoadEver() {
+    if (stats.firstLoadDone) return;
+    stats.firstLoadDone = true;
+    saveStats();
+    await addXpDirect(15, 'first-load');
+}
+async function xpOnRegister() {
+    await addXpDirect(50, 'register');
+}
+async function xpOnAddFavorite(raw) {
+    // Уникальность: только для новых добавлений
+    if (!tryEarnXp('fav_add', 3, { cooldown: 1500, dailyKey: 'favoritesXp', dailyMax: 30 })) return;
+    await addXpDirect(3, 'favorite');
+}
+async function xpOnCopyKey(raw) {
+    resetDailyBudgetIfNeeded();
+    const proto = detectProtocol(raw);
+    if (!dailyBudget.protocols[proto]) {
+        dailyBudget.protocols[proto] = true;
+        const count = Object.keys(dailyBudget.protocols).length;
+        await addXpDirect(15, 'new-protocol');
+        const protoName = proto.toUpperCase();
+        showToast('+' + 15 + ' XP · Новый протокол ' + protoName);
+        if (count === 3 && !dailyBudget.bonus3) {
+            dailyBudget.bonus3 = true;
+            await addXpDirect(30, 'bonus-3-protocols');
+            setTimeout(() => showToast('🎉 3 протокола за день! +30 XP'), 2000);
+        }
+    }
+}
+
+// ============================================================
+//  DAILY STREAK CHECK
+// ============================================================
+async function checkDailyStreak() {
+    const today = getToday();
+    if (stats.lastDaily === today) {
+        // Уже получали сегодня — просто обновить UI
+        refreshStreakUI();
+        return;
+    }
+    const yesterday = getYesterday();
+    if (stats.lastDaily === yesterday) {
+        stats.streak = (stats.streak || 0) + 1;
+    } else {
+        // Пропуск — сбрасываем
+        stats.streak = 1;
+    }
+    if (stats.streak > (stats.maxStreak || 0)) stats.maxStreak = stats.streak;
+    stats.lastDaily = today;
+    saveStats();
+
+    // Базовый XP за день × множитель
+    const mult = streakMultiplier(stats.streak);
+    const baseXp = 20;
+    const totalXp = Math.round(baseXp * mult);
+    await addXpDirect(totalXp, 'daily');
+
+    // Проверка милстоуна
+    const milestone = STREAK_MILESTONES.find(m => m.days === stats.streak);
+    if (milestone) {
+        await addXpDirect(milestone.xp, 'streak-milestone');
+        showMilestone(milestone);
+    } else {
+        showToast('🔥 Streak: ' + stats.streak + ' дн. · +' + totalXp + ' XP (×' + mult.toFixed(2) + ')', 3000);
+    }
+    refreshStreakUI();
+}
+
+function refreshStreakUI() {
+    const streak = stats.streak || 0;
+    const maxStreak = stats.maxStreak || 0;
+    const mult = streakMultiplier(streak);
+    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setTxt('streakCount', streak);
+    setTxt('streakMax', maxStreak);
+    setTxt('streakMult', mult.toFixed(2));
+}
+
+// ============================================================
+//  LEVEL / STREAK UI
+// ============================================================
 function refreshLevelUI() {
     const xp = stats.xp || 0;
-    const lvl = levelForXp(xp);
+    let lvl = levelForXp(xp);
+    if (lvl > MAX_LEVEL) lvl = MAX_LEVEL;
+
     const curBase = xpForLevel(lvl);
     const nextBase = xpForLevel(lvl + 1);
     const inLevel = xp - curBase;
     const needTotal = nextBase - curBase;
-    const pct = needTotal > 0 ? (inLevel / needTotal) * 100 : 0;
-    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    set('levelNumber', lvl);
-    set('levelName', levelName(lvl));
-    set('currentXp', inLevel);
-    set('nextXp', needTotal);
+    const pct = lvl >= MAX_LEVEL ? 100 : (needTotal > 0 ? (inLevel / needTotal) * 100 : 0);
+
+    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setTxt('levelNumber', lvl);
+    setTxt('levelName', levelName(lvl));
+    setTxt('currentXp', lvl >= MAX_LEVEL ? '★' : inLevel);
+    setTxt('nextXp', lvl >= MAX_LEVEL ? 'МАКС' : needTotal);
+
     const bar = document.getElementById('levelProgressBar');
     if (bar) bar.style.width = pct.toFixed(1) + '%';
+
+    const badge = document.getElementById('levelBadge');
+    if (badge) {
+        badge.classList.toggle('maxed', lvl >= MAX_LEVEL);
+    }
 }
+
 function showLevelUp(level) {
     document.getElementById('levelUpNum').textContent = level;
     document.getElementById('levelUpName').textContent = levelName(level);
+    const rewardsWrap = document.getElementById('levelUpRewards');
+    const reward = LEVEL_REWARDS[level];
+    if (reward) {
+        rewardsWrap.innerHTML = '<span class="chip active">' + reward[0] + ' ' + reward[1] + '</span>';
+    } else {
+        rewardsWrap.innerHTML = '';
+    }
     document.getElementById('levelUpModal').classList.add('show');
     launchConfetti();
     sendSystemNotification('VPN Keys', 'Новый уровень: ' + level + ' — ' + levelName(level));
 }
 function closeLevelUp() { document.getElementById('levelUpModal').classList.remove('show'); }
 
-async function checkDailyBonus() {
-    const today = new Date().toISOString().slice(0, 10);
-    const last = stats.lastDaily || '';
-    if (last !== today) {
-        stats.lastDaily = today;
-        saveStats();
-        await addXp(XP_REWARDS.daily, 'daily');
-        showToast('+ ' + XP_REWARDS.daily + ' XP за ежедневный вход!');
-    }
+function showMilestone(m) {
+    document.getElementById('milestoneTitle').textContent = m.title;
+    document.getElementById('milestoneSub').textContent = m.sub;
+    document.getElementById('milestoneXp').textContent = '+' + m.xp + ' XP';
+    document.querySelector('.milestone-fire').textContent = m.emoji;
+    document.getElementById('milestoneModal').classList.add('show');
+    launchConfetti();
+    vibrate([40, 80, 40, 80, 40]);
+    sendSystemNotification('VPN Keys', m.title + ' — ' + m.sub);
 }
+function closeMilestone() { document.getElementById('milestoneModal').classList.remove('show'); }
 
 // ============================================================
 //  HAPTIC
@@ -1124,7 +1359,7 @@ async function signUp() {
         await cred.user.updateProfile({ displayName: nickname });
         currentUser = firebaseAuth.currentUser;
         updateProfileUI();
-        await addXp(XP_REWARDS.register, 'register');
+        await xpOnRegister();
     } catch (e) {
         if (e.code === 'auth/network-request-failed') { showOfflineScreen(); return; }
         showAuthError(authErrorText(e.code));
@@ -1243,6 +1478,7 @@ function updateProfileUI() {
         editDesc.textContent = 'Доступно только с аккаунтом';
     }
     refreshLevelUI();
+    refreshStreakUI();
 }
 
 // ============================================================
@@ -1277,16 +1513,13 @@ let filteredKeys = [];
 let currentFilter = 'all';
 let favorites = [];
 let settings = { ...DEFAULT_SETTINGS };
-let stats = { loaded: 0, copied: 0, xp: 0, lastDaily: '' };
+let stats = { loaded: 0, copied: 0, xp: 0, lastDaily: '', streak: 0, maxStreak: 0, firstLoadDone: false };
 let isFetching = false;
 let lastKeysHash = null;
 let checkTimer = null;
 let pendingUpdate = null;
 let appInitialized = false;
-
-// Lazy loading
 let visibleCount = PAGE_SIZE;
-let sentinelObserver = null;
 
 // ============================================================
 //  STORAGE
@@ -1306,7 +1539,6 @@ async function loadFromStorage() {
         if (hh) lastKeysHash = hh;
     } catch (e) { console.warn('[Storage]', e); }
 }
-
 function saveSettings() {
     settings.autoLoad = document.getElementById('optAutoLoad').checked;
     settings.autoCheck = document.getElementById('optAutoCheck').checked;
@@ -1360,10 +1592,7 @@ function applyAccent(name) {
 function setAccent(name, event) {
     if (event && event.target) {
         const rect = event.target.getBoundingClientRect();
-        const x = rect.left + rect.width / 2;
-        const y = rect.top + rect.height / 2;
-        const color = ACCENTS[name][0];
-        explodeWave(x, y, color);
+        explodeWave(rect.left + rect.width / 2, rect.top + rect.height / 2, ACCENTS[name][0]);
         setTimeout(() => {
             settings.accent = name;
             applyAccent(name);
@@ -1379,15 +1608,13 @@ function setAccent(name, event) {
 }
 function toggleTheme(event) {
     const isLight = document.getElementById('optLightTheme').checked;
-    let x = window.innerWidth / 2;
-    let y = window.innerHeight / 2;
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
     if (event && event.target) {
         const rect = event.target.getBoundingClientRect();
         x = rect.left + rect.width / 2;
         y = rect.top + rect.height / 2;
     }
-    const color = isLight ? '#f5f5f7' : '#0f0f13';
-    explodeWave(x, y, color);
+    explodeWave(x, y, isLight ? '#f5f5f7' : '#0f0f13');
     setTimeout(() => {
         settings.lightTheme = isLight;
         document.body.classList.toggle('light', settings.lightTheme);
@@ -1458,7 +1685,8 @@ function copyToClipboard(text) {
         stats.copied++;
         saveStats();
         refreshStatsUI();
-        addXp(XP_REWARDS.copy, 'copy');
+        // XP — только за уникальный протокол дня
+        xpOnCopyKey(text);
     };
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
@@ -1579,14 +1807,14 @@ function switchTab(tab, el) {
     const titles = {
         main: ['VPN Keys', 'Бесплатные конфигурации'],
         settings: ['Настройки', 'Приложение'],
-        profile: ['Профиль', 'Уровень и статистика']
+        profile: ['Профиль', 'Уровень и streak']
     };
     document.getElementById('pageTitle').querySelector('span').textContent = titles[tab][0];
     document.getElementById('pageSubtitle').textContent = titles[tab][1];
     document.getElementById('content').scrollTop = 0;
     document.getElementById('backToTop').classList.remove('show');
 
-    if (tab === 'profile') { refreshStatsUI(); refreshLevelUI(); }
+    if (tab === 'profile') { refreshStatsUI(); refreshLevelUI(); refreshStreakUI(); }
 }
 
 // ============================================================
@@ -1611,7 +1839,7 @@ function applyFilters() {
 }
 
 // ============================================================
-//  LAZY LOADING / RENDERING
+//  LAZY LOADING
 // ============================================================
 function showSkeletons() {
     const list = document.getElementById('keyList');
@@ -1638,7 +1866,6 @@ function renderKeys(reset) {
         allInd.classList.remove('show');
         return;
     }
-
     if (reset) {
         list.innerHTML = '';
         visibleCount = Math.min(PAGE_SIZE, filteredKeys.length);
@@ -1711,7 +1938,7 @@ function toggleFavorite(encoded, btnEl) {
         playCopySound();
         vibrate(15);
         launchConfetti();
-        addXp(XP_REWARDS.favorite, 'favorite');
+        xpOnAddFavorite(raw);
         if (btnEl) btnEl.classList.add('active');
     } else {
         favorites.splice(idx, 1);
@@ -1778,7 +2005,7 @@ async function resetAll() {
     try { localStorage.clear(); } catch (e) {}
     await idbClearAll();
     favorites = [];
-    stats = { loaded: 0, copied: 0, xp: 0, lastDaily: '' };
+    stats = { loaded: 0, copied: 0, xp: 0, lastDaily: '', streak: 0, maxStreak: 0, firstLoadDone: false };
     allKeys = [];
     settings = { ...DEFAULT_SETTINGS };
     lastKeysHash = null;
@@ -1790,6 +2017,7 @@ async function resetAll() {
     renderFavorites();
     refreshStatsUI();
     refreshLevelUI();
+    refreshStreakUI();
     updateProfileUI();
     showToast('Все данные сброшены');
 }
@@ -1823,7 +2051,6 @@ async function fetchKeys() {
         const text = await resp.text();
         allKeys = parseKeys(text);
         saveHash(simpleHash(text));
-        const wasEmpty = stats.loaded === 0;
         stats.loaded = allKeys.length;
         saveStats();
         saveKeysToStorage();
@@ -1845,7 +2072,9 @@ async function fetchKeys() {
         renderFavorites();
         vibrate(15);
         showToast('Загружено ' + allKeys.length + ' ключей');
-        await addXp(wasEmpty ? XP_REWARDS.firstLoad : XP_REWARDS.loadKeys, 'load');
+        // XP: первая загрузка или обычная (анти-спам внутри)
+        if (!stats.firstLoadDone) await xpOnFirstLoadEver();
+        else await xpOnLoadKeys();
     } catch (e) {
         btn.disabled = false;
         btn.querySelector('span').textContent = 'Загрузить';
@@ -1934,7 +2163,7 @@ function updateUIVisibility() {
 }
 
 // ============================================================
-//  SCROLL
+//  SCROLL + LAZY LOAD
 // ============================================================
 function scrollToTop() { document.getElementById('content').scrollTo({ top: 0, behavior: 'smooth' }); }
 document.getElementById('content').addEventListener('scroll', function () {
@@ -1942,7 +2171,6 @@ document.getElementById('content').addEventListener('scroll', function () {
     if (this.scrollTop > 400) btn.classList.add('show');
     else btn.classList.remove('show');
 
-    // Lazy load near bottom
     const nearBottom = this.scrollTop + this.clientHeight >= this.scrollHeight - 260;
     if (nearBottom && visibleCount < filteredKeys.length) {
         if (!this._loadingMore) {
@@ -1956,13 +2184,13 @@ document.getElementById('content').addEventListener('scroll', function () {
 });
 
 // ============================================================
-//  MODAL OVERLAY CLICKS
+//  MODAL OVERLAY
 // ============================================================
 document.getElementById('editModal').addEventListener('click', function (e) { if (e.target === this) closeEditModal(); });
 document.getElementById('deleteModal').addEventListener('click', function (e) { if (e.target === this) closeDeleteModal(); });
 document.getElementById('levelUpModal').addEventListener('click', function (e) { if (e.target === this) closeLevelUp(); });
+document.getElementById('milestoneModal').addEventListener('click', function (e) { if (e.target === this) closeMilestone(); });
 
-// Enter handlers
 document.getElementById('authPassword').addEventListener('keypress', e => { if (e.key === 'Enter') submitAuth(); });
 document.getElementById('authEmail').addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('authPassword').focus(); });
 document.getElementById('authNickname').addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('authEmail').focus(); });
@@ -1982,9 +2210,11 @@ async function initAppAfterAuth() {
     renderFavorites();
     refreshStatsUI();
     refreshLevelUI();
+    refreshStreakUI();
     updateProfileUI();
     scheduleAutoCheck();
-    await checkDailyBonus();
+    resetDailyBudgetIfNeeded();
+    await checkDailyStreak();
 
     if (settings.autoLoad && allKeys.length === 0) {
         if (navigator.onLine) setTimeout(fetchKeys, 300);
@@ -2016,7 +2246,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('authScreen').classList.remove('hidden');
         updateProfileUI();
     }
-    console.log('[VPN Keys] v3.0 — levels, glass, mesh, dust, lazy-load');
+    console.log('[VPN Keys] v3.1 — streak, anti-spam, levels up to 100');
 });
 </script>
 </body>
