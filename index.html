@@ -48,6 +48,49 @@
             transition: background 0.2s, color 0.2s;
         }
 
+        /* ============ SPLASH ============ */
+        .splash {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 6000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .splash.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+        .splash-logo {
+            width: 72px; height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: splashPulse 1.6s ease-in-out infinite;
+        }
+
+        .splash-logo svg { width: 36px; height: 36px; stroke: #fff; fill: none; stroke-width: 2; }
+
+        .splash-spinner {
+            width: 32px; height: 32px;
+            border: 3px solid var(--card-border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes splashPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
         /* ============ AUTH SCREEN ============ */
         .auth-screen {
             position: fixed;
@@ -58,14 +101,11 @@
             align-items: center;
             justify-content: center;
             padding: 20px;
+            overflow-y: auto;
             transition: opacity 0.3s, visibility 0.3s;
         }
 
-        .auth-screen.hidden {
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-        }
+        .auth-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
 
         .auth-card {
             width: 100%;
@@ -73,41 +113,64 @@
             background: var(--card);
             border: 1px solid var(--card-border);
             border-radius: 20px;
-            padding: 32px 24px;
+            padding: 28px 24px;
+            margin: auto;
         }
 
         .auth-logo {
-            width: 64px;
-            height: 64px;
+            width: 60px; height: 60px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--accent), var(--accent-light));
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 20px;
+            margin: 0 auto 16px;
         }
 
-        .auth-logo svg {
-            width: 32px;
-            height: 32px;
-            stroke: #fff;
-            fill: none;
-            stroke-width: 2;
-        }
+        .auth-logo svg { width: 30px; height: 30px; stroke: #fff; fill: none; stroke-width: 2; }
 
         .auth-card h2 {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 700;
             text-align: center;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
             color: var(--text);
         }
 
         .auth-sub {
             text-align: center;
-            font-size: 13px;
+            font-size: 12px;
             color: var(--text-muted);
-            margin-bottom: 24px;
+            margin-bottom: 20px;
+        }
+
+        /* Табы Вход/Регистрация */
+        .auth-tabs {
+            display: flex;
+            background: var(--bg);
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 18px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 9px;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.2s;
+            background: none;
+            border: none;
+            font-family: inherit;
+        }
+
+        .auth-tab.active {
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            color: #fff;
         }
 
         .auth-input {
@@ -126,6 +189,8 @@
 
         .auth-input:focus { border-color: var(--accent); }
 
+        .auth-input.hidden { display: none; }
+
         .auth-btn {
             width: 100%;
             padding: 13px;
@@ -134,7 +199,7 @@
             font-size: 14px;
             font-weight: 700;
             cursor: pointer;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             font-family: inherit;
             transition: transform 0.15s;
         }
@@ -144,11 +209,6 @@
         .auth-btn-primary {
             background: linear-gradient(135deg, var(--accent), var(--accent-light));
             color: #fff;
-        }
-
-        .auth-btn-secondary {
-            background: var(--card-border);
-            color: var(--text);
         }
 
         .auth-link {
@@ -200,11 +260,7 @@
 
         .app-header h1 svg { width: 22px; height: 22px; stroke: var(--accent-light); }
 
-        .app-header p {
-            font-size: 12px;
-            color: var(--text-dim);
-            margin-top: 3px;
-        }
+        .app-header p { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
 
         /* ============ КОНТЕНТ ============ */
         .content {
@@ -217,11 +273,6 @@
 
         .tab-pane { display: none; }
         .tab-pane.active { display: block; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
 
         /* ============ ОБЩИЕ ============ */
         .status-bar {
@@ -283,13 +334,17 @@
         }
         .btn-secondary svg { stroke: var(--text-dim); }
 
-        .btn-sm { padding: 9px 12px; font-size: 13px; border-radius: 8px; }
-
-        .controls {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
+        .btn-danger {
+            background: #e1705522;
+            color: #e17055;
+            border: 1px solid #e1705540;
         }
+        .btn-danger svg { stroke: #e17055; }
+
+        .btn-sm { padding: 9px 12px; font-size: 13px; border-radius: 8px; }
+        .btn-full { width: 100%; }
+
+        .controls { display: flex; gap: 8px; margin-bottom: 12px; }
         .controls .btn { flex: 1; }
 
         /* Поиск */
@@ -349,18 +404,13 @@
         }
 
         /* ============ КАРТОЧКИ ============ */
-        .key-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
+        .key-list { display: flex; flex-direction: column; gap: 10px; }
 
         .key-card {
             background: var(--card);
             border-radius: 14px;
             padding: 14px;
             border: 1px solid var(--card-border);
-            position: relative;
             animation: cardIn 0.3s ease both;
         }
 
@@ -369,13 +419,9 @@
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        .key-card.removing {
-            animation: cardOut 0.3s ease forwards;
-        }
+        .key-card.removing { animation: cardOut 0.3s ease forwards; }
 
-        @keyframes cardOut {
-            to { opacity: 0; transform: scale(0.85); }
-        }
+        @keyframes cardOut { to { opacity: 0; transform: scale(0.85); } }
 
         .key-card .card-top {
             display: flex;
@@ -545,7 +591,6 @@
         }
         .select-input:focus { border-color: var(--accent); }
 
-        /* Акцентный цвет */
         .accent-picker {
             display: flex;
             gap: 10px;
@@ -589,29 +634,30 @@
         }
 
         .avatar {
-            width: 56px; height: 56px;
+            width: 60px; height: 60px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--accent), var(--accent-light));
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            font-size: 22px;
+            font-size: 24px;
             font-weight: 700;
             color: #fff;
+            text-transform: uppercase;
         }
         .avatar svg { width: 28px; height: 28px; stroke: #fff; fill: none; stroke-width: 2; }
 
         .profile-info { flex: 1; overflow: hidden; }
         .profile-info .name {
-            font-size: 15px;
+            font-size: 16px;
             font-weight: 700;
             color: var(--text);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .profile-info .sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+        .profile-info .sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; word-break: break-all; }
 
         .stats-grid {
             display: grid;
@@ -723,19 +769,11 @@
             z-index: 100;
         }
 
-        .back-to-top.show {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-
+        .back-to-top.show { opacity: 1; visibility: visible; transform: translateY(0); }
         .back-to-top:active { transform: scale(0.9); }
-        .back-to-top svg {
-            width: 20px; height: 20px;
-            stroke: #fff; fill: none; stroke-width: 2.5;
-        }
+        .back-to-top svg { width: 20px; height: 20px; stroke: #fff; fill: none; stroke-width: 2.5; }
 
-        /* ============ ОБНОВЛЕНИЕ БАННЕР ============ */
+        /* ============ БАННЕР ============ */
         .update-banner {
             display: none;
             align-items: center;
@@ -750,11 +788,7 @@
         }
         .update-banner.show { display: flex; }
 
-        .update-banner svg {
-            width: 18px; height: 18px;
-            stroke: #fff; fill: none;
-            flex-shrink: 0;
-        }
+        .update-banner svg { width: 18px; height: 18px; stroke: #fff; fill: none; flex-shrink: 0; }
 
         .update-banner .close-banner {
             margin-left: auto;
@@ -808,15 +842,11 @@
             pointer-events: none;
             max-width: 90vw;
             text-align: center;
-            transition: bottom 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55),
-                        opacity 0.3s;
+            transition: bottom 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55), opacity 0.3s;
             opacity: 0;
         }
 
-        .toast.show {
-            bottom: 90px;
-            opacity: 1;
-        }
+        .toast.show { bottom: 90px; opacity: 1; }
 
         .error-msg {
             background: #e1705515;
@@ -836,12 +866,74 @@
             top: -9999px;
             opacity: 0;
         }
+
+        /* ============ MODAL ============ */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 4000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.show { display: flex; }
+
+        .modal {
+            width: 100%;
+            max-width: 400px;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 18px;
+            padding: 24px;
+            animation: modalIn 0.25s ease;
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+
+        .modal-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .modal-actions .btn { flex: 1; }
     </style>
 </head>
 <body>
 
-    <!-- ============ ЭКРАН АВТОРИЗАЦИИ ============ -->
-    <div class="auth-screen" id="authScreen">
+    <!-- SPLASH -->
+    <div class="splash" id="splashScreen">
+        <div class="splash-logo">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/>
+                <path d="M9 12l2 2 4-4"/>
+            </svg>
+        </div>
+        <div class="splash-spinner"></div>
+    </div>
+
+    <!-- ЭКРАН АВТОРИЗАЦИИ -->
+    <div class="auth-screen hidden" id="authScreen">
         <div class="auth-card">
             <div class="auth-logo">
                 <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
@@ -849,22 +941,53 @@
                     <path d="M9 12l2 2 4-4"/>
                 </svg>
             </div>
-            <h2>Добро пожаловать</h2>
-            <p class="auth-sub">Войдите, чтобы синхронизировать избранное</p>
+            <h2 id="authTitle">Добро пожаловать</h2>
+            <p class="auth-sub" id="authSubtitle">Войдите, чтобы синхронизировать избранное</p>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tabLogin" onclick="switchAuthMode('login')">Вход</button>
+                <button class="auth-tab" id="tabRegister" onclick="switchAuthMode('register')">Регистрация</button>
+            </div>
 
             <div class="auth-error" id="authError"></div>
 
+            <input type="text" class="auth-input hidden" id="authNickname" placeholder="Никнейм" autocomplete="nickname" maxlength="30">
             <input type="email" class="auth-input" id="authEmail" placeholder="Email" autocomplete="email">
             <input type="password" class="auth-input" id="authPassword" placeholder="Пароль" autocomplete="current-password">
 
-            <button class="auth-btn auth-btn-primary" onclick="signIn()">Войти</button>
-            <button class="auth-btn auth-btn-secondary" onclick="signUp()">Создать аккаунт</button>
-            <button class="auth-link" onclick="resetPassword()">Забыли пароль?</button>
+            <button class="auth-btn auth-btn-primary" id="authSubmitBtn" onclick="submitAuth()">Войти</button>
+            <button class="auth-link" id="authForgotBtn" onclick="resetPassword()">Забыли пароль?</button>
             <button class="auth-link" onclick="continueAsGuest()">Продолжить как гость</button>
         </div>
     </div>
 
-    <!-- ============ БАННЕР ============ -->
+    <!-- МОДАЛ РЕДАКТИРОВАНИЯ -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <h3>Редактировать профиль</h3>
+            <p class="modal-sub">Почта и пароль не изменяются</p>
+            <input type="text" class="auth-input" id="editNickname" placeholder="Никнейм" maxlength="30">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeEditModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="saveProfile()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛ УДАЛЕНИЯ -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <h3>Удалить аккаунт?</h3>
+            <p class="modal-sub">Это действие нельзя отменить. Введите пароль для подтверждения.</p>
+            <input type="password" class="auth-input" id="deletePassword" placeholder="Пароль" autocomplete="current-password">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">Отмена</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- БАННЕР -->
     <div class="update-banner" id="updateBanner" onclick="applyPendingUpdate()">
         <svg viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/>
@@ -873,7 +996,7 @@
         <button class="close-banner" onclick="event.stopPropagation(); hideUpdateBanner();">✕</button>
     </div>
 
-    <!-- ============ ШАПКА ============ -->
+    <!-- ШАПКА -->
     <div class="app-header">
         <h1 id="pageTitle">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -885,10 +1008,10 @@
         <p id="pageSubtitle">Бесплатные конфигурации</p>
     </div>
 
-    <!-- ============ КОНТЕНТ ============ -->
+    <!-- КОНТЕНТ -->
     <div class="content" id="content">
 
-        <!-- ===== ГЛАВНОЕ ===== -->
+        <!-- ГЛАВНОЕ -->
         <div class="tab-pane active" id="tab-main">
 
             <div class="status-bar">
@@ -945,7 +1068,7 @@
             </div>
         </div>
 
-        <!-- ===== НАСТРОЙКИ ===== -->
+        <!-- НАСТРОЙКИ -->
         <div class="tab-pane" id="tab-settings">
 
             <div class="settings-title">Внешний вид</div>
@@ -1076,12 +1199,12 @@
                         <div class="name">Версия</div>
                         <div class="desc">Текущая сборка</div>
                     </div>
-                    <span style="color:var(--text-muted);font-size:12px;">2.3</span>
+                    <span style="color:var(--text-muted);font-size:12px;">2.4</span>
                 </div>
             </div>
         </div>
 
-        <!-- ===== ПРОФИЛЬ ===== -->
+        <!-- ПРОФИЛЬ -->
         <div class="tab-pane" id="tab-profile">
 
             <div class="profile-header">
@@ -1116,6 +1239,50 @@
                 </div>
             </div>
 
+            <div class="settings-title">Аккаунт</div>
+            <div class="settings-section">
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <div class="name">Редактировать профиль</div>
+                        <div class="desc" id="editDesc">Изменить никнейм</div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="openEditModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                        <span>Изменить</span>
+                    </button>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <div class="name">Выйти из аккаунта</div>
+                        <div class="desc" id="logoutDesc">Вы не авторизованы</div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="signOut()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                            <polyline points="16 17 21 12 16 7"/>
+                            <line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
+                        <span>Выйти</span>
+                    </button>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <div class="name" style="color:#e17055;">Удалить аккаунт</div>
+                        <div class="desc">Безвозвратно удалить аккаунт</div>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="openDeleteModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                        </svg>
+                        <span>Удалить</span>
+                    </button>
+                </div>
+            </div>
+
             <div class="settings-title">Избранные ключи</div>
             <div class="key-list" id="favList">
                 <div class="empty-state">
@@ -1138,15 +1305,6 @@
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
                         </svg>
                         <span>Очистить</span>
-                    </button>
-                </div>
-                <div class="setting-row">
-                    <div class="setting-label">
-                        <div class="name">Выйти из аккаунта</div>
-                        <div class="desc" id="logoutDesc">Вы не авторизованы</div>
-                    </div>
-                    <button class="btn btn-secondary btn-sm" onclick="signOut()">
-                        <span>Выйти</span>
                     </button>
                 </div>
             </div>
@@ -1191,7 +1349,7 @@
     <div class="toast" id="toast"></div>
     <textarea id="copyHelper" readonly></textarea>
 
-    <!-- Firebase SDK (compat-версия) -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
@@ -1213,6 +1371,7 @@
     let firebaseReady = false;
     let firebaseAuth = null;
     let currentUser = null;
+    let authMode = 'login'; // 'login' | 'register'
 
     try {
         if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
@@ -1228,29 +1387,35 @@
     }
 
     // ============================================================
-    //  AUTH
+    //  AUTH UI
     // ============================================================
+    function switchAuthMode(mode) {
+        authMode = mode;
+        const isLogin = mode === 'login';
+        document.getElementById('tabLogin').classList.toggle('active', isLogin);
+        document.getElementById('tabRegister').classList.toggle('active', !isLogin);
+        document.getElementById('authNickname').classList.toggle('hidden', isLogin);
+        document.getElementById('authPassword').setAttribute('autocomplete', isLogin ? 'current-password' : 'new-password');
+        document.getElementById('authSubmitBtn').textContent = isLogin ? 'Войти' : 'Создать аккаунт';
+        document.getElementById('authForgotBtn').style.display = isLogin ? 'block' : 'none';
+        document.getElementById('authTitle').textContent = isLogin ? 'Добро пожаловать' : 'Создать аккаунт';
+        document.getElementById('authSubtitle').textContent = isLogin
+            ? 'Войдите, чтобы синхронизировать избранное'
+            : 'Придумайте никнейм, email и пароль';
+        clearAuthError();
+    }
+
     function showAuthError(msg, isSuccess = false) {
         const el = document.getElementById('authError');
         el.textContent = msg;
         el.classList.add('show');
-        if (isSuccess) {
-            el.style.color = '#00b894';
-            el.style.background = '#00b89415';
-            el.style.borderColor = '#00b89440';
-        } else {
-            el.style.color = '#e17055';
-            el.style.background = '#e1705515';
-            el.style.borderColor = '#e1705540';
-        }
+        el.style.color = isSuccess ? '#00b894' : '#e17055';
+        el.style.background = isSuccess ? '#00b89415' : '#e1705515';
+        el.style.borderColor = isSuccess ? '#00b89440' : '#e1705540';
     }
 
     function clearAuthError() {
-        const el = document.getElementById('authError');
-        el.classList.remove('show');
-        el.style.color = '';
-        el.style.background = '';
-        el.style.borderColor = '';
+        document.getElementById('authError').classList.remove('show');
     }
 
     function authErrorText(code) {
@@ -1264,14 +1429,21 @@
             'auth/too-many-requests': 'Слишком много попыток, попробуйте позже',
             'auth/invalid-credential': 'Неверный email или пароль',
             'auth/unauthorized-domain': 'Домен не авторизован в Firebase',
-            'auth/operation-not-allowed': 'Email/Password не включён в Firebase'
+            'auth/operation-not-allowed': 'Email/Password не включён в Firebase',
+            'auth/requires-recent-login': 'Требуется повторный вход',
+            'auth/missing-password': 'Введите пароль'
         };
         return map[code] || ('Ошибка: ' + code);
     }
 
+    async function submitAuth() {
+        if (authMode === 'login') await signIn();
+        else await signUp();
+    }
+
     async function signIn() {
         clearAuthError();
-        if (!firebaseReady) { showAuthError('Firebase не настроен. Используйте режим «Гость».'); return; }
+        if (!firebaseReady) { showAuthError('Firebase не настроен. Используйте «Гость».'); return; }
         const email = document.getElementById('authEmail').value.trim();
         const password = document.getElementById('authPassword').value;
         if (!email || !password) { showAuthError('Введите email и пароль'); return; }
@@ -1284,13 +1456,21 @@
 
     async function signUp() {
         clearAuthError();
-        if (!firebaseReady) { showAuthError('Firebase не настроен. Используйте режим «Гость».'); return; }
+        if (!firebaseReady) { showAuthError('Firebase не настроен. Используйте «Гость».'); return; }
+        const nickname = document.getElementById('authNickname').value.trim();
         const email = document.getElementById('authEmail').value.trim();
         const password = document.getElementById('authPassword').value;
+
+        if (!nickname) { showAuthError('Введите никнейм'); return; }
+        if (nickname.length < 2) { showAuthError('Никнейм слишком короткий'); return; }
         if (!email || !password) { showAuthError('Введите email и пароль'); return; }
         if (password.length < 6) { showAuthError('Пароль должен быть минимум 6 символов'); return; }
+
         try {
-            await firebaseAuth.createUserWithEmailAndPassword(email, password);
+            const cred = await firebaseAuth.createUserWithEmailAndPassword(email, password);
+            await cred.user.updateProfile({ displayName: nickname });
+            currentUser = firebaseAuth.currentUser;
+            updateProfileUI();
         } catch (e) {
             showAuthError(authErrorText(e.code));
         }
@@ -1312,6 +1492,7 @@
     function continueAsGuest() {
         currentUser = null;
         document.getElementById('authScreen').classList.add('hidden');
+        document.getElementById('splashScreen').classList.add('hidden');
         updateProfileUI();
         initAppAfterAuth();
     }
@@ -1321,11 +1502,95 @@
             document.getElementById('authScreen').classList.remove('hidden');
             return;
         }
+        if (!confirm('Выйти из аккаунта?')) return;
         try {
             await firebaseAuth.signOut();
+            appInitialized = false;
             document.getElementById('authScreen').classList.remove('hidden');
+            showToast('Вы вышли из аккаунта');
         } catch (e) {
             showToast('Ошибка выхода: ' + e.message);
+        }
+    }
+
+    // ============================================================
+    //  РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+    // ============================================================
+    function openEditModal() {
+        if (!currentUser) { showToast('Войдите в аккаунт'); return; }
+        document.getElementById('editNickname').value = currentUser.displayName || '';
+        document.getElementById('editModal').classList.add('show');
+    }
+
+    function closeEditModal() {
+        document.getElementById('editModal').classList.remove('show');
+    }
+
+    async function saveProfile() {
+        if (!currentUser) return;
+        const nickname = document.getElementById('editNickname').value.trim();
+        if (!nickname) { showToast('Введите никнейм'); return; }
+        if (nickname.length < 2) { showToast('Никнейм слишком короткий'); return; }
+        try {
+            await currentUser.updateProfile({ displayName: nickname });
+            await currentUser.reload();
+            currentUser = firebaseAuth.currentUser;
+            updateProfileUI();
+            closeEditModal();
+            showToast('Профиль обновлён');
+        } catch (e) {
+            showToast('Ошибка: ' + (e.message || e.code));
+        }
+    }
+
+    // ============================================================
+    //  УДАЛЕНИЕ АККАУНТА
+    // ============================================================
+    function openDeleteModal() {
+        if (!currentUser) { showToast('Войдите в аккаунт'); return; }
+        document.getElementById('deletePassword').value = '';
+        document.getElementById('deleteModal').classList.add('show');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.remove('show');
+    }
+
+    async function confirmDelete() {
+        if (!currentUser) return;
+        const password = document.getElementById('deletePassword').value;
+        if (!password) { showToast('Введите пароль'); return; }
+        try {
+            // Re-authenticate
+            const cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
+            await currentUser.reauthenticateWithCredential(cred);
+            await currentUser.delete();
+            closeDeleteModal();
+            showToast('Аккаунт удалён');
+
+            // Очищаем локальные данные
+            try {
+                ['vpn_keys', 'vpn_favorites', 'vpn_stats', 'vpn_settings', 'vpn_hash']
+                    .forEach(k => localStorage.removeItem(k));
+            } catch (e) {}
+
+            // Возвращаем на экран авторизации
+            appInitialized = false;
+            currentUser = null;
+            document.getElementById('authScreen').classList.remove('hidden');
+            document.getElementById('authPassword').value = '';
+            document.getElementById('authNickname').value = '';
+            updateProfileUI();
+        } catch (e) {
+            closeDeleteModal();
+            const code = e.code || '';
+            if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+                showToast('Неверный пароль');
+            } else if (code === 'auth/too-many-requests') {
+                showToast('Слишком много попыток, подождите');
+            } else {
+                showToast('Ошибка: ' + (e.message || code));
+            }
         }
     }
 
@@ -1334,14 +1599,17 @@
         const subEl = document.getElementById('profileSub');
         const avatarEl = document.getElementById('profileAvatar');
         const logoutDesc = document.getElementById('logoutDesc');
+        const editDesc = document.getElementById('editDesc');
 
         if (currentUser) {
-            nameEl.textContent = currentUser.email.split('@')[0] || 'Пользователь';
+            const nickname = currentUser.displayName || currentUser.email.split('@')[0] || 'Пользователь';
+            nameEl.textContent = nickname;
             subEl.textContent = currentUser.email;
-            avatarEl.innerHTML = (currentUser.email[0] || '?').toUpperCase();
-            avatarEl.style.fontSize = '22px';
+            avatarEl.textContent = nickname[0].toUpperCase();
+            avatarEl.style.fontSize = '24px';
             avatarEl.style.fontWeight = '700';
             logoutDesc.textContent = 'Вы вошли как ' + currentUser.email;
+            editDesc.textContent = 'Изменить никнейм';
         } else {
             nameEl.textContent = 'Гость';
             subEl.textContent = 'Локальный профиль';
@@ -1351,6 +1619,7 @@
                     <circle cx="12" cy="7" r="4"/>
                 </svg>`;
             logoutDesc.textContent = 'Вы не авторизованы';
+            editDesc.textContent = 'Доступно только с аккаунтом';
         }
     }
 
@@ -1824,8 +2093,6 @@
 
             if (lastKeysHash && newHash !== lastKeysHash) {
                 const parsed = parseKeys(text);
-                const oldCount = allKeys.length;
-
                 if (settings.notify) {
                     pendingUpdate = { keys: parsed, hash: newHash };
                     showUpdateBanner(`Доступны новые ключи: ${parsed.length}`);
@@ -2073,6 +2340,31 @@
         else btn.classList.remove('show');
     });
 
+    // Закрытие модалок по клику на оверлей
+    document.getElementById('editModal').addEventListener('click', function (e) {
+        if (e.target === this) closeEditModal();
+    });
+    document.getElementById('deleteModal').addEventListener('click', function (e) {
+        if (e.target === this) closeDeleteModal();
+    });
+
+    // Enter отправляет форму
+    document.getElementById('authPassword').addEventListener('keypress', e => {
+        if (e.key === 'Enter') submitAuth();
+    });
+    document.getElementById('authEmail').addEventListener('keypress', e => {
+        if (e.key === 'Enter') document.getElementById('authPassword').focus();
+    });
+    document.getElementById('authNickname').addEventListener('keypress', e => {
+        if (e.key === 'Enter') document.getElementById('authEmail').focus();
+    });
+    document.getElementById('editNickname').addEventListener('keypress', e => {
+        if (e.key === 'Enter') saveProfile();
+    });
+    document.getElementById('deletePassword').addEventListener('keypress', e => {
+        if (e.key === 'Enter') confirmDelete();
+    });
+
     // ============================================================
     //  ИНИЦИАЛИЗАЦИЯ
     // ============================================================
@@ -2096,7 +2388,11 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         if (firebaseReady) {
+            // Ждём, пока Firebase восстановит сессию (или убедится что её нет)
             firebaseAuth.onAuthStateChanged(user => {
+                // Скрываем сплэш
+                document.getElementById('splashScreen').classList.add('hidden');
+
                 if (user) {
                     currentUser = user;
                     document.getElementById('authScreen').classList.add('hidden');
@@ -2105,13 +2401,17 @@
                 } else {
                     currentUser = null;
                     updateProfileUI();
+                    // Показываем экран входа
                     document.getElementById('authScreen').classList.remove('hidden');
                 }
             });
         } else {
+            // Firebase не настроен — сразу показываем экран входа с режимом «Гость»
+            document.getElementById('splashScreen').classList.add('hidden');
+            document.getElementById('authScreen').classList.remove('hidden');
             updateProfileUI();
         }
-        console.log('[VPN Keys] v2.3 loaded');
+        console.log('[VPN Keys] v2.4 loaded');
     });
     </script>
 </body>
