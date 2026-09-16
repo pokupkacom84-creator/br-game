@@ -282,18 +282,6 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
 .avatar-preview-wrap { display:flex; justify-content:center; margin-bottom:16px; }
 .avatar-preview { width:96px; height:96px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent-light)); display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:36px; font-weight:700; color:#fff; }
 .avatar-preview img { width:100%; height:100%; object-fit:cover; }
-
-/* ============ FILE INPUT (прозрачный поверх кнопки) ============ */
-.file-input-wrapper { position: relative; width: 100%; margin-bottom: 8px; }
-.file-input-wrapper .btn { width: 100%; pointer-events: none; }
-.file-input-overlay {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    opacity: 0;
-    cursor: pointer;
-    z-index: 10;
-    font-size: 100px;
-}
 </style>
 </head>
 <body>
@@ -381,23 +369,14 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
         <div class="avatar-preview-wrap">
             <div class="avatar-preview" id="avatarPreview">?</div>
         </div>
-
-        <div class="file-input-wrapper">
-            <button class="btn btn-primary btn-full" type="button">
-                <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                <span>Выбрать из галереи</span>
-            </button>
-            <input type="file" id="avatarInput" accept="image/*" class="file-input-overlay">
-        </div>
-
-        <div class="file-input-wrapper">
-            <button class="btn btn-primary btn-full" type="button" style="background:linear-gradient(135deg,#0984e3,#74b9ff);">
-                <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                <span>Сделать фото</span>
-            </button>
-            <input type="file" id="cameraInput" accept="image/*" capture="environment" class="file-input-overlay">
-        </div>
-
+        <button class="btn btn-primary btn-full" style="margin-bottom:8px;" onclick="openPickerFromApp('gallery')">
+            <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span>Выбрать из галереи</span>
+        </button>
+        <button class="btn btn-primary btn-full" style="margin-bottom:8px;background:linear-gradient(135deg,#0984e3,#74b9ff);" onclick="openPickerFromApp('camera')">
+            <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span>Сделать фото</span>
+        </button>
         <button class="btn btn-danger btn-full" id="removeAvatarBtn" onclick="removeAvatar()">
             <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
             <span>Удалить аватар</span>
@@ -891,7 +870,7 @@ async function signOut() {
 }
 
 // ============================================================
-//  AVATAR SYSTEM
+//  AVATAR SYSTEM (JS BRIDGE)
 // ============================================================
 let localAvatar = null;
 
@@ -904,11 +883,69 @@ async function removeLocalAvatar() {
     await idbRemove('local_avatar');
 }
 
+// Вызывается из HTML-кнопки
+function openPickerFromApp(mode) {
+    console.log('[AVATAR] openPickerFromApp, mode =', mode);
+    if (window.Android && typeof window.Android.openImagePicker === 'function') {
+        window.Android.openImagePicker(mode || 'gallery');
+    } else {
+        alert('JS-мост недоступен. Запустите приложение в Sketchware Pro.');
+    }
+}
+
+// Вызывается ИЗ JAVA, когда фото выбрано и сконвертировано в Base64
+window.setAvatarFromBase64 = async function(base64Data) {
+    console.log('[AVATAR] setAvatarFromBase64, длина:', base64Data ? base64Data.length : 0);
+    try {
+        if (!base64Data || base64Data.length < 50) {
+            showToast('Файл не получен');
+            return;
+        }
+        await saveLocalAvatar(base64Data);
+        updateProfileUI();
+        closeAvatarModal();
+        showToast('Аватар обновлён');
+
+        // Синхронизация с Firebase если пользователь авторизован
+        if (currentUser && firebaseStorage) {
+            try {
+                const resp = await fetch(base64Data);
+                const blob = await resp.blob();
+                const ref = firebaseStorage.ref('avatars/' + currentUser.uid + '.jpg');
+                await ref.put(blob);
+                const url = await ref.getDownloadURL();
+                await currentUser.updateProfile({ photoURL: url });
+                await currentUser.reload();
+                currentUser = firebaseAuth.currentUser;
+                updateProfileUI();
+            } catch (err) {
+                console.warn('[Avatar upload]', err);
+            }
+        }
+    } catch (e) {
+        console.error('[AVATAR]', e);
+        alert('Ошибка: ' + e.message);
+    }
+};
+
+// Старый fallback для браузера (если откроют через обычный Chrome)
+document.addEventListener('change', async (e) => {
+    if (e.target && e.target.id === 'avatarInput') {
+        const file = e.target.files && e.target.files[0];
+        e.target.value = '';
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => window.setAvatarFromBase64(ev.target.result);
+            reader.readAsDataURL(file);
+        }
+    }
+});
+
 function openAvatarModal() {
     const previewEl = document.getElementById('avatarPreview');
     const src = (currentUser && currentUser.photoURL) || localAvatar;
     if (src) {
-        previewEl.innerHTML = `<img src="${src}" alt="">`;
+        previewEl.innerHTML = '<img src="' + src + '" alt="">';
     } else {
         const name = currentUser ? (currentUser.displayName || currentUser.email || 'U') : 'Гость';
         previewEl.textContent = name[0].toUpperCase();
@@ -920,89 +957,6 @@ function openAvatarModal() {
 }
 function closeAvatarModal() { document.getElementById('avatarModal').classList.remove('show'); }
 
-function resizeImage(file, maxW, maxH) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                let { width, height } = img;
-                const ratio = Math.min(maxW / width, maxH / height, 1);
-                width = Math.round(width * ratio);
-                height = Math.round(height * ratio);
-                const canvas = document.createElement('canvas');
-                canvas.width = width; canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('toBlob failed')), 'image/jpeg', 0.85);
-            };
-            img.onerror = reject;
-            img.src = e.target.result;
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-}
-
-function blobToDataURL(blob) {
-    return new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(r.result);
-        r.onerror = reject;
-        r.readAsDataURL(blob);
-    });
-}
-
-async function handleAvatarFile(file) {
-    if (!file) { console.warn('[AVATAR] файл не получен'); return; }
-    console.log('[AVATAR] файл:', file.name, file.type, file.size);
-    if (!file.type.startsWith('image/')) { showToast('Выберите изображение'); return; }
-    if (file.size > 8 * 1024 * 1024) { showToast('Файл больше 8 МБ'); return; }
-
-    closeAvatarModal();
-    showToast('Загрузка аватара...');
-
-    try {
-        const blob = await resizeImage(file, 256, 256);
-        const dataUrl = await blobToDataURL(blob);
-
-        await saveLocalAvatar(dataUrl);
-
-        if (currentUser && firebaseStorage) {
-            try {
-                const ref = firebaseStorage.ref(`avatars/${currentUser.uid}.jpg`);
-                await ref.put(blob);
-                const url = await ref.getDownloadURL();
-                await currentUser.updateProfile({ photoURL: url });
-                await currentUser.reload();
-                currentUser = firebaseAuth.currentUser;
-            } catch (err) {
-                console.warn('[Avatar upload]', err);
-            }
-        }
-
-        updateProfileUI();
-        showToast('Аватар обновлён');
-    } catch (err) {
-        console.error('[Avatar]', err);
-        showToast('Ошибка: ' + (err.message || 'загрузка не удалась'));
-    }
-}
-
-document.getElementById('avatarInput').addEventListener('change', async (e) => {
-    console.log('[AVATAR] change сработал, файлов:', e.target.files.length);
-    const file = e.target.files && e.target.files[0];
-    e.target.value = '';
-    await handleAvatarFile(file);
-});
-
-document.getElementById('cameraInput').addEventListener('change', async (e) => {
-    console.log('[AVATAR-CAM] change сработал, файлов:', e.target.files.length);
-    const file = e.target.files && e.target.files[0];
-    e.target.value = '';
-    await handleAvatarFile(file);
-});
-
 async function removeAvatar() {
     if (!confirm('Удалить аватар?')) return;
     closeAvatarModal();
@@ -1010,7 +964,7 @@ async function removeAvatar() {
     if (currentUser) {
         try {
             if (firebaseStorage) {
-                try { await firebaseStorage.ref(`avatars/${currentUser.uid}.jpg`).delete(); } catch (e) {}
+                try { await firebaseStorage.ref('avatars/' + currentUser.uid + '.jpg').delete(); } catch (e) {}
             }
             await currentUser.updateProfile({ photoURL: null });
             await currentUser.reload();
@@ -1062,7 +1016,7 @@ async function confirmDelete() {
         await currentUser.reauthenticateWithCredential(cred);
         const uid = currentUser.uid;
         await currentUser.delete();
-        if (firebaseStorage) { try { await firebaseStorage.ref(`avatars/${uid}.jpg`).delete(); } catch (e) {} }
+        if (firebaseStorage) { try { await firebaseStorage.ref('avatars/' + uid + '.jpg').delete(); } catch (e) {} }
         closeDeleteModal();
         showToast('Аккаунт удалён');
         try { localStorage.clear(); } catch (e) {}
@@ -1090,7 +1044,7 @@ function updateProfileUI() {
     const logoutDesc = document.getElementById('logoutDesc');
     const editDesc = document.getElementById('editDesc');
 
-    const editIconSvg = `<span class="avatar-edit"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span>`;
+    const editIconSvg = '<span class="avatar-edit"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span>';
 
     const cloudAvatar = currentUser && currentUser.photoURL ? currentUser.photoURL : null;
     const avatarSrc = cloudAvatar || localAvatar;
@@ -1100,10 +1054,10 @@ function updateProfileUI() {
         nameEl.textContent = nickname;
         subEl.textContent = currentUser.email;
         if (avatarSrc) {
-            avatarEl.innerHTML = `<img src="${avatarSrc}" alt="">${editIconSvg}`;
+            avatarEl.innerHTML = '<img src="' + avatarSrc + '" alt="">' + editIconSvg;
             avatarEl.style.fontSize = '';
         } else {
-            avatarEl.innerHTML = `${nickname[0].toUpperCase()}${editIconSvg}`;
+            avatarEl.innerHTML = nickname[0].toUpperCase() + editIconSvg;
             avatarEl.style.fontSize = '24px';
             avatarEl.style.fontWeight = '700';
         }
@@ -1113,10 +1067,10 @@ function updateProfileUI() {
         nameEl.textContent = 'Гость';
         subEl.textContent = 'Локальный профиль';
         if (avatarSrc) {
-            avatarEl.innerHTML = `<img src="${avatarSrc}" alt="">${editIconSvg}`;
+            avatarEl.innerHTML = '<img src="' + avatarSrc + '" alt="">' + editIconSvg;
             avatarEl.style.fontSize = '';
         } else {
-            avatarEl.innerHTML = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${editIconSvg}`;
+            avatarEl.innerHTML = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' + editIconSvg;
         }
         logoutDesc.textContent = 'Вы не авторизованы';
         editDesc.textContent = 'Доступно только с аккаунтом';
@@ -1480,7 +1434,6 @@ function openWheelModal() {
     drawWheel(wheelRotation);
     updateWheelAvailability();
 }
-
 function closeWheelModal() { document.getElementById('wheelModal').classList.remove('show'); }
 
 function updateWheelAvailability() {
@@ -1495,7 +1448,7 @@ function updateWheelAvailability() {
         btn.disabled = true;
         btn.style.opacity = '.5';
         btn.querySelector('span').textContent = 'Недоступно';
-        cool.textContent = `Следующая попытка через ${hours} ч ${mins} мин`;
+        cool.textContent = 'Следующая попытка через ' + hours + ' ч ' + mins + ' мин';
         badge.classList.add('hidden');
     } else {
         btn.disabled = false;
@@ -1509,10 +1462,7 @@ function updateWheelAvailability() {
 async function spinWheel() {
     if (wheelSpinning) return;
     const now = Date.now();
-    if (now - wheelLastSpin < WHEEL_COOLDOWN_MS) {
-        updateWheelAvailability();
-        return;
-    }
+    if (now - wheelLastSpin < WHEEL_COOLDOWN_MS) { updateWheelAvailability(); return; }
     if (allKeys.length === 0) { showToast('Сначала загрузите ключи'); return; }
 
     wheelSpinning = true;
@@ -1584,10 +1534,10 @@ function grantPrize(prize) {
     renderFavorites();
     refreshStatsUI();
 
-    resultEl.textContent = `🎉 Выигрыш: +${pick.length} ключей в избранное!`;
+    resultEl.textContent = '🎉 Выигрыш: +' + pick.length + ' ключей в избранное!';
     resultEl.className = 'wheel-result prize';
     launchConfetti();
-    showToast(`Добавлено ${pick.length} ключей`);
+    showToast('Добавлено ' + pick.length + ' ключей');
 }
 
 // ============================================================
@@ -1644,7 +1594,7 @@ function showSkeletons() {
     const list = document.getElementById('keyList');
     let html = '';
     for (let i = 0; i < 5; i++) {
-        html += `<div class="skeleton-card"><div class="sk-line sk-short"></div><div class="sk-line sk-long"></div><div class="sk-line sk-mid"></div></div>`;
+        html += '<div class="skeleton-card"><div class="sk-line sk-short"></div><div class="sk-line sk-long"></div><div class="sk-line sk-mid"></div></div>';
     }
     list.innerHTML = html;
 }
@@ -1787,9 +1737,9 @@ function renderKeys() {
     const list = document.getElementById('keyList');
     if (filteredKeys.length === 0) {
         if (allKeys.length === 0) {
-            list.innerHTML = `<div class="empty-state"><svg class="big-icon" viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/></svg><p>Нажмите «Загрузить»,<br>чтобы получить бесплатные ключи</p></div>`;
+            list.innerHTML = '<div class="empty-state"><svg class="big-icon" viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/></svg><p>Нажмите «Загрузить»,<br>чтобы получить бесплатные ключи</p></div>';
         } else {
-            list.innerHTML = `<div class="empty-state"><svg class="big-icon" viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>Ничего не найдено</p></div>`;
+            list.innerHTML = '<div class="empty-state"><svg class="big-icon" viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>Ничего не найдено</p></div>';
         }
         return;
     }
@@ -1802,22 +1752,22 @@ function renderKeys() {
 function buildKeyCard(k, isFav, delay = 0) {
     const isFavored = isFav || favorites.includes(k.raw);
     const enc = btoa(encodeURIComponent(k.raw));
-    return `<div class="key-card" data-raw="${esc(k.raw)}" style="animation-delay:${delay}ms">
-        <div class="card-top">
-            <span class="protocol-badge ${k.protocol}">${k.protocol.toUpperCase()}</span>
-            <button class="fav-btn ${isFavored ? 'active' : ''}" onclick="toggleFavorite('${enc}', this)">
-                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            </button>
-        </div>
-        <div class="key-name">${esc(k.name)}</div>
-        <div class="key-preview">${esc(truncate(k.raw, 70))}</div>
-        <div class="card-actions">
-            <button class="btn btn-primary btn-sm" onclick="copyKeyByRaw('${enc}')">
-                <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                <span>Скопировать</span>
-            </button>
-        </div>
-    </div>`;
+    return '<div class="key-card" data-raw="' + esc(k.raw) + '" style="animation-delay:' + delay + 'ms">' +
+        '<div class="card-top">' +
+            '<span class="protocol-badge ' + k.protocol + '">' + k.protocol.toUpperCase() + '</span>' +
+            '<button class="fav-btn ' + (isFavored ? 'active' : '') + '" onclick="toggleFavorite(\'' + enc + '\', this)">' +
+                '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' +
+            '</button>' +
+        '</div>' +
+        '<div class="key-name">' + esc(k.name) + '</div>' +
+        '<div class="key-preview">' + esc(truncate(k.raw, 70)) + '</div>' +
+        '<div class="card-actions">' +
+            '<button class="btn btn-primary btn-sm" onclick="copyKeyByRaw(\'' + enc + '\')">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+                '<span>Скопировать</span>' +
+            '</button>' +
+        '</div>' +
+    '</div>';
 }
 function copyKeyByRaw(encoded) { try { copyToClipboard(decodeURIComponent(atob(encoded))); } catch (e) {} }
 function toggleFavorite(encoded, btnEl) {
@@ -1847,13 +1797,13 @@ function toggleFavorite(encoded, btnEl) {
 function renderFavorites() {
     const list = document.getElementById('favList');
     if (favorites.length === 0) {
-        list.innerHTML = `<div class="empty-state"><svg class="big-icon" viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><p>Пока нет избранных ключей.<br>Нажмите на звёздочку в карточке ключа.</p></div>`;
+        list.innerHTML = '<div class="empty-state"><svg class="big-icon" viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><p>Пока нет избранных ключей.<br>Нажмите на звёздочку в карточке ключа.</p></div>';
         return;
     }
     let html = '';
     for (let i = 0; i < favorites.length; i++) {
         const raw = favorites[i];
-        html += buildKeyCard({ raw, protocol: detectProtocol(raw), name: extractName(raw) }, true, Math.min(i * 30, 400));
+        html += buildKeyCard({ raw: raw, protocol: detectProtocol(raw), name: extractName(raw) }, true, Math.min(i * 30, 400));
     }
     list.innerHTML = html;
 }
@@ -1987,7 +1937,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateProfileUI();
     }
     document.getElementById('wheelFab').classList.add('show');
-    console.log('[VPN Keys] v2.5 avatar fix loaded');
+    console.log('[VPN Keys] v2.5 loaded with JS Bridge avatar');
 });
 </script>
 </body>
