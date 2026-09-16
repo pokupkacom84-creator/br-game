@@ -235,7 +235,6 @@
   .serverList::-webkit-scrollbar-thumb, .modalCard::-webkit-scrollbar-thumb {
     background: rgba(255,167,38,0.3); border-radius: 3px; }
 
-  /* In-game HUD elements */
   #gameHud { position: fixed; inset: 0; z-index: 15; pointer-events: none; }
   #gameHud .touchBtn { pointer-events: auto; }
   .slotBar { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 8px; }
@@ -405,7 +404,6 @@
   </div>
 </div>
 
-<!-- SETTINGS MODAL -->
 <div id="settingsModal" class="modal hidden">
   <div class="modalCard">
     <div class="modalTitle">Настройки</div>
@@ -421,7 +419,6 @@
   </div>
 </div>
 
-<!-- ACHIEVEMENTS MODAL -->
 <div id="achModal" class="modal hidden">
   <div class="modalCard">
     <div class="modalTitle">Достижения</div>
@@ -430,7 +427,6 @@
   </div>
 </div>
 
-<!-- LEADERBOARD MODAL -->
 <div id="lbModal" class="modal hidden">
   <div class="modalCard">
     <div class="modalTitle">Лидерборд · Топ 50</div>
@@ -441,7 +437,6 @@
   </div>
 </div>
 
-<!-- FRIENDS MODAL -->
 <div id="frModal" class="modal hidden">
   <div class="modalCard">
     <div class="modalTitle">Друзья</div>
@@ -458,13 +453,11 @@
   </div>
 </div>
 
-<!-- CONNECTING -->
 <div id="connecting" class="screen hidden">
   <div class="spinner"></div>
   <div class="muted" id="connectMsg">Подключение...</div>
 </div>
 
-<!-- WAITING -->
 <div id="waiting" class="screen hidden">
   <div class="muted">Сервер</div>
   <div class="waitServerName" id="waitingServerName">-</div>
@@ -480,7 +473,6 @@
   <button class="btn btn-ghost" id="btnWaitingBack" style="margin-top:10px;min-width:200px;">ОТМЕНА</button>
 </div>
 
-<!-- ============ IN-GAME HUD ============ -->
 <div id="gameHud" class="hidden">
   <div class="topIndicators">
     <div class="phaseChip" id="phaseChip">ФАЗА 1</div>
@@ -534,6 +526,10 @@
 (() => {
 'use strict';
 
+/* ===== GLOBAL ERROR LOGGER ===== */
+window.addEventListener('error', e => console.error('[GLOBAL]', e.error || e.message));
+window.addEventListener('unhandledrejection', e => console.error('[PROMISE]', e.reason));
+
 const firebaseConfig = {
   apiKey: "AIzaSyB0uaLhHrYjWblrCBLTPx7mF_OmUhhld70",
   authDomain: "br-game-1f919.firebaseapp.com",
@@ -565,7 +561,6 @@ const SYNC_INTERVAL = 100, INTERP_SPEED = 14;
 const START_DELAY = 6000, SHOT_MAX_AGE = 2500, LOOT_COUNT = 60;
 const PROFILE_CACHE_KEY = 'br_profile_cache_v3';
 const SETTINGS_KEY = 'br_settings_v1';
-const ACH_KEY = 'br_achievements_v1';
 
 const ZONE_PHASES = [
   { wait: 45, shrink: 25, toR: 1100 },
@@ -594,15 +589,15 @@ const MEDS = {
 };
 
 const ACHIEVEMENTS = [
-  { id:'first_blood',   name:'Первая кровь',   desc:'1 убийство',            goal:1,   val: s => s.totalKills||0 },
-  { id:'shooter',       name:'Стрелок',        desc:'50 убийств',            goal:50,  val: s => s.totalKills||0 },
-  { id:'killer',        name:'Мясник',         desc:'500 убийств',           goal:500, val: s => s.totalKills||0 },
-  { id:'chicken',       name:'Победитель',     desc:'1 победа',              goal:1,   val: s => s.wins||0 },
-  { id:'gladiator',     name:'Гладиатор',      desc:'10 побед',              goal:10,  val: s => s.wins||0 },
-  { id:'survivor',      name:'Выживший',       desc:'25 матчей',             goal:25,  val: s => s.matches||0 },
-  { id:'daily3',        name:'Регуляр',        desc:'3 дня подряд',          goal:3,   val: s => s.dailyStreak||0 },
-  { id:'daily7',        name:'Постоянство',    desc:'7 дней подряд',         goal:7,   val: s => s.dailyStreak||0 },
-  { id:'squad_win',     name:'Командный',      desc:'Победа в отряде 4',     goal:1,   val: s => s.squadWins||0 },
+  { id:'first_blood', name:'Первая кровь', desc:'1 убийство',     goal:1,   val: s => s.totalKills||0 },
+  { id:'shooter',     name:'Стрелок',      desc:'50 убийств',     goal:50,  val: s => s.totalKills||0 },
+  { id:'killer',      name:'Мясник',       desc:'500 убийств',    goal:500, val: s => s.totalKills||0 },
+  { id:'chicken',     name:'Победитель',   desc:'1 победа',       goal:1,   val: s => s.wins||0 },
+  { id:'gladiator',   name:'Гладиатор',    desc:'10 побед',       goal:10,  val: s => s.wins||0 },
+  { id:'survivor',    name:'Выживший',     desc:'25 матчей',      goal:25,  val: s => s.matches||0 },
+  { id:'daily3',      name:'Регуляр',      desc:'3 дня подряд',   goal:3,   val: s => s.dailyStreak||0 },
+  { id:'daily7',      name:'Постоянство',  desc:'7 дней подряд',  goal:7,   val: s => s.dailyStreak||0 },
+  { id:'squad_win',   name:'Командный',    desc:'Победа в отряде',goal:1,   val: s => s.squadWins||0 },
 ];
 
 const BOT_MODES = {
@@ -620,13 +615,11 @@ let settings = { sound:true, sensitivity:1.0, zoom:1.0, gfx:'high' };
 try { const s = localStorage.getItem(SETTINGS_KEY); if (s) Object.assign(settings, JSON.parse(s)); } catch(e){}
 function saveSettings(){ try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch(e){} }
 
-/* ===== SOUND (Web Audio) ===== */
+/* ===== SOUND ===== */
 let actx = null;
 function ensureAudio(){
   if (!settings.sound) return false;
-  if (!actx){
-    try { actx = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){ return false; }
-  }
+  if (!actx){ try { actx = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){ return false; } }
   if (actx.state === 'suspended') actx.resume();
   return true;
 }
@@ -707,8 +700,7 @@ let pendingSquadSize = 1;
 let lastZonePhase = -1;
 let shakeTime = 0, shakeIntensity = 0;
 let spectatorTarget = null;
-let shootingHeld = false;
-let lastHitTime = 0;
+let endRecorded = false;
 
 const SCREENS = ['authScreen','mainMenu','serverBrowser','connecting','waiting'];
 function showScreen(id){ for (const s of SCREENS) document.getElementById(s).classList.toggle('hidden', s !== id); }
@@ -718,13 +710,11 @@ function hideAllScreens(){ for (const s of SCREENS) document.getElementById(s).c
 function generateObstacles(seed){
   const rnd = mulberry32(hashStr('obst:' + seed));
   const arr = [];
-  // big central compound
   arr.push({ type:'rect', x: WORLD/2 - 110, y: WORLD/2 - 110, w: 220, h: 220, solid:true });
   for (let i = 0; i < 90; i++){
     const roll = rnd();
     const x = 160 + rnd()*(WORLD-320);
     const y = 160 + rnd()*(WORLD-320);
-    // skip central area
     if (Math.abs(x - WORLD/2) < 160 && Math.abs(y - WORLD/2) < 160) continue;
     if (roll < 0.55){
       const w = 44 + rnd()*90, h = 44 + rnd()*90;
@@ -755,8 +745,7 @@ function resolveObstacle(ent){
       if (d < minD){
         const push = (minD - d);
         const k = d > 0.001 ? push/d : 1;
-        ent.x += dx * k;
-        ent.y += dy * k;
+        ent.x += dx * k; ent.y += dy * k;
       }
     } else {
       const nx = Math.max(o.x, Math.min(ent.x, o.x + o.w));
@@ -767,10 +756,8 @@ function resolveObstacle(ent){
         const d = Math.sqrt(d2);
         if (d > 0.001){
           const push = ent.r - d;
-          ent.x += dx/d * push;
-          ent.y += dy/d * push;
+          ent.x += dx/d * push; ent.y += dy/d * push;
         } else {
-          // inside — push out to nearest edge
           const dxl = ent.x - o.x, dxr = (o.x+o.w) - ent.x;
           const dyt = ent.y - o.y, dyb = (o.y+o.h) - ent.y;
           const m = Math.min(dxl,dxr,dyt,dyb);
@@ -807,9 +794,7 @@ function bulletHitsObstacle(x, y){
 function safeSpawn(x, y, r){
   for (let i = 0; i < 30; i++){
     let ok = true;
-    for (const o of obstacles){
-      if (circleVsObstacle(x, y, r + 4, o)){ ok = false; break; }
-    }
+    for (const o of obstacles){ if (circleVsObstacle(x, y, r + 4, o)){ ok = false; break; } }
     if (ok) return { x, y };
     x += rand(-60, 60); y += rand(-60, 60);
     x = Math.max(60, Math.min(WORLD - 60, x));
@@ -824,8 +809,7 @@ function makeEntity(x, y, isBot, name){
     x, y, r:16, hp:100, maxHp:100, angle:0,
     isBot, name, uid:null,
     speed: PLAYER_SPEED,
-    slots: [null, null],
-    currentSlot: 0,
+    slots: [null, null], currentSlot: 0,
     meds: { bandage:0, medkit:0, energy:0 },
     grenadeCount: 0,
     armor: 0, helmet: 0,
@@ -839,11 +823,9 @@ function makeEntity(x, y, isBot, name){
     dmgMul: 1,
     team: 0,
     muzzleFlash: 0,
+    reloadSlot: null,
+    _wasFiring: false,
   };
-}
-function getWeapon(ent){
-  const w = ent.slots[ent.currentSlot];
-  return w ? WEAPONS[w] : null;
 }
 function spawnPointFor(uid){
   const h = hashStr((roomId || '') + uid);
@@ -860,13 +842,11 @@ function resetGame(){
     const sp = safeSpawn(WORLD/2 + rand(-200,200), WORLD/2 + rand(-200,200), 16);
     px = sp.x; py = sp.y;
   }
-  // obstacles per room
   obstacles = generateObstacles(netMode === 'online' ? (roomId || 'x') : ('bot:' + selectedBotMode + ':' + Date.now()));
 
   player = makeEntity(px, py, false, myName);
   player.uid = myUid;
   player.team = myTeam;
-  // starting pistol in slot 0
   player.slots[0] = 'pistol';
   player.ammoBySlot[0] = WEAPONS.pistol.ammo;
   player.meds.bandage = 2;
@@ -894,10 +874,11 @@ function resetGame(){
   bullets = []; loot = []; particles = []; killFeed = []; grenades = []; airdrops = [];
   sawOthers = false;
   matchRecorded = false;
+  endRecorded = false;
   lastZonePhase = -1;
   if (netMode === 'offline') spawnLootRandom(70, selectedBotMode);
   else spawnLootSeeded(roomId, LOOT_COUNT);
-  zone = { x: WORLD/2, y: WORLD/2, r: ZONE_START_R, targetR: ZONE_END_R, phase: 0, phaseStart: 0, shrinkStart: 0 };
+  zone = { x: WORLD/2, y: WORLD/2, r: ZONE_START_R, targetR: ZONE_END_R, phase: 0 };
   redZone = null;
   time = 0;
   gameState = 'playing';
@@ -959,14 +940,13 @@ function removeLootById(id){
   for (let i = loot.length - 1; i >= 0; i--) if (String(loot[i].id) === s) loot.splice(i,1);
 }
 function isTeammate(a, b){ return a && b && a !== b && a.team === b.team && a.team > 0; }
-function applyDamage(target, rawDmg, headshot, attacker){
+function applyDamage(target, rawDmg, headshot){
   if (!target || !target.alive) return 0;
   let mul = 1;
-  if (headshot && target.helmet > 0){ mul *= HELMET_MUL[target.helmet]; }
-  if (!headshot && target.armor > 0){ mul *= ARMOR_MUL[target.armor]; }
+  if (headshot && target.helmet > 0) mul *= HELMET_MUL[target.helmet];
+  if (!headshot && target.armor > 0) mul *= ARMOR_MUL[target.armor];
   const dmg = rawDmg * mul;
   target.hp = Math.max(0, target.hp - dmg);
-  target.lastDamageAt = performance.now();
   return dmg;
 }
 function killEntity(ent, killer){
@@ -998,7 +978,7 @@ const mouse = { x:0, y:0, down:false };
 
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
-  if (gameState === 'won' || gameState === 'lost'){ backToMainMenu(); return; }
+  if (gameState === 'won' || gameState === 'lost'){ if (!spectatorTarget) backToMainMenu(); return; }
   if (gameState !== 'playing') return;
   for (const t of e.changedTouches){
     if (t.clientX < W/2 && joyL.id === null){
@@ -1036,7 +1016,7 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
 canvas.addEventListener('mousedown', () => {
-  if (gameState === 'won' || gameState === 'lost'){ backToMainMenu(); return; }
+  if (gameState === 'won' || gameState === 'lost'){ if (!spectatorTarget) backToMainMenu(); return; }
   if (gameState === 'playing') mouse.down = true;
 });
 canvas.addEventListener('mouseup', () => { mouse.down = false; });
@@ -1053,9 +1033,7 @@ function selectSlot(i){
 document.getElementById('btnSwap').onclick = () => selectSlot(1 - player.currentSlot);
 document.getElementById('slot0').onclick = () => selectSlot(0);
 document.getElementById('slot1').onclick = () => selectSlot(1);
-document.querySelectorAll('.medBtn').forEach(el => {
-  el.onclick = () => useMed(el.dataset.med);
-});
+document.querySelectorAll('.medBtn').forEach(el => { el.onclick = () => useMed(el.dataset.med); });
 document.getElementById('btnThrow').onclick = () => throwGrenade();
 
 function updateHudSlots(){
@@ -1091,11 +1069,8 @@ function finishMed(){
   const cfg = MEDS[type];
   if (!cfg) return;
   if (player.meds[type] > 0) player.meds[type]--;
-  if (type === 'energy'){
-    player.energyRegen = cfg.duration;
-  } else {
-    player.hp = Math.min(cfg.cap, player.hp + cfg.heal);
-  }
+  if (type === 'energy') player.energyRegen = cfg.duration;
+  else player.hp = Math.min(cfg.cap, player.hp + cfg.heal);
   player.usingMed = null;
   document.getElementById('medProgress').classList.add('hidden');
   SFX.pickup();
@@ -1113,10 +1088,7 @@ function throwGrenade(){
     y: player.y + Math.sin(player.angle) * 20,
     vx: Math.cos(player.angle) * spd,
     vy: Math.sin(player.angle) * spd,
-    fuse: 3.0,
-    owner: player,
-    uid: myUid,
-    team: player.team,
+    fuse: 3.0, owner: player, uid: myUid, team: player.team,
   });
   SFX.throwG();
   if (netMode === 'online' && db && roomId){
@@ -1177,47 +1149,87 @@ tabLogin.onclick = () => setAuthMode('login');
 tabRegister.onclick = () => setAuthMode('register');
 authSubmit.onclick = doAuthSubmit;
 [authEmail, authPass, authName].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') doAuthSubmit(); }));
+
 async function doAuthSubmit(){
   authError.textContent = '';
   const email = (authEmail.value || '').trim();
   const pass  = (authPass.value || '').trim();
   const name  = sanitizeName(authName.value);
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ authError.textContent = 'Введи корректный email'; return; }
-  if (pass.length < 6){ authError.textContent = 'Пароль минимум 6 символов'; return; }
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    authError.textContent = 'Введи корректный email'; return;
+  }
+  if (pass.length < 6){
+    authError.textContent = 'Пароль минимум 6 символов'; return;
+  }
+  if (authMode === 'register' && (!name || name === 'PLAYER')){
+    authError.textContent = 'Придумай ник (до 14 символов)'; return;
+  }
+
   authSubmit.disabled = true;
   const oldLabel = authSubmit.textContent;
   authSubmit.textContent = '...';
+
   try {
-    if (!db) initFirebase();
+    if (!db || !auth) initFirebase();
+
     if (authMode === 'login'){
       await auth.signInWithEmailAndPassword(email, pass);
+      // навигацию делает onAuthStateChanged
     } else {
       const cred = await auth.createUserWithEmailAndPassword(email, pass);
-      await cred.user.updateProfile({ displayName: name });
-      await db.ref('users/' + cred.user.uid).set({
-        name, email, kills:0, wins:0, matches:0, dailyStreak:0,
-        createdAt: firebase.database.ServerValue.TIMESTAMP,
+      const uid = cred.user.uid;
+
+      try { await cred.user.updateProfile({ displayName: name }); } catch(e){ console.warn(e); }
+
+      // update (не set) — не затираем возможный профиль
+      await db.ref('users/' + uid).update({
+        name, email,
+        kills: 0, wins: 0, matches: 0, dailyStreak: 0,
       });
+
+      // синхронизируем локально сразу
+      userProfile = Object.assign(userProfile, {
+        name, kills: 0, wins: 0, matches: 0, dailyStreak: 0,
+      });
+      myName = name;
+      cacheProfile();
+      updateProfileUI();
+      console.log('[auth] registered:', uid, name);
     }
   } catch(err){
+    console.error('[auth]', err);
     const c = err.code || '';
-    if (c.includes('email-already-in-use')) authError.textContent = 'Email уже занят';
-    else if (c.includes('weak-password')) authError.textContent = 'Слабый пароль';
-    else if (c.includes('wrong-password') || c.includes('invalid-credential')) authError.textContent = 'Неверные данные';
-    else if (c.includes('user-not-found')) authError.textContent = 'Аккаунт не найден';
-    else if (c.includes('operation-not-allowed')) authError.textContent = 'Включи Email/Password в Firebase';
-    else authError.textContent = err.message || 'Ошибка';
+    let msg = err.message || String(err);
+    if (c.includes('email-already-in-use'))      msg = 'Email уже занят — попробуй войти';
+    else if (c.includes('weak-password'))        msg = 'Слабый пароль';
+    else if (c.includes('wrong-password'))       msg = 'Неверный пароль';
+    else if (c.includes('invalid-credential'))   msg = 'Неверный email или пароль';
+    else if (c.includes('user-not-found'))       msg = 'Аккаунт не найден';
+    else if (c.includes('invalid-email'))        msg = 'Неверный email';
+    else if (c.includes('operation-not-allowed'))msg = 'Включи Email/Password в Firebase Auth';
+    else if (c.includes('network-request-failed'))msg = 'Нет соединения с Firebase';
+    authError.textContent = msg;
   } finally {
     authSubmit.disabled = false;
     authSubmit.textContent = oldLabel;
   }
 }
+
 btnGuest.onclick = async () => {
   authError.textContent = '';
   btnGuest.disabled = true;
-  try { if (!db) initFirebase(); await auth.signInAnonymously(); }
-  catch(err){ authError.textContent = err.message || 'Ошибка'; }
-  finally { btnGuest.disabled = false; }
+  try {
+    if (!db || !auth) initFirebase();
+    await auth.signInAnonymously();
+  } catch(err){
+    console.error('[guest]', err);
+    const c = err.code || '';
+    if (c.includes('operation-not-allowed')) authError.textContent = 'Включи Anonymous в Firebase Auth';
+    else authError.textContent = err.message || 'Ошибка';
+  } finally {
+    btnGuest.disabled = false;
+  }
 };
 
 /* ===== MODE LIST ===== */
@@ -1265,7 +1277,7 @@ document.getElementById('btnChangeName').onclick = async () => {
     await currentUser.updateProfile({ displayName: newName });
     await db.ref('users/' + currentUser.uid + '/name').set(newName);
     cacheProfile();
-  } catch(e){}
+  } catch(e){ console.warn(e); }
   updateProfileUI();
 };
 document.getElementById('btnSettings').onclick = openSettings;
@@ -1297,14 +1309,8 @@ function openSettings(){
   settingsModal.classList.remove('hidden');
 }
 document.getElementById('btnCloseSettings').onclick = () => { settingsModal.classList.add('hidden'); saveSettings(); };
-document.getElementById('sensSlider').oninput = e => {
-  settings.sensitivity = +e.target.value;
-  document.getElementById('sensVal').textContent = settings.sensitivity.toFixed(1);
-};
-document.getElementById('zoomSlider').oninput = e => {
-  settings.zoom = +e.target.value;
-  document.getElementById('zoomVal').textContent = settings.zoom.toFixed(1);
-};
+document.getElementById('sensSlider').oninput = e => { settings.sensitivity = +e.target.value; document.getElementById('sensVal').textContent = settings.sensitivity.toFixed(1); };
+document.getElementById('zoomSlider').oninput = e => { settings.zoom = +e.target.value; document.getElementById('zoomVal').textContent = settings.zoom.toFixed(1); };
 document.getElementById('btnToggleSound').onclick = () => {
   settings.sound = !settings.sound;
   document.getElementById('btnToggleSound').textContent = '🔊 ЗВУК: ' + (settings.sound ? 'ВКЛ' : 'ВЫКЛ');
@@ -1404,7 +1410,7 @@ async function refreshFriends(){
     list.innerHTML = '';
     const val = snap.val() || {};
     const keys = Object.keys(val);
-    if (keys.length === 0){ list.innerHTML = '<div class="muted">Пока нет друзей</div>'; }
+    if (keys.length === 0) list.innerHTML = '<div class="muted">Пока нет друзей</div>';
     for (const uid of keys){
       const f = val[uid];
       const row = document.createElement('div');
@@ -1412,14 +1418,12 @@ async function refreshFriends(){
       row.innerHTML = `<span>👤</span><div style="flex:1"><div style="font-weight:800">${escapeHtml(f.name)}</div></div>`;
       const invBtn = document.createElement('button');
       invBtn.className = 'btn btn-ghost';
-      invBtn.style.padding = '4px 10px';
-      invBtn.style.height = '28px';
-      invBtn.style.fontSize = '10px';
+      invBtn.style.cssText = 'padding:4px 10px;height:28px;font-size:10px';
       invBtn.textContent = 'ПРИГЛАСИТЬ';
       invBtn.onclick = () => inviteFriend(uid);
       const delBtn = document.createElement('button');
       delBtn.className = 'btn btn-ghost';
-      delBtn.style.padding = '4px 10px'; delBtn.style.height = '28px'; delBtn.style.fontSize = '10px';
+      delBtn.style.cssText = 'padding:4px 10px;height:28px;font-size:10px';
       delBtn.textContent = '✕';
       delBtn.onclick = async () => { await db.ref(`users/${currentUser.uid}/friends/${uid}`).remove(); refreshFriends(); };
       row.appendChild(invBtn); row.appendChild(delBtn);
@@ -1431,17 +1435,12 @@ async function refreshFriends(){
 async function inviteFriend(friendUid){
   if (!isRegistered()){ alert('Только для зарегистрированных'); return; }
   try {
-    // pick any open room (hosted by user or find a random one)
     let roomToInvite = roomId;
     if (!roomToInvite){
       const snap = await db.ref('rooms').orderByChild('meta/createdBy').equalTo(currentUser.uid).limitToFirst(1).once('value');
       snap.forEach(c => { roomToInvite = c.key; });
     }
-    if (!roomToInvite){
-      // create one
-      alert('Сначала создай сервер, потом приглашай.');
-      return;
-    }
+    if (!roomToInvite){ alert('Сначала создай сервер, потом приглашай.'); return; }
     await db.ref(`invites/${friendUid}/${currentUser.uid}`).set({
       fromName: userProfile.name || 'PLAYER',
       roomId: roomToInvite,
@@ -1459,6 +1458,7 @@ function startFriendInvitesListener(){
   frListenerCb = frListenerRef.on('value', snap => {
     const val = snap.val() || {};
     const box = document.getElementById('frInvites');
+    if (!box) return;
     box.innerHTML = '';
     const keys = Object.keys(val);
     if (keys.length === 0){ box.innerHTML = '<div class="muted">Нет приглашений</div>'; return; }
@@ -1468,7 +1468,7 @@ function startFriendInvitesListener(){
       row.className = 'listRow';
       row.innerHTML = `<span>✉️</span><div style="flex:1"><div style="font-weight:800">${escapeHtml(inv.fromName||'?')}</div><div class="sub">${escapeHtml(inv.roomName||'')}</div></div>`;
       const acc = document.createElement('button');
-      acc.className = 'btn btn-primary'; acc.style.padding='4px 10px'; acc.style.height='28px'; acc.style.fontSize='10px';
+      acc.className = 'btn btn-primary'; acc.style.cssText = 'padding:4px 10px;height:28px;font-size:10px';
       acc.textContent = 'ВОЙТИ';
       acc.onclick = async () => {
         await db.ref(`invites/${currentUser.uid}/${fromUid}`).remove();
@@ -1476,7 +1476,7 @@ function startFriendInvitesListener(){
         joinServerById(inv.roomId, null);
       };
       const rej = document.createElement('button');
-      rej.className = 'btn btn-ghost'; rej.style.padding='4px 10px'; rej.style.height='28px'; rej.style.fontSize='10px';
+      rej.className = 'btn btn-ghost'; rej.style.cssText = 'padding:4px 10px;height:28px;font-size:10px';
       rej.textContent = '✕';
       rej.onclick = () => db.ref(`invites/${currentUser.uid}/${fromUid}`).remove();
       row.appendChild(acc); row.appendChild(rej);
@@ -1503,7 +1503,6 @@ codeInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.get
 
 function startServerBrowserListener(){
   if (serverBrowserRef) return;
-  // cleanup old rooms
   cleanupOldRooms().catch(()=>{});
   serverBrowserRef = db.ref('rooms');
   serverBrowserCb = serverBrowserRef.on('value', snap => renderServerList(snap.val() || {}), err => {
@@ -1670,12 +1669,9 @@ async function connectToRoom(meta){
     catch(e){ clearTimeout(to); res(0); }
   });
 
-  // Compute team
   if (meta.squadSize && meta.squadSize > 1){
     myTeam = 1 + (hashStr(roomId + myUid) % Math.ceil((meta.maxPlayers||30) / meta.squadSize));
-  } else {
-    myTeam = 0;
-  }
+  } else myTeam = 0;
 
   document.getElementById('connectMsg').textContent = 'Вход в комнату...';
   try { await joinRoom(); }
@@ -1756,8 +1752,7 @@ async function joinRoom(){
         e.angle = e.targetAngle = p.angle || 0;
         e.hp = p.hp != null ? p.hp : 100;
         e.lastServerHp = e.hp; e.pendingDamage = 0;
-        e.slots = ['pistol', null];
-        e.weaponKey = p.weapon || 'pistol';
+        e.slots = ['pistol', null]; e.weaponKey = p.weapon || 'pistol';
         e.alive = p.alive !== false; e.kills = p.kills || 0;
         e.team = p.team || 0;
         remotePlayers.set(uid, e);
@@ -1837,10 +1832,9 @@ function setupGameListeners(){
   const dCb = dmgRef.on('child_added', snap => {
     const d = snap.val(); snap.ref.remove().catch(()=>{});
     if (!d || !player || !player.alive || gameState !== 'playing') return;
-    // check teammate
     const fromTeam = d.byTeam || 0;
     if (fromTeam > 0 && fromTeam === player.team) return;
-    const dealt = applyDamage(player, d.amount, false);
+    applyDamage(player, d.amount, false);
     showDamageFlash();
     shakeScreen(0.2, 8);
     if (player.hp <= 0){
@@ -1859,7 +1853,6 @@ function setupGameListeners(){
   const kCb = myKillsRef.on('value', s => { if (player) player.kills = s.val() || 0; });
   listeners.push({ ref: myKillsRef, type:'value', cb: kCb });
 
-  // loot via transaction (server-authoritative)
   const takenRef = db.ref(`rooms/${roomId}/taken`);
   const tCb = takenRef.on('child_added', snap => {
     const id = String(snap.key);
@@ -1868,7 +1861,6 @@ function setupGameListeners(){
   });
   listeners.push({ ref: takenRef, type:'child_added', cb: tCb });
 
-  // airdrops
   const adRef = db.ref(`rooms/${roomId}/airdrops`);
   const adCb = adRef.on('child_added', snap => {
     const a = snap.val();
@@ -1884,10 +1876,9 @@ function tryTakeLoot(lootId, ent){
   if (netMode !== 'online') return true;
   const id = String(lootId);
   if (takenLoot.has(id)) return false;
-  // Optimistic local
   takenLoot.add(id);
   db.ref(`rooms/${roomId}/taken/${id}`).transaction(cur => {
-    if (cur) return; // abort — already taken
+    if (cur) return;
     return true;
   }).catch(()=>{});
   return true;
@@ -1934,14 +1925,12 @@ function tryFire(ent, dt){
       x: ent.x + Math.cos(ent.angle)*(ent.r + 6),
       y: ent.y + Math.sin(ent.angle)*(ent.r + 6),
       vx: Math.cos(a)*wpn.speed, vy: Math.sin(a)*wpn.speed,
-      dmg: wpn.dmg * mul, owner: ent, life: 1.2, color: wpn.color,
-      team: ent.team,
+      dmg: wpn.dmg * mul, owner: ent, life: 1.2, color: wpn.color, team: ent.team,
     });
   }
   ent.ammoBySlot[ent.currentSlot] = ammo - 1;
   ent.fireCd = wpn.rate;
   ent.muzzleFlash = 0.08;
-  // casings
   for (let i = 0; i < 2; i++)
     particles.push({
       x: ent.x + Math.cos(ent.angle)*(ent.r+8),
@@ -1950,10 +1939,7 @@ function tryFire(ent, dt){
       vy: Math.sin(ent.angle+Math.PI/2)*rand(60,120) + rand(-30,30),
       life: 0.4, color: '#ffd166',
     });
-  if (netMode === 'online' && ent === player){
-    sendShot(ent.x, ent.y, ent.angle, w);
-    SFX.shot(w);
-  }
+  if (netMode === 'online' && ent === player){ sendShot(ent.x, ent.y, ent.angle, w); SFX.shot(w); }
 }
 
 function updatePlayer(dt){
@@ -2008,18 +1994,12 @@ function updatePlayer(dt){
   }
   if (player.muzzleFlash > 0) player.muzzleFlash -= dt;
 
-  // med progress
   if (player.usingMed){
     player.medTimer -= dt;
     const pct = 1 - player.medTimer / player.medTotal;
     document.getElementById('medProgressFill').style.width = (pct*100) + '%';
-    // cancel if moved much or shot
-    if ((dx || dy) && Math.hypot(dx,dy) > 0.05){
-      // allow slow walking
-    }
     if (player.medTimer <= 0) finishMed();
   }
-  // energy regen
   if (player.energyRegen > 0){
     player.energyRegen -= dt;
     player.hp = Math.min(player.maxHp, player.hp + MEDS.energy.regen * dt);
@@ -2066,7 +2046,13 @@ function updateBot(b, dt){
   b.y = Math.max(b.r, Math.min(WORLD - b.r, b.y));
   resolveObstacle(b);
   if (b.fireCd > 0) b.fireCd -= dt;
-  if (b.reloading > 0){ b.reloading -= dt; if (b.reloading <= 0 && b.reloadSlot != null){ b.ammoBySlot[b.reloadSlot] = WEAPONS[b.slots[b.reloadSlot]].ammo; b.reloadSlot = null; } }
+  if (b.reloading > 0){
+    b.reloading -= dt;
+    if (b.reloading <= 0 && b.reloadSlot != null){
+      b.ammoBySlot[b.reloadSlot] = WEAPONS[b.slots[b.reloadSlot]].ammo;
+      b.reloadSlot = null;
+    }
+  }
   if (b.muzzleFlash > 0) b.muzzleFlash -= dt;
 }
 
@@ -2127,12 +2113,8 @@ function updateGrenades(dt){
     g.vx *= 0.96; g.vy *= 0.96;
     g.x += g.vx * dt; g.y += g.vy * dt;
     g.fuse -= dt;
-    // obstacle bounce (simple)
     if (pointBlocked(g.x, g.y)){ g.vx *= -0.5; g.vy *= -0.5; }
-    if (g.fuse <= 0){
-      explodeGrenade(g);
-      grenades.splice(i,1);
-    }
+    if (g.fuse <= 0){ explodeGrenade(g); grenades.splice(i,1); }
   }
 }
 
@@ -2148,11 +2130,9 @@ function updateLoot(){
       const existing = player.slots.indexOf(wk);
       if (existing >= 0){ if (existing === player.currentSlot) ok = false; }
       else {
-        // pick slot with empty first, else replace current
         if (!player.slots[0]) player.slots[0] = wk;
         else if (!player.slots[1]) player.slots[1] = wk;
         else player.slots[player.currentSlot] = wk;
-        // refill ammo
         const slot = player.slots.indexOf(wk);
         player.ammoBySlot[slot] = WEAPONS[wk].ammo;
         updateHudSlots();
@@ -2160,10 +2140,7 @@ function updateLoot(){
     }
     else if (l.type === 'armor'){ if (player.armor >= 3) ok = false; else player.armor++; }
     else if (l.type === 'helmet'){ if (player.helmet >= 3) ok = false; else player.helmet++; }
-    else if (l.type === 'bandage'){
-      const max = MEDS.bandage.stack;
-      if (player.meds.bandage >= max) ok = false; else player.meds.bandage++;
-    }
+    else if (l.type === 'bandage'){ const max = MEDS.bandage.stack; if (player.meds.bandage >= max) ok = false; else player.meds.bandage++; }
     else if (l.type === 'medkit'){ const max = MEDS.medkit.stack; if (player.meds.medkit >= max) ok = false; else player.meds.medkit++; }
     else if (l.type === 'energy'){ const max = MEDS.energy.stack; if (player.meds.energy >= max) ok = false; else player.meds.energy++; }
     else if (l.type === 'grenade'){ if (player.grenadeCount >= 3) ok = false; else player.grenadeCount++; }
@@ -2180,7 +2157,6 @@ function updateLoot(){
 function updateAirdrops(dt){
   const interval = netMode === 'online' ? 90000 : 75000;
   if (time * 1000 > 30000 && Math.floor(time * 1000 / interval) > Math.floor((time*1000 - dt*1000) / interval)){
-    // spawn
     const angle = rand(0, Math.PI*2);
     const r = rand(300, 1000);
     const x = zone.x + Math.cos(angle) * r;
@@ -2196,12 +2172,10 @@ function updateAirdrops(dt){
       setTimeout(() => document.getElementById('airdropWarn').classList.add('hidden'), 4000);
     }
   }
-  // crate pickup
   for (let i = airdrops.length - 1; i >= 0; i--){
     const a = airdrops[i];
     if (!player.alive || a.opened) continue;
     if (Math.hypot(player.x - a.x, player.y - a.y) < 40){
-      // spawn good loot around
       player.slots[0] = 'awm';
       player.ammoBySlot[0] = WEAPONS.awm.ammo;
       player.armor = 3;
@@ -2228,7 +2202,14 @@ function updateZone(dt){
     const p = ZONE_PHASES[i];
     if (t < p.wait){ phase = i; phaseState = 'wait'; phaseLeft = p.wait - t; targetR = i === 0 ? ZONE_START_R : ZONE_PHASES[i-1].toR; break; }
     t -= p.wait;
-    if (t < p.shrink){ phase = i; phaseState = 'shrink'; phaseLeft = p.shrink - t; const from = i === 0 ? ZONE_START_R : ZONE_PHASES[i-1].toR; const to = p.toR; const k = 1 - phaseLeft / p.shrink; targetR = from + (to - from) * k; break; }
+    if (t < p.shrink){
+      phase = i; phaseState = 'shrink'; phaseLeft = p.shrink - t;
+      const from = i === 0 ? ZONE_START_R : ZONE_PHASES[i-1].toR;
+      const to = p.toR;
+      const k = 1 - phaseLeft / p.shrink;
+      targetR = from + (to - from) * k;
+      break;
+    }
     t -= p.shrink;
     phase = i + 1;
     targetR = p.toR;
@@ -2238,17 +2219,16 @@ function updateZone(dt){
     phaseState = 'done';
   }
   zone.r = targetR;
+  const chip = document.getElementById('phaseChip');
   if (phase !== lastZonePhase){
     lastZonePhase = phase;
-    document.getElementById('phaseChip').textContent = `ФАЗА ${phase + 1}${phaseState==='shrink' ? ' · СЖАТИЕ' : ''}`;
+    chip.textContent = `ФАЗА ${phase + 1}${phaseState==='shrink' ? ' · СЖАТИЕ' : ''}`;
     if (phaseState === 'shrink') SFX.zone();
   } else {
-    const chip = document.getElementById('phaseChip');
     const txt = `ФАЗА ${phase + 1}${phaseState==='shrink' ? ' · СЖАТИЕ ' + Math.ceil(phaseLeft) : phaseState==='wait' ? ' · ' + Math.ceil(phaseLeft) + 'с' : ''}`;
     if (chip.textContent !== txt) chip.textContent = txt;
   }
 
-  // red zone
   if (!redZone && elapsed > 60 && Math.random() < dt * 0.08){
     redZone = { x: zone.x + rand(-zone.r*0.7, zone.r*0.7), y: zone.y + rand(-zone.r*0.7, zone.r*0.7), r: 220, life: 20 };
     document.getElementById('redZoneWarn').classList.remove('hidden');
@@ -2271,7 +2251,10 @@ function updateZone(dt){
 
   if (player && player.alive){
     const d = Math.hypot(player.x - zone.x, player.y - zone.y);
-    if (d > zone.r){ applyDamage(player, ZONE_DPS * dt, false); if (player.hp <= 0){ killEntity(player, null); gameState = 'lost'; startSpectator(); } }
+    if (d > zone.r){
+      applyDamage(player, ZONE_DPS * dt, false);
+      if (player.hp <= 0){ killEntity(player, null); gameState = 'lost'; startSpectator(); }
+    }
   }
   if (netMode === 'offline'){
     for (const b of bots){
@@ -2299,7 +2282,9 @@ function updateParticles(dt){
 function updateCamera(){
   let focus = player;
   if (!player.alive && gameState === 'lost' && spectatorTarget){
-    const t = remotePlayers.get(spectatorTarget) || bots.find(b => b.uid === spectatorTarget || b.name === spectatorTarget);
+    const t = netMode === 'offline'
+      ? bots.find(b => b.name === spectatorTarget)
+      : remotePlayers.get(spectatorTarget);
     if (t && t.alive) focus = t;
   }
   const zoom = settings.zoom;
@@ -2307,11 +2292,7 @@ function updateCamera(){
   cam.y = focus.y - H/(2*zoom);
   if (W < WORLD) cam.x = Math.max(0, Math.min(WORLD - W/zoom, cam.x));
   if (H < WORLD) cam.y = Math.max(0, Math.min(WORLD - H/zoom, cam.y));
-  // shake
-  if (shakeTime > 0){
-    cam.x += rand(-1,1) * shakeIntensity;
-    cam.y += rand(-1,1) * shakeIntensity;
-  }
+  if (shakeTime > 0){ cam.x += rand(-1,1) * shakeIntensity; cam.y += rand(-1,1) * shakeIntensity; }
 }
 function shakeScreen(dur, intensity){ shakeTime = dur; shakeIntensity = intensity; }
 function showDamageFlash(){
@@ -2326,16 +2307,16 @@ function startSpectator(){
   const alive = [];
   if (netMode === 'offline') for (const b of bots) if (b.alive) alive.push(b.name);
   else for (const [uid, e] of remotePlayers) if (e.alive) alive.push(uid);
-  if (alive.length === 0){ spectatorTarget = null; }
-  else spectatorTarget = alive[0];
+  spectatorTarget = alive.length ? alive[0] : null;
   updateSpecName();
 }
 function updateSpecName(){
-  if (!spectatorTarget){ document.getElementById('specName').textContent = '—'; return; }
+  const el = document.getElementById('specName');
+  if (!spectatorTarget){ el.textContent = '—'; return; }
   let nm = '—';
   if (netMode === 'offline'){ const b = bots.find(x => x.name === spectatorTarget); if (b) nm = b.name; }
   else { const e = remotePlayers.get(spectatorTarget); if (e) nm = e.name; }
-  document.getElementById('specName').textContent = nm;
+  el.textContent = nm;
 }
 function specNext(){
   const alive = [];
@@ -2411,7 +2392,6 @@ function drawZone(){
   ctx.arc(sx, sy, zone.r*zoom, 0, Math.PI*2);
   ctx.strokeStyle = 'rgba(255,80,120,0.85)';
   ctx.lineWidth = 3; ctx.stroke();
-  // red zone
   if (redZone){
     const rx = (redZone.x - cam.x)*zoom, ry = (redZone.y - cam.y)*zoom;
     ctx.beginPath(); ctx.arc(rx, ry, redZone.r*zoom, 0, Math.PI*2);
@@ -2452,7 +2432,6 @@ function drawLoot(){
     }
     ctx.restore();
   }
-  // airdrops
   for (const a of airdrops){
     const sx = (a.x - cam.x)*zoom, sy = (a.y - cam.y)*zoom;
     ctx.save(); ctx.translate(sx, sy);
@@ -2467,13 +2446,12 @@ function drawEntity(ent, color){
   const zoom = settings.zoom;
   const sx = (ent.x - cam.x)*zoom, sy = (ent.y - cam.y)*zoom;
   if (sx < -50 || sx > W + 50 || sy < -50 || sy > H + 50) return;
-  const isTeammate = player && ent !== player && player.team > 0 && player.team === ent.team;
+  const isTeam = player && ent !== player && player.team > 0 && player.team === ent.team;
   ctx.save();
   ctx.translate(sx, sy); ctx.scale(zoom, zoom); ctx.rotate(ent.angle);
   ctx.beginPath(); ctx.arc(0, 0, ent.r, 0, Math.PI*2);
-  ctx.fillStyle = isTeammate ? '#06d6a0' : color; ctx.fill();
+  ctx.fillStyle = isTeam ? '#06d6a0' : color; ctx.fill();
   ctx.lineWidth = 2; ctx.strokeStyle = '#0a0f14'; ctx.stroke();
-  // armor ring
   if (ent.armor > 0){
     ctx.beginPath(); ctx.arc(0, 0, ent.r + 3, 0, Math.PI*2);
     ctx.strokeStyle = `rgba(76,201,240,${0.3 + ent.armor*0.2})`;
@@ -2484,18 +2462,15 @@ function drawEntity(ent, color){
     ctx.strokeStyle = `rgba(199,125,255,${0.3 + ent.helmet*0.2})`;
     ctx.lineWidth = 2; ctx.stroke();
   }
-  // gun
   const w = ent.slots ? ent.slots[ent.currentSlot] : 'pistol';
   const wc = w ? WEAPONS[w].color : '#888';
   ctx.fillStyle = '#111'; ctx.fillRect(ent.r - 4, -3, 20, 6);
   ctx.fillStyle = wc; ctx.fillRect(ent.r + 10, -2, 4, 4);
-  // muzzle flash
   if (ent.muzzleFlash > 0){
     ctx.fillStyle = '#ffe066';
     ctx.beginPath(); ctx.arc(ent.r + 16, 0, 6, 0, Math.PI*2); ctx.fill();
   }
   ctx.restore();
-  // hp bar
   if (ent.hp < ent.maxHp){
     const bw = 34*zoom;
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -2505,7 +2480,7 @@ function drawEntity(ent, color){
     ctx.fillRect(sx - bw/2, sy - ent.r*zoom - 13, bw * ratio, 5);
   }
   if (ent.name && ent !== player){
-    ctx.fillStyle = isTeammate ? 'rgba(6,214,160,0.9)' : 'rgba(255,255,255,0.85)';
+    ctx.fillStyle = isTeam ? 'rgba(6,214,160,0.9)' : 'rgba(255,255,255,0.85)';
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(ent.name, sx, sy - ent.r*zoom - 18);
@@ -2565,7 +2540,6 @@ function drawHUD(){
   ctx.fillRect(18, 18, 196*hp, 22);
   ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign='left';
   ctx.fillText('HP ' + Math.max(0, Math.round(player.hp)), 24, 34);
-  // armor
   if (player.armor > 0 || player.helmet > 0){
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(16, 46, 200, 18);
     ctx.fillStyle = '#4cc9f0';
@@ -2585,13 +2559,11 @@ function drawHUD(){
     if (player.reloading > 0) ctx.fillText('RELOAD...', W - 20, H - 102);
     else ctx.fillText((player.ammoBySlot[player.currentSlot]|0) + ' / ' + wpn.ammo, W - 20, H - 102);
   }
-  // energy
   if (player.energyRegen > 0){
     ctx.textAlign='center'; ctx.fillStyle = '#ffd166';
     ctx.font = 'bold 12px sans-serif';
     ctx.fillText('⚡ REGEN ' + Math.ceil(player.energyRegen) + 's', W/2, 70);
   }
-  // kill feed
   ctx.textAlign='right'; ctx.font = '12px sans-serif';
   killFeed.forEach((k, i) => {
     ctx.globalAlpha = Math.min(1, k.t);
@@ -2599,7 +2571,6 @@ function drawHUD(){
     ctx.fillText(k.text, W - 16, 100 + i*18);
   });
   ctx.globalAlpha = 1;
-  // minimap
   const mm = 90, mx = W - mm - 16, my = 16;
   ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(mx, my, mm, mm);
   ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.strokeRect(mx, my, mm, mm);
@@ -2643,7 +2614,6 @@ function drawEndScreen(){
   if (gameState === 'won'){
     ctx.fillStyle = '#06d6a0'; ctx.font = 'bold 48px sans-serif';
     ctx.fillText('ПОБЕДА!', W/2, H/2 - 30);
-    SFX.win();
   } else {
     ctx.fillStyle = '#ef476f'; ctx.font = 'bold 48px sans-serif';
     ctx.fillText('ПОРАЖЕНИЕ', W/2, H/2 - 30);
@@ -2664,12 +2634,11 @@ async function recordMatchResult(won, kills, squadWon){
     const ref = db.ref('users/' + currentUser.uid);
     const today = new Date().toISOString().slice(0,10);
     await ref.transaction(u => {
-      if (!u) return u;
+      if (!u) u = { name: userProfile.name || 'PLAYER' };
       u.matches = (u.matches||0) + 1;
       u.kills = (u.kills||0) + Math.max(0, kills|0);
       if (won) u.wins = (u.wins||0) + 1;
       if (won && squadWon) u.squadWins = (u.squadWins||0) + 1;
-      // daily
       if (u.lastDay !== today){
         const y = new Date(Date.now() - 864e5).toISOString().slice(0,10);
         u.dailyStreak = (u.lastDay === y) ? (u.dailyStreak||0) + 1 : 1;
@@ -2677,39 +2646,44 @@ async function recordMatchResult(won, kills, squadWon){
       }
       return u;
     });
+
     userProfile.matches = (userProfile.matches||0) + 1;
-    userProfile.kills = (userProfile.kills||0) + Math.max(0, kills|0);
+    userProfile.kills   = (userProfile.kills  ||0) + Math.max(0, kills|0);
     if (won) userProfile.wins = (userProfile.wins||0) + 1;
     if (won && squadWon) userProfile.squadWins = (userProfile.squadWins||0) + 1;
-    const today = new Date().toISOString().slice(0,10);
-    if (userProfile.lastDay !== today){
+    const todayStr = new Date().toISOString().slice(0,10);
+    if (userProfile.lastDay !== todayStr){
       const y = new Date(Date.now() - 864e5).toISOString().slice(0,10);
       userProfile.dailyStreak = (userProfile.lastDay === y) ? (userProfile.dailyStreak||0) + 1 : 1;
-      userProfile.lastDay = today;
+      userProfile.lastDay = todayStr;
     }
     cacheProfile(); updateProfileUI();
-    // check achievements
+    console.log('[record] saved:', { won, kills, userProfile });
+
     const stats = { totalKills: userProfile.kills||0, wins: userProfile.wins||0, matches: userProfile.matches||0, dailyStreak: userProfile.dailyStreak||0, squadWins: userProfile.squadWins||0 };
+    if (!userProfile.achievements) userProfile.achievements = {};
     for (const a of ACHIEVEMENTS){
-      if (!userProfile.achievements) userProfile.achievements = {};
       if (!userProfile.achievements[a.id] && a.val(stats) >= a.goal){
         userProfile.achievements[a.id] = true;
         db.ref(`users/${currentUser.uid}/achievements/${a.id}`).set(true).catch(()=>{});
         killFeed.push({ text: '🏆 ' + a.name, t: 5 });
       }
     }
-  } catch(e){ console.warn('record match', e); }
+    cacheProfile();
+  } catch(e){ console.error('[record] failed', e); }
 }
 
 /* ===== HUD visibility ===== */
 function showGameHud(v){
   document.getElementById('gameHud').classList.toggle('hidden', !v);
+  if (!v){
+    document.getElementById('specBar').classList.add('hidden');
+    document.getElementById('medProgress').classList.add('hidden');
+  }
 }
 
 /* ===== MAIN LOOP ===== */
 let last = performance.now();
-let endRecorded = false;
-let specSwitchCd = 0;
 
 function loop(now){
   let dt = (now - last)/1000;
@@ -2731,7 +2705,6 @@ function loop(now){
     updateAlive();
     updateHudSlots();
 
-    // low hp vignette
     const vig = document.getElementById('lowHpVig');
     const hpRatio = player.hp / player.maxHp;
     vig.style.opacity = hpRatio < 0.3 ? String((0.3 - hpRatio) * 3) : '0';
@@ -2751,7 +2724,6 @@ function loop(now){
     }
     if (now - lastSync > SYNC_INTERVAL){ lastSync = now; syncMyState(); }
   } else if (player && (gameState === 'won' || gameState === 'lost')){
-    // spectator still updates world for offline
     if (netMode === 'offline'){
       time += dt;
       for (const b of bots) updateBot(b, dt);
@@ -2769,7 +2741,6 @@ function loop(now){
       updateParticles(dt);
       updateAlive();
     }
-    endRecorded = false;
   }
 
   if (player && gameState !== 'menu') updateCamera();
@@ -2783,11 +2754,10 @@ function loop(now){
     else for (const e of remotePlayers.values()) drawEntity(e, '#e63946');
     drawEntity(player, '#4895ef');
     drawBullets(); drawGrenades(); drawParticles();
-    if (gameState === 'playing' || gameState === 'lost' || gameState === 'won'){
+    if (gameState === 'playing'){
       drawJoystick(joyL); drawJoystick(joyR);
-    }
-    if (gameState === 'playing') drawHUD();
-    else if (gameState === 'won' || gameState === 'lost'){
+      drawHUD();
+    } else if (gameState === 'won' || gameState === 'lost'){
       drawHUD();
       if (!spectatorTarget) drawEndScreen();
     }
@@ -2802,57 +2772,106 @@ function initFirebase(){
   auth = firebase.auth();
   db = firebase.database();
 }
-(function tryCachedProfile(){
-  const c = loadCachedProfile();
-  if (c && c.profile){ userProfile = Object.assign(userProfile, c.profile); updateProfileUI(); }
-})();
 
-function initAuthFlow(){
+(async function bootstrap(){
+  try {
+    const c = loadCachedProfile();
+    if (c && c.profile){ userProfile = Object.assign(userProfile, c.profile); updateProfileUI(); }
+  } catch(e){}
+
   initFirebase();
-  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+
+  // Важно: await setPersistence ДО onAuthStateChanged
+  try {
+    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+  } catch(e){
+    console.warn('[auth] persistence:', e);
+  }
+
   auth.onAuthStateChanged(async user => {
     if (user){
       currentUser = user;
       myUid = user.uid;
-      if (userProfile.name === 'PLAYER' || !userProfile.name){
-        const c = loadCachedProfile();
-        if (c && c.uid === user.uid && c.profile) userProfile = Object.assign(userProfile, c.profile);
-      }
-      updateProfileUI();
+
+      // показываем меню сразу, чтобы UI не подвисал
       showScreen('mainMenu');
-      await loadOrCreateProfile(user);
-      try { startFriendInvitesListener(); } catch(e){}
+      updateProfileUI();
+
+      try {
+        await loadOrCreateProfile(user);
+      } catch(e){
+        console.error('[profile]', e);
+      }
+
+      try { startFriendInvitesListener(); } catch(e){ console.warn('[friends]', e); }
     } else {
-      currentUser = null; myUid = null;
-      try { const lastEmail = localStorage.getItem('br_last_email'); if (lastEmail) authEmail.value = lastEmail; } catch(e){}
+      currentUser = null;
+      myUid = null;
+      try {
+        const lastEmail = localStorage.getItem('br_last_email');
+        if (lastEmail) authEmail.value = lastEmail;
+      } catch(e){}
       showScreen('authScreen');
     }
   });
-}
+})();
+
 async function loadOrCreateProfile(user){
+  if (!db){ console.error('[profile] db not initialized'); return; }
   const ref = db.ref('users/' + user.uid);
   let snap;
-  try { snap = await withTimeout(ref.once('value'), 8000, 'profile timeout'); } catch(e){ return; }
+  try {
+    snap = await withTimeout(ref.once('value'), 8000, 'profile timeout');
+  } catch(e){
+    console.warn('[profile] read failed', e);
+    return;
+  }
   const data = snap.val();
   if (data){
     userProfile = {
       name: sanitizeName(data.name || user.displayName || 'PLAYER'),
-      kills: data.kills||0, wins: data.wins||0, matches: data.matches||0,
-      dailyStreak: data.dailyStreak||0, lastDay: data.lastDay||null,
-      squadWins: data.squadWins||0, achievements: data.achievements||{},
+      kills: data.kills || 0,
+      wins: data.wins || 0,
+      matches: data.matches || 0,
+      dailyStreak: data.dailyStreak || 0,
+      lastDay: data.lastDay || null,
+      squadWins: data.squadWins || 0,
+      achievements: data.achievements || {},
     };
+    console.log('[profile] loaded:', userProfile);
   } else {
-    const fallbackName = sanitizeName(user.displayName || (user.isAnonymous ? ('GUEST' + user.uid.substring(0,3).toUpperCase()) : (user.email||'PLAYER').split('@')[0]));
-    userProfile = { name: fallbackName, kills:0, wins:0, matches:0, dailyStreak:0, lastDay:null, squadWins:0, achievements:{} };
-    try { await ref.set({ name: fallbackName, email: user.email||null, kills:0, wins:0, matches:0, dailyStreak:0, createdAt: firebase.database.ServerValue.TIMESTAMP }); } catch(e){}
+    const fallbackName = sanitizeName(
+      user.displayName ||
+      (user.isAnonymous
+        ? ('GUEST' + user.uid.substring(0,3).toUpperCase())
+        : (user.email || 'PLAYER').split('@')[0])
+    );
+    userProfile = {
+      name: fallbackName,
+      kills: 0, wins: 0, matches: 0,
+      dailyStreak: 0, lastDay: null, squadWins: 0, achievements: {},
+    };
+    try {
+      await ref.update({
+        name: fallbackName,
+        email: user.email || null,
+        kills: 0, wins: 0, matches: 0, dailyStreak: 0,
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+      });
+      console.log('[profile] created:', userProfile);
+    } catch(e){
+      console.warn('[profile] create failed', e);
+    }
   }
   myName = userProfile.name;
-  if (user.email){ try { localStorage.setItem('br_last_email', user.email); } catch(e){} }
-  cacheProfile(); updateProfileUI();
+  if (user.email){
+    try { localStorage.setItem('br_last_email', user.email); } catch(e){}
+  }
+  cacheProfile();
+  updateProfileUI();
 }
 
 setAuthMode('login');
-initAuthFlow();
 
 })();
 </script>
