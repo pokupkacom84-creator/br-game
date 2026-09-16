@@ -5,281 +5,617 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>BR 2D Online</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui, -apple-system, sans-serif; }
-  html,body { width:100%; height:100%; overflow:hidden; background:#0a0f14;
-    touch-action:none; user-select:none; -webkit-user-select:none;
-    -webkit-tap-highlight-color:transparent; }
+  * { margin:0; padding:0; box-sizing:border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#05070b;
+      touch-action:none; user-select:none; -webkit-user-select:none;
+      -webkit-tap-highlight-color:transparent; }
   canvas { display:block; }
+
   :root {
-    --fs-xs: clamp(9px, 1.9vh, 12px);
-    --fs-sm: clamp(10px, 2.1vh, 14px);
-    --fs-md: clamp(12px, 2.5vh, 16px);
-    --fs-lg: clamp(14px, 3vh, 20px);
-    --fs-xl: clamp(20px, 4.2vh, 28px);
-    --gap: clamp(3px, 0.9vh, 10px);
-    --pad: clamp(5px, 1.2vh, 14px);
-    --btn-h: clamp(30px, 7.5vh, 50px);
+    --accent: #ffa726;
+    --accent2: #ff6f00;
+    --bg: #0a0e14;
+    --card: rgba(18,24,33,0.85);
+    --card2: rgba(12,17,24,0.9);
+    --border: rgba(255,255,255,0.08);
+    --text: #eef3f8;
+    --muted: #7c8a9c;
+    --muted2: #5a6675;
+    --success: #10d9a3;
+    --danger: #ff4d6d;
+    --fs-xs: clamp(9.5px, 1.9vh, 12px);
+    --fs-sm: clamp(11px, 2.2vh, 14px);
+    --fs-md: clamp(13px, 2.6vh, 16px);
+    --fs-lg: clamp(16px, 3.2vh, 22px);
+    --fs-xl: clamp(22px, 4.6vh, 34px);
+    --g: clamp(6px, 1.4vh, 14px);
+    --pad: clamp(10px, 2.2vh, 22px);
+    --h: clamp(34px, 8vh, 52px);
+    --radius: clamp(10px, 2vh, 16px);
   }
-  .screen { position:fixed; inset:0; z-index:20; color:#fff; overflow:hidden; }
+
+  .screen { position:fixed; inset:0; z-index:20; color:var(--text); overflow:hidden; }
   .hidden { display:none !important; }
 
-  /* AUTH */
+  /* ================ AUTH ================ */
   #authScreen {
     display:flex; align-items:center; justify-content:center;
-    background:
-      radial-gradient(ellipse at top left, rgba(255,180,0,0.16), transparent 55%),
-      radial-gradient(ellipse at bottom right, rgba(60,140,255,0.12), transparent 60%),
-      linear-gradient(180deg, #1a1f28 0%, #0a0e14 100%);
     padding: var(--pad);
+    background:
+      radial-gradient(1000px 600px at 20% -10%, rgba(255,167,38,0.16), transparent 60%),
+      radial-gradient(900px 700px at 110% 110%, rgba(41,121,255,0.14), transparent 60%),
+      linear-gradient(180deg, #0c1118 0%, #05070b 100%);
   }
-  .authBox {
-    width: min(94vw, 720px);
-    display:grid; grid-template-columns: 1fr 1fr auto;
-    gap: var(--gap); padding: calc(var(--pad)*1.4);
-    border-radius: 14px;
-    background: rgba(15,20,28,0.9);
-    border: 1px solid rgba(255,180,0,0.25);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  .authCard {
+    width: min(100%, 900px);
+    display: grid;
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto;
+    gap: var(--g);
+    padding: calc(var(--pad) * 1.2);
+    border-radius: calc(var(--radius) * 1.2);
+    background: linear-gradient(180deg, rgba(18,24,33,0.92), rgba(10,14,20,0.96));
+    border: 1px solid var(--border);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+    backdrop-filter: blur(20px);
   }
-  .authLogo {
-    grid-column: 1 / -1; text-align:center;
-    font-size: var(--fs-lg); font-weight: 900; letter-spacing: 3px;
-    background: linear-gradient(90deg,#ffb400,#ff7a00);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
+  .brand {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: var(--fs-lg);
+    font-weight: 900;
+    letter-spacing: 6px;
+    background: linear-gradient(90deg, #ffa726, #ff6f00);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+    padding-bottom: 4px;
+  }
+  .brandSub {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: var(--fs-xs);
+    color: var(--muted);
+    letter-spacing: 3px;
+    margin-top: -8px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
   }
   .authTabs {
-    grid-column: 1 / -1; display: flex;
-    background: rgba(0,0,0,0.4); border-radius: 8px; padding: 3px;
+    grid-column: 1 / -1;
+    display: flex;
+    background: rgba(0,0,0,0.4);
+    border-radius: 12px;
+    padding: 4px;
+    gap: 4px;
   }
   .authTab {
-    flex: 1; padding: calc(var(--gap)*1.2); border:none; background:transparent;
-    color:#8899a8; font-weight: bold; font-size: var(--fs-xs);
-    letter-spacing: 1px; border-radius: 6px; cursor: pointer;
+    flex: 1;
+    padding: calc(var(--g)*1.1) calc(var(--g)*0.8);
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-weight: 800;
+    font-size: var(--fs-xs);
+    letter-spacing: 2px;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: 0.2s;
   }
   .authTab.active {
-    background: linear-gradient(135deg,#ffb400,#f58b00); color:#1a1206;
+    background: linear-gradient(180deg, #2a3444, #1a2230);
+    color: var(--text);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
   }
-  .authInput {
-    padding: 0 calc(var(--gap)*1.4);
-    height: var(--btn-h);
-    border: 1.5px solid #2b3a47; background:#101820;
-    color:#fff; border-radius: 8px; font-size: var(--fs-sm);
-    outline: none; min-width: 0;
+  .inp {
+    height: var(--h);
+    padding: 0 calc(var(--g)*1.4);
+    border: 1px solid var(--border);
+    background: rgba(6,10,15,0.7);
+    color: var(--text);
+    border-radius: 10px;
+    font-size: var(--fs-sm);
+    outline: none;
+    min-width: 0;
+    transition: 0.15s;
+    font-weight: 500;
   }
-  .authInput:focus { border-color: #ffb400; }
+  .inp::placeholder { color: var(--muted2); }
+  .inp:focus { border-color: var(--accent); background: rgba(6,10,15,0.95); }
   #authName { grid-column: 1 / -1; }
-  #authSubmit { grid-column: 3 / 4; }
-  #authError {
-    grid-column: 1 / -1; color:#ef476f; font-size: var(--fs-xs);
-    text-align: center; min-height: 1em;
+  #authEmail { grid-column: 1 / 2; }
+  #authPass { grid-column: 2 / 3; }
+  #authSubmit { grid-column: 3 / 4; min-width: 110px; }
+
+  .btn {
+    height: var(--h);
+    padding: 0 calc(var(--g)*1.6);
+    border-radius: 10px;
+    border: none;
+    font-size: var(--fs-sm);
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: transform 0.12s, box-shadow 0.2s;
+    display: inline-flex; align-items: center; justify-content: center;
+    white-space: nowrap;
+    text-transform: uppercase;
+    font-family: inherit;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: linear-gradient(180deg, #ffb74d, #ff8f00);
+    color: #1a1206;
+    box-shadow: 0 6px 18px rgba(255,143,0,0.35), inset 0 1px 0 rgba(255,255,255,0.4);
+  }
+  .btn-ghost {
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.07); }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .authMsg {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: var(--fs-xs);
+    min-height: 1em;
+    color: var(--danger);
+    letter-spacing: 0.5px;
   }
   #btnGuest { grid-column: 1 / -1; }
 
-  .btnPrimary, .btnSecondary {
-    padding: 0 calc(var(--gap)*1.4);
-    height: var(--btn-h);
-    border-radius: 8px;
-    font-size: var(--fs-sm); font-weight: 900; letter-spacing: 0.8px;
-    cursor: pointer; transition: transform 0.1s;
-    display:inline-flex; align-items:center; justify-content:center;
-    white-space:nowrap;
-  }
-  .btnPrimary {
-    border: none;
-    background: linear-gradient(135deg,#ffb400,#f58b00);
-    color: #1a1206;
-    box-shadow: 0 4px 14px rgba(255,180,0,0.3);
-  }
-  .btnSecondary {
-    border: 1.5px solid #2b3a47; background: transparent;
-    color: #cfd8e3; font-weight: 700;
-  }
-  .btnPrimary:active, .btnSecondary:active { transform: scale(0.97); }
-  .btnPrimary:disabled { opacity: 0.6; cursor: default; }
-
-  /* MAIN MENU */
+  /* ================ MAIN MENU ================ */
   #mainMenu {
-    display: grid; grid-template-rows: auto 1fr;
-    gap: var(--gap); padding: var(--pad);
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: var(--g);
+    padding: var(--pad);
     background:
-      radial-gradient(ellipse at 15% 10%, rgba(255,180,0,0.18), transparent 45%),
-      radial-gradient(ellipse at 85% 95%, rgba(40,120,255,0.14), transparent 55%),
-      linear-gradient(180deg, #141a22 0%, #070a0f 100%);
+      radial-gradient(900px 500px at 15% -5%, rgba(255,167,38,0.15), transparent 55%),
+      radial-gradient(800px 600px at 110% 105%, rgba(41,121,255,0.1), transparent 55%),
+      linear-gradient(180deg, #0c1118 0%, #05070b 100%);
   }
+  #mainMenu::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      radial-gradient(circle at 25% 25%, rgba(255,167,38,0.05), transparent 40%),
+      repeating-linear-gradient(115deg, rgba(255,255,255,0.012) 0 1px, transparent 1px 80px);
+  }
+  .menuInner {
+    max-width: min(1180px, 100%);
+    width: 100%;
+    margin: 0 auto;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: var(--g);
+    min-height: 0;
+    position: relative;
+    z-index: 1;
+  }
+
   .topBar {
-    display: flex; align-items: center; gap: var(--gap);
-    max-width: min(1200px, 100%); width:100%; margin:0 auto;
+    display: flex;
+    align-items: center;
+    gap: var(--g);
   }
-  .profilePill {
-    display: flex; align-items: center; gap: calc(var(--gap)*1.2);
-    padding: calc(var(--gap)*0.6); padding-right: calc(var(--gap)*1.5);
-    border-radius: 40px; background: rgba(10,15,22,0.85);
-    border: 1px solid rgba(255,180,0,0.35);
-    height: var(--btn-h); flex-shrink: 0;
+  .profileCard {
+    display: flex; align-items: center; gap: calc(var(--g)*1.2);
+    padding: calc(var(--g)*0.5) calc(var(--g)*1.4) calc(var(--g)*0.5) calc(var(--g)*0.5);
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(25,32,44,0.9), rgba(14,19,27,0.9));
+    border: 1px solid var(--border);
+    height: var(--h);
+    flex-shrink: 0;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.35);
   }
   .avatar {
-    width: calc(var(--btn-h) - 8px); height: calc(var(--btn-h) - 8px);
+    width: calc(var(--h) - 10px); height: calc(var(--h) - 10px);
     border-radius: 50%;
-    background: linear-gradient(135deg,#ffb400,#f58b00);
+    background: linear-gradient(135deg, #ffb74d, #ff6f00);
     display: flex; align-items: center; justify-content: center;
-    font-weight: 900; font-size: var(--fs-md); color:#1a1206; flex-shrink: 0;
+    font-weight: 900;
+    font-size: calc(var(--fs-sm) + 2px);
+    color: #1a1206;
+    flex-shrink: 0;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
   }
-  .profileInfo { display: flex; flex-direction: column; overflow: hidden; }
-  .profileName { font-size: var(--fs-sm); font-weight: 900; white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis; }
-  .profileLevel { font-size: var(--fs-xs); color:#ffb400; font-weight: 700; }
-  .statsRow { display: flex; gap: var(--gap); flex: 1; min-width: 0; }
-  .stat { flex: 1; padding: 2px calc(var(--gap)*0.6); border-radius: 8px;
+  .pInfo { display: flex; flex-direction: column; overflow: hidden; }
+  .pName {
+    font-size: var(--fs-sm); font-weight: 800;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    letter-spacing: 0.4px;
+  }
+  .pLvl {
+    font-size: var(--fs-xs);
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .stats {
+    display: flex; gap: 6px; flex: 1; min-width: 0;
+  }
+  .statCard {
+    flex: 1;
+    padding: calc(var(--g)*0.5) calc(var(--g)*0.8);
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(25,32,44,0.85), rgba(14,19,27,0.85));
+    border: 1px solid var(--border);
     text-align: center;
-    background: linear-gradient(180deg, rgba(20,26,36,0.9), rgba(10,14,20,0.9));
-    border: 1px solid rgba(255,180,0,0.2); min-width: 0; }
-  .statVal { font-size: var(--fs-md); font-weight: 900; color:#ffb400; line-height:1.1; }
-  .statLbl { font-size: var(--fs-xs); color:#7f8ea0; font-weight: 700; }
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .statVal {
+    font-size: var(--fs-md);
+    font-weight: 900;
+    color: var(--accent);
+    line-height: 1;
+    letter-spacing: 0.5px;
+  }
+  .statLbl {
+    font-size: var(--fs-xs);
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    margin-top: 3px;
+  }
   .iconBtn {
-    width: var(--btn-h); height: var(--btn-h);
-    border-radius: 50%; border: 1px solid rgba(255,255,255,0.15);
-    background: rgba(10,15,22,0.8); color: #cfd8e3;
-    font-size: var(--fs-md); cursor: pointer; flex-shrink: 0;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .iconBtn:active { transform: scale(0.95); }
-  .menuContent {
-    display: grid; grid-template-rows: auto 1fr auto;
-    gap: var(--gap); max-width: min(1200px, 100%); width:100%;
-    margin:0 auto; min-height: 0;
-  }
-  .panelTitle { font-size: var(--fs-xs); color: #7f8ea0; letter-spacing: 2px;
-    font-weight: 900; margin-bottom: 2px; }
-  .modeList {
-    display: grid; grid-template-columns: repeat(6, 1fr);
-    gap: calc(var(--gap)*0.7);
-  }
-  .modeBtn {
-    padding: calc(var(--gap)*0.8) calc(var(--gap)*0.4);
-    border-radius: 8px; background: rgba(10,14,20,0.7);
-    border: 1px solid rgba(255,255,255,0.08);
-    color: #cfd8e3; font-size: var(--fs-xs); font-weight: 900;
-    letter-spacing: 0.5px; cursor: pointer; text-align: center;
-    display: flex; flex-direction: column; align-items: center;
-    justify-content: center; gap: 2px; transition: 0.15s;
-    min-height: var(--btn-h);
-  }
-  .modeBtn.active {
-    background: linear-gradient(135deg,#ffb400,#f58b00);
-    color: #1a1206; border-color: transparent;
-    box-shadow: 0 4px 14px rgba(255,180,0,0.3);
-  }
-  .modeBtn .mIcon { font-size: 1.2em; }
-  .playPanel {
-    display: grid; grid-template-columns: 1fr 1fr 2fr;
-    gap: var(--gap); align-items: end;
-  }
-  .btnPlay {
-    border: none; border-radius: 14px;
-    background: linear-gradient(135deg,#ffb400,#ff7a00);
-    color:#1a1206; font-size: var(--fs-xl);
-    font-weight: 900; letter-spacing: 4px;
+    width: var(--h); height: var(--h);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(25,32,44,0.9), rgba(14,19,27,0.9));
+    color: var(--text);
+    font-size: var(--fs-md);
     cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    box-shadow: 0 8px 30px rgba(255,140,0,0.4), inset 0 2px 0 rgba(255,255,255,0.3);
-    height: calc(var(--btn-h) * 1.25);
-  }
-  .btnPlay:active { transform: scale(0.98); }
-
-  /* SERVER BROWSER */
-  #serverBrowser {
-    display: grid; grid-template-rows: auto 1fr;
-    gap: var(--gap); padding: var(--pad);
-    background:
-      radial-gradient(ellipse at 50% 0%, rgba(255,180,0,0.14), transparent 55%),
-      linear-gradient(180deg, #141a22 0%, #070a0f 100%);
-    max-width: min(1200px, 100%); margin: 0 auto;
-  }
-  .browserHeader { display: flex; align-items: center; gap: var(--gap);
-    flex-wrap: wrap; }
-  .browserHeader h2 {
-    font-size: var(--fs-lg); font-weight: 900; letter-spacing: 2px;
-    background: linear-gradient(90deg,#ffb400,#ff7a00);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    flex: 1; white-space: nowrap;
-  }
-  .codeInput {
-    padding: 0 calc(var(--gap)*1.2); height: var(--btn-h);
-    border: 1.5px solid #2b3a47; background:#101820;
-    color:#fff; border-radius: 8px; font-size: var(--fs-sm);
-    outline: none; letter-spacing: 2px; text-transform: uppercase;
-    width: min(24vw, 130px); min-width: 90px;
-  }
-  .codeInput:focus { border-color: #ffb400; }
-  .serverList {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: var(--gap); overflow-y: auto; padding-right: 4px; align-content: start;
-  }
-  .serverCard {
-    padding: calc(var(--gap)*0.9) calc(var(--gap)*1);
-    border-radius: 10px;
-    background: linear-gradient(180deg, rgba(20,26,36,0.95), rgba(10,14,20,0.95));
-    border: 1px solid rgba(255,180,0,0.2);
-    cursor: pointer; display: flex; flex-direction: column; gap: 2px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
     transition: 0.15s;
   }
-  .serverCard:active { transform: scale(0.98); }
-  .srvName { font-size: var(--fs-sm); font-weight: 900;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .srvMeta { font-size: var(--fs-xs); color: #7f8ea0;
-    display: flex; justify-content: space-between; gap: 6px; }
-  .srvMeta .green { color:#06d6a0; font-weight:700; }
-  .emptyList { grid-column: 1 / -1; text-align: center;
-    padding: 20px; color: #5c6b7a; font-size: var(--fs-sm); }
+  .iconBtn:active { transform: scale(0.94); background: rgba(255,255,255,0.08); }
 
-  /* MODALS */
+  .modesBlock {
+    display: flex; flex-direction: column;
+    gap: calc(var(--g)*0.7);
+    min-height: 0;
+  }
+  .sectionTitle {
+    font-size: var(--fs-xs);
+    color: var(--muted);
+    letter-spacing: 3px;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding-left: 4px;
+  }
+  .modeGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: calc(var(--g)*0.7);
+  }
+  .modeCard {
+    padding: calc(var(--g)*0.9);
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(20,26,35,0.85), rgba(11,15,22,0.9));
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.18s;
+    display: flex;
+    align-items: center;
+    gap: calc(var(--g)*0.8);
+    text-align: left;
+    color: var(--text);
+    font-family: inherit;
+    min-height: var(--h);
+  }
+  .modeCard:active { transform: scale(0.98); }
+  .modeCard.active {
+    background: linear-gradient(180deg, rgba(255,167,38,0.18), rgba(255,111,0,0.08));
+    border-color: rgba(255,167,38,0.55);
+    box-shadow: 0 6px 24px rgba(255,140,0,0.15);
+  }
+  .modeIcon {
+    font-size: calc(var(--fs-md) + 4px);
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .modeText { display: flex; flex-direction: column; min-width: 0; }
+  .modeName {
+    font-size: var(--fs-xs);
+    font-weight: 900;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+  }
+  .modeDesc {
+    font-size: calc(var(--fs-xs) - 1px);
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bottomRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr 2.2fr;
+    gap: var(--g);
+    align-items: stretch;
+  }
+  .playBtn {
+    height: calc(var(--h) * 1.35);
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffb74d, #ff8f00);
+    color: #1a1206;
+    font-size: var(--fs-xl);
+    font-weight: 900;
+    letter-spacing: 5px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    box-shadow: 0 12px 36px rgba(255,143,0,0.45), inset 0 2px 0 rgba(255,255,255,0.45);
+    transition: transform 0.12s;
+    font-family: inherit;
+    text-transform: uppercase;
+  }
+  .playBtn:active { transform: scale(0.98); }
+  .playBtn .ico { font-size: 0.75em; }
+
+  .sideBtn {
+    height: calc(var(--h) * 1.35);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(25,32,44,0.9), rgba(14,19,27,0.9));
+    color: var(--text);
+    font-size: var(--fs-sm);
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-family: inherit;
+    text-transform: uppercase;
+  }
+  .sideBtn:active { transform: scale(0.97); background: rgba(255,255,255,0.06); }
+  .sideBtn .ico { font-size: 1.1em; }
+
+  /* ================ SERVER BROWSER ================ */
+  #serverBrowser {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: var(--g);
+    padding: var(--pad);
+    background:
+      radial-gradient(900px 500px at 50% -10%, rgba(255,167,38,0.12), transparent 55%),
+      linear-gradient(180deg, #0c1118 0%, #05070b 100%);
+    max-width: min(1180px, 100%);
+    margin: 0 auto;
+    width: 100%;
+  }
+  .browserHeader {
+    display: flex;
+    align-items: center;
+    gap: var(--g);
+    flex-wrap: wrap;
+  }
+  .browserTitle {
+    font-size: var(--fs-lg);
+    font-weight: 900;
+    letter-spacing: 3px;
+    background: linear-gradient(90deg, #ffa726, #ff6f00);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+    flex-shrink: 0;
+  }
+  .codeInput {
+    height: var(--h);
+    padding: 0 calc(var(--g)*1.4);
+    border: 1px solid var(--border);
+    background: rgba(6,10,15,0.7);
+    color: var(--text);
+    border-radius: 10px;
+    font-size: var(--fs-sm);
+    outline: none;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    width: min(28vw, 160px);
+    min-width: 110px;
+    font-weight: 700;
+    text-align: center;
+  }
+  .codeInput:focus { border-color: var(--accent); }
+  .codeInput::placeholder { letter-spacing: 1px; font-weight: 500; }
+  .browserSpacer { flex: 1; }
+
+  .serverList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: calc(var(--g)*0.9);
+    overflow-y: auto;
+    padding-right: 4px;
+    align-content: start;
+  }
+  .serverCard {
+    padding: calc(var(--g)*1.1);
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(22,29,40,0.9), rgba(12,17,24,0.9));
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 0;
+  }
+  .serverCard:active { transform: scale(0.98); border-color: rgba(255,167,38,0.4); }
+  .srvTop {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .srvName {
+    font-size: var(--fs-sm);
+    font-weight: 900;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+  }
+  .srvLock { color: var(--accent); font-size: var(--fs-sm); }
+  .srvRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--fs-xs);
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .srvPlayers { color: var(--success); font-weight: 800; }
+  .srvCode {
+    color: var(--muted2);
+    font-family: ui-monospace, monospace;
+    letter-spacing: 1px;
+    font-size: calc(var(--fs-xs) - 1px);
+  }
+  .emptyList {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: var(--fs-sm);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .emptyList .em { font-size: 36px; opacity: 0.4; }
+
+  /* ================ MODALS ================ */
   .modal {
     position: fixed; inset: 0; z-index: 40;
     display: flex; align-items: center; justify-content: center;
-    background: rgba(0,0,0,0.7); padding: var(--pad);
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    padding: var(--pad);
+    animation: fadeIn 0.15s ease;
   }
-  .modalBox {
-    width: min(94vw, 420px);
-    display: flex; flex-direction: column; gap: var(--gap);
-    padding: calc(var(--pad)*1.4); border-radius: 14px;
-    background: rgba(15,20,28,0.98);
-    border: 1px solid rgba(255,180,0,0.3);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  .modalCard {
+    width: min(100%, 400px);
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--g)*1.1);
+    padding: calc(var(--pad)*1.2);
+    border-radius: calc(var(--radius)*1.1);
+    background: linear-gradient(180deg, rgba(20,26,35,0.98), rgba(10,14,20,0.98));
+    border: 1px solid var(--border);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.7);
+    animation: pop 0.18s ease;
+  }
+  @keyframes pop {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
   }
   .modalTitle {
-    font-size: var(--fs-md); font-weight: 900; letter-spacing: 2px;
+    font-size: var(--fs-md);
+    font-weight: 900;
+    letter-spacing: 3px;
     text-align: center;
-    background: linear-gradient(90deg,#ffb400,#ff7a00);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
+    color: var(--accent);
+    text-transform: uppercase;
+    padding-bottom: 4px;
   }
-  .modalBox input {
-    padding: 0 calc(var(--gap)*1.4); height: var(--btn-h);
-    border: 1.5px solid #2b3a47; background:#101820;
-    color:#fff; border-radius: 8px; font-size: var(--fs-sm); outline: none;
+  .modalSub {
+    text-align: center;
+    font-size: var(--fs-xs);
+    color: var(--muted);
+    margin-top: -6px;
   }
-  .modalBox input:focus { border-color: #ffb400; }
-  .modalRow { display: flex; gap: var(--gap); }
-  .modalRow .btnPrimary, .modalRow .btnSecondary { flex: 1; }
-  .modalErr { color: #ef476f; font-size: var(--fs-xs);
-    text-align: center; min-height: 1em; }
+  .modalCard .inp { width: 100%; }
+  .modalRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--g);
+  }
+  .modalErr {
+    color: var(--danger);
+    font-size: var(--fs-xs);
+    text-align: center;
+    min-height: 1em;
+    letter-spacing: 0.4px;
+  }
 
-  /* WAITING / CONNECTING */
+  /* ================ CONNECTING / WAITING ================ */
   #connecting, #waiting {
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: var(--gap); padding: var(--pad); text-align: center;
-    background: radial-gradient(ellipse at center, #141a22 0%, #070a0f 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--g)*1.1);
+    padding: var(--pad);
+    text-align: center;
+    background:
+      radial-gradient(800px 600px at 50% 30%, rgba(255,167,38,0.1), transparent 55%),
+      linear-gradient(180deg, #0c1118 0%, #05070b 100%);
   }
   .spinner {
-    width: clamp(28px, 8vh, 46px); height: clamp(28px, 8vh, 46px);
-    border: 3px solid #2b3a47; border-top-color: #ffb400;
-    border-radius: 50%; animation: spin 0.8s linear infinite;
+    width: clamp(32px, 8vh, 52px);
+    height: clamp(32px, 8vh, 52px);
+    border: 3px solid rgba(255,167,38,0.15);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  #waitingRoom { color: #ffb400; font-size: var(--fs-xl); font-weight: 900;
-    letter-spacing: 5px; }
-  #waitingServerName { color: #fff; font-size: var(--fs-md); font-weight: 700; }
-  .sub { color: #8899a8; font-size: var(--fs-xs); }
+  .waitRoomCode {
+    font-size: var(--fs-xl);
+    font-weight: 900;
+    letter-spacing: 8px;
+    background: linear-gradient(180deg, #ffb74d, #ff6f00);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+    padding: 4px 0;
+  }
+  .waitServerName {
+    font-size: var(--fs-md);
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text);
+  }
+  .waitCount {
+    font-size: var(--fs-xl);
+    font-weight: 900;
+    color: var(--accent);
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+  .muted {
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  /* Scrollbar */
+  .serverList::-webkit-scrollbar { width: 6px; }
+  .serverList::-webkit-scrollbar-thumb {
+    background: rgba(255,167,38,0.3);
+    border-radius: 3px;
+  }
+
+  /* Portrait fallback */
+  @media (orientation: portrait) {
+    .authCard {
+      grid-template-columns: 1fr;
+    }
+    #authEmail, #authPass, #authSubmit { grid-column: 1 / -1; }
+    .modeGrid { grid-template-columns: repeat(2, 1fr); }
+    .bottomRow { grid-template-columns: 1fr 1fr; }
+    .bottomRow .playBtn { grid-column: 1 / -1; }
+  }
 </style>
 </head>
 <body>
@@ -287,51 +623,51 @@
 
 <!-- AUTH -->
 <div id="authScreen" class="screen">
-  <div class="authBox">
-    <div class="authLogo">2D BATTLE ROYALE</div>
+  <div class="authCard">
+    <div class="brand">2D BATTLE ROYALE</div>
+    <div class="brandSub">ONLINE · MOBILE · FREE</div>
     <div class="authTabs">
       <button class="authTab active" id="tabLogin">ВХОД</button>
       <button class="authTab" id="tabRegister">РЕГИСТРАЦИЯ</button>
     </div>
-    <input id="authName" class="authInput hidden" placeholder="НИК (до 14 симв.)" maxlength="14" autocomplete="off">
-    <input id="authEmail" class="authInput" type="email" placeholder="EMAIL" autocomplete="email">
-    <input id="authPass" class="authInput" type="password" placeholder="ПАРОЛЬ" autocomplete="current-password">
-    <button id="authSubmit" class="btnPrimary">ВОЙТИ</button>
-    <div id="authError"></div>
-    <button id="btnGuest" class="btnSecondary">ИГРАТЬ КАК ГОСТЬ</button>
+    <input id="authName" class="inp hidden" placeholder="НИК (до 14 симв.)" maxlength="14" autocomplete="off">
+    <input id="authEmail" class="inp" type="email" placeholder="EMAIL" autocomplete="email">
+    <input id="authPass" class="inp" type="password" placeholder="ПАРОЛЬ" autocomplete="current-password">
+    <button id="authSubmit" class="btn btn-primary">ВОЙТИ</button>
+    <div class="authMsg" id="authError"></div>
+    <button id="btnGuest" class="btn btn-ghost">ИГРАТЬ КАК ГОСТЬ</button>
   </div>
 </div>
 
 <!-- MAIN MENU -->
 <div id="mainMenu" class="screen hidden">
-  <div class="topBar">
-    <div class="profilePill">
-      <div class="avatar" id="avatarEl">P</div>
-      <div class="profileInfo">
-        <div class="profileName" id="profileNameEl">PLAYER</div>
-        <div class="profileLevel">УР. <span id="levelEl">1</span></div>
+  <div class="menuInner">
+    <div class="topBar">
+      <div class="profileCard">
+        <div class="avatar" id="avatarEl">P</div>
+        <div class="pInfo">
+          <div class="pName" id="profileNameEl">PLAYER</div>
+          <div class="pLvl">УР. <span id="levelEl">1</span></div>
+        </div>
       </div>
+      <div class="stats">
+        <div class="statCard"><div class="statVal" id="statKills">0</div><div class="statLbl">УБИЙСТВ</div></div>
+        <div class="statCard"><div class="statVal" id="statWins">0</div><div class="statLbl">ПОБЕД</div></div>
+        <div class="statCard"><div class="statVal" id="statMatches">0</div><div class="statLbl">МАТЧЕЙ</div></div>
+      </div>
+      <button class="iconBtn" id="btnChangeName" title="Сменить ник">✎</button>
+      <button class="iconBtn" id="btnLogout" title="Выйти">⏻</button>
     </div>
-    <div class="statsRow">
-      <div class="stat"><div class="statVal" id="statKills">0</div><div class="statLbl">УБИЙСТВ</div></div>
-      <div class="stat"><div class="statVal" id="statWins">0</div><div class="statLbl">ПОБЕД</div></div>
-      <div class="stat"><div class="statVal" id="statMatches">0</div><div class="statLbl">МАТЧЕЙ</div></div>
-    </div>
-    <button id="btnChangeName" class="iconBtn" title="Сменить ник">✎</button>
-    <button id="btnLogout" class="iconBtn" title="Выйти">⏻</button>
-  </div>
-  <div class="menuContent">
-    <div>
-      <div class="panelTitle">РЕЖИМЫ ПРОТИВ БОТОВ</div>
-      <div class="modeList" id="modeList"></div>
-    </div>
-    <div></div>
-    <div class="playPanel">
-      <button id="btnServers" class="btnSecondary">СЕРВЕРА</button>
-      <button id="btnCreateServer" class="btnSecondary">СОЗДАТЬ</button>
-      <button id="btnBotsPlay" class="btnPlay">
-        <span>▶</span><span>ИГРАТЬ</span>
-      </button>
+
+    <div class="modesBlock">
+      <div class="sectionTitle">Режим против ботов</div>
+      <div class="modeGrid" id="modeList"></div>
+      <div class="browserSpacer"></div>
+      <div class="bottomRow">
+        <button class="sideBtn" id="btnServers"><span class="ico">🌐</span>СЕРВЕРА</button>
+        <button class="sideBtn" id="btnCreateServer"><span class="ico">✦</span>СОЗДАТЬ</button>
+        <button class="playBtn" id="btnBotsPlay"><span class="ico">▶</span>ИГРАТЬ</button>
+      </div>
     </div>
   </div>
 </div>
@@ -339,42 +675,43 @@
 <!-- SERVER BROWSER -->
 <div id="serverBrowser" class="screen hidden">
   <div class="browserHeader">
-    <button id="btnBrowserBack" class="iconBtn" style="position:static">←</button>
-    <h2>СЕРВЕРА</h2>
+    <button class="iconBtn" id="btnBrowserBack">←</button>
+    <div class="browserTitle">СЕРВЕРА</div>
+    <div class="browserSpacer"></div>
     <input id="codeInput" class="codeInput" placeholder="КОД" maxlength="8" autocomplete="off">
-    <button id="btnJoinCode" class="btnPrimary" style="padding:0 12px">ВОЙТИ</button>
-    <button id="btnBrowserRefresh" class="iconBtn" style="position:static">⟳</button>
-    <button id="btnBrowserCreate" class="btnPrimary" style="padding:0 14px">СОЗДАТЬ</button>
+    <button class="btn btn-primary" id="btnJoinCode">ВОЙТИ</button>
+    <button class="iconBtn" id="btnBrowserRefresh" title="Обновить">⟳</button>
+    <button class="btn btn-primary" id="btnBrowserCreate" style="letter-spacing:1px;">СОЗДАТЬ</button>
   </div>
   <div class="serverList" id="serverList">
-    <div class="emptyList">Загрузка...</div>
+    <div class="emptyList"><div class="em">⟳</div><div>Загрузка...</div></div>
   </div>
 </div>
 
 <!-- MODAL CREATE -->
 <div id="createServerModal" class="modal hidden">
-  <div class="modalBox">
-    <div class="modalTitle">НОВЫЙ СЕРВЕР</div>
-    <input id="newServerName" placeholder="НАЗВАНИЕ" maxlength="24" autocomplete="off">
-    <input id="newServerPass" placeholder="ПАРОЛЬ (необязательно)" maxlength="20" autocomplete="off">
+  <div class="modalCard">
+    <div class="modalTitle">Новый сервер</div>
+    <input id="newServerName" class="inp" placeholder="НАЗВАНИЕ СЕРВЕРА" maxlength="24" autocomplete="off">
+    <input id="newServerPass" class="inp" placeholder="ПАРОЛЬ (необязательно)" maxlength="20" autocomplete="off">
     <div class="modalErr" id="createServerErr"></div>
     <div class="modalRow">
-      <button id="btnCancelCreate" class="btnSecondary">ОТМЕНА</button>
-      <button id="btnConfirmCreate" class="btnPrimary">СОЗДАТЬ</button>
+      <button class="btn btn-ghost" id="btnCancelCreate">ОТМЕНА</button>
+      <button class="btn btn-primary" id="btnConfirmCreate">СОЗДАТЬ</button>
     </div>
   </div>
 </div>
 
 <!-- MODAL JOIN -->
 <div id="joinModal" class="modal hidden">
-  <div class="modalBox">
-    <div class="modalTitle">ПАРОЛЬ СЕРВЕРА</div>
-    <div class="sub" id="joinServerName" style="text-align:center"></div>
-    <input id="joinPassword" type="password" placeholder="ПАРОЛЬ" maxlength="20" autocomplete="off">
+  <div class="modalCard">
+    <div class="modalTitle">Пароль сервера</div>
+    <div class="modalSub" id="joinServerName"></div>
+    <input id="joinPassword" class="inp" type="password" placeholder="ПАРОЛЬ" maxlength="20" autocomplete="off">
     <div class="modalErr" id="joinErr"></div>
     <div class="modalRow">
-      <button id="btnCancelJoin" class="btnSecondary">ОТМЕНА</button>
-      <button id="btnConfirmJoin" class="btnPrimary">ВОЙТИ</button>
+      <button class="btn btn-ghost" id="btnCancelJoin">ОТМЕНА</button>
+      <button class="btn btn-primary" id="btnConfirmJoin">ВОЙТИ</button>
     </div>
   </div>
 </div>
@@ -382,18 +719,23 @@
 <!-- CONNECTING -->
 <div id="connecting" class="screen hidden">
   <div class="spinner"></div>
-  <div class="sub" id="connectMsg">Подключение...</div>
+  <div class="muted" id="connectMsg">Подключение...</div>
 </div>
 
 <!-- WAITING -->
 <div id="waiting" class="screen hidden">
-  <div class="sub">Сервер</div>
-  <div id="waitingServerName">-</div>
-  <div class="sub">Код комнаты</div>
-  <div id="waitingRoom">------</div>
-  <div class="sub">Ты вошёл как <b id="waitingName" style="color:#fff">PLAYER</b></div>
-  <div class="sub">Старт через <span id="countdown">5</span>с</div>
-  <button id="btnWaitingBack" class="btnSecondary" style="margin-top:8px;min-width:180px">ОТМЕНА</button>
+  <div class="muted">Сервер</div>
+  <div class="waitServerName" id="waitingServerName">-</div>
+  <div class="muted" style="margin-top:4px;">Код комнаты</div>
+  <div class="waitRoomCode" id="waitingRoom">------</div>
+  <div class="muted">Ты вошёл как</div>
+  <div style="font-weight:900;letter-spacing:1px;font-size:var(--fs-md);" id="waitingName">PLAYER</div>
+  <div style="display:flex;align-items:baseline;gap:8px;margin-top:6px;">
+    <span class="muted">Старт через</span>
+    <span class="waitCount" id="countdown">5</span>
+    <span class="muted">сек</span>
+  </div>
+  <button class="btn btn-ghost" id="btnWaitingBack" style="margin-top:10px;min-width:200px;">ОТМЕНА</button>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -404,7 +746,6 @@
 (() => {
 'use strict';
 
-/* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyB0uaLhHrYjWblrCBLTPx7mF_OmUhhld70",
   authDomain: "br-game-1f919.firebaseapp.com",
@@ -415,7 +756,7 @@ const firebaseConfig = {
   appId: "1:758598814466:web:85779913ac960b18a2901b"
 };
 
-/* SETUP */
+/* ===== SETUP ===== */
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 let W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -428,13 +769,13 @@ function resize(){
 window.addEventListener('resize', resize);
 resize();
 
-/* CONST */
+/* ===== CONST ===== */
 const WORLD = 3200;
 const ZONE_START_R = 1500, ZONE_END_R = 120, ZONE_SHRINK = 22, ZONE_DPS = 7;
 const JOY_R = 80, PLAYER_SPEED = 190;
 const SYNC_INTERVAL = 100, INTERP_SPEED = 14;
 const START_DELAY = 6000, SHOT_MAX_AGE = 2500, LOOT_COUNT = 60;
-const PROFILE_CACHE_KEY = 'br_profile_cache';
+const PROFILE_CACHE_KEY = 'br_profile_cache_v2';
 
 const WEAPONS = {
   pistol:  { name:'PISTOL',  dmg:12, rate:0.28, spread:0.06, speed:750,  ammo:12, reload:1.1, color:'#ffd166', pellets:1 },
@@ -445,12 +786,12 @@ const WEAPONS = {
 const WEAPON_KEYS = Object.keys(WEAPONS);
 
 const BOT_MODES = {
-  classic:  { name:'КЛАССИКА',  icon:'🎯', bots:29, botSpeed:[140,175] },
-  hardcore: { name:'ХАРДКОР',   icon:'💀', bots:39, botSpeed:[175,215], botDmgMul:1.5 },
-  sniper:   { name:'СНАЙПЕРЫ',  icon:'🔭', bots:19, weapon:'rifle' },
-  shotgun:  { name:'ДРОБОБИК',  icon:'💥', bots:19, weapon:'shotgun' },
-  pistol:   { name:'ПИСТОЛЕТЫ', icon:'🔫', bots:19, weapon:'pistol' },
-  smg:      { name:'SMG',       icon:'⚡', bots:19, weapon:'smg' },
+  classic:  { name:'КЛАССИКА',  icon:'🎯', desc:'Стандартный BR', bots:29, botSpeed:[140,175] },
+  hardcore: { name:'ХАРДКОР',   icon:'💀', desc:'30+ ботов, x1.5 урон', bots:39, botSpeed:[175,215], botDmgMul:1.5 },
+  sniper:   { name:'СНАЙПЕРЫ',  icon:'🔭', desc:'Только винтовки', bots:19, weapon:'rifle' },
+  shotgun:  { name:'ДРОБОВИКИ', icon:'💥', desc:'Ближний бой', bots:19, weapon:'shotgun' },
+  pistol:   { name:'ПИСТОЛЕТЫ', icon:'🔫', desc:'Классика 1x1', bots:19, weapon:'pistol' },
+  smg:      { name:'SMG',       icon:'⚡', desc:'Скорострельные', bots:19, weapon:'smg' },
 };
 let selectedBotMode = 'classic';
 
@@ -473,7 +814,7 @@ function simpleHash(s){
   return 'h' + Math.abs(h).toString(36);
 }
 
-/* STATE */
+/* ===== STATE ===== */
 let player, bots, bullets, loot, particles, killFeed, zone;
 let cam = { x:0, y:0 };
 let gameState = 'menu';
@@ -505,8 +846,8 @@ let userProfile = { name:'PLAYER', kills:0, wins:0, matches:0 };
 let serverBrowserRef = null, serverBrowserCb = null;
 let pendingJoinRoomId = null;
 
-/* HELPERS */
-function log(...a){ console.log('%c[BR]', 'color:#06d6a0', ...a); }
+/* ===== HELPERS ===== */
+function log(...a){ console.log('%c[BR]', 'color:#ffa726', ...a); }
 function withTimeout(p, ms, msg){
   return Promise.race([
     p,
@@ -540,7 +881,7 @@ function hideAllScreens(){
   for (const s of SCREENS) document.getElementById(s).classList.add('hidden');
 }
 
-/* ENTITY */
+/* ===== ENTITY ===== */
 function makeEntity(x, y, isBot, name){
   return {
     x, y, r:16, hp:100, maxHp:100, angle:0,
@@ -555,7 +896,6 @@ function makeEntity(x, y, isBot, name){
     dmgMul: 1,
   };
 }
-
 function spawnPointFor(uid){
   const h = hashStr((roomId || '') + uid);
   const ang = ((h % 1024) / 1024) * Math.PI * 2;
@@ -602,7 +942,6 @@ function resetGame(){
   gameState = 'playing';
   updateAlive();
 }
-
 function updateAlive(){
   let n = (player && player.alive) ? 1 : 0;
   if (netMode === 'online'){
@@ -612,21 +951,19 @@ function updateAlive(){
   }
   aliveCount = n;
 }
-
 function spawnLootRandom(n, mode){
   const cfg = BOT_MODES[mode] || {};
   const forceWeapon = cfg.weapon;
   for (let i = 0; i < n; i++){
     const id = 'L' + i;
-    if (Math.random() < 0.22){
+    if (Math.random() < 0.22)
       loot.push({ id, x: rand(120,WORLD-120), y: rand(120,WORLD-120), type:'health', r:12 });
-    } else {
+    else {
       const wk = forceWeapon || WEAPON_KEYS[Math.floor(Math.random()*WEAPON_KEYS.length)];
       loot.push({ id, x: rand(120,WORLD-120), y: rand(120,WORLD-120), type:'weapon', weaponKey: wk, r:14 });
     }
   }
 }
-
 function spawnLootSeeded(seed, n){
   const rnd = mulberry32(hashStr('loot:' + seed));
   for (let i = 0; i < n; i++){
@@ -642,21 +979,18 @@ function spawnLootSeeded(seed, n){
     }
   }
 }
-
 function removeLootById(id){
   const s = String(id);
   for (let i = loot.length - 1; i >= 0; i--){
     if (String(loot[i].id) === s) loot.splice(i, 1);
   }
 }
-
 function applyLocalDamage(e, dmg){
   if (!e || !e.alive) return;
   e.hp = Math.max(0, e.hp - dmg);
   e.pendingDamage = (e.pendingDamage || 0) + dmg;
   e.localHitAt = performance.now();
 }
-
 function killEntity(ent, killer){
   if (!ent || !ent.alive) return;
   ent.alive = false;
@@ -676,7 +1010,7 @@ function killEntity(ent, killer){
   }
 }
 
-/* INPUT */
+/* ===== INPUT ===== */
 const joyL = { active:false, id:null, ox:0, oy:0, x:0, y:0 };
 const joyR = { active:false, id:null, ox:0, oy:0, x:0, y:0 };
 const keys = {};
@@ -720,7 +1054,7 @@ canvas.addEventListener('mousedown', () => {
 });
 canvas.addEventListener('mouseup', () => { mouse.down = false; });
 
-/* AUTH UI */
+/* ===== AUTH UI ===== */
 const authName = document.getElementById('authName');
 const authEmail = document.getElementById('authEmail');
 const authPass = document.getElementById('authPass');
@@ -749,8 +1083,8 @@ authSubmit.onclick = doAuthSubmit;
 async function doAuthSubmit(){
   authError.textContent = '';
   const email = (authEmail.value || '').trim();
-  const pass = (authPass.value || '').trim();
-  const name = sanitizeName(authName.value);
+  const pass  = (authPass.value || '').trim();
+  const name  = sanitizeName(authName.value);
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
     authError.textContent = 'Введи корректный email'; return;
@@ -808,21 +1142,26 @@ btnGuest.onclick = async () => {
   }
 };
 
-/* MAIN MENU UI */
+/* ===== MODE LIST ===== */
 const modeListEl = document.getElementById('modeList');
 function renderModeList(){
   modeListEl.innerHTML = '';
   for (const key in BOT_MODES){
     const m = BOT_MODES[key];
     const btn = document.createElement('button');
-    btn.className = 'modeBtn' + (key === selectedBotMode ? ' active' : '');
-    btn.innerHTML = `<span class="mIcon">${m.icon}</span><span>${m.name}</span>`;
+    btn.className = 'modeCard' + (key === selectedBotMode ? ' active' : '');
+    btn.innerHTML = `<span class="modeIcon">${m.icon}</span>
+      <span class="modeText">
+        <span class="modeName">${m.name}</span>
+        <span class="modeDesc">${m.desc}</span>
+      </span>`;
     btn.onclick = () => { selectedBotMode = key; renderModeList(); };
     modeListEl.appendChild(btn);
   }
 }
 renderModeList();
 
+/* ===== MAIN MENU ACTIONS ===== */
 document.getElementById('btnBotsPlay').onclick = () => {
   myName = userProfile.name || 'PLAYER';
   netMode = 'offline';
@@ -835,7 +1174,7 @@ document.getElementById('btnServers').onclick = () => {
 };
 document.getElementById('btnCreateServer').onclick = () => {
   if (!isRegistered()){
-    alert('Создавать сервера могут только зарегистрированные игроки.\nВойди по email или зарегистрируйся.');
+    alert('Создавать сервера могут только зарегистрированные игроки.');
     return;
   }
   openCreateModal();
@@ -846,7 +1185,6 @@ document.getElementById('btnLogout').onclick = async () => {
   try { localStorage.removeItem(PROFILE_CACHE_KEY); } catch(e){}
   try { await auth.signOut(); } catch(e){}
 };
-
 document.getElementById('btnChangeName').onclick = async () => {
   if (!isRegistered()){
     alert('Смена ника доступна только зарегистрированным игрокам');
@@ -893,7 +1231,7 @@ function loadCachedProfile(){
   } catch(e){ return null; }
 }
 
-/* SERVER BROWSER */
+/* ===== SERVER BROWSER ===== */
 const serverListEl = document.getElementById('serverList');
 const codeInput = document.getElementById('codeInput');
 
@@ -931,7 +1269,7 @@ function startServerBrowserListener(){
   serverBrowserCb = serverBrowserRef.on('value', snap => {
     renderServerList(snap.val() || {});
   }, err => {
-    serverListEl.innerHTML = '<div class="emptyList">Ошибка загрузки: ' + err.message + '</div>';
+    serverListEl.innerHTML = '<div class="emptyList"><div class="em">⚠</div><div>Ошибка: ' + escapeHtml(err.message) + '</div></div>';
   });
 }
 function stopServerBrowserListener(){
@@ -941,7 +1279,6 @@ function stopServerBrowserListener(){
     serverBrowserCb = null;
   }
 }
-
 function renderServerList(rooms){
   const now = serverNow();
   const items = [];
@@ -957,7 +1294,7 @@ function renderServerList(rooms){
   items.sort((a,b) => (b.meta.createdAt || 0) - (a.meta.createdAt || 0));
 
   if (items.length === 0){
-    serverListEl.innerHTML = '<div class="emptyList">Пока нет серверов. Создай свой!</div>';
+    serverListEl.innerHTML = '<div class="emptyList"><div class="em">🌐</div><div>Пока нет серверов. Создай свой!</div></div>';
     return;
   }
   serverListEl.innerHTML = '';
@@ -965,17 +1302,20 @@ function renderServerList(rooms){
     const card = document.createElement('div');
     card.className = 'serverCard';
     const started = it.meta.startAt <= now + 500;
-    const lock = it.meta.hasPassword ? '🔒 ' : '';
+    const lock = it.meta.hasPassword ? '<span class="srvLock">🔒</span>' : '';
     const tag = started ? '▶ идёт' : ('старт ' + Math.max(0, Math.ceil((it.meta.startAt - now)/1000)) + 'с');
     card.innerHTML = `
-      <div class="srvName">${lock}${escapeHtml(it.meta.name || 'Сервер')}</div>
-      <div class="srvMeta">
-        <span class="green">${it.players} игр.</span>
+      <div class="srvTop">
+        ${lock}
+        <div class="srvName">${escapeHtml(it.meta.name || 'Сервер')}</div>
+      </div>
+      <div class="srvRow">
+        <span class="srvPlayers">● ${it.players} игр.</span>
         <span>${tag}</span>
       </div>
-      <div class="srvMeta" style="opacity:0.65">
+      <div class="srvRow">
         <span>${escapeHtml(it.meta.createdByName || '?')}</span>
-        <span>${it.rid}</span>
+        <span class="srvCode">${it.rid}</span>
       </div>
     `;
     card.onclick = () => joinServerById(it.rid, it.meta);
@@ -983,7 +1323,7 @@ function renderServerList(rooms){
   }
 }
 
-/* MODAL CREATE */
+/* ===== MODAL CREATE ===== */
 const createModal = document.getElementById('createServerModal');
 const newServerName = document.getElementById('newServerName');
 const newServerPass = document.getElementById('newServerPass');
@@ -1042,7 +1382,7 @@ async function createServer(){
   await connectToRoom(meta);
 }
 
-/* JOIN SERVER */
+/* ===== JOIN ===== */
 const joinModal = document.getElementById('joinModal');
 const joinPassword = document.getElementById('joinPassword');
 const joinErr = document.getElementById('joinErr');
@@ -1105,11 +1445,11 @@ async function joinServerById(rid, knownMeta){
   }
 }
 
-/* CONNECT TO ROOM */
+/* ===== CONNECT ===== */
 async function connectToRoom(meta){
   matchStartAt = Number(meta.startAt) || (Date.now() + serverOffset + START_DELAY);
   showScreen('connecting');
-  document.getElementById('connectMsg').textContent = 'Синхронизация...';
+  document.getElementById('connectMsg').textContent = 'Синхронизация времени...';
 
   serverOffset = await new Promise(res => {
     const to = setTimeout(() => res(0), 2500);
@@ -1120,10 +1460,9 @@ async function connectToRoom(meta){
     } catch(e){ clearTimeout(to); res(0); }
   });
 
-  document.getElementById('connectMsg').textContent = 'Вход...';
-  try {
-    await joinRoom();
-  } catch(err){
+  document.getElementById('connectMsg').textContent = 'Вход в комнату...';
+  try { await joinRoom(); }
+  catch(err){
     console.error('[joinRoom]', err);
     showScreen('serverBrowser');
     alert('Ошибка входа: ' + (err.message || err));
@@ -1179,7 +1518,6 @@ function cleanupRoom(){
     db.ref(`rooms/${roomId}/players/${myUid}`).remove().catch(()=>{});
   }
 }
-
 function backToMainMenu(){
   cleanupRoom();
   netMode = 'offline';
@@ -1187,7 +1525,7 @@ function backToMainMenu(){
   showScreen('mainMenu');
 }
 
-/* NETWORK joinRoom */
+/* ===== NETWORK ===== */
 async function joinRoom(){
   const sp = spawnPointFor(myUid);
   const me = {
@@ -1212,12 +1550,10 @@ async function joinRoom(){
       if (!e){
         e = makeEntity(p.x, p.y, false, p.name || uid.substring(0,4));
         e.uid = uid;
-        e.x = e.targetX = p.x;
-        e.y = e.targetY = p.y;
+        e.x = e.targetX = p.x; e.y = e.targetY = p.y;
         e.angle = e.targetAngle = p.angle || 0;
         e.hp = p.hp != null ? p.hp : 100;
-        e.lastServerHp = e.hp;
-        e.pendingDamage = 0;
+        e.lastServerHp = e.hp; e.pendingDamage = 0;
         e.weaponKey = p.weapon || 'pistol';
         e.weapon = WEAPONS[e.weaponKey] || WEAPONS.pistol;
         e.alive = p.alive !== false;
@@ -1349,7 +1685,7 @@ function sendDamage(targetUid, amount){
   }).catch(()=>{});
 }
 
-/* COMBAT */
+/* ===== COMBAT / UPDATE / RENDER ===== */
 function tryFire(ent, dt){
   if (ent.fireCd > 0 || ent.reloading > 0) return;
   if (ent.ammo <= 0){ ent.reloading = ent.weapon.reload; return; }
@@ -1379,7 +1715,6 @@ function tryFire(ent, dt){
     sendShot(ent.x, ent.y, ent.angle, ent.weaponKey);
 }
 
-/* UPDATE */
 function updatePlayer(dt){
   if (!player.alive) return;
   let dx = 0, dy = 0;
@@ -1417,7 +1752,6 @@ function updatePlayer(dt){
     wantFire = true;
   }
   if (wantFire) tryFire(player, dt);
-
   if (player.fireCd > 0) player.fireCd -= dt;
   if (player.reloading > 0){
     player.reloading -= dt;
@@ -1581,7 +1915,6 @@ function updateParticles(dt){
   }
 }
 
-/* CAMERA */
 function updateCamera(){
   const focus = (player && player.alive) ? player : { x: zone.x, y: zone.y };
   cam.x = focus.x - W/2;
@@ -1590,7 +1923,7 @@ function updateCamera(){
   if (H < WORLD) cam.y = Math.max(0, Math.min(WORLD - H, cam.y));
 }
 
-/* RENDER */
+/* ===== RENDER ===== */
 function drawGrid(){
   const step = 100;
   const x0 = Math.floor(cam.x / step) * step;
@@ -1666,7 +1999,7 @@ function drawEntity(ent, color){
     ctx.fillRect(sx - bw/2, sy - ent.r - 13, bw * ratio, 5);
   }
   if (ent.name && ent !== player){
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(ent.name, sx, sy - ent.r - 18);
@@ -1781,11 +2114,11 @@ function drawEndScreen(){
   ctx.fillText('Убийств: ' + player.kills, W/2, H/2 + 20);
   ctx.fillText('Место: #' + Math.max(1, aliveCount), W/2, H/2 + 46);
   ctx.font = 'bold 16px sans-serif';
-  ctx.fillStyle = '#ffb400';
+  ctx.fillStyle = '#ffa726';
   ctx.fillText('ТАПНИ, ЧТОБЫ ВЕРНУТЬСЯ В МЕНЮ', W/2, H/2 + 100);
 }
 
-/* RECORD MATCH */
+/* ===== RECORD ===== */
 async function recordMatchResult(won, kills){
   if (!currentUser || matchRecorded) return;
   matchRecorded = true;
@@ -1807,7 +2140,7 @@ async function recordMatchResult(won, kills){
   } catch(e){ console.warn('record match', e); }
 }
 
-/* MAIN LOOP */
+/* ===== MAIN LOOP ===== */
 let last = performance.now();
 let endRecorded = false;
 
@@ -1835,12 +2168,10 @@ function loop(now){
       if (!player.alive) gameState = 'lost';
       else if (sawOthers && aliveCount === 1) gameState = 'won';
     }
-
     if ((gameState === 'won' || gameState === 'lost') && !endRecorded){
       endRecorded = true;
       if (netMode === 'online') recordMatchResult(gameState === 'won', player.kills);
     }
-
     if (now - lastSync > SYNC_INTERVAL){
       lastSync = now;
       syncMyState();
@@ -1875,14 +2206,13 @@ function loop(now){
 }
 requestAnimationFrame(loop);
 
-/* INIT FIREBASE + AUTH FLOW */
+/* ===== FIREBASE INIT ===== */
 function initFirebase(){
   if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
   db = firebase.database();
 }
 
-/* показать кэш мгновенно, чтобы при перезагрузке не было мигания */
 (function tryCachedProfile(){
   const c = loadCachedProfile();
   if (c && c.profile){ userProfile = c.profile; updateProfileUI(); }
@@ -1890,26 +2220,22 @@ function initFirebase(){
 
 function initAuthFlow(){
   initFirebase();
-  // Сохраняем сессию между перезагрузками (по умолчанию LOCAL)
   auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
 
   auth.onAuthStateChanged(async user => {
     if (user){
       currentUser = user;
       myUid = user.uid;
-      // сразу показать меню с кэшем
       if (userProfile.name === 'PLAYER' || !userProfile.name){
         const c = loadCachedProfile();
         if (c && c.uid === user.uid && c.profile) userProfile = c.profile;
       }
       updateProfileUI();
       showScreen('mainMenu');
-      // асинхронно подтянуть актуальный профиль
       await loadOrCreateProfile(user);
     } else {
       currentUser = null;
       myUid = null;
-      // покажем экран входа, но подставим сохранённый email
       try {
         const lastEmail = localStorage.getItem('br_last_email');
         if (lastEmail) authEmail.value = lastEmail;
@@ -1924,10 +2250,7 @@ async function loadOrCreateProfile(user){
   let snap;
   try {
     snap = await withTimeout(ref.once('value'), 8000, 'profile timeout');
-  } catch(e){
-    console.warn('profile load timeout', e);
-    return;
-  }
+  } catch(e){ return; }
   const data = snap.val();
   if (data){
     userProfile = {
@@ -1947,10 +2270,9 @@ async function loadOrCreateProfile(user){
         kills: 0, wins: 0, matches: 0,
         createdAt: firebase.database.ServerValue.TIMESTAMP,
       });
-    } catch(e){ console.warn('profile create', e); }
+    } catch(e){}
   }
   myName = userProfile.name;
-  // запоминаем email для автозаполнения после выхода
   if (user.email){
     try { localStorage.setItem('br_last_email', user.email); } catch(e){}
   }
