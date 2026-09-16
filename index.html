@@ -282,6 +282,23 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
 .avatar-preview-wrap { display:flex; justify-content:center; margin-bottom:16px; }
 .avatar-preview { width:96px; height:96px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent-light)); display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:36px; font-weight:700; color:#fff; }
 .avatar-preview img { width:100%; height:100%; object-fit:cover; }
+
+/* ============ FIX: скрытый input без display:none (иначе WebView блокирует клик) ============ */
+.visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0,0,0,0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+label.btn { cursor: pointer; -webkit-user-select: none; user-select: none; }
+label.btn:active { transform: scale(.97); }
 </style>
 </head>
 <body>
@@ -369,14 +386,18 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
         <div class="avatar-preview-wrap">
             <div class="avatar-preview" id="avatarPreview">?</div>
         </div>
-        <button class="btn btn-primary btn-full" style="margin-bottom:8px;" onclick="openGallery()">
+
+        <!-- ВАЖНО: label + for=... работают в любом WebView, onclick на кнопке — нет -->
+        <label class="btn btn-primary btn-full" for="avatarInput" style="margin-bottom:8px;">
             <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             <span>Выбрать из галереи</span>
-        </button>
-        <button class="btn btn-primary btn-full" style="margin-bottom:8px;background:linear-gradient(135deg,#0984e3,#74b9ff);" onclick="openCamera()">
+        </label>
+
+        <label class="btn btn-primary btn-full" for="cameraInput" style="margin-bottom:8px;background:linear-gradient(135deg,#0984e3,#74b9ff);">
             <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
             <span>Сделать фото</span>
-        </button>
+        </label>
+
         <button class="btn btn-danger btn-full" id="removeAvatarBtn" onclick="removeAvatar()">
             <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
             <span>Удалить аватар</span>
@@ -627,9 +648,9 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
 <div class="toast" id="toast"></div>
 <textarea id="copyHelper" readonly></textarea>
 
-<!-- Скрытые input'ы для галереи и камеры -->
-<input type="file" id="avatarInput" accept="image/*" style="display:none;">
-<input type="file" id="cameraInput" accept="image/*" capture="user" style="display:none;">
+<!-- Скрытые input'ы для галереи и камеры (класс visually-hidden, НЕ display:none) -->
+<input type="file" id="avatarInput" accept="image/*" class="visually-hidden">
+<input type="file" id="cameraInput" accept="image/*" capture="user" class="visually-hidden">
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -876,9 +897,9 @@ async function signOut() {
 }
 
 // ============================================================
-//  AVATAR SYSTEM  (галерея + камера + локальное хранилище)
+//  AVATAR SYSTEM
 // ============================================================
-let localAvatar = null; // base64 dataURL для гостя/локального хранения
+let localAvatar = null;
 
 async function saveLocalAvatar(dataUrl) {
     localAvatar = dataUrl;
@@ -890,7 +911,6 @@ async function removeLocalAvatar() {
 }
 
 function openAvatarModal() {
-    // Обновляем превью
     const previewEl = document.getElementById('avatarPreview');
     const src = (currentUser && currentUser.photoURL) || localAvatar;
     if (src) {
@@ -899,7 +919,6 @@ function openAvatarModal() {
         const name = currentUser ? (currentUser.displayName || currentUser.email || 'U') : 'Гость';
         previewEl.textContent = name[0].toUpperCase();
     }
-    // Кнопка удаления доступна, если есть что удалять
     const removeBtn = document.getElementById('removeAvatarBtn');
     if (src) removeBtn.style.display = 'flex';
     else removeBtn.style.display = 'none';
@@ -907,14 +926,6 @@ function openAvatarModal() {
 }
 function closeAvatarModal() { document.getElementById('avatarModal').classList.remove('show'); }
 
-function openGallery() {
-    document.getElementById('avatarInput').click();
-}
-function openCamera() {
-    document.getElementById('cameraInput').click();
-}
-
-// Сжимаем картинку до maxW×maxH, возвращаем Blob (JPEG)
 function resizeImage(file, maxW, maxH) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -960,10 +971,8 @@ async function handleAvatarFile(file) {
         const blob = await resizeImage(file, 256, 256);
         const dataUrl = await blobToDataURL(blob);
 
-        // 1. Всегда сохраняем локально
         await saveLocalAvatar(dataUrl);
 
-        // 2. Если залогинен — синхронизируем в Firebase Storage
         if (currentUser && firebaseStorage) {
             try {
                 const ref = firebaseStorage.ref(`avatars/${currentUser.uid}.jpg`);
@@ -979,7 +988,6 @@ async function handleAvatarFile(file) {
         }
 
         updateProfileUI();
-        // Обновить превью в модалке, если она открыта
         const previewEl = document.getElementById('avatarPreview');
         if (previewEl) previewEl.innerHTML = `<img src="${dataUrl}" alt="">`;
         showToast('Аватар обновлён');
@@ -1005,10 +1013,8 @@ async function removeAvatar() {
     if (!confirm('Удалить аватар?')) return;
     closeAvatarModal();
 
-    // Локально
     await removeLocalAvatar();
 
-    // В облаке
     if (currentUser) {
         try {
             if (firebaseStorage) {
@@ -1095,7 +1101,6 @@ function updateProfileUI() {
 
     const editIconSvg = `<span class="avatar-edit"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span>`;
 
-    // Определяем источник аватара: облако > локальный
     const cloudAvatar = currentUser && currentUser.photoURL ? currentUser.photoURL : null;
     const avatarSrc = cloudAvatar || localAvatar;
 
@@ -1966,7 +1971,6 @@ async function initAppAfterAuth() {
 document.addEventListener('DOMContentLoaded', async () => {
     if (!navigator.onLine) setTimeout(showOfflineScreen, 100);
 
-    // Заранее загружаем локальный аватар, чтобы он показался даже до логина
     try {
         const la = await idbGet('local_avatar');
         if (la) localAvatar = la;
@@ -1992,7 +1996,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateProfileUI();
     }
     document.getElementById('wheelFab').classList.add('show');
-    console.log('[VPN Keys] v2.5 + avatar gallery loaded');
+    console.log('[VPN Keys] v2.5 + avatar gallery (label fix) loaded');
 });
 </script>
 </body>
