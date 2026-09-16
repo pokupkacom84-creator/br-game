@@ -10,66 +10,238 @@
     touch-action:none; user-select:none; -webkit-user-select:none;
     -webkit-tap-highlight-color:transparent; }
   canvas { display:block; }
-  .overlay { position:fixed; inset:0; display:flex; flex-direction:column;
-    align-items:center; justify-content:center; gap:14px; z-index:10;
-    background:radial-gradient(circle at center, #16202b 0%, #0a0f14 100%);
-    padding:24px; text-align:center; }
+
+  /* ====== ОБЩИЕ ЭКРАНЫ ====== */
+  .screen { position:fixed; inset:0; z-index:20; display:flex; flex-direction:column;
+    color:#fff; overflow:hidden; }
   .hidden { display:none !important; }
-  h1 { color:#fff; font-size:26px; letter-spacing:2px; margin-bottom:8px; }
-  button { padding:14px 28px; border:none; border-radius:10px; font-size:15px;
-    font-weight:bold; letter-spacing:1px; cursor:pointer; min-width:220px;
-    transition:transform 0.1s; }
-  button:active { transform:scale(0.96); }
-  button:disabled { opacity:0.5; cursor:default; }
-  #btnBots { background:#4895ef; color:#fff; }
-  #btnOnline { background:#06d6a0; color:#002a1e; }
-  input { padding:12px 16px; border:2px solid #2b3a47; background:#101820;
-    color:#fff; border-radius:8px; font-size:16px; text-align:center;
-    letter-spacing:3px; text-transform:uppercase; width:220px; outline:none; }
-  input:focus { border-color:#06d6a0; }
-  #nameInput { text-transform:none; letter-spacing:1px; border-color:#3a5266; }
-  #nameInput:focus { border-color:#4895ef; }
-  .divider { color:#5c6b7a; font-size:12px; letter-spacing:2px; margin:4px 0; }
+
+  /* ====== АВТОРИЗАЦИЯ ====== */
+  #authScreen {
+    align-items:center; justify-content:center; padding:24px;
+    background:
+      radial-gradient(ellipse at top left, rgba(255,180,0,0.18), transparent 55%),
+      radial-gradient(ellipse at bottom right, rgba(60,140,255,0.14), transparent 60%),
+      linear-gradient(180deg, #1a1f28 0%, #0a0e14 100%);
+  }
+  .authBox { width:100%; max-width:360px; display:flex; flex-direction:column;
+    gap:12px; padding:26px 22px; border-radius:18px;
+    background:rgba(15,20,28,0.85); border:1px solid rgba(255,180,0,0.25);
+    box-shadow:0 20px 60px rgba(0,0,0,0.6); }
+  .authLogo { font-size:20px; font-weight:900; letter-spacing:3px;
+    text-align:center; margin-bottom:6px;
+    background:linear-gradient(90deg,#ffb400,#ff7a00);
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .authTabs { display:flex; background:rgba(0,0,0,0.4); border-radius:10px; padding:4px; }
+  .authTab { flex:1; padding:10px; border:none; background:transparent; color:#8899a8;
+    font-weight:bold; font-size:13px; letter-spacing:1px; border-radius:8px; cursor:pointer; }
+  .authTab.active { background:linear-gradient(135deg,#ffb400,#f58b00); color:#1a1206;
+    box-shadow:0 4px 12px rgba(255,180,0,0.35); }
+  .authInput { padding:13px 16px; border:1.5px solid #2b3a47; background:#101820;
+    color:#fff; border-radius:10px; font-size:15px; outline:none; }
+  .authInput:focus { border-color:#ffb400; }
+  .btnPrimary { padding:14px; border:none; border-radius:10px; font-size:15px;
+    font-weight:900; letter-spacing:1.5px; cursor:pointer;
+    background:linear-gradient(135deg,#ffb400,#f58b00); color:#1a1206;
+    box-shadow:0 6px 20px rgba(255,180,0,0.35); transition:transform 0.1s; }
+  .btnPrimary:active { transform:scale(0.97); }
+  .btnPrimary:disabled { opacity:0.6; cursor:default; }
+  .btnSecondary { padding:13px; border:1.5px solid #2b3a47; background:transparent;
+    color:#cfd8e3; border-radius:10px; font-size:14px; font-weight:700;
+    letter-spacing:1px; cursor:pointer; transition:transform 0.1s; }
+  .btnSecondary:active { transform:scale(0.97); }
+  .authSep { text-align:center; color:#5c6b7a; font-size:12px; letter-spacing:2px;
+    margin:4px 0; }
+  #authError { color:#ef476f; font-size:12.5px; text-align:center; min-height:16px; }
+
+  /* ====== ГЛАВНОЕ МЕНЮ (PUBG-style) ====== */
+  #mainMenu {
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(255,180,0,0.22), transparent 45%),
+      radial-gradient(ellipse at 85% 90%, rgba(40,120,255,0.16), transparent 55%),
+      linear-gradient(180deg, #141a22 0%, #070a0f 100%);
+    padding: 16px 16px 24px;
+  }
+  #mainMenu::before {
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:
+      repeating-linear-gradient(115deg, rgba(255,180,0,0.035) 0 1px, transparent 1px 60px),
+      repeating-linear-gradient(-25deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 90px);
+  }
+  .menuTop { display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
+  .profilePill { display:flex; align-items:center; gap:12px;
+    padding:8px 16px 8px 8px; border-radius:30px;
+    background:rgba(10,15,22,0.85);
+    border:1px solid rgba(255,180,0,0.35);
+    box-shadow:0 4px 20px rgba(0,0,0,0.5); flex:1; max-width:280px; }
+  .avatar { width:44px; height:44px; border-radius:50%;
+    background:linear-gradient(135deg,#ffb400,#f58b00);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:900; font-size:19px; color:#1a1206; flex-shrink:0;
+    border:2px solid rgba(255,255,255,0.15); }
+  .profileInfo { display:flex; flex-direction:column; gap:2px; overflow:hidden; }
+  .profileName { font-size:14px; font-weight:900; letter-spacing:0.5px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .profileLevel { font-size:11px; color:#ffb400; font-weight:700; letter-spacing:1px; }
+  .iconBtn { width:44px; height:44px; border-radius:50%; border:1px solid rgba(255,255,255,0.15);
+    background:rgba(10,15,22,0.8); color:#cfd8e3; font-size:18px; cursor:pointer; }
+  .iconBtn:active { transform:scale(0.95); }
+
+  .statsRow { display:flex; gap:10px; margin-top:20px; position:relative; z-index:1; }
+  .stat { flex:1; padding:14px 10px; border-radius:12px; text-align:center;
+    background:linear-gradient(180deg, rgba(20,26,36,0.9), rgba(10,14,20,0.9));
+    border:1px solid rgba(255,180,0,0.2);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.04); }
+  .statVal { font-size:22px; font-weight:900; color:#ffb400; letter-spacing:0.5px; }
+  .statLbl { font-size:10px; color:#7f8ea0; letter-spacing:1.5px; margin-top:4px; font-weight:700; }
+
+  .menuModes { display:flex; gap:8px; margin-top:24px; position:relative; z-index:1; }
+  .modeTab { flex:1; padding:12px 8px; text-align:center; border-radius:10px;
+    font-size:13px; font-weight:900; letter-spacing:2px; color:#5c6b7a;
+    background:rgba(10,14,20,0.6); border:1px solid rgba(255,255,255,0.06);
+    cursor:pointer; transition:0.15s; }
+  .modeTab.active { color:#1a1206;
+    background:linear-gradient(135deg,#ffb400,#f58b00);
+    border-color:transparent;
+    box-shadow:0 6px 20px rgba(255,180,0,0.3); }
+
+  .spacer { flex:1; }
+
+  .btnPlay {
+    position:relative; z-index:1;
+    margin-top: 30px;
+    padding:22px 28px; border:none; border-radius:16px;
+    background:linear-gradient(135deg,#ffb400,#ff7a00);
+    color:#1a1206; font-size:22px; font-weight:900; letter-spacing:4px;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:14px;
+    box-shadow:0 10px 40px rgba(255,140,0,0.45),
+               inset 0 2px 0 rgba(255,255,255,0.3);
+    transition:transform 0.1s;
+  }
+  .btnPlay:active { transform:scale(0.98); }
+  .playIcon { font-size:24px; }
+
+  .menuBottom { display:flex; gap:8px; margin-top:14px; position:relative; z-index:1; }
+  .menuBottom .btnSecondary { flex:1; font-size:11px; padding:12px 8px; letter-spacing:0.5px; }
+
+  /* ====== ЛОББИ (создание/вход в комнату) ====== */
+  #lobby {
+    align-items:center; justify-content:center; padding:24px; text-align:center;
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(255,180,0,0.15), transparent 55%),
+      linear-gradient(180deg, #141a22 0%, #070a0f 100%);
+    gap:14px;
+  }
+  #lobby h1 { font-size:24px; font-weight:900; letter-spacing:3px;
+    background:linear-gradient(90deg,#ffb400,#ff7a00);
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  #lobby input { padding:13px 16px; border:1.5px solid #2b3a47; background:#101820;
+    color:#fff; border-radius:10px; font-size:15px; text-align:center;
+    letter-spacing:2px; text-transform:uppercase; width:230px; outline:none; }
+  #lobby input:focus { border-color:#ffb400; }
+  #lobby .btnPrimary { min-width:230px; }
+  #lobby .btnSecondary { min-width:230px; }
+  .backBtn { position:absolute; top:16px; left:16px; z-index:3;
+    width:40px; height:40px; border-radius:50%; border:1px solid rgba(255,255,255,0.15);
+    background:rgba(10,15,22,0.8); color:#cfd8e3; font-size:18px; cursor:pointer; }
+  .divider { color:#5c6b7a; font-size:12px; letter-spacing:2px; margin:2px 0; }
   #lobbyError { color:#ef476f; font-size:13px; min-height:18px; max-width:320px; }
-  #waitingRoom { color:#06d6a0; font-size:20px; font-weight:bold;
-    letter-spacing:4px; margin-top:8px; }
   .sub { color:#8899a8; font-size:12px; }
-  .spinner { width:40px; height:40px; border:4px solid #2b3a47;
-    border-top-color:#06d6a0; border-radius:50%; animation:spin 0.8s linear infinite; }
+
+  /* ====== ЗАГРУЗКА / ОЖИДАНИЕ ====== */
+  #connecting, #waiting {
+    align-items:center; justify-content:center;
+    background: radial-gradient(ellipse at center, #141a22 0%, #070a0f 100%);
+    gap:14px; text-align:center; padding:24px;
+  }
+  .spinner { width:44px; height:44px; border:4px solid #2b3a47;
+    border-top-color:#ffb400; border-radius:50%; animation:spin 0.8s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
+  #waitingRoom { color:#ffb400; font-size:26px; font-weight:900;
+    letter-spacing:6px; margin-top:4px; }
   #connectMsg { color:#8899a8; font-size:13px; }
-  .hint { color:#5c6b7a; font-size:11px; letter-spacing:0; margin-top:-6px; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 
-<!-- ЛОББИ -->
-<div id="lobby" class="overlay">
-  <h1>2D BATTLE ROYALE</h1>
+<!-- ====== АВТОРИЗАЦИЯ ====== -->
+<div id="authScreen" class="screen">
+  <div class="authBox">
+    <div class="authLogo">2D BATTLE ROYALE</div>
+    <div class="authTabs">
+      <button class="authTab active" data-mode="login" id="tabLogin">ВХОД</button>
+      <button class="authTab" data-mode="register" id="tabRegister">РЕГИСТРАЦИЯ</button>
+    </div>
+    <input id="authName" class="authInput hidden" placeholder="НИК (до 14 симв.)" maxlength="14" autocomplete="off">
+    <input id="authEmail" class="authInput" type="email" placeholder="EMAIL" autocomplete="email">
+    <input id="authPass" class="authInput" type="password" placeholder="ПАРОЛЬ (мин. 6 симв.)" autocomplete="current-password">
+    <button id="authSubmit" class="btnPrimary">ВОЙТИ</button>
+    <div id="authError"></div>
+    <div class="authSep">— или —</div>
+    <button id="btnGuest" class="btnSecondary">ИГРАТЬ КАК ГОСТЬ</button>
+  </div>
+</div>
 
-  <input id="nameInput" placeholder="ТВОЙ НИК" maxlength="14" autocomplete="off" spellcheck="false">
-  <div class="hint">до 14 символов · сохранится в браузере</div>
+<!-- ====== ГЛАВНОЕ МЕНЮ ====== -->
+<div id="mainMenu" class="screen hidden">
+  <div class="menuTop">
+    <div class="profilePill">
+      <div class="avatar" id="avatarEl">P</div>
+      <div class="profileInfo">
+        <div class="profileName" id="profileNameEl">PLAYER</div>
+        <div class="profileLevel">УР. <span id="levelEl">1</span></div>
+      </div>
+    </div>
+    <button id="btnLogout" class="iconBtn" title="Выйти">⏻</button>
+  </div>
 
-  <button id="btnBots">ИГРАТЬ С БОТАМИ</button>
+  <div class="statsRow">
+    <div class="stat"><div class="statVal" id="statKills">0</div><div class="statLbl">УБИЙСТВ</div></div>
+    <div class="stat"><div class="statVal" id="statWins">0</div><div class="statLbl">ПОБЕД</div></div>
+    <div class="stat"><div class="statVal" id="statMatches">0</div><div class="statLbl">МАТЧЕЙ</div></div>
+  </div>
 
-  <div class="divider">— или —</div>
+  <div class="menuModes">
+    <div class="modeTab active">SOLO</div>
+    <div class="modeTab">DUO</div>
+    <div class="modeTab">SQUAD</div>
+  </div>
 
+  <div class="spacer"></div>
+
+  <button id="btnPlay" class="btnPlay">
+    <span class="playIcon">▶</span>
+    <span class="playText">ИГРАТЬ</span>
+  </button>
+
+  <div class="menuBottom">
+    <button id="btnCustom" class="btnSecondary">СВОЯ КОМНАТА</button>
+    <button id="btnBots" class="btnSecondary">С БОТАМИ</button>
+    <button id="btnChangeName" class="btnSecondary">СМЕНИТЬ НИК</button>
+  </div>
+</div>
+
+<!-- ====== ЛОББИ (создать/войти в комнату) ====== -->
+<div id="lobby" class="screen hidden">
+  <button id="btnLobbyBack" class="backBtn">←</button>
+  <h1>ОНЛАЙН МАТЧ</h1>
   <input id="roomInput" placeholder="КОД КОМНАТЫ" maxlength="8" autocomplete="off">
   <div class="sub">оставь пустым — создастся новая</div>
-  <button id="btnOnline">ИГРАТЬ ОНЛАЙН</button>
-
+  <button id="btnOnline" class="btnPrimary">ИГРАТЬ ОНЛАЙН</button>
+  <div class="divider">— или —</div>
+  <button id="btnBotsFromLobby" class="btnSecondary">ТРЕНИРОВКА С БОТАМИ</button>
   <div id="lobbyError"></div>
 </div>
 
-<!-- ЗАГРУЗКА -->
-<div id="connecting" class="overlay hidden">
+<!-- ====== ЗАГРУЗКА ====== -->
+<div id="connecting" class="screen hidden">
   <div class="spinner"></div>
   <div class="sub" id="connectMsg">Подключение к серверу...</div>
 </div>
 
-<!-- ОЖИДАНИЕ -->
-<div id="waiting" class="overlay hidden">
+<!-- ====== ОЖИДАНИЕ ====== -->
+<div id="waiting" class="screen hidden">
   <div class="sub">Код комнаты для друзей:</div>
   <div id="waitingRoom">------</div>
   <div class="sub" style="margin-top:14px">Ты вошёл как
@@ -100,7 +272,6 @@ const firebaseConfig = {
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 let W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
-
 function resize(){
   W = window.innerWidth; H = window.innerHeight;
   canvas.width = W * DPR; canvas.height = H * DPR;
@@ -112,19 +283,10 @@ resize();
 
 /* ============ CONST ============ */
 const WORLD = 3200;
-const ZONE_START_R = 1500;
-const ZONE_END_R = 120;
-const ZONE_SHRINK = 22;
-const ZONE_DPS = 7;
-const BOTS_COUNT = 29;
-const JOY_R = 80;
-const PLAYER_SPEED = 190;
-const SYNC_INTERVAL = 100;
-const INTERP_SPEED = 14;
-const START_DELAY = 6000;
-const SHOT_MAX_AGE = 2500;
-const LOOT_COUNT = 60;
-const NAME_KEY = 'br_name';
+const ZONE_START_R = 1500, ZONE_END_R = 120, ZONE_SHRINK = 22, ZONE_DPS = 7;
+const BOTS_COUNT = 29, JOY_R = 80, PLAYER_SPEED = 190;
+const SYNC_INTERVAL = 100, INTERP_SPEED = 14;
+const START_DELAY = 6000, SHOT_MAX_AGE = 2500, LOOT_COUNT = 60;
 
 const WEAPONS = {
   pistol:  { name:'PISTOL',  dmg:12, rate:0.28, spread:0.06, speed:750,  ammo:12, reload:1.1, color:'#ffd166', pellets:1 },
@@ -134,7 +296,6 @@ const WEAPONS = {
 };
 const WEAPON_KEYS = Object.keys(WEAPONS);
 
-/* ============ ХЭШ / РАНДОМ ============ */
 function hashStr(s){
   let h = 2166136261;
   for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -173,6 +334,12 @@ let takenLoot = new Set();
 let sawOthers = false;
 let countdownTimer = null;
 
+/* профиль игрока */
+let currentUser = null;
+let userProfile = { name:'PLAYER', kills:0, wins:0, matches:0 };
+let matchRecorded = false;
+
+/* ============ INIT FIREBASE ============ */
 function initFirebase(){
   if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -187,26 +354,17 @@ function withTimeout(p, ms, msg){
     new Promise((_, rej) => setTimeout(() => rej(new Error(msg || 'timeout')), ms))
   ]);
 }
-
-/* ============ ИМЯ ИГРОКА ============ */
-const nameInput = document.getElementById('nameInput');
-
-function getPlayerName(){
-  let n = (nameInput.value || '').trim();
-  if (!n) n = 'PLAYER';
+function sanitizeName(n){
+  n = (n || '').toString().trim();
   n = n.substring(0, 14).replace(/[<>&"]/g, '').replace(/\s+/g, ' ');
-  if (!n) n = 'PLAYER';
-  try { localStorage.setItem(NAME_KEY, n); } catch(e){}
-  nameInput.value = n;
-  return n;
+  return n || 'PLAYER';
 }
-
-(function loadName(){
-  try {
-    const saved = localStorage.getItem(NAME_KEY);
-    if (saved) nameInput.value = saved;
-  } catch(e){}
-})();
+function showScreen(id){
+  ['authScreen','mainMenu','lobby','connecting','waiting'].forEach(s => {
+    document.getElementById(s).classList.toggle('hidden', s !== id);
+  });
+}
+function hideAllScreens(){ showScreen('__none__'); }
 
 /* ============ ENTITY ============ */
 function makeEntity(x, y, isBot, name){
@@ -219,7 +377,6 @@ function makeEntity(x, y, isBot, name){
     alive:true, kills:0,
     wanderAngle: rand(0, Math.PI*2), wanderTimer:0,
     targetX: x, targetY: y, targetAngle: 0,
-    // для prediction урона по врагам:
     lastServerHp: 100, pendingDamage: 0,
   };
 }
@@ -257,6 +414,7 @@ function resetGame(){
 
   bullets = []; loot = []; particles = []; killFeed = [];
   sawOthers = false;
+  matchRecorded = false;
 
   if (netMode === 'offline') spawnLootRandom(55);
   else spawnLootSeeded(roomId, LOOT_COUNT);
@@ -288,7 +446,6 @@ function spawnLootRandom(n){
     }
   }
 }
-
 function spawnLootSeeded(seed, n){
   const rnd = mulberry32(hashStr('loot:' + seed));
   for (let i = 0; i < n; i++){
@@ -297,15 +454,13 @@ function spawnLootSeeded(seed, n){
     const x = 120 + rnd() * (WORLD - 240);
     const y = 120 + rnd() * (WORLD - 240);
     if (takenLoot.has(id)) continue;
-    if (roll < 0.22){
-      loot.push({ id, x, y, type:'health', r:12 });
-    } else {
+    if (roll < 0.22) loot.push({ id, x, y, type:'health', r:12 });
+    else {
       const wk = WEAPON_KEYS[Math.floor(rnd()*WEAPON_KEYS.length)];
       loot.push({ id, x, y, type:'weapon', weaponKey: wk, r:14 });
     }
   }
 }
-
 function removeLootById(id){
   const s = String(id);
   for (let i = loot.length - 1; i >= 0; i--){
@@ -313,7 +468,6 @@ function removeLootById(id){
   }
 }
 
-/* ============ РЕГ УРОНА: локальное предсказание ============ */
 function applyLocalDamage(e, dmg){
   if (!e || !e.alive) return;
   e.hp = Math.max(0, e.hp - dmg);
@@ -352,7 +506,7 @@ const mouse = { x:0, y:0, down:false };
 
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
-  if (gameState === 'won' || gameState === 'lost'){ backToMenu(); return; }
+  if (gameState === 'won' || gameState === 'lost'){ backToMainMenu(); return; }
   if (gameState !== 'playing') return;
   for (const t of e.changedTouches){
     if (t.clientX < W/2 && joyL.id === null){
@@ -386,44 +540,280 @@ addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
 addEventListener('keyup',   e => { keys[e.key.toLowerCase()] = false; });
 canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
 canvas.addEventListener('mousedown', () => {
-  if (gameState === 'won' || gameState === 'lost'){ backToMenu(); return; }
+  if (gameState === 'won' || gameState === 'lost'){ backToMainMenu(); return; }
   if (gameState === 'playing') mouse.down = true;
 });
 canvas.addEventListener('mouseup', () => { mouse.down = false; });
 
-/* ============ LOBBY UI ============ */
-const lobbyEl     = document.getElementById('lobby');
-const connectEl   = document.getElementById('connecting');
-const waitingEl   = document.getElementById('waiting');
-const roomInput   = document.getElementById('roomInput');
-const errorEl     = document.getElementById('lobbyError');
-const waitRoomEl  = document.getElementById('waitingRoom');
-const waitNameEl  = document.getElementById('waitingName');
-const countdownEl = document.getElementById('countdown');
-const connectMsgEl = document.getElementById('connectMsg');
+/* ============ АВТОРИЗАЦИЯ UI ============ */
+const authScreen = document.getElementById('authScreen');
+const authName   = document.getElementById('authName');
+const authEmail  = document.getElementById('authEmail');
+const authPass   = document.getElementById('authPass');
+const authSubmit = document.getElementById('authSubmit');
+const authError  = document.getElementById('authError');
+const tabLogin   = document.getElementById('tabLogin');
+const tabReg     = document.getElementById('tabRegister');
+const btnGuest   = document.getElementById('btnGuest');
+
+let authMode = 'login';
+
+function setAuthMode(mode){
+  authMode = mode;
+  tabLogin.classList.toggle('active', mode === 'login');
+  tabReg.classList.toggle('active', mode === 'register');
+  authName.classList.toggle('hidden', mode === 'login');
+  authSubmit.textContent = (mode === 'login') ? 'ВОЙТИ' : 'СОЗДАТЬ АККАУНТ';
+  authError.textContent = '';
+}
+
+tabLogin.onclick = () => setAuthMode('login');
+tabReg.onclick = () => setAuthMode('register');
+
+authSubmit.onclick = doAuthSubmit;
+[authEmail, authPass, authName].forEach(el => {
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter') doAuthSubmit();
+  });
+});
+
+async function doAuthSubmit(){
+  authError.textContent = '';
+  const email = (authEmail.value || '').trim();
+  const pass  = (authPass.value || '').trim();
+  const name  = sanitizeName(authName.value);
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    authError.textContent = 'Введи корректный email'; return;
+  }
+  if (pass.length < 6){
+    authError.textContent = 'Пароль минимум 6 символов'; return;
+  }
+
+  authSubmit.disabled = true;
+  authSubmit.textContent = '...';
+  try {
+    if (!db) initFirebase();
+    if (authMode === 'login'){
+      await auth.signInWithEmailAndPassword(email, pass);
+      /* onAuthStateChanged подхватит и откроет меню */
+    } else {
+      const cred = await auth.createUserWithEmailAndPassword(email, pass);
+      await cred.user.updateProfile({ displayName: name });
+      /* создаём профиль в базе */
+      await db.ref('users/' + cred.user.uid).set({
+        name, email,
+        kills: 0, wins: 0, matches: 0,
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+      });
+    }
+  } catch (err){
+    console.error('[auth]', err);
+    const code = err.code || '';
+    if (code.includes('email-already-in-use'))      authError.textContent = 'Этот email уже занят';
+    else if (code.includes('invalid-email'))         authError.textContent = 'Неверный email';
+    else if (code.includes('weak-password'))         authError.textContent = 'Слабый пароль (мин 6)';
+    else if (code.includes('wrong-password'))        authError.textContent = 'Неверный пароль';
+    else if (code.includes('user-not-found'))        authError.textContent = 'Аккаунт не найден';
+    else if (code.includes('invalid-credential'))    authError.textContent = 'Неверный email или пароль';
+    else if (code.includes('operation-not-allowed')) authError.textContent = 'Включи Email/Password в Firebase';
+    else if (code.includes('network'))               authError.textContent = 'Нет сети';
+    else                                             authError.textContent = err.message || 'Ошибка';
+  } finally {
+    authSubmit.disabled = false;
+    authSubmit.textContent = (authMode === 'login') ? 'ВОЙТИ' : 'СОЗДАТЬ АККАУНТ';
+  }
+}
+
+btnGuest.onclick = async () => {
+  authError.textContent = '';
+  btnGuest.disabled = true;
+  try {
+    if (!db) initFirebase();
+    await auth.signInAnonymously();
+  } catch (err){
+    console.error('[auth guest]', err);
+    if ((err.code || '').includes('operation-not-allowed'))
+      authError.textContent = 'Включи Anonymous в Firebase Auth';
+    else
+      authError.textContent = err.message || 'Ошибка входа';
+  } finally {
+    btnGuest.disabled = false;
+  }
+};
+
+/* ============ ГЛАВНОЕ МЕНЮ UI ============ */
+const mainMenu   = document.getElementById('mainMenu');
+const avatarEl   = document.getElementById('avatarEl');
+const profileNameEl = document.getElementById('profileNameEl');
+const levelEl    = document.getElementById('levelEl');
+const statKills  = document.getElementById('statKills');
+const statWins   = document.getElementById('statWins');
+const statMatches = document.getElementById('statMatches');
+
+document.querySelectorAll('.modeTab').forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll('.modeTab').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+  };
+});
+
+document.getElementById('btnLogout').onclick = async () => {
+  if (!confirm('Выйти из аккаунта?')) return;
+  try { await auth.signOut(); } catch(e){}
+};
+
+document.getElementById('btnPlay').onclick = () => {
+  showScreen('lobby');
+  document.getElementById('lobbyError').textContent = '';
+  document.getElementById('roomInput').value = '';
+};
+
+document.getElementById('btnCustom').onclick = () => {
+  showScreen('lobby');
+  document.getElementById('lobbyError').textContent = '';
+  document.getElementById('roomInput').value = '';
+  setTimeout(() => document.getElementById('roomInput').focus(), 100);
+};
+
+document.getElementById('btnBots').onclick = () => startOfflineGame();
+
+document.getElementById('btnBotsFromLobby').onclick = () => startOfflineGame();
+
+document.getElementById('btnLobbyBack').onclick = () => {
+  showScreen('mainMenu');
+};
+
+document.getElementById('btnChangeName').onclick = async () => {
+  const cur = userProfile.name || '';
+  const n = prompt('Новый ник (до 14 символов):', cur);
+  if (n === null) return;
+  const newName = sanitizeName(n);
+  userProfile.name = newName;
+  myName = newName;
+  try {
+    if (currentUser && !currentUser.isAnonymous){
+      await currentUser.updateProfile({ displayName: newName });
+    }
+    if (currentUser) await db.ref('users/' + currentUser.uid + '/name').set(newName);
+  } catch(e){ console.warn(e); }
+  updateProfileUI();
+};
+
+function startOfflineGame(){
+  myName = userProfile.name || 'PLAYER';
+  netMode = 'offline';
+  hideAllScreens();
+  resetGame();
+}
+
+/* ============ AUTH STATE ============ */
+function initAuthFlow(){
+  initFirebase();
+  auth.onAuthStateChanged(async user => {
+    if (user){
+      currentUser = user;
+      myUid = user.uid;
+      await loadOrCreateProfile(user);
+      showScreen('mainMenu');
+    } else {
+      currentUser = null;
+      myUid = null;
+      showScreen('authScreen');
+    }
+  });
+}
+
+async function loadOrCreateProfile(user){
+  const ref = db.ref('users/' + user.uid);
+  let snap;
+  try {
+    snap = await withTimeout(ref.once('value'), 8000, 'profile timeout');
+  } catch(e){
+    /* сеть упала — используем локальный профиль */
+    const fallbackName = sanitizeName(user.displayName || (user.isAnonymous
+      ? ('GUEST' + user.uid.substring(0,3).toUpperCase())
+      : (user.email || '').split('@')[0]));
+    userProfile = { name: fallbackName, kills:0, wins:0, matches:0 };
+    updateProfileUI();
+    return;
+  }
+
+  const data = snap.val();
+  if (data){
+    userProfile = {
+      name: sanitizeName(data.name || user.displayName || 'PLAYER'),
+      kills: data.kills || 0,
+      wins: data.wins || 0,
+      matches: data.matches || 0,
+    };
+  } else {
+    const name = sanitizeName(user.displayName || (user.isAnonymous
+      ? ('GUEST' + user.uid.substring(0,3).toUpperCase())
+      : (user.email || 'PLAYER').split('@')[0]));
+    userProfile = { name, kills:0, wins:0, matches:0 };
+    try {
+      await ref.set({
+        name, email: user.email || null,
+        kills: 0, wins: 0, matches: 0,
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+      });
+    } catch(e){ console.warn('profile create', e); }
+  }
+  myName = userProfile.name;
+  updateProfileUI();
+}
+
+function updateProfileUI(){
+  const name = userProfile.name || 'PLAYER';
+  avatarEl.textContent = (name[0] || 'P').toUpperCase();
+  profileNameEl.textContent = name;
+  const level = 1 + Math.floor((userProfile.kills || 0) / 10);
+  levelEl.textContent = level;
+  statKills.textContent = userProfile.kills || 0;
+  statWins.textContent = userProfile.wins || 0;
+  statMatches.textContent = userProfile.matches || 0;
+}
+
+async function recordMatchResult(won, kills){
+  if (!currentUser || matchRecorded) return;
+  matchRecorded = true;
+  try {
+    const ref = db.ref('users/' + currentUser.uid);
+    await ref.transaction(u => {
+      if (!u) return u;
+      u.matches = (u.matches || 0) + 1;
+      u.kills = (u.kills || 0) + Math.max(0, kills|0);
+      if (won) u.wins = (u.wins || 0) + 1;
+      return u;
+    });
+    /* локально тоже обновим */
+    userProfile.matches = (userProfile.matches || 0) + 1;
+    userProfile.kills   = (userProfile.kills   || 0) + Math.max(0, kills|0);
+    if (won) userProfile.wins = (userProfile.wins || 0) + 1;
+    updateProfileUI();
+  } catch(e){ console.warn('record match', e); }
+}
+
+/* ============ LOBBY ============ */
+const roomInput = document.getElementById('roomInput');
+const errorEl   = document.getElementById('lobbyError');
 const btnOnlineEl = document.getElementById('btnOnline');
 
-nameInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter'){ e.preventDefault(); getPlayerName(); roomInput.focus(); }
-});
 roomInput.addEventListener('keydown', e => {
   if (e.key === 'Enter'){ e.preventDefault(); goOnline(); }
 });
-
-document.getElementById('btnBots').onclick = () => {
-  myName = getPlayerName();
-  netMode = 'offline';
-  lobbyEl.classList.add('hidden');
-  resetGame();
-};
 
 btnOnlineEl.onclick = goOnline;
 
 async function goOnline(){
   if (btnOnlineEl.disabled) return;
-
-  myName = getPlayerName();
   errorEl.textContent = '';
+
+  if (!currentUser){
+    showScreen('authScreen');
+    return;
+  }
 
   const typed = roomInput.value.trim().toUpperCase();
   if (typed && !/^[A-Z0-9]{4,8}$/.test(typed)){
@@ -432,18 +822,12 @@ async function goOnline(){
   }
 
   btnOnlineEl.disabled = true;
-  lobbyEl.classList.add('hidden');
-  connectEl.classList.remove('hidden');
+  showScreen('connecting');
+  const connectMsgEl = document.getElementById('connectMsg');
   connectMsgEl.textContent = 'Подключение к серверу...';
 
   try {
-    if (!db) initFirebase();
-
-    log('signing in as', myName);
-    connectMsgEl.textContent = 'Авторизация...';
-    const cred = await withTimeout(auth.signInAnonymously(), 12000, 'Не удалось войти (таймаут)');
-    myUid = cred.user.uid;
-    log('signed in', myUid);
+    myName = userProfile.name || sanitizeName(currentUser.displayName || 'PLAYER');
 
     connectMsgEl.textContent = 'Синхронизация времени...';
     serverOffset = await new Promise(res => {
@@ -454,7 +838,6 @@ async function goOnline(){
         }, () => { clearTimeout(to); res(0); });
       } catch(e){ clearTimeout(to); res(0); }
     });
-    log('server offset', serverOffset);
 
     const creating = !typed;
     roomId = typed || ('R' + Math.random().toString(36).substring(2, 7).toUpperCase());
@@ -475,7 +858,6 @@ async function goOnline(){
     }
 
     if (!meta || !meta.startAt){
-      log('creating meta...');
       connectMsgEl.textContent = 'Создание комнаты...';
       const t = Date.now() + serverOffset + START_DELAY;
       try {
@@ -492,17 +874,16 @@ async function goOnline(){
     matchStartAt = isFinite(startAtNum) && startAtNum > 0
       ? startAtNum
       : (Date.now() + serverOffset + START_DELAY);
-    log('matchStartAt', matchStartAt, 'now', serverNow(), 'delta', matchStartAt - serverNow());
 
     connectMsgEl.textContent = 'Вход в комнату...';
     await joinRoom();
 
-    connectEl.classList.add('hidden');
-    waitingEl.classList.remove('hidden');
-    waitRoomEl.textContent = roomId;
-    waitNameEl.textContent = myName;
+    showScreen('waiting');
+    document.getElementById('waitingRoom').textContent = roomId;
+    document.getElementById('waitingName').textContent = myName;
 
     if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    const countdownEl = document.getElementById('countdown');
     const tick = () => {
       const delta = matchStartAt - serverNow();
       const left = Math.max(0, Math.ceil((isFinite(delta) ? delta : 0) / 1000));
@@ -517,9 +898,7 @@ async function goOnline(){
 
   } catch (err){
     console.error('[BR] online error:', err);
-    connectEl.classList.add('hidden');
-    waitingEl.classList.add('hidden');
-    lobbyEl.classList.remove('hidden');
+    showScreen('lobby');
     errorEl.textContent = (err && (err.message || err.code)) || 'Ошибка подключения';
   } finally {
     btnOnlineEl.disabled = false;
@@ -528,8 +907,8 @@ async function goOnline(){
 
 function startOnlineMatch(){
   log('starting match as', myName);
-  waitingEl.classList.add('hidden');
   netMode = 'online';
+  hideAllScreens();
   resetGame();
   player.uid = myUid;
   player.name = myName;
@@ -542,10 +921,8 @@ function startOnlineMatch(){
   setupGameListeners();
 }
 
-function backToMenu(){
+function backToMainMenu(){
   if (countdownTimer){ clearInterval(countdownTimer); countdownTimer = null; }
-  waitingEl.classList.add('hidden');
-  connectEl.classList.add('hidden');
 
   for (const l of listeners){
     try { l.ref.off(l.type, l.cb); } catch(e){}
@@ -560,8 +937,7 @@ function backToMenu(){
 
   netMode = 'offline';
   gameState = 'menu';
-  lobbyEl.classList.remove('hidden');
-  roomInput.value = '';
+  showScreen('mainMenu');
 }
 
 /* ============ NETWORK: вступление ============ */
@@ -590,7 +966,6 @@ async function joinRoom(){
 
       let e = remotePlayers.get(uid);
       if (!e){
-        /* --- новая сущность --- */
         e = makeEntity(p.x, p.y, false, p.name || uid.substring(0,4));
         e.uid = uid;
         e.x = e.targetX = p.x;
@@ -605,21 +980,17 @@ async function joinRoom(){
         e.kills = p.kills || 0;
         remotePlayers.set(uid, e);
       } else {
-        /* --- обновление существующей --- */
         e.targetX = p.x;
         e.targetY = p.y;
         e.targetAngle = p.angle || 0;
 
-        /* РЕКОНСИЛЯЦИЯ HP: серверное значение + неподтверждённое предсказание */
         const serverHp   = (p.hp != null) ? p.hp : e.hp;
         const prevServer = (e.lastServerHp != null) ? e.lastServerHp : serverHp;
         const serverDrop = Math.max(0, prevServer - serverHp);
 
         if (serverDrop > 0){
-          /* сервер подтвердил часть урона — списываем его с pending */
           e.pendingDamage = Math.max(0, (e.pendingDamage || 0) - serverDrop);
         } else {
-          /* сервер ещё не подтвердил — плавно рассасываем предсказание */
           e.pendingDamage = Math.max(0, (e.pendingDamage || 0) - 2);
         }
         e.lastServerHp = serverHp;
@@ -630,10 +1001,7 @@ async function joinRoom(){
 
         const wasAlive = e.alive;
         e.alive = p.alive !== false;
-        if (!e.alive){
-          e.hp = 0;
-          e.pendingDamage = 0;
-        }
+        if (!e.alive){ e.hp = 0; e.pendingDamage = 0; }
         if (wasAlive && !e.alive && gameState === 'playing'){
           const mine = (p.killedBy && p.killedBy === myUid);
           killFeed.push({ text: mine ? `YOU → ${e.name}` : `${e.name} устранён`, t: 4 });
@@ -701,10 +1069,8 @@ function setupGameListeners(){
       killEntity(player, { name: d.byName || 'ENEMY' });
       gameState = 'lost';
       if (d.by){
-        /* +1 фраг убийце */
         db.ref(`rooms/${roomId}/players/${d.by}/kills`)
           .transaction(v => (v || 0) + 1).catch(()=>{});
-        /* сообщаем всем, кто именно убил — для killfeed "YOU → Имя" */
         db.ref(`rooms/${roomId}/players/${myUid}/killedBy`)
           .set(d.by).catch(()=>{});
       }
@@ -738,18 +1104,13 @@ function syncMyState(){
     alive: player.alive,
   }).catch(()=>{});
 }
-
 function sendShot(x, y, angle, weaponKey){
   if (netMode !== 'online' || !db || !player || !player.alive) return;
   db.ref(`rooms/${roomId}/shots`).push({
-    uid: myUid,
-    x: Math.round(x), y: Math.round(y),
-    angle: Math.round(angle*100)/100,
-    weaponKey,
-    t: serverNow(),
+    uid: myUid, x: Math.round(x), y: Math.round(y),
+    angle: Math.round(angle*100)/100, weaponKey, t: serverNow(),
   }).catch(()=>{});
 }
-
 function sendDamage(targetUid, amount){
   if (netMode !== 'online' || !db) return;
   db.ref(`rooms/${roomId}/damage/${targetUid}`).push({
@@ -763,7 +1124,6 @@ function tryFire(ent, dt){
   if (ent.ammo <= 0){ ent.reloading = ent.weapon.reload; return; }
   const w = ent.weapon;
   const p = w.pellets || 1;
-
   for (let i = 0; i < p; i++){
     const a = ent.angle + rand(-w.spread, w.spread);
     bullets.push({
@@ -775,7 +1135,6 @@ function tryFire(ent, dt){
   }
   ent.ammo--;
   ent.fireCd = w.rate;
-
   for (let i = 0; i < 3; i++)
     particles.push({
       x: ent.x + Math.cos(ent.angle)*(ent.r+10),
@@ -784,7 +1143,6 @@ function tryFire(ent, dt){
       vy: Math.sin(ent.angle)*rand(50,150) + rand(-40,40),
       life: 0.15, color: w.color
     });
-
   if (netMode === 'online' && ent === player)
     sendShot(ent.x, ent.y, ent.angle, ent.weaponKey);
 }
@@ -807,7 +1165,6 @@ function updatePlayer(dt){
   if (keys['d'] || keys['arrowright']) dx += 1;
   const m = Math.hypot(dx, dy);
   if (m > 1){ dx /= m; dy /= m; }
-
   player.x += dx * player.speed * dt;
   player.y += dy * player.speed * dt;
   player.x = Math.max(player.r, Math.min(WORLD - player.r, player.x));
@@ -851,7 +1208,6 @@ function updateBot(b, dt){
   const zdx = zone.x - b.x, zdy = zone.y - b.y;
   const zdist = Math.hypot(zdx, zdy);
   const outside = zdist > zone.r - 150;
-
   let mx = 0, my = 0;
   if (target && minD < 500 && !outside){
     const ang = Math.atan2(target.y - b.y, target.x - b.x);
@@ -906,7 +1262,6 @@ function updateBullets(dt){
       bullets.splice(i, 1); continue;
     }
     if (b.visual) continue;
-
     let hit = false;
     const targets = [player];
     if (netMode === 'offline') targets.push(...bots);
@@ -916,7 +1271,6 @@ function updateBullets(dt){
       if (!t || !t.alive || t === b.owner) continue;
       if (Math.hypot(t.x - b.x, t.y - b.y) < t.r + 4){
         if (netMode === 'online' && t.uid){
-          /* отправляем урон жертве + мгновенно снимаем HP у себя */
           sendDamage(t.uid, b.dmg);
           applyLocalDamage(t, b.dmg);
         } else {
@@ -938,7 +1292,6 @@ function updateLoot(){
   for (let i = loot.length - 1; i >= 0; i--){
     const l = loot[i];
     if (Math.hypot(player.x - l.x, player.y - l.y) >= player.r + l.r + 6) continue;
-
     if (l.type === 'health'){
       if (player.hp >= player.maxHp) continue;
       player.hp = Math.min(player.maxHp, player.hp + 40);
@@ -949,7 +1302,6 @@ function updateLoot(){
       player.ammo = player.weapon.ammo;
       player.reloading = 0;
     }
-
     if (netMode === 'online' && l.id != null){
       const id = String(l.id);
       if (!takenLoot.has(id)){
@@ -968,7 +1320,6 @@ function updateZone(dt){
   } else {
     zone.r = Math.max(ZONE_END_R, zone.r - ZONE_SHRINK * dt);
   }
-
   if (player && player.alive){
     const d = Math.hypot(player.x - zone.x, player.y - zone.y);
     if (d > zone.r){
@@ -1027,7 +1378,6 @@ function drawGrid(){
   ctx.lineWidth = 4;
   ctx.strokeRect(-cam.x, -cam.y, WORLD, WORLD);
 }
-
 function drawZone(){
   const sx = zone.x - cam.x, sy = zone.y - cam.y;
   ctx.save();
@@ -1043,7 +1393,6 @@ function drawZone(){
   ctx.lineWidth = 3;
   ctx.stroke();
 }
-
 function drawLoot(){
   for (const l of loot){
     const sx = l.x - cam.x, sy = l.y - cam.y;
@@ -1063,7 +1412,6 @@ function drawLoot(){
     ctx.restore();
   }
 }
-
 function drawEntity(ent, color){
   if (!ent.alive) return;
   const sx = ent.x - cam.x, sy = ent.y - cam.y;
@@ -1094,7 +1442,6 @@ function drawEntity(ent, color){
     ctx.fillText(ent.name, sx, sy - ent.r - 18);
   }
 }
-
 function drawBullets(){
   for (const b of bullets){
     const sx = b.x - cam.x, sy = b.y - cam.y;
@@ -1108,7 +1455,6 @@ function drawBullets(){
     ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1;
   }
 }
-
 function drawParticles(){
   for (const p of particles){
     const sx = p.x - cam.x, sy = p.y - cam.y;
@@ -1119,7 +1465,6 @@ function drawParticles(){
   }
   ctx.globalAlpha = 1;
 }
-
 function drawJoystick(joy){
   if (!joy.active) return;
   ctx.beginPath(); ctx.arc(joy.ox, joy.oy, JOY_R, 0, Math.PI*2);
@@ -1131,7 +1476,6 @@ function drawJoystick(joy){
   ctx.beginPath(); ctx.arc(joy.ox + dx, joy.oy + dy, 30, 0, Math.PI*2);
   ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill();
 }
-
 function drawHUD(){
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.fillRect(16, 16, 200, 26);
@@ -1195,9 +1539,8 @@ function drawHUD(){
     ctx.fillText('ROOM: ' + roomId, 16, 60);
   }
 }
-
 function drawEndScreen(){
-  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillStyle = 'rgba(0,0,0,0.78)';
   ctx.fillRect(0, 0, W, H);
   ctx.textAlign = 'center';
   if (gameState === 'won'){
@@ -1214,12 +1557,14 @@ function drawEndScreen(){
   ctx.fillText('Убийств: ' + player.kills, W/2, H/2 + 20);
   ctx.fillText('Место: #' + Math.max(1, aliveCount), W/2, H/2 + 46);
   ctx.font = 'bold 16px sans-serif';
-  ctx.fillStyle = '#4cc9f0';
+  ctx.fillStyle = '#ffb400';
   ctx.fillText('ТАПНИ, ЧТОБЫ ВЕРНУТЬСЯ В МЕНЮ', W/2, H/2 + 100);
 }
 
 /* ============ MAIN LOOP ============ */
 let last = performance.now();
+let endRecorded = false;
+
 function loop(now){
   let dt = (now - last) / 1000;
   last = now;
@@ -1245,20 +1590,29 @@ function loop(now){
       else if (sawOthers && aliveCount === 1) gameState = 'won';
     }
 
+    /* записываем результат матча один раз */
+    if ((gameState === 'won' || gameState === 'lost') && !endRecorded && netMode === 'online'){
+      endRecorded = true;
+      recordMatchResult(gameState === 'won', player.kills);
+    }
+    if ((gameState === 'won' || gameState === 'lost') && !endRecorded && netMode === 'offline'){
+      endRecorded = true; /* оффлайн не пишем в облако */
+    }
+
     if (now - lastSync > SYNC_INTERVAL){
       lastSync = now;
       syncMyState();
     }
-  } else if (player){
+  } else if (player && (gameState === 'won' || gameState === 'lost')){
     updateParticles(dt);
   }
 
-  if (player) updateCamera();
+  if (player && gameState !== 'menu') updateCamera();
 
   ctx.fillStyle = '#0d141c';
   ctx.fillRect(0, 0, W, H);
 
-  if (player){
+  if (player && gameState !== 'menu' && gameState !== 'auth'){
     drawGrid(); drawZone(); drawLoot();
     if (netMode === 'offline'){
       for (const b of bots) drawEntity(b, '#e63946');
@@ -1279,6 +1633,11 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
+/* ============ СТАРТ ============ */
+/* Настраиваем режим по умолчанию (вход) и запускаем auth-флоу */
+setAuthMode('login');
+initAuthFlow();
 
 })();
 </script>
