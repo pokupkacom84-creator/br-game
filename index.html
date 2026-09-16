@@ -240,6 +240,32 @@ body.dust-on .dust-layer { opacity: 1; }
 .card-actions { display:flex; gap:8px; }
 .card-actions .btn { flex:1; }
 
+/* ============ REVIEWS BUTTON ============ */
+.reviews-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 9px 12px;
+    margin-top: 8px;
+    background: var(--card-border);
+    border: none;
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .15s, color .15s, transform .1s;
+}
+.reviews-btn:active { transform: scale(.98); }
+.reviews-btn:hover { background: rgba(108,92,231,.15); color: var(--accent-light); }
+.reviews-btn .stars { color: #fdcb6e; letter-spacing: 1px; font-size: 13px; }
+.reviews-btn .rating-num { color: var(--text); font-weight: 700; }
+.reviews-btn .count { color: var(--text-muted); font-weight: 500; font-size: 11px; }
+.reviews-btn .label { color: var(--text-dim); }
+
 .load-more-indicator { display:none; text-align:center; padding:16px; color:var(--text-muted); font-size:12px; font-weight:600; }
 .load-more-indicator.show { display:block; }
 .load-more-indicator .spinner-sm {
@@ -497,18 +523,6 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
     -webkit-background-clip:text; -webkit-text-fill-color:transparent;
 }
 
-/* ============ RATING MINI ============ */
-.rating-mini {
-    font-size: 10px; color: #fdcb6e; font-weight: 700;
-    padding: 3px 7px; border-radius: 6px;
-    cursor: pointer; user-select: none;
-    transition: background .15s;
-    white-space: nowrap;
-}
-.rating-mini:hover { background: var(--card-border); }
-.rating-mini.empty { color: var(--text-muted); font-weight: 600; }
-.rating-mini:active { transform: scale(.95); }
-
 /* ============ REVIEW MODAL ============ */
 .review-modal .modal-sub { text-align: left; margin-bottom: 10px; }
 .review-stars {
@@ -676,7 +690,7 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
 <!-- ============ REVIEW MODAL ============ -->
 <div class="modal-overlay review-modal" id="reviewModal">
     <div class="modal">
-        <h3 id="reviewTitle">Оценка ключа</h3>
+        <h3 id="reviewTitle">Отзывы</h3>
         <p class="modal-sub" id="reviewSub">Пока нет оценок</p>
 
         <div class="review-stars" id="reviewStars">
@@ -751,7 +765,7 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
             <button class="chip active" data-filter="all" onclick="setFilter('all', this)">Все</button>
             <button class="chip" data-filter="vless" onclick="setFilter('vless', this)">VLESS</button>
             <button class="chip" data-filter="hysteria" onclick="setFilter('hysteria', this)">Hysteria</button>
-            <button class="chip" data-filter="vmess" onclick="setFilter('vmess', this)">VMESS</button>
+            <button class="chip" data-filter="vmess" onclick="setFilter('vmess', this)">VMess</button>
             <button class="chip" data-filter="trojan" onclick="setFilter('trojan', this)">Trojan</button>
             <button class="chip" data-filter="ss" onclick="setFilter('ss', this)">SS</button>
         </div>
@@ -828,7 +842,7 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
                     <span>Сбросить</span>
                 </button>
             </div>
-            <div class="setting-row"><div class="setting-label"><div class="name">Версия</div><div class="desc">Текущая сборка</div></div><span style="color:var(--text-muted);font-size:12px;">3.3</span></div>
+            <div class="setting-row"><div class="setting-label"><div class="name">Версия</div><div class="desc">Текущая сборка</div></div><span style="color:var(--text-muted);font-size:12px;">3.4</span></div>
         </div>
     </div>
 
@@ -1534,46 +1548,67 @@ async function saveProfile() {
     if (rawUsername && cleanUsername.length < 3) { showToast('@username: 3-20 символов'); return; }
     if (cleanUsername && !USERNAME_RE.test(cleanUsername)) { showToast('@username: буквы, цифры, _'); return; }
 
+    const btn = document.querySelector('#editModal .btn-primary');
+    const oldText = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Сохранение...'; }
+
     try {
+        // === 1. Сначала пытаемся занять username через транзакцию (атомарно) ===
+        if (rtdb && cleanUsername) {
+            const unameKey = cleanUsername.toLowerCase();
+            const unameRef = rtdb.ref('vpnkeys/usernames/' + unameKey);
+
+            // Проверка на занятость + атомарный захват
+            const result = await unameRef.transaction(current => {
+                // Если пусто — захватываем
+                if (current === null) return currentUser.uid;
+                // Если уже наш — ок
+                if (current === currentUser.uid) return currentUser.uid;
+                // Иначе — занято, откат
+                return;
+            });
+
+            if (!result.committed) {
+                if (btn) { btn.disabled = false; btn.textContent = oldText; }
+                showToast('@' + cleanUsername + ' уже занят другим пользователем');
+                return;
+            }
+
+            // Если был старый username — освобождаем
+            if (currentUsername && currentUsername.toLowerCase() !== unameKey) {
+                try {
+                    await rtdb.ref('vpnkeys/usernames/' + currentUsername.toLowerCase()).remove();
+                } catch (e) {}
+            }
+
+            // Записываем username в профиль
+            await rtdb.ref('vpnkeys/users/' + currentUser.uid + '/username').set(cleanUsername);
+            currentUsername = cleanUsername;
+        } else if (rtdb && !cleanUsername) {
+            // Очистка username
+            if (currentUsername) {
+                try { await rtdb.ref('vpnkeys/usernames/' + currentUsername.toLowerCase()).remove(); } catch (e) {}
+            }
+            await rtdb.ref('vpnkeys/users/' + currentUser.uid + '/username').remove();
+            currentUsername = null;
+        } else if (!rtdb) {
+            currentUsername = cleanUsername || null;
+        }
+
+        // === 2. Обновляем displayName ===
         await currentUser.updateProfile({ displayName: nickname });
         await currentUser.reload();
         currentUser = firebaseAuth.currentUser;
 
-        // Сохраняем @username в RTDB (публично)
-        if (rtdb) {
-            if (cleanUsername) {
-                // Проверка: не занят ли никнейм другим uid
-                const unameRef = rtdb.ref('vpnkeys/usernames/' + cleanUsername.toLowerCase());
-                const existing = await unameRef.get();
-                const ownerUid = existing.val();
-                if (ownerUid && ownerUid !== currentUser.uid) {
-                    showToast('@' + cleanUsername + ' уже занят');
-                    return;
-                }
-                // Снять старый резерв
-                if (currentUsername && currentUsername.toLowerCase() !== cleanUsername.toLowerCase()) {
-                    try { await rtdb.ref('vpnkeys/usernames/' + currentUsername.toLowerCase()).remove(); } catch (e) {}
-                }
-                // Записать новый
-                await unameRef.set(currentUser.uid);
-                await rtdb.ref('vpnkeys/users/' + currentUser.uid + '/username').set(cleanUsername);
-                currentUsername = cleanUsername;
-            } else {
-                // Очистить username
-                if (currentUsername) {
-                    try { await rtdb.ref('vpnkeys/usernames/' + currentUsername.toLowerCase()).remove(); } catch (e) {}
-                }
-                await rtdb.ref('vpnkeys/users/' + currentUser.uid + '/username').remove();
-                currentUsername = null;
-            }
-        } else {
-            currentUsername = cleanUsername || null;
-        }
-
         updateProfileUI();
         closeEditModal();
         showToast('Профиль обновлён');
-    } catch (e) { showToast('Ошибка: ' + (e.message || e.code)); }
+    } catch (e) {
+        console.error(e);
+        showToast('Ошибка: ' + (e.message || e.code || ''));
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = oldText; }
+    }
 }
 
 // ============================================================
@@ -1593,13 +1628,11 @@ async function confirmDelete() {
         const cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
         await currentUser.reauthenticateWithCredential(cred);
 
-        // Чистим username из RTDB
         if (rtdb && currentUsername) {
             try { await rtdb.ref('vpnkeys/usernames/' + currentUsername.toLowerCase()).remove(); } catch (e) {}
         }
         if (rtdb) {
             try { await rtdb.ref('vpnkeys/users/' + currentUser.uid).remove(); } catch (e) {}
-            try { await rtdb.ref('vpnkeys/reviews').child(currentUser.uid).remove(); } catch (e) {}
         }
 
         await currentUser.delete();
@@ -1911,6 +1944,13 @@ function simpleHash(str) {
     for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
     return (h >>> 0).toString(36);
 }
+function pluralizeReviews(n) {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'отзыв';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'отзыва';
+    return 'отзывов';
+}
 function parseKeys(text) {
     if (!/vless:\/\/|vmess:\/\/|trojan:\/\/|ss:\/\/|hysteria:\/\//i.test(text)) {
         const d = tryBase64Decode(text);
@@ -1992,7 +2032,7 @@ function switchTab(tab, el) {
     document.getElementById('content').scrollTop = 0;
     document.getElementById('backToTop').classList.remove('show');
 
-    if (tab === 'profile') { refreshStatsUI(); refreshLevelUI(); refreshStreakUI(); }
+    if (tab === 'profile') { refreshStatsUI(); refreshLevelUI(); refreshStreakUI(); renderFavorites(); }
 }
 
 // ============================================================
@@ -2091,7 +2131,6 @@ function buildKeyCard(k, isFav, delay = 0) {
     return '<div class="key-card" data-raw="' + esc(k.raw) + '" data-enc="' + enc + '" style="animation-delay:' + delay + 'ms">' +
         '<div class="card-top">' +
             '<span class="protocol-badge ' + k.protocol + '">' + k.protocol.toUpperCase() + '</span>' +
-            buildRatingStars(enc) +
             '<button class="fav-btn ' + (isFavored ? 'active' : '') + '" onclick="toggleFavorite(\'' + enc + '\', this)">' +
                 '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' +
             '</button>' +
@@ -2104,38 +2143,85 @@ function buildKeyCard(k, isFav, delay = 0) {
                 '<span>Скопировать</span>' +
             '</button>' +
         '</div>' +
+        buildReviewsButton(enc) +
     '</div>';
 }
+
+// ============ REVIEWS BUTTON (под карточкой) ============
+function buildReviewsButton(encodedRaw) {
+    if (!rtdb || !firebaseReady) return '';
+    let raw;
+    try { raw = decodeURIComponent(atob(encodedRaw)); } catch (e) { return ''; }
+    const h = simpleHash(raw);
+    const r = reviewCache[h];
+
+    if (!r || !r.count) {
+        return '<button class="reviews-btn" data-hash="' + h +
+            '" onclick="openReviewModal(\'' + encodedRaw + '\', event)">' +
+            '<span class="stars">☆☆☆☆☆</span>' +
+            '<span class="label">Отзывы</span>' +
+            '<span class="count">· пока нет</span>' +
+            '</button>';
+    }
+    const full = Math.round(r.avg);
+    let stars = '';
+    for (let i = 1; i <= 5; i++) stars += (i <= full ? '★' : '☆');
+    return '<button class="reviews-btn" data-hash="' + h +
+        '" onclick="openReviewModal(\'' + encodedRaw + '\', event)">' +
+        '<span class="stars">' + stars + '</span>' +
+        '<span class="rating-num">' + r.avg.toFixed(1) + '</span>' +
+        '<span class="label">Отзывы</span>' +
+        '<span class="count">· ' + r.count + ' ' + pluralizeReviews(r.count) + '</span>' +
+        '</button>';
+}
+
 function copyKeyByRaw(encoded) { try { copyToClipboard(decodeURIComponent(atob(encoded))); } catch (e) {} }
+
 function toggleFavorite(encoded, btnEl) {
     let raw;
     try { raw = decodeURIComponent(atob(encoded)); } catch (e) { return; }
     const idx = favorites.indexOf(raw);
+
     if (idx === -1) {
+        // Добавление в избранное
         favorites.push(raw);
+        saveFavorites();
         showToast('Добавлено в избранное');
         playCopySound();
         vibrate(15);
         launchConfetti();
         xpOnAddFavorite(raw);
         if (btnEl) btnEl.classList.add('active');
+        // НЕМЕДЛЕННО обновляем список избранного в профиле
+        renderFavorites();
+        refreshStatsUI();
     } else {
+        // Удаление
         favorites.splice(idx, 1);
+        saveFavorites();
         showToast('Убрано из избранного');
         vibrate(10);
         if (btnEl) {
             const card = btnEl.closest('.key-card');
             if (card) {
                 card.classList.add('removing');
-                setTimeout(() => { applyFilters(); renderFavorites(); }, 300);
-            } else { applyFilters(); renderFavorites(); }
-        } else { applyFilters(); renderFavorites(); }
+                setTimeout(() => {
+                    applyFilters();
+                    renderFavorites();
+                    refreshStatsUI();
+                }, 300);
+                return;
+            }
+        }
+        applyFilters();
+        renderFavorites();
+        refreshStatsUI();
     }
-    saveFavorites();
-    refreshStatsUI();
 }
+
 function renderFavorites() {
     const list = document.getElementById('favList');
+    if (!list) return;
     if (favorites.length === 0) {
         list.innerHTML = '<div class="empty-state"><svg class="big-icon" viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><p>Пока нет избранных ключей.<br>Нажмите на звёздочку в карточке ключа.</p></div>';
         return;
@@ -2146,7 +2232,10 @@ function renderFavorites() {
         html += buildKeyCard({ raw: raw, protocol: detectProtocol(raw), name: extractName(raw) }, true, Math.min(i * 30, 400));
     }
     list.innerHTML = html;
+    // Обновить рейтинги для новых карточек
+    setTimeout(refreshVisibleRatings, 50);
 }
+
 function clearFavorites() {
     if (!confirm('Удалить все избранные ключи?')) return;
     document.querySelectorAll('#favList .key-card').forEach((c, i) => {
@@ -2373,11 +2462,11 @@ async function broadcastHash(hash) {
     if (!rtdb || !firebaseReady || !hash) return;
     try {
         await rtdb.ref(LIVE_PATH).set({ hash, ts: Date.now() });
-    } catch (e) { /* тихо */ }
+    } catch (e) {}
 }
 
 // ============================================================
-//  REVIEWS / RATINGS — видны ВСЕМ
+//  REVIEWS / RATINGS
 // ============================================================
 const REVIEWS_PATH = 'vpnkeys/reviews';
 let reviewCache = {};
@@ -2404,37 +2493,23 @@ function initReviews() {
             reviewCache[keyHash] = { avg, count, items: list, userRating };
         }
 
-        // Обновляем все видимые рейтинги (для всех пользователей)
         refreshVisibleRatings();
         if (currentReviewKey) renderReviewContent();
     });
 }
 
-function buildRatingStars(encodedRaw) {
-    if (!rtdb || !firebaseReady) return '';
-    let raw;
-    try { raw = decodeURIComponent(atob(encodedRaw)); } catch (e) { return ''; }
-    const h = simpleHash(raw);
-    const r = reviewCache[h];
-
-    if (!r || !r.count) {
-        return '<span class="rating-mini empty" data-hash="' + h +
-            '" onclick="openReviewModal(\'' + encodedRaw + '\', event)">☆ Оценить</span>';
-    }
-    const full = Math.round(r.avg);
-    let stars = '';
-    for (let i = 1; i <= 5; i++) stars += (i <= full ? '★' : '☆');
-    return '<span class="rating-mini" data-hash="' + h +
-        '" onclick="openReviewModal(\'' + encodedRaw + '\', event)">' +
-        stars + ' ' + r.avg.toFixed(1) + ' (' + r.count + ')</span>';
-}
-
+// Обновление кнопок "Отзывы" во всех карточках
 function refreshVisibleRatings() {
     document.querySelectorAll('.key-card').forEach(card => {
         const enc = card.dataset.enc;
         if (!enc) return;
-        const slot = card.querySelector('.rating-mini');
-        if (slot) slot.outerHTML = buildRatingStars(enc);
+        const old = card.querySelector('.reviews-btn');
+        if (old) {
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = buildReviewsButton(enc);
+            const newNode = wrapper.firstElementChild;
+            if (newNode) old.replaceWith(newNode);
+        }
     });
 }
 
@@ -2468,7 +2543,6 @@ function closeReviewModal() {
 
 function renderReviewStars() {
     document.querySelectorAll('#reviewStars span').forEach(s => {
-        s.classList.toggle('active', Number(s.dataWord) <= myRating);
         s.classList.toggle('active', Number(s.dataset.star) <= myRating);
     });
 }
@@ -2484,7 +2558,7 @@ function renderReviewContent() {
         const full = Math.round(r.avg);
         let stars = '';
         for (let i = 1; i <= 5; i++) stars += (i <= full ? '★' : '☆');
-        sub.textContent = 'Средняя: ' + stars + ' ' + r.avg.toFixed(1) + ' · ' + r.count + ' оценок';
+        sub.textContent = 'Средняя: ' + stars + ' ' + r.avg.toFixed(1) + ' · ' + r.count + ' ' + pluralizeReviews(r.count);
     }
 
     const list = document.getElementById('reviewList');
@@ -2592,12 +2666,11 @@ document.getElementById('editNickname').addEventListener('keypress', e => { if (
 document.getElementById('editUsername').addEventListener('keypress', e => { if (e.key === 'Enter') saveProfile(); });
 document.getElementById('deletePassword').addEventListener('keypress', e => { if (e.key === 'Enter') confirmDelete(); });
 
-// Живая нормализация @username в поле ввода
+// Живая нормализация @username
 document.getElementById('editUsername').addEventListener('input', (e) => {
     const cursorPos = e.target.selectionStart;
     const before = e.target.value.length;
     let v = e.target.value;
-    // Оставляем ведущий @ и чистим остальное
     let hadAt = v.startsWith('@');
     let clean = normalizeUsername(v);
     let newVal = clean ? ('@' + clean) : (hadAt ? '@' : '');
@@ -2645,7 +2718,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('splashScreen').classList.add('hidden');
             if (user) {
                 currentUser = user;
-                // Загружаем @username перед показом профиля
                 await loadCurrentUsername();
                 document.getElementById('authScreen').classList.add('hidden');
                 updateProfileUI();
@@ -2658,12 +2730,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     } else {
-        // Firebase не готов — работаем без аккаунта (fallback)
         document.getElementById('splashScreen').classList.add('hidden');
         updateProfileUI();
         initAppAfterAuth();
     }
-    console.log('[VPN Keys] v3.3 — no guest + @username + public reviews');
+    console.log('[VPN Keys] v3.4 — reviews button + instant favorites + unique usernames');
 });
 </script>
 </body>
