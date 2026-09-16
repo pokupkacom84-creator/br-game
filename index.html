@@ -56,14 +56,14 @@
   <div class="sub">Подключение к серверу...</div>
 </div>
 
-<!-- ОЖИДАНИЕ -->
+<!-- ОЖИДАНИЕ (показываем код) -->
 <div id="waiting" class="overlay hidden">
   <div class="sub">Код комнаты для друзей:</div>
   <div id="waitingRoom">------</div>
   <div class="sub" style="margin-top:20px">Старт через <span id="countdown">5</span>с</div>
 </div>
 
-<!-- Firebase SDK (compat) -->
+<!-- Firebase SDK (compat — стабильнее в WebView) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -72,17 +72,17 @@
 (() => {
 'use strict';
 
-/* ====== ТВОЙ FIREBASE CONFIG (уже подставлен) ====== */
+/* ⚠️ ВСТАВЬ СВОИ ДАННЫЕ ИЗ FIREBASE CONSOLE ⚠️ */
 const firebaseConfig = {
-  apiKey: "AIzaSyB0uaLhHrYjWblrCBLTPx7mF_OmUhhld70",
-  authDomain: "br-game-1f919.firebaseapp.com",
-  databaseURL: "https://br-game-1f919-default-rtdb.firebaseio.com",
-  projectId: "br-game-1f919",
-  storageBucket: "br-game-1f919.firebasestorage.app",
-  messagingSenderId: "758598814466",
-  appId: "1:758598814466:web:85779913ac960b18a2901b"
+  apiKey: "AIzaSy...",
+  authDomain: "your-project.firebaseapp.com",
+  databaseURL: "https://your-project-default-rtdb.firebaseio.com",
+  projectId: "your-project",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "000000000000",
+  appId: "1:000000000000:web:xxxxxxxxxxxx"
 };
-/* =================================================== */
+/* ⚠️ КОНЕЦ ВСТАВКИ ⚠️ */
 
 /* ============ SETUP ============ */
 const canvas = document.getElementById('c');
@@ -107,8 +107,8 @@ const ZONE_DPS = 7;
 const BOTS_COUNT = 29;
 const JOY_R = 80;
 const PLAYER_SPEED = 190;
-const SYNC_INTERVAL = 90;
-const INTERP_SPEED = 14;
+const SYNC_INTERVAL = 90;        // мс между отправками позиции (≈11 Hz)
+const INTERP_SPEED = 14;         // скорость сглаживания удалённых игроков
 
 const WEAPONS = {
   pistol:  { name:'PISTOL',  dmg:12, rate:0.28, spread:0.06, speed:750,  ammo:12, reload:1.1, color:'#ffd166', pellets:1 },
@@ -121,18 +121,20 @@ const WEAPON_KEYS = Object.keys(WEAPONS);
 /* ============ STATE ============ */
 let player, bots, bullets, loot, particles, killFeed, zone;
 let cam = { x:0, y:0 };
-let gameState = 'menu';
+let gameState = 'menu';    // menu | waiting | playing | won | lost
 let time = 0, aliveCount = 0;
 const rand = (a,b) => a + Math.random()*(b-a);
 
-let netMode = 'offline';
+/* сеть */
+let netMode = 'offline';   // 'offline' | 'online'
 let myUid = null;
 let roomId = null;
-let remotePlayers = new Map();
+let remotePlayers = new Map();  // uid -> entity
 let listeners = [];
 let lastSync = 0;
 let myName = 'PLAYER';
 
+/* ============ FIREBASE ============ */
 let db = null, auth = null;
 function initFirebase(){
   firebase.initializeApp(firebaseConfig);
@@ -150,6 +152,7 @@ function makeEntity(x, y, isBot, name){
     ammo: WEAPONS.pistol.ammo, reloading:0, fireCd:0,
     alive:true, kills:0,
     wanderAngle: rand(0, Math.PI*2), wanderTimer:0,
+    // для интерполяции удалённых игроков:
     targetX: x, targetY: y, targetAngle: 0,
   };
 }
@@ -208,6 +211,7 @@ function killEntity(ent, killer){
   for (let i = 0; i < 12; i++)
     particles.push({ x:ent.x, y:ent.y, vx: rand(-120,120), vy: rand(-120,120), life: 0.6, color:'#ff5a5a' });
 
+  // sync death в онлайн-режиме
   if (netMode === 'online' && ent.uid === myUid && db) {
     db.ref(`rooms/${roomId}/players/${myUid}`).update({ alive:false, hp:0 });
   }
@@ -295,6 +299,7 @@ document.getElementById('btnOnline').onclick = async () => {
 
     await joinRoom();
 
+    // показать код на 5 секунд, потом начать
     connectEl.classList.add('hidden');
     waitingEl.classList.remove('hidden');
     waitRoomEl.textContent = code;
@@ -320,6 +325,7 @@ document.getElementById('btnOnline').onclick = async () => {
 };
 
 function backToMenu(){
+  // отписки
   for (const l of listeners){
     try { l.ref.off(l.type, l.cb); } catch(e){}
   }
@@ -335,19 +341,22 @@ function backToMenu(){
 
 /* ============ NETWORK ============ */
 async function joinRoom(){
-  if (!player) player = makeEntity(WORLD/2, WORLD/2, false, myName);
   const me = {
-    x: Math.round(player.x),
-    y: Math.round(player.y),
+    x: Math.round(player ? player.x : WORLD/2),
+    y: Math.round(player ? player.y : WORLD/2),
     angle: 0, hp: 100, weapon: 'pistol', alive: true,
     name: myName,
     joinedAt: firebase.database.ServerValue.TIMESTAMP,
   };
+  // создаём временного игрока, чтобы координаты были готовы
+  if (!player) player = makeEntity(WORLD/2, WORLD/2, false, myName);
+  me.x = Math.round(player.x); me.y = Math.round(player.y);
 
   const myRef = db.ref(`rooms/${roomId}/players/${myUid}`);
   await myRef.set(me);
   myRef.onDisconnect().remove();
 
+  // Слушаем других игроков
   const playersRef = db.ref(`rooms/${roomId}/players`);
   const pCb = playersRef.on('value', snap => {
     const data = snap.val() || {};
@@ -383,6 +392,7 @@ async function joinRoom(){
         e.name = p.name || e.name;
       }
     }
+    // удалить тех, кто вышел
     for (const uid of [...remotePlayers.keys()]){
       if (!seen.has(uid)){
         const gone = remotePlayers.get(uid);
@@ -397,10 +407,12 @@ async function joinRoom(){
   });
   listeners.push({ ref: playersRef, type: 'value', cb: pCb });
 
+  // Слушаем выстрелы
   const shotsRef = db.ref(`rooms/${roomId}/shots`).limitToLast(50);
   const sCb = shotsRef.on('child_added', snap => {
     const s = snap.val();
     if (!s || s.uid === myUid) { snap.ref.remove(); return; }
+    // визуальный выстрел
     const w = WEAPONS[s.weaponKey] || WEAPONS.pistol;
     const p = w.pellets || 1;
     for (let i = 0; i < p; i++){
@@ -411,10 +423,11 @@ async function joinRoom(){
         dmg: 0, owner: null, life: 1.0, color: w.color, visual: true,
       });
     }
-    snap.ref.remove();
+    snap.ref.remove(); // удаляем сразу — не нужна история
   });
   listeners.push({ ref: shotsRef, type: 'child_added', cb: sCb });
 
+  // Слушаем урон по мне
   const dmgRef = db.ref(`rooms/${roomId}/damage/${myUid}`);
   const dCb = dmgRef.on('child_added', snap => {
     const d = snap.val();
@@ -484,6 +497,7 @@ function tryFire(ent, dt){
       life: 0.15, color: w.color
     });
 
+  // sync выстрела в сеть
   if (netMode === 'online' && ent === player)
     sendShot(ent.x, ent.y, ent.angle, ent.weaponKey);
 }
@@ -584,11 +598,12 @@ function updateBot(b, dt){
 
 function updateRemotePlayers(dt){
   if (netMode !== 'online') return;
-  const k = 1 - Math.exp(-INTERP_SPEED * dt);
+  const k = 1 - Math.exp(-INTERP_SPEED * dt);   // сглаживание
   for (const e of remotePlayers.values()){
     if (!e.alive) continue;
     e.x += (e.targetX - e.x) * k;
     e.y += (e.targetY - e.y) * k;
+    // угол — коротким путём
     let da = e.targetAngle - e.angle;
     while (da >  Math.PI) da -= Math.PI*2;
     while (da < -Math.PI) da += Math.PI*2;
@@ -603,9 +618,10 @@ function updateBullets(dt){
     if (b.life <= 0 || b.x < 0 || b.x > WORLD || b.y < 0 || b.y > WORLD){
       bullets.splice(i, 1); continue;
     }
-    if (b.visual) continue;
+    if (b.visual) continue;   // визуальные не наносят урон
 
     let hit = false;
+    // локальные цели
     const targets = [player];
     if (netMode === 'offline') targets.push(...bots);
     else for (const e of remotePlayers.values()) targets.push(e);
@@ -614,6 +630,7 @@ function updateBullets(dt){
       if (!t.alive || t === b.owner) continue;
       if (Math.hypot(t.x - b.x, t.y - b.y) < t.r + 4){
         if (netMode === 'online' && t.uid){
+          // отправляем урон владельцу цели
           sendDamage(t.uid, b.dmg);
         } else {
           t.hp -= b.dmg;
@@ -651,7 +668,10 @@ function updateLoot(){
 }
 
 function updateZone(dt){
+  // зона сужается только локально, но в онлайн-режиме её должны видеть одинаково
+  // Для простоты: клиент-хост (первый uid) считает, все остальные — получают
   if (netMode === 'online'){
+    // синхронизируем зону через БД от "хоста" (у кого наименьший uid)
     const uids = [myUid, ...remotePlayers.keys()].filter(Boolean).sort();
     if (uids[0] === myUid){
       zone.r = Math.max(ZONE_END_R, zone.r - ZONE_SHRINK * dt);
@@ -853,6 +873,7 @@ function drawHUD(){
   });
   ctx.globalAlpha = 1;
 
+  // Мини-карта
   const mm = 90, mx = W - mm - 16, my = 16;
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.fillRect(mx, my, mm, mm);
@@ -881,6 +902,7 @@ function drawHUD(){
     ctx.fillRect(mx + player.x*kx - 2, my + player.y*kx - 2, 5, 5);
   }
 
+  // Номер комнаты (для онлайна)
   if (netMode === 'online' && roomId){
     ctx.textAlign = 'left'; ctx.font = 'bold 12px sans-serif';
     ctx.fillStyle = 'rgba(6,214,160,0.9)';
@@ -934,6 +956,7 @@ function loop(now){
       if (!player.alive) gameState = 'lost';
     }
 
+    // sync состояния
     if (now - lastSync > SYNC_INTERVAL){
       lastSync = now;
       syncMyState();
@@ -944,6 +967,7 @@ function loop(now){
 
   if (player) updateCamera();
 
+  // render
   ctx.fillStyle = '#0d141c';
   ctx.fillRect(0, 0, W, H);
 
