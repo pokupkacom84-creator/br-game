@@ -142,6 +142,7 @@
         .protocol-badge.vmess { background: #0984e333; color: #0984e3; }
         .protocol-badge.trojan { background: #e1705533; color: #e17055; }
         .protocol-badge.ss { background: #fdcb6e33; color: #fdcb6e; }
+        .protocol-badge.hysteria { background: #a29bfe33; color: #a29bfe; }
 
         .key-card .key-name {
             font-size: 13px;
@@ -250,7 +251,6 @@
 
         .footer a { color: #6c5ce7; text-decoration: none; }
 
-        /* Скрытый textarea для копирования */
         #copyHelper {
             position: fixed;
             left: -9999px;
@@ -297,7 +297,7 @@
     </div>
 
     <div class="footer">
-        Источники: <a href="https://github.com/barry-far/V2ray-Configs" target="_blank">GitHub / V2ray-Configs</a>
+        Источник: <a href="https://github.com/AvenCores/goida-vpn-configs" target="_blank">AvenCores / goida-vpn-configs</a>
         <br>Ключи публичные и могут быть нестабильны
     </div>
 
@@ -306,49 +306,24 @@
 
     <script>
     // ============================================================
-    //  ИСТОЧНИКИ БЕСПЛАТНЫХ КОНФИГУРАЦИЙ
+    //  ИСТОЧНИК КОНФИГУРАЦИЙ
     // ============================================================
-    // Публичные репозитории GitHub, которые обновляются ежедневно.
-    // Формат: обычный текст, по одной ссылке на строку.
-    // Поддерживаются: vless://, vmess://, trojan://, ss://
+    // Используется единственный файл из репозитория AvenCores.
+    // Если файл в Base64 — он будет автоматически декодирован.
     // ============================================================
 
-    const SOURCES = [
-        {
-            name: 'barry-far / V2ray-Configs (VLESS)',
-            url: 'https://raw.githubusercontent.com/barry-far/V2ray-Configs/main/All_Configs_Sub.txt',
-            type: 'raw'
-        },
-        {
-            name: 'barry-far / V2ray-Configs (Reality)',
-            url: 'https://raw.githubusercontent.com/barry-far/V2ray-Configs/main/Splitted-By-Protocol/vless.txt',
-            type: 'raw'
-        },
-        {
-            name: 'v2ray-links / v2ray-free',
-            url: 'https://raw.githubusercontent.com/v2ray-links/v2ray-free/master/v2ray',
-            type: 'raw'
-        },
-        {
-            name: 'DukeMehdi / FreeList-V2ray-Configs',
-            url: 'https://raw.githubusercontent.com/DukeMehdi/FreeList-V2ray-Configs/main/Sub1.txt',
-            type: 'raw'
-        }
-    ];
+    const SOURCE_URL = 'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/main/githubmirror/26.txt';
 
     // ============================================================
     //  ГЛОБАЛЬНОЕ СОСТОЯНИЕ
     // ============================================================
-    let allKeys = [];       // массив объектов { raw, protocol, source }
+    let allKeys = [];
     let isFetching = false;
 
     // ============================================================
     //  УТИЛИТЫ
     // ============================================================
 
-    /**
-     * Показывает всплывающее уведомление (тост).
-     */
     function showToast(msg, duration = 2200) {
         const toast = document.getElementById('toast');
         toast.textContent = msg;
@@ -357,10 +332,6 @@
         toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
     }
 
-    /**
-     * Копирует текст в буфер обмена.
-     * Использует нативный API с fallback на execCommand для WebView.
-     */
     function copyToClipboard(text) {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(text).then(() => {
@@ -394,12 +365,10 @@
         if (l.startsWith('vmess://')) return 'vmess';
         if (l.startsWith('trojan://')) return 'trojan';
         if (l.startsWith('ss://')) return 'ss';
+        if (l.startsWith('hysteria://') || l.startsWith('hy2://')) return 'hysteria';
         return 'unknown';
     }
 
-    /**
-     * Извлекает имя сервера из ссылки (фрагмент после #).
-     */
     function extractName(link) {
         try {
             const hashIndex = link.lastIndexOf('#');
@@ -407,34 +376,47 @@
                 const name = decodeURIComponent(link.substring(hashIndex + 1));
                 if (name) return name;
             }
-            // Пытаемся вытащить host из ссылки
             const match = link.match(/@([^:\/?#]+)/);
             if (match) return match[1];
         } catch (e) {}
         return 'Сервер';
     }
 
-    /**
-     * Обрезает ссылку для превью.
-     */
     function truncate(str, len = 60) {
         return str.length > len ? str.substring(0, len) + '...' : str;
     }
 
-    /**
-     * Экранирует HTML.
-     */
     function esc(s) {
         return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    /**
+     * Пытается декодировать строку из Base64.
+     * Возвращает декодированный текст или null, если это не Base64.
+     */
+    function tryBase64Decode(str) {
+        const clean = str.replace(/\s/g, '');
+        // Проверяем, похоже ли на Base64
+        if (!/^[A-Za-z0-9+/=]+$/.test(clean)) return null;
+        if (clean.length < 20) return null;
+
+        try {
+            // atob доступен в WebView
+            const decoded = atob(clean);
+            // Проверяем, содержит ли результат известные протоколы
+            if (/vless:\/\/|vmess:\/\/|trojan:\/\/|ss:\/\/|hysteria:\/\//i.test(decoded)) {
+                return decoded;
+            }
+            return null;
+        } catch (e) {
+            return null;
+        }
     }
 
     // ============================================================
     //  ЗАГРУЗКА КЛЮЧЕЙ
     // ============================================================
 
-    /**
-     * Загружает все источники параллельно, парсит и отображает ключи.
-     */
     async function fetchKeys() {
         if (isFetching) return;
         isFetching = true;
@@ -445,7 +427,6 @@
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
 
-        // UI: загрузка
         fetchBtn.disabled = true;
         fetchBtn.textContent = '⏳ Загрузка...';
         loader.classList.add('active');
@@ -453,101 +434,96 @@
         statusDot.className = 'status-dot';
         statusText.textContent = 'Загрузка...';
 
-        const collected = [];
-        const errors = [];
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 20000);
 
-        // Загружаем источники параллельно
-        const promises = SOURCES.map(async (src) => {
-            try {
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 15000);
+            const resp = await fetch(SOURCE_URL, { signal: controller.signal });
+            clearTimeout(timeout);
 
-                const resp = await fetch(src.url, { signal: controller.signal });
-                clearTimeout(timeout);
-
-                if (!resp.ok) {
-                    throw new Error(`HTTP ${resp.status}`);
-                }
-
-                const text = await resp.text();
-
-                // Парсим: каждая строка — потенциальный конфиг
-                const lines = text.split(/\r?\n/);
-                let sourceCount = 0;
-
-                for (const line of lines) {
-                    const trimmed = line.trim();
-                    if (!trimmed) continue;
-
-                    const proto = detectProtocol(trimmed);
-                    if (proto === 'unknown') continue;
-
-                    collected.push({
-                        raw: trimmed,
-                        protocol: proto,
-                        source: src.name,
-                        name: extractName(trimmed)
-                    });
-                    sourceCount++;
-                }
-
-                console.log(`[Happ] ${src.name}: ${sourceCount} ключей`);
-            } catch (e) {
-                console.warn(`[Happ] Ошибка источника ${src.name}:`, e.message);
-                errors.push(`${src.name}: ${e.message}`);
+            if (!resp.ok) {
+                throw new Error(`HTTP ${resp.status}`);
             }
-        });
 
-        await Promise.allSettled(promises);
+            let text = await resp.text();
 
-        // Дедупликация по raw-строке
-        const seen = new Set();
-        const unique = [];
-        for (const k of collected) {
-            if (!seen.has(k.raw)) {
-                seen.add(k.raw);
-                unique.push(k);
+            // Пробуем декодировать Base64, если обычный парсинг не находит ключей
+            if (!/vless:\/\/|vmess:\/\/|trojan:\/\/|ss:\/\/|hysteria:\/\//i.test(text)) {
+                const decoded = tryBase64Decode(text);
+                if (decoded) {
+                    console.log('[Happ] Обнаружен Base64, декодируем...');
+                    text = decoded;
+                }
             }
-        }
 
-        allKeys = unique;
+            // Парсим построчно
+            const lines = text.split(/\r?\n/);
+            const collected = [];
 
-        // UI: результат
-        loader.classList.remove('active');
-        fetchBtn.disabled = false;
-        fetchBtn.textContent = '⬇ Загрузить ключи';
-        isFetching = false;
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed) continue;
 
-        if (allKeys.length === 0) {
+                const proto = detectProtocol(trimmed);
+                if (proto === 'unknown') continue;
+
+                collected.push({
+                    raw: trimmed,
+                    protocol: proto,
+                    name: extractName(trimmed)
+                });
+            }
+
+            // Дедупликация
+            const seen = new Set();
+            const unique = [];
+            for (const k of collected) {
+                if (!seen.has(k.raw)) {
+                    seen.add(k.raw);
+                    unique.push(k);
+                }
+            }
+
+            allKeys = unique;
+
+            loader.classList.remove('active');
+            fetchBtn.disabled = false;
+            fetchBtn.textContent = '⬇ Загрузить ключи';
+            isFetching = false;
+
+            if (allKeys.length === 0) {
+                statusDot.className = 'status-dot err';
+                statusText.textContent = 'Ключи не найдены';
+                errorMsg.textContent = 'Файл загружен, но в нём не найдено ни одной поддерживаемой конфигурации.';
+                errorMsg.classList.add('show');
+                renderKeys();
+                return;
+            }
+
+            statusDot.className = 'status-dot ok';
+            statusText.textContent = 'Загружено';
+            renderKeys();
+            showToast(`✅ Загружено ${allKeys.length} ключей`);
+
+        } catch (e) {
+            console.error('[Happ] Ошибка загрузки:', e);
+            loader.classList.remove('active');
+            fetchBtn.disabled = false;
+            fetchBtn.textContent = '⬇ Загрузить ключи';
+            isFetching = false;
+
             statusDot.className = 'status-dot err';
-            statusText.textContent = 'Ключи не найдены';
-            errorMsg.textContent = errors.length
-                ? 'Ошибки: ' + errors.join('; ')
-                : 'Не удалось загрузить ни одного ключа. Проверьте интернет.';
+            statusText.textContent = 'Ошибка загрузки';
+            errorMsg.textContent = 'Не удалось загрузить файл: ' + (e.name === 'AbortError' ? 'превышено время ожидания' : e.message);
             errorMsg.classList.add('show');
             renderKeys();
-            return;
         }
-
-        statusDot.className = 'status-dot ok';
-        statusText.textContent = `Загружено (${errors.length ? errors.length + ' ошибок' : 'OK'})`;
-
-        if (errors.length) {
-            errorMsg.textContent = 'Некоторые источники недоступны: ' + errors.join('; ');
-            errorMsg.classList.add('show');
-        }
-
-        renderKeys();
-        showToast(`✅ Загружено ${allKeys.length} ключей`);
     }
 
     // ============================================================
     //  ОТОБРАЖЕНИЕ
     // ============================================================
 
-    /**
-     * Рендерит список ключей.
-     */
     function renderKeys() {
         const list = document.getElementById('keyList');
         const countEl = document.getElementById('keyCount');
@@ -563,8 +539,7 @@
             return;
         }
 
-        // Сортируем: сначала vless, потом vmess, trojan, ss
-        const order = { vless: 0, vmess: 1, trojan: 2, ss: 3 };
+        const order = { vless: 0, hysteria: 1, vmess: 2, trojan: 3, ss: 4 };
         const sorted = [...allKeys].sort((a, b) => (order[a.protocol] ?? 9) - (order[b.protocol] ?? 9));
 
         let html = '';
@@ -588,51 +563,30 @@
         list.innerHTML = html;
     }
 
-    /**
-     * Копирует ключ по индексу.
-     */
     function copyKey(index) {
         const sorted = getSortedKeys();
         const k = sorted[index];
         if (k) copyToClipboard(k.raw);
     }
 
-    /**
-     * Пытается открыть ссылку через happ:// deeplink.
-     * Happ поддерживает схему happ://add?url=...
-     * Если приложение не установлено — предложит скопировать.
-     */
     function openInHapp(index) {
         const sorted = getSortedKeys();
         const k = sorted[index];
         if (!k) return;
 
-        // Формируем deeplink для Happ.
-        // Happ принимает happ://add?url=<encoded_subscription_url>
-        // Но мы можем передать и отдельный ключ через буфер.
-        // Самый надёжный способ — скопировать и открыть Happ.
         copyToClipboard(k.raw);
         showToast('📋 Ключ скопирован. Вставьте его в Happ → «+» → «Добавить из буфера»', 4000);
 
-        // Пробуем открыть Happ (если установлен)
         try {
             window.location.href = 'happ://';
-        } catch (e) {
-            // Приложение не установлено — ничего страшного
-        }
+        } catch (e) {}
     }
 
-    /**
-     * Возвращает отсортированный массив ключей.
-     */
     function getSortedKeys() {
-        const order = { vless: 0, vmess: 1, trojan: 2, ss: 3 };
+        const order = { vless: 0, hysteria: 1, vmess: 2, trojan: 3, ss: 4 };
         return [...allKeys].sort((a, b) => (order[a.protocol] ?? 9) - (order[b.protocol] ?? 9));
     }
 
-    /**
-     * Очищает список.
-     */
     function clearKeys() {
         allKeys = [];
         document.getElementById('keyList').innerHTML = `
@@ -647,12 +601,8 @@
         showToast('🗑 Список очищен');
     }
 
-    // ============================================================
-    //  ИНИЦИАЛИЗАЦИЯ
-    // ============================================================
     document.addEventListener('DOMContentLoaded', () => {
-        console.log('[Happ Free Keys] Приложение загружено');
-        console.log('[Happ Free Keys] Источники:', SOURCES.map(s => s.name).join(', '));
+        console.log('[Happ Free Keys] Источник:', SOURCE_URL);
     });
     </script>
 </body>
