@@ -69,6 +69,32 @@ body.animated-bg .content,
 body.animated-bg .bottom-nav,
 body.animated-bg .update-banner { position: relative; z-index: 1; }
 
+/* ============ SCROLL PROGRESS ============ */
+.scroll-progress {
+    position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-light));
+    z-index: 300; transition: width .08s linear;
+    box-shadow: 0 0 10px var(--accent);
+    border-radius: 0 3px 3px 0;
+}
+
+/* ============ PULL-TO-REFRESH ============ */
+.pull-indicator {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    height: 0; overflow: hidden; color: var(--accent-light);
+    font-size: 12px; font-weight: 700; letter-spacing: .5px;
+    transition: height .18s ease, opacity .18s;
+    opacity: 0;
+}
+.pull-indicator.visible { height: 44px; opacity: 1; }
+.pull-indicator svg {
+    width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.4;
+    transition: transform .2s;
+}
+.pull-indicator.ready svg { transform: rotate(180deg); }
+.pull-indicator.loading svg { animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ============ OFFLINE SCREEN ============ */
 .offline-screen { position:fixed; inset:0; background:var(--bg); z-index:7000; display:flex; align-items:center; justify-content:center; padding:20px; transition:opacity .3s,visibility .3s; }
 .offline-screen.hidden { opacity:0; visibility:hidden; pointer-events:none; }
@@ -86,7 +112,6 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
 .splash-logo svg { width:36px; height:36px; stroke:#fff; fill:none; stroke-width:2; }
 .splash-spinner { width:32px; height:32px; border:3px solid var(--card-border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
 @keyframes splashPulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
-@keyframes spin { to { transform:rotate(360deg); } }
 
 /* ============ AUTH ============ */
 .auth-screen { position:fixed; inset:0; background:var(--bg); z-index:5000; display:flex; align-items:center; justify-content:center; padding:20px; overflow-y:auto; transition:opacity .3s,visibility .3s; }
@@ -127,8 +152,9 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
 .status-dot.ok { background:#00b894; animation:none; }
 .status-dot.err { background:#e17055; animation:none; }
 @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
-.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:10px 18px; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; transition:transform .15s; font-family:inherit; }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:10px 18px; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; transition:transform .15s,box-shadow .15s; font-family:inherit; }
 .btn:active { transform:scale(.97); }
+.btn:disabled { cursor:not-allowed; }
 .btn svg { width:16px; height:16px; stroke-width:2.2; }
 .btn-primary { background:linear-gradient(135deg,var(--accent),var(--accent-light)); color:#fff; }
 .btn-primary svg { stroke:#fff; }
@@ -138,6 +164,10 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
 .btn-danger svg { stroke:#e17055; }
 .btn-sm { padding:9px 12px; font-size:13px; border-radius:8px; }
 .btn-full { width:100%; }
+@media (hover:hover) {
+    .btn-primary:hover { box-shadow: 0 6px 18px rgba(108,92,231,.35); }
+    .btn-secondary:hover { background: var(--card); }
+}
 .controls { display:flex; gap:8px; margin-bottom:12px; }
 .controls .btn { flex:1; }
 .search-box { position:relative; margin-bottom:10px; }
@@ -146,12 +176,25 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
 .search-box svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); width:16px; height:16px; stroke:var(--text-muted); pointer-events:none; }
 .filter-chips { display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; margin-bottom:12px; scrollbar-width:none; }
 .filter-chips::-webkit-scrollbar { display:none; }
-.chip { flex-shrink:0; padding:6px 12px; border-radius:20px; background:var(--card); border:1px solid var(--card-border); color:var(--text-dim); font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; font-family:inherit; }
+.chip { flex-shrink:0; padding:6px 12px; border-radius:20px; background:var(--card); border:1px solid var(--card-border); color:var(--text-dim); font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; font-family:inherit; display:inline-flex; align-items:center; gap:5px; }
 .chip.active { background:linear-gradient(135deg,var(--accent),var(--accent-light)); color:#fff; border-color:transparent; }
+.chip svg { width:12px; height:12px; stroke:currentColor; fill:none; stroke-width:2.4; }
+.sort-row { display:flex; align-items:center; gap:6px; margin-bottom:12px; overflow-x:auto; scrollbar-width:none; }
+.sort-row::-webkit-scrollbar { display:none; }
+.sort-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.6px; font-weight:700; flex-shrink:0; }
 
 /* ============ CARDS ============ */
 .key-list { display:flex; flex-direction:column; gap:10px; }
-.key-card { background:var(--card); border-radius:14px; padding:14px; border:1px solid var(--card-border); animation:cardIn .3s ease both; }
+.key-card { background:var(--card); border-radius:14px; padding:14px; border:1px solid var(--card-border); animation:cardIn .3s ease both; position:relative; overflow:hidden; cursor:pointer; transition:border-color .15s,transform .12s; }
+.key-card::before {
+    content:''; position:absolute; inset:0; background:linear-gradient(135deg, transparent 0%, rgba(108,92,231,.04) 100%);
+    opacity:0; transition:opacity .2s; pointer-events:none;
+}
+.key-card:hover::before { opacity:1; }
+.key-card:active { transform: scale(.985); }
+@media (hover:hover) {
+    .key-card:hover { border-color: var(--accent); }
+}
 @keyframes cardIn { from{opacity:0;transform:translateY(12px) scale(.98);} to{opacity:1;transform:translateY(0) scale(1);} }
 .key-card.removing { animation:cardOut .3s ease forwards; }
 @keyframes cardOut { to { opacity:0; transform:scale(.85); } }
@@ -215,6 +258,17 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
 .stat-value { font-size:24px; font-weight:700; background:linear-gradient(135deg,var(--accent),var(--accent-light)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
 .stat-label { font-size:11px; color:var(--text-muted); margin-top:4px; text-transform:uppercase; letter-spacing:.5px; }
 
+/* ============ HISTORY ============ */
+.history-list { display:flex; flex-direction:column; gap:8px; }
+.history-item { display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--card-border); border-radius:12px; padding:10px 12px; cursor:pointer; transition:border-color .15s,transform .12s; }
+.history-item:active { transform: scale(.985); }
+@media (hover:hover) { .history-item:hover { border-color: var(--accent); } }
+.history-item .hi-icon { width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.history-item .hi-icon svg { width:15px; height:15px; stroke:#fff; fill:none; stroke-width:2.4; }
+.history-item .hi-info { flex:1; min-width:0; }
+.history-item .hi-name { font-size:13px; color:var(--text); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.history-item .hi-time { font-size:10px; color:var(--text-muted); margin-top:2px; }
+
 /* ============ BOTTOM NAV ============ */
 .bottom-nav { display:flex; background:var(--nav-bg); border-top:1px solid var(--card-border); flex-shrink:0; padding-bottom:env(safe-area-inset-bottom,0); box-shadow:0 -4px 20px rgba(0,0,0,.15); }
 .nav-item { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px 4px 12px; background:none; border:none; color:var(--text-muted); cursor:pointer; transition:color .15s; font-family:inherit; position:relative; }
@@ -247,13 +301,35 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
 .wheel-modal .modal-sub { margin-bottom: 14px; }
 .wheel-container { position: relative; width: 280px; height: 280px; margin: 0 auto 16px; }
 .wheel-pointer { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); font-size: 26px; z-index: 2; filter: drop-shadow(0 2px 4px rgba(0,0,0,.4)); }
-.wheel-pointer::after { content:''; }
 #wheelCanvas { width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 8px 28px rgba(0,0,0,.4); display: block; }
 .wheel-result { font-size: 14px; font-weight: 600; min-height: 24px; margin-bottom: 12px; color: var(--text); }
 .wheel-result.prize { color: #00b894; animation: wheelResultPop .5s ease; }
 .wheel-result.empty { color: #e17055; }
 @keyframes wheelResultPop { 0%{transform:scale(.5);opacity:0;} 60%{transform:scale(1.15);} 100%{transform:scale(1);opacity:1;} }
 .wheel-cooldown { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+
+/* ============ KEY DETAIL MODAL ============ */
+.detail-modal .modal { padding: 22px 20px; }
+.detail-modal .modal h3 { display:flex; align-items:center; gap:8px; margin-bottom: 14px; }
+.detail-qr-wrap { background:#fff; padding:14px; border-radius:14px; width:max-content; margin: 0 auto 14px; box-shadow: 0 6px 20px rgba(0,0,0,.2); }
+.detail-qr-wrap img { display:block; width:220px; height:220px; }
+.detail-key-block { background:var(--bg); border:1px solid var(--card-border); border-radius:12px; padding:12px 14px; margin-bottom:14px; max-height:130px; overflow-y:auto; }
+.detail-key-block code { font-family:'Courier New',monospace; font-size:11.5px; color:var(--text-dim); word-break:break-all; line-height:1.55; white-space:pre-wrap; }
+.detail-meta { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+.detail-meta .chip { cursor:default; }
+
+/* ============ LONG PRESS SHEET ============ */
+.sheet-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:4500; display:none; align-items:flex-end; justify-content:center; backdrop-filter:blur(4px); }
+.sheet-overlay.show { display:flex; animation: fadeIn .18s ease; }
+@keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+.sheet { width:100%; max-width:460px; background:var(--card); border-radius:22px 22px 0 0; padding:14px 14px calc(14px + env(safe-area-inset-bottom,0)); animation: sheetUp .28s cubic-bezier(.2,.9,.35,1); }
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sheet-handle { width:40px; height:4px; background:var(--card-border); border-radius:2px; margin:0 auto 14px; }
+.sheet-title { font-size:13px; color:var(--text-muted); font-weight:600; padding:0 8px 10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sheet-item { display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:12px; background:none; border:none; width:100%; color:var(--text); font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; transition:background .15s; text-align:left; }
+.sheet-item:active { background: var(--bg); }
+.sheet-item svg { width:18px; height:18px; stroke: currentColor; fill:none; stroke-width:2; flex-shrink:0; }
+.sheet-item.danger { color: #e17055; }
 
 /* ============ BANNER ============ */
 .update-banner { display:none; align-items:center; gap:10px; padding:10px 14px; background:linear-gradient(135deg,var(--accent),var(--accent-light)); color:#fff; font-size:13px; font-weight:600; cursor:pointer; animation:slideDown .3s ease; }
@@ -266,14 +342,15 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
 .empty-state { text-align:center; padding:50px 20px; color:var(--text-muted); }
 .empty-state .big-icon { width:48px; height:48px; stroke:var(--text-muted); fill:none; stroke-width:1.6; margin-bottom:12px; opacity:.6; }
 .empty-state p { font-size:13px; line-height:1.5; }
-.toast { position:fixed; bottom:-100px; left:50%; transform:translateX(-50%); background:#2d2d3a; color:#fff; padding:12px 22px; border-radius:12px; font-size:13px; font-weight:500; box-shadow:0 8px 30px rgba(0,0,0,.5); z-index:9999; pointer-events:none; max-width:90vw; text-align:center; transition:bottom .4s cubic-bezier(.68,-.55,.265,1.55),opacity .3s; opacity:0; }
+.toast { position:fixed; bottom:-100px; left:50%; transform:translateX(-50%); background:#2d2d3a; color:#fff; padding:12px 22px; border-radius:12px; font-size:13px; font-weight:500; box-shadow:0 8px 30px rgba(0,0,0,.5); z-index:9999; pointer-events:auto; max-width:90vw; text-align:center; transition:bottom .4s cubic-bezier(.68,-.55,.265,1.55),opacity .3s; opacity:0; display:flex; align-items:center; gap:14px; }
 .toast.show { bottom:90px; opacity:1; }
+.toast .toast-action { background:none; border:none; color:var(--accent-light); font-weight:700; font-size:13px; cursor:pointer; padding:2px 4px; font-family:inherit; }
 .error-msg { background:#e1705515; border:1px solid #e1705540; border-radius:10px; padding:12px 14px; font-size:12px; color:#e17055; margin-bottom:12px; display:none; }
 .error-msg.show { display:block; }
 #copyHelper { position:fixed; left:-9999px; top:-9999px; opacity:0; }
 .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:4000; display:none; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px); }
 .modal-overlay.show { display:flex; }
-.modal { width:100%; max-width:400px; background:var(--card); border:1px solid var(--card-border); border-radius:18px; padding:24px; animation:modalIn .25s ease; }
+.modal { width:100%; max-width:400px; background:var(--card); border:1px solid var(--card-border); border-radius:18px; padding:24px; animation:modalIn .25s ease; max-height:90vh; overflow-y:auto; }
 @keyframes modalIn { from{opacity:0;transform:scale(.9);} to{opacity:1;transform:scale(1);} }
 .modal h3 { font-size:18px; font-weight:700; margin-bottom:6px; color:var(--text); }
 .modal-sub { font-size:12px; color:var(--text-muted); margin-bottom:16px; }
@@ -285,6 +362,9 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
 </style>
 </head>
 <body>
+
+<!-- ============ SCROLL PROGRESS ============ -->
+<div class="scroll-progress" id="scrollProgress"></div>
 
 <!-- ============ OFFLINE SCREEN ============ -->
 <div class="offline-screen hidden" id="offlineScreen">
@@ -400,6 +480,28 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
     </div>
 </div>
 
+<!-- ============ KEY DETAIL MODAL ============ -->
+<div class="modal-overlay detail-modal" id="detailModal">
+    <div class="modal">
+        <h3 id="detailTitle">Ключ</h3>
+        <p class="modal-sub" id="detailSub">Отсканируйте QR или скопируйте строку</p>
+        <div class="detail-qr-wrap" id="detailQrWrap">
+            <img id="detailQr" alt="QR">
+        </div>
+        <div class="detail-meta" id="detailMeta"></div>
+        <div class="detail-key-block">
+            <code id="detailKey"></code>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeKeyDetail()">Закрыть</button>
+            <button class="btn btn-primary" onclick="copyDetailKey()">
+                <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <span>Копировать</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- ============ WHEEL MODAL ============ -->
 <div class="modal-overlay wheel-modal" id="wheelModal">
     <div class="modal">
@@ -414,6 +516,30 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
             <span>Крутить колесо</span>
         </button>
         <div class="wheel-cooldown" id="wheelCooldown"></div>
+    </div>
+</div>
+
+<!-- ============ LONG PRESS SHEET ============ -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet(event)">
+    <div class="sheet" id="actionSheet" onclick="event.stopPropagation()">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title" id="sheetTitle">Действия</div>
+        <button class="sheet-item" onclick="sheetAction('copy')">
+            <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>Скопировать ключ</span>
+        </button>
+        <button class="sheet-item" onclick="sheetAction('qr')">
+            <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3z"/></svg>
+            <span>Показать QR-код</span>
+        </button>
+        <button class="sheet-item" onclick="sheetAction('fav')">
+            <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span id="sheetFavLabel">В избранное</span>
+        </button>
+        <button class="sheet-item danger" onclick="sheetAction('share')">
+            <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            <span>Поделиться</span>
+        </button>
     </div>
 </div>
 
@@ -443,6 +569,10 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
 
     <!-- MAIN -->
     <div class="tab-pane active" id="tab-main">
+        <div class="pull-indicator" id="pullIndicator">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg>
+            <span id="pullText">Потяните вниз</span>
+        </div>
         <div class="status-bar">
             <div><span class="status-dot" id="statusDot"></span><span id="statusText">Готов к загрузке</span></div>
             <span id="keyCount" style="color:var(--accent);font-weight:600;">0</span>
@@ -453,7 +583,10 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
                 <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 <span>Загрузить</span>
             </button>
-            <button class="btn btn-secondary" onclick="clearKeys()">
+            <button class="btn btn-secondary" id="copyAllBtn" onclick="copyAllFiltered()" title="Копировать всё" style="flex:0 0 44px; padding:10px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+            <button class="btn btn-secondary" onclick="clearKeys()" style="flex:0 0 44px; padding:10px;" title="Очистить">
                 <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
             </button>
         </div>
@@ -468,6 +601,22 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
             <button class="chip" data-filter="vmess" onclick="setFilter('vmess', this)">VMESS</button>
             <button class="chip" data-filter="trojan" onclick="setFilter('trojan', this)">Trojan</button>
             <button class="chip" data-filter="ss" onclick="setFilter('ss', this)">SS</button>
+        </div>
+        <div class="sort-row" id="sortRow" style="display:none;">
+            <span class="sort-label">Сортировка</span>
+            <button class="chip active" data-sort="default" onclick="setSort('default', this)">По умолчанию</button>
+            <button class="chip" data-sort="az" onclick="setSort('az', this)">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5h10M11 9h7M11 15h10M11 19h7M3 5l3 3 3-3M6 8v11"/></svg>
+                A-Z
+            </button>
+            <button class="chip" data-sort="za" onclick="setSort('za', this)">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5h10M11 9h7M11 15h10M11 19h7M3 16l3-3 3 3M6 13v11"/></svg>
+                Z-A
+            </button>
+            <button class="chip" data-sort="proto" onclick="setSort('proto', this)">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+                По протоколу
+            </button>
         </div>
         <div class="key-list" id="keyList">
             <div class="empty-state" id="emptyState">
@@ -488,6 +637,10 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
             <div class="setting-row">
                 <div class="setting-label"><div class="name">Анимированный фон</div><div class="desc">Живые градиенты в стиле параллакса</div></div>
                 <label class="switch"><input type="checkbox" id="optAnimatedBg" onchange="saveSettings()"><span class="slider"></span></label>
+            </div>
+            <div class="setting-row">
+                <div class="setting-label"><div class="name">Вибрация</div><div class="desc">Тактильный отклик при действиях</div></div>
+                <label class="switch"><input type="checkbox" id="optHaptic" onchange="saveSettings()"><span class="slider"></span></label>
             </div>
             <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
                 <div class="setting-label"><div class="name">Акцентный цвет</div><div class="desc">Основной цвет интерфейса</div></div>
@@ -533,7 +686,7 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
                     <span>Сбросить</span>
                 </button>
             </div>
-            <div class="setting-row"><div class="setting-label"><div class="name">Версия</div><div class="desc">Текущая сборка</div></div><span style="color:var(--text-muted);font-size:12px;">2.5</span></div>
+            <div class="setting-row"><div class="setting-label"><div class="name">Версия</div><div class="desc">Текущая сборка</div></div><span style="color:var(--text-muted);font-size:12px;">2.6</span></div>
         </div>
     </div>
 
@@ -578,7 +731,23 @@ body.animated-bg .update-banner { position: relative; z-index: 1; }
                 </button>
             </div>
         </div>
-        <div class="settings-title">Избранные ключи</div>
+        <div class="settings-title">Недавно скопированные</div>
+        <div class="history-list" id="historyList">
+            <div class="empty-state">
+                <svg class="big-icon" viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <p>История пуста.<br>Скопированные ключи появятся здесь.</p>
+            </div>
+        </div>
+        <div class="settings-section" id="historyClearWrap" style="margin-top:14px;display:none;">
+            <div class="setting-row">
+                <div class="setting-label"><div class="name">Очистить историю</div><div class="desc">Удалить все записи копирований</div></div>
+                <button class="btn btn-secondary btn-sm" onclick="clearHistory()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                    <span>Очистить</span>
+                </button>
+            </div>
+        </div>
+        <div class="settings-title" style="margin-top:14px;">Избранные ключи</div>
         <div class="key-list" id="favList">
             <div class="empty-state">
                 <svg class="big-icon" viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -666,7 +835,6 @@ function openDB() {
     });
     return dbPromise;
 }
-
 async function idbGet(key) {
     try {
         const db = await openDB();
@@ -678,7 +846,6 @@ async function idbGet(key) {
         });
     } catch (e) { return null; }
 }
-
 async function idbSet(key, value) {
     try {
         const db = await openDB();
@@ -690,7 +857,6 @@ async function idbSet(key, value) {
         });
     } catch (e) {}
 }
-
 async function idbRemove(key) {
     try {
         const db = await openDB();
@@ -701,7 +867,6 @@ async function idbRemove(key) {
         });
     } catch (e) {}
 }
-
 async function idbClearAll() {
     try {
         const db = await openDB();
@@ -712,7 +877,6 @@ async function idbClearAll() {
         });
     } catch (e) {}
 }
-
 async function migrateFromLocalStorage() {
     const migrated = await idbGet('_migrated_v2');
     if (migrated) return;
@@ -768,6 +932,16 @@ function retryConnection() {
 }
 window.addEventListener('online', () => { hideOfflineScreen(); showToast('Соединение восстановлено'); });
 window.addEventListener('offline', () => { showOfflineScreen(); });
+
+// ============================================================
+//  HAPTIC
+// ============================================================
+function vibrate(pattern) {
+    if (!settings.haptic) return;
+    try {
+        if (navigator.vibrate) navigator.vibrate(pattern);
+    } catch (e) {}
+}
 
 // ============================================================
 //  AUTH UI
@@ -882,8 +1056,6 @@ async function removeLocalAvatar() {
     localAvatar = null;
     await idbRemove('local_avatar');
 }
-
-// Вызывается из HTML-кнопки
 function openPickerFromApp(mode) {
     console.log('[AVATAR] openPickerFromApp, mode =', mode);
     if (window.Android && typeof window.Android.openImagePicker === 'function') {
@@ -892,8 +1064,6 @@ function openPickerFromApp(mode) {
         alert('JS-мост недоступен. Запустите приложение в Sketchware Pro.');
     }
 }
-
-// Вызывается ИЗ JAVA, когда фото выбрано и сконвертировано в Base64
 window.setAvatarFromBase64 = async function(base64Data) {
     console.log('[AVATAR] setAvatarFromBase64, длина:', base64Data ? base64Data.length : 0);
     try {
@@ -906,7 +1076,6 @@ window.setAvatarFromBase64 = async function(base64Data) {
         closeAvatarModal();
         showToast('Аватар обновлён');
 
-        // Синхронизация с Firebase если пользователь авторизован
         if (currentUser && firebaseStorage) {
             try {
                 const resp = await fetch(base64Data);
@@ -927,8 +1096,6 @@ window.setAvatarFromBase64 = async function(base64Data) {
         alert('Ошибка: ' + e.message);
     }
 };
-
-// Старый fallback для браузера (если откроют через обычный Chrome)
 document.addEventListener('change', async (e) => {
     if (e.target && e.target.id === 'avatarInput') {
         const file = e.target.files && e.target.files[0];
@@ -940,7 +1107,6 @@ document.addEventListener('change', async (e) => {
         }
     }
 });
-
 function openAvatarModal() {
     const previewEl = document.getElementById('avatarPreview');
     const src = (currentUser && currentUser.photoURL) || localAvatar;
@@ -956,7 +1122,6 @@ function openAvatarModal() {
     document.getElementById('avatarModal').classList.add('show');
 }
 function closeAvatarModal() { document.getElementById('avatarModal').classList.remove('show'); }
-
 async function removeAvatar() {
     if (!confirm('Удалить аватар?')) return;
     closeAvatarModal();
@@ -1036,7 +1201,6 @@ async function confirmDelete() {
         else showToast('Ошибка: ' + (e.message || code));
     }
 }
-
 function updateProfileUI() {
     const nameEl = document.getElementById('profileName');
     const subEl = document.getElementById('profileSub');
@@ -1095,6 +1259,7 @@ const ACCENTS = {
 };
 const CHECK_INTERVAL_MS = 5 * 60 * 1000;
 const WHEEL_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const HISTORY_MAX = 20;
 
 const WHEEL_PRIZES = [
     { id: 'five',    label: '+5 избранных',  color: '#6c5ce7' },
@@ -1107,7 +1272,7 @@ const WHEEL_PRIZES = [
 
 const DEFAULT_SETTINGS = {
     autoLoad: true, autoCheck: true, notify: true, saveKeys: true, sound: true,
-    lightTheme: false, accent: 'violet', source: '26', animatedBg: true
+    lightTheme: false, accent: 'violet', source: '26', animatedBg: true, haptic: true
 };
 
 // ============================================================
@@ -1116,7 +1281,9 @@ const DEFAULT_SETTINGS = {
 let allKeys = [];
 let filteredKeys = [];
 let currentFilter = 'all';
+let currentSort = 'default';
 let favorites = [];
+let history = [];
 let settings = { ...DEFAULT_SETTINGS };
 let stats = { loaded: 0, copied: 0 };
 let isFetching = false;
@@ -1128,8 +1295,15 @@ let wheelRotation = 0;
 let wheelSpinning = false;
 let wheelLastSpin = 0;
 
+// Key detail state
+let detailKeyRaw = '';
+// Long press state
+let pressTimer = null;
+let activeLongPressRaw = null;
+let activeLongPressEncoded = null;
+
 // ============================================================
-//  STORAGE (IndexedDB)
+//  STORAGE
 // ============================================================
 async function loadFromStorage() {
     await migrateFromLocalStorage();
@@ -1138,12 +1312,14 @@ async function loadFromStorage() {
         if (s) settings = { ...DEFAULT_SETTINGS, ...s };
         const f = await idbGet('vpn_favorites');
         if (f) favorites = f;
+        const h = await idbGet('vpn_history');
+        if (h) history = h;
         const st = await idbGet('vpn_stats');
         if (st) stats = { ...stats, ...st };
         const k = await idbGet('vpn_keys');
         if (k && settings.saveKeys) allKeys = k;
-        const h = await idbGet('vpn_hash');
-        if (h) lastKeysHash = h;
+        const hh = await idbGet('vpn_hash');
+        if (hh) lastKeysHash = hh;
         const wl = await idbGet('wheel_last_spin');
         if (wl) wheelLastSpin = wl;
         const la = await idbGet('local_avatar');
@@ -1159,6 +1335,7 @@ function saveSettings() {
     settings.sound = document.getElementById('optSound').checked;
     settings.lightTheme = document.getElementById('optLightTheme').checked;
     settings.animatedBg = document.getElementById('optAnimatedBg').checked;
+    settings.haptic = document.getElementById('optHaptic').checked;
     settings.source = document.getElementById('optSource').value;
     idbSet('vpn_settings', settings);
     applyAnimatedBg();
@@ -1172,6 +1349,7 @@ function applySettingsToUI() {
     document.getElementById('optSound').checked = settings.sound;
     document.getElementById('optLightTheme').checked = settings.lightTheme;
     document.getElementById('optAnimatedBg').checked = settings.animatedBg;
+    document.getElementById('optHaptic').checked = settings.haptic;
     document.getElementById('optSource').value = settings.source;
     document.body.classList.toggle('light', settings.lightTheme);
     applyAccent(settings.accent);
@@ -1180,8 +1358,8 @@ function applySettingsToUI() {
 function applyAnimatedBg() {
     document.body.classList.toggle('animated-bg', settings.animatedBg);
 }
-
 function saveFavorites() { idbSet('vpn_favorites', favorites); }
+function saveHistory() { idbSet('vpn_history', history); }
 function saveStats() { idbSet('vpn_stats', stats); }
 function saveKeysToStorage() {
     if (!settings.saveKeys) { idbRemove('vpn_keys'); return; }
@@ -1202,6 +1380,7 @@ function setAccent(name) {
     settings.accent = name;
     applyAccent(name);
     idbSet('vpn_settings', settings);
+    vibrate(10);
     showToast('Цвет изменён');
 }
 function toggleTheme() {
@@ -1239,9 +1418,19 @@ function sendSystemNotification(title, body) {
 // ============================================================
 //  UTILS
 // ============================================================
-function showToast(msg, duration = 2200) {
+function showToast(msg, duration = 2200, action = null) {
     const t = document.getElementById('toast');
-    t.textContent = msg;
+    t.innerHTML = '';
+    const span = document.createElement('span');
+    span.textContent = msg;
+    t.appendChild(span);
+    if (action) {
+        const btn = document.createElement('button');
+        btn.className = 'toast-action';
+        btn.textContent = action.label;
+        btn.onclick = (e) => { e.stopPropagation(); action.handler(); t.classList.remove('show'); };
+        t.appendChild(btn);
+    }
     t.classList.add('show');
     clearTimeout(t._timer);
     t._timer = setTimeout(() => t.classList.remove('show'), duration);
@@ -1264,13 +1453,15 @@ function playCopySound() {
         osc.stop(ctx.currentTime + 0.13);
     } catch (e) {}
 }
-function copyToClipboard(text) {
+function copyToClipboard(text, opts = {}) {
     const done = () => {
-        showToast('Скопировано');
+        showToast(opts.silent ? 'Скопировано' : 'Скопировано');
         playCopySound();
+        vibrate(15);
         stats.copied++;
         saveStats();
         refreshStatsUI();
+        if (!opts.skipHistory) addToHistory(text);
     };
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
@@ -1336,6 +1527,67 @@ function parseKeys(text) {
     for (const k of collected) { if (!seen.has(k.raw)) { seen.add(k.raw); unique.push(k); } }
     return unique;
 }
+function timeAgo(ts) {
+    const diff = Date.now() - ts;
+    if (diff < 60000) return 'только что';
+    if (diff < 3600000) return Math.floor(diff / 60000) + ' мин назад';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + ' ч назад';
+    return Math.floor(diff / 86400000) + ' дн назад';
+}
+
+// ============================================================
+//  HISTORY
+// ============================================================
+function addToHistory(raw) {
+    if (!raw) return;
+    const idx = history.findIndex(h => h.raw === raw);
+    if (idx !== -1) history.splice(idx, 1);
+    history.unshift({
+        raw,
+        name: extractName(raw),
+        protocol: detectProtocol(raw),
+        ts: Date.now()
+    });
+    if (history.length > HISTORY_MAX) history.length = HISTORY_MAX;
+    saveHistory();
+    renderHistory();
+}
+function renderHistory() {
+    const list = document.getElementById('historyList');
+    const clearWrap = document.getElementById('historyClearWrap');
+    if (!list) return;
+    if (history.length === 0) {
+        list.innerHTML = '<div class="empty-state"><svg class="big-icon" viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><p>История пуста.<br>Скопированные ключи появятся здесь.</p></div>';
+        clearWrap.style.display = 'none';
+        return;
+    }
+    clearWrap.style.display = 'block';
+    const protoColors = {
+        vless: '#00b894', vmess: '#0984e3', trojan: '#e17055',
+        ss: '#fdcb6e', hysteria: '#a29bfe'
+    };
+    let html = '';
+    for (const h of history) {
+        const enc = btoa(encodeURIComponent(h.raw));
+        const color = protoColors[h.protocol] || '#6c5ce7';
+        html += '<div class="history-item" onclick="copyKeyByRaw(\'' + enc + '\')">' +
+            '<div class="hi-icon" style="background:' + color + '33;"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" style="stroke:' + color + '"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></div>' +
+            '<div class="hi-info">' +
+                '<div class="hi-name">' + esc(h.name) + '</div>' +
+                '<div class="hi-time">' + esc(h.protocol.toUpperCase()) + ' • ' + timeAgo(h.ts) + '</div>' +
+            '</div>' +
+        '</div>';
+    }
+    list.innerHTML = html;
+}
+function clearHistory() {
+    if (!confirm('Очистить историю копирований?')) return;
+    history = [];
+    saveHistory();
+    renderHistory();
+    vibrate(10);
+    showToast('История очищена');
+}
 
 // ============================================================
 //  CONFETTI
@@ -1379,7 +1631,7 @@ function launchConfetti() {
 }
 
 // ============================================================
-//  WHEEL OF FORTUNE
+//  WHEEL
 // ============================================================
 function drawWheel(rotation) {
     const canvas = document.getElementById('wheelCanvas');
@@ -1426,7 +1678,6 @@ function drawWheel(rotation) {
     ctx.fillStyle = '#6c5ce7';
     ctx.fill();
 }
-
 function openWheelModal() {
     document.getElementById('wheelModal').classList.add('show');
     document.getElementById('wheelResult').textContent = '';
@@ -1435,7 +1686,6 @@ function openWheelModal() {
     updateWheelAvailability();
 }
 function closeWheelModal() { document.getElementById('wheelModal').classList.remove('show'); }
-
 function updateWheelAvailability() {
     const now = Date.now();
     const left = WHEEL_COOLDOWN_MS - (now - wheelLastSpin);
@@ -1458,7 +1708,6 @@ function updateWheelAvailability() {
         badge.classList.remove('hidden');
     }
 }
-
 async function spinWheel() {
     if (wheelSpinning) return;
     const now = Date.now();
@@ -1466,6 +1715,7 @@ async function spinWheel() {
     if (allKeys.length === 0) { showToast('Сначала загрузите ключи'); return; }
 
     wheelSpinning = true;
+    vibrate([10, 30, 10]);
     const btn = document.getElementById('spinBtn');
     btn.disabled = true;
     btn.querySelector('span').textContent = 'Крутится...';
@@ -1505,7 +1755,6 @@ async function spinWheel() {
     }
     requestAnimationFrame(animate);
 }
-
 function grantPrize(prize) {
     const resultEl = document.getElementById('wheelResult');
     const count = { 'five': 5, 'ten': 10, 'three': 3, 'one': 1, 'nothing': 0 }[prize.id] || 0;
@@ -1515,7 +1764,6 @@ function grantPrize(prize) {
         resultEl.className = 'wheel-result empty';
         return;
     }
-
     const available = allKeys.filter(k => !favorites.includes(k.raw));
     if (available.length === 0) {
         resultEl.textContent = '😅 Все ключи уже в избранном!';
@@ -1537,6 +1785,7 @@ function grantPrize(prize) {
     resultEl.textContent = '🎉 Выигрыш: +' + pick.length + ' ключей в избранное!';
     resultEl.className = 'wheel-result prize';
     launchConfetti();
+    vibrate([20, 40, 20]);
     showToast('Добавлено ' + pick.length + ' ключей');
 }
 
@@ -1544,6 +1793,7 @@ function grantPrize(prize) {
 //  NAVIGATION
 // ============================================================
 function switchTab(tab, el) {
+    vibrate(8);
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('active');
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1563,25 +1813,43 @@ function switchTab(tab, el) {
     if (tab === 'main') wheelFab.classList.add('show');
     else wheelFab.classList.remove('show');
 
-    if (tab === 'profile') refreshStatsUI();
+    if (tab === 'profile') { refreshStatsUI(); renderHistory(); }
 }
 
 // ============================================================
-//  FILTERS
+//  FILTERS & SORT
 // ============================================================
 function setFilter(f, el) {
+    vibrate(8);
     currentFilter = f;
-    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
     if (el) el.classList.add('active');
     applyFilters();
 }
+function setSort(mode, el) {
+    vibrate(8);
+    currentSort = mode;
+    document.querySelectorAll('#sortRow .chip').forEach(c => c.classList.remove('active'));
+    if (el) el.classList.add('active');
+    applyFilters();
+}
+function sortKeys(list) {
+    const arr = [...list];
+    switch (currentSort) {
+        case 'az': return arr.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+        case 'za': return arr.sort((a, b) => b.name.localeCompare(a.name, 'ru'));
+        case 'proto': return arr.sort((a, b) => a.protocol.localeCompare(b.protocol));
+        default: return arr;
+    }
+}
 function applyFilters() {
     const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
-    filteredKeys = allKeys.filter(k => {
+    let list = allKeys.filter(k => {
         if (currentFilter !== 'all' && k.protocol !== currentFilter) return false;
         if (q && !k.name.toLowerCase().includes(q) && !k.raw.toLowerCase().includes(q)) return false;
         return true;
     });
+    filteredKeys = sortKeys(list);
     renderKeys();
 }
 
@@ -1598,8 +1866,7 @@ function showSkeletons() {
     }
     list.innerHTML = html;
 }
-
-async function fetchKeys() {
+async function fetchKeys(opts = {}) {
     if (isFetching) return;
     if (!navigator.onLine) { showOfflineScreen(); return; }
     isFetching = true;
@@ -1612,7 +1879,7 @@ async function fetchKeys() {
     errEl.classList.remove('show');
     dot.className = 'status-dot';
     st.textContent = 'Загрузка...';
-    showSkeletons();
+    if (!opts.silent) showSkeletons();
 
     try {
         const url = getSourceUrl() + '?t=' + Date.now();
@@ -1643,6 +1910,7 @@ async function fetchKeys() {
         updateUIVisibility();
         applyFilters();
         renderFavorites();
+        vibrate(15);
         showToast('Загружено ' + allKeys.length + ' ключей');
     } catch (e) {
         btn.disabled = false;
@@ -1717,6 +1985,7 @@ function applyPendingUpdate() {
     updateUIVisibility();
     applyFilters();
     renderFavorites();
+    vibrate(15);
     showToast('Обновлено');
 }
 function scheduleAutoCheck() {
@@ -1727,6 +1996,7 @@ function updateUIVisibility() {
     const has = allKeys.length > 0;
     document.getElementById('searchWrap').style.display = has ? 'block' : 'none';
     document.getElementById('filterChips').style.display = has ? 'flex' : 'none';
+    document.getElementById('sortRow').style.display = has ? 'flex' : 'none';
     document.getElementById('keyCount').textContent = allKeys.length;
 }
 
@@ -1748,28 +2018,42 @@ function renderKeys() {
         html += buildKeyCard(filteredKeys[i], false, Math.min(i * 30, 600));
     }
     list.innerHTML = html;
+    attachLongPressHandlers(list);
 }
 function buildKeyCard(k, isFav, delay = 0) {
     const isFavored = isFav || favorites.includes(k.raw);
     const enc = btoa(encodeURIComponent(k.raw));
-    return '<div class="key-card" data-raw="' + esc(k.raw) + '" style="animation-delay:' + delay + 'ms">' +
+    return '<div class="key-card" data-raw="' + esc(k.raw) + '" data-encoded="' + enc + '" style="animation-delay:' + delay + 'ms" onclick="handleCardClick(event, this)">' +
         '<div class="card-top">' +
             '<span class="protocol-badge ' + k.protocol + '">' + k.protocol.toUpperCase() + '</span>' +
-            '<button class="fav-btn ' + (isFavored ? 'active' : '') + '" onclick="toggleFavorite(\'' + enc + '\', this)">' +
+            '<button class="fav-btn ' + (isFavored ? 'active' : '') + '" onclick="event.stopPropagation();toggleFavorite(\'' + enc + '\', this)">' +
                 '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' +
             '</button>' +
         '</div>' +
         '<div class="key-name">' + esc(k.name) + '</div>' +
         '<div class="key-preview">' + esc(truncate(k.raw, 70)) + '</div>' +
         '<div class="card-actions">' +
-            '<button class="btn btn-primary btn-sm" onclick="copyKeyByRaw(\'' + enc + '\')">' +
+            '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();copyKeyByRaw(\'' + enc + '\')">' +
                 '<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
                 '<span>Скопировать</span>' +
             '</button>' +
         '</div>' +
     '</div>';
 }
-function copyKeyByRaw(encoded) { try { copyToClipboard(decodeURIComponent(atob(encoded))); } catch (e) {} }
+function handleCardClick(e, card) {
+    if (e.target.closest('button')) return;
+    // treat as tap -> open detail
+    if (wasLongPressed) { wasLongPressed = false; return; }
+    const enc = card.dataset.encoded;
+    if (enc) openKeyDetail(enc);
+}
+function copyKeyByRaw(encoded) {
+    try {
+        const raw = decodeURIComponent(atob(encoded));
+        copyToClipboard(raw);
+        vibrate(20);
+    } catch (e) {}
+}
 function toggleFavorite(encoded, btnEl) {
     let raw;
     try { raw = decodeURIComponent(atob(encoded)); } catch (e) { return; }
@@ -1778,11 +2062,13 @@ function toggleFavorite(encoded, btnEl) {
         favorites.push(raw);
         showToast('Добавлено в избранное');
         playCopySound();
+        vibrate(15);
         launchConfetti();
         if (btnEl) btnEl.classList.add('active');
     } else {
         favorites.splice(idx, 1);
         showToast('Убрано из избранного');
+        vibrate(10);
         if (btnEl) {
             const card = btnEl.closest('.key-card');
             if (card) {
@@ -1806,6 +2092,7 @@ function renderFavorites() {
         html += buildKeyCard({ raw: raw, protocol: detectProtocol(raw), name: extractName(raw) }, true, Math.min(i * 30, 400));
     }
     list.innerHTML = html;
+    attachLongPressHandlers(list);
 }
 function clearFavorites() {
     if (!confirm('Удалить все избранные ключи?')) return;
@@ -1838,11 +2125,19 @@ function refreshStatsUI() {
     document.getElementById('statFavs').textContent = favorites.length;
     document.getElementById('statProtocols').textContent = new Set(allKeys.map(k => k.protocol)).size;
 }
+function copyAllFiltered() {
+    if (filteredKeys.length === 0) { showToast('Нет ключей для копирования'); return; }
+    const text = filteredKeys.map(k => k.raw).join('\n');
+    copyToClipboard(text, { skipHistory: true });
+    vibrate([15, 30, 15]);
+    showToast('Скопировано ' + filteredKeys.length + ' ключей');
+}
 async function resetAll() {
     if (!confirm('Удалить все данные приложения?')) return;
     try { localStorage.clear(); } catch (e) {}
     await idbClearAll();
     favorites = [];
+    history = [];
     stats = { loaded: 0, copied: 0 };
     allKeys = [];
     settings = { ...DEFAULT_SETTINGS };
@@ -1856,6 +2151,7 @@ async function resetAll() {
     applySettingsToUI();
     clearKeys();
     renderFavorites();
+    renderHistory();
     refreshStatsUI();
     updateWheelAvailability();
     updateProfileUI();
@@ -1863,20 +2159,191 @@ async function resetAll() {
 }
 
 // ============================================================
-//  SCROLL
+//  KEY DETAIL MODAL
 // ============================================================
-function scrollToTop() { document.getElementById('content').scrollTo({ top: 0, behavior: 'smooth' }); }
-document.getElementById('content').addEventListener('scroll', function () {
+function openKeyDetail(encoded) {
+    let raw;
+    try { raw = decodeURIComponent(atob(encoded)); } catch (e) { return; }
+    detailKeyRaw = raw;
+    const name = extractName(raw);
+    const proto = detectProtocol(raw);
+    document.getElementById('detailTitle').textContent = name;
+    document.getElementById('detailSub').textContent = proto.toUpperCase() + ' • Отсканируйте QR или скопируйте';
+    document.getElementById('detailKey').textContent = raw;
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=' + encodeURIComponent(raw);
+    document.getElementById('detailQr').src = qrUrl;
+    document.getElementById('detailMeta').innerHTML =
+        '<span class="chip active">' + proto.toUpperCase() + '</span>' +
+        '<span class="chip">' + raw.length + ' симв.</span>' +
+        (favorites.includes(raw) ? '<span class="chip">★ В избранном</span>' : '');
+    document.getElementById('detailModal').classList.add('show');
+    vibrate(10);
+}
+function closeKeyDetail() { document.getElementById('detailModal').classList.remove('show'); }
+function copyDetailKey() {
+    if (!detailKeyRaw) return;
+    copyToClipboard(detailKeyRaw);
+}
+
+// ============================================================
+//  LONG PRESS / ACTION SHEET
+// ============================================================
+let wasLongPressed = false;
+function attachLongPressHandlers(container) {
+    const cards = container.querySelectorAll('.key-card');
+    cards.forEach(card => {
+        card.addEventListener('touchstart', (e) => startLongPress(e, card), { passive: true });
+        card.addEventListener('touchend', cancelLongPress);
+        card.addEventListener('touchmove', cancelLongPress);
+        card.addEventListener('touchcancel', cancelLongPress);
+        // Desktop
+        card.addEventListener('mousedown', (e) => startLongPress(e, card));
+        card.addEventListener('mouseup', cancelLongPress);
+        card.addEventListener('mouseleave', cancelLongPress);
+    });
+}
+function startLongPress(e, card) {
+    if (e.target.closest('button')) return;
+    wasLongPressed = false;
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => {
+        wasLongPressed = true;
+        activeLongPressEncoded = card.dataset.encoded;
+        try { activeLongPressRaw = decodeURIComponent(atob(activeLongPressEncoded)); } catch (err) { activeLongPressRaw = null; }
+        openSheet(card);
+    }, 480);
+}
+function cancelLongPress() {
+    clearTimeout(pressTimer);
+}
+function openSheet(card) {
+    if (!activeLongPressRaw) return;
+    const name = extractName(activeLongPressRaw);
+    document.getElementById('sheetTitle').textContent = name;
+    const favLabel = document.getElementById('sheetFavLabel');
+    favLabel.textContent = favorites.includes(activeLongPressRaw) ? 'Убрать из избранного' : 'В избранное';
+    document.getElementById('sheetOverlay').classList.add('show');
+    vibrate(15);
+}
+function closeSheet(e) {
+    if (e && e.target && e.target.id !== 'sheetOverlay') return;
+    document.getElementById('sheetOverlay').classList.remove('show');
+}
+function sheetAction(action) {
+    document.getElementById('sheetOverlay').classList.remove('show');
+    if (!activeLongPressRaw) return;
+    const raw = activeLongPressRaw;
+    const enc = activeLongPressEncoded;
+    if (action === 'copy') { copyKeyByRaw(enc); }
+    else if (action === 'qr') { openKeyDetail(enc); }
+    else if (action === 'fav') { toggleFavorite(enc, null); setTimeout(() => { applyFilters(); renderFavorites(); }, 200); }
+    else if (action === 'share') { shareKey(raw); }
+    activeLongPressRaw = null;
+    activeLongPressEncoded = null;
+}
+async function shareKey(raw) {
+    const name = extractName(raw);
+    try {
+        if (navigator.share) {
+            await navigator.share({ title: name, text: raw });
+        } else {
+            copyToClipboard(raw);
+            showToast('Ключ скопирован — можно делиться');
+        }
+    } catch (e) { /* user cancelled */ }
+}
+
+// ============================================================
+//  SCROLL PROGRESS + PULL TO REFRESH
+// ============================================================
+const contentEl = document.getElementById('content');
+contentEl.addEventListener('scroll', function () {
+    // Scroll progress
+    const max = this.scrollHeight - this.clientHeight;
+    const pct = max > 0 ? (this.scrollTop / max) * 100 : 0;
+    document.getElementById('scrollProgress').style.width = pct + '%';
+    // Back to top
     const btn = document.getElementById('backToTop');
     if (this.scrollTop > 400) btn.classList.add('show');
     else btn.classList.remove('show');
 });
 
-// Modal overlay click
+// Pull to refresh
+let pullStartY = 0;
+let pullActive = false;
+let pullDistance = 0;
+const PULL_THRESHOLD = 70;
+
+contentEl.addEventListener('touchstart', (e) => {
+    if (contentEl.scrollTop <= 0 && !isFetching) {
+        pullStartY = e.touches[0].clientY;
+        pullActive = true;
+        pullDistance = 0;
+    }
+}, { passive: true });
+
+contentEl.addEventListener('touchmove', (e) => {
+    if (!pullActive) return;
+    const y = e.touches[0].clientY;
+    const dy = y - pullStartY;
+    if (dy > 0 && contentEl.scrollTop <= 0) {
+        pullDistance = Math.min(dy, 120);
+        const ind = document.getElementById('pullIndicator');
+        const txt = document.getElementById('pullText');
+        ind.classList.add('visible');
+        if (pullDistance >= PULL_THRESHOLD) {
+            ind.classList.add('ready');
+            txt.textContent = 'Отпустите для обновления';
+        } else {
+            ind.classList.remove('ready');
+            txt.textContent = 'Потяните вниз';
+        }
+    }
+}, { passive: true });
+
+contentEl.addEventListener('touchend', () => {
+    if (!pullActive) return;
+    pullActive = false;
+    const ind = document.getElementById('pullIndicator');
+    const txt = document.getElementById('pullText');
+    if (pullDistance >= PULL_THRESHOLD) {
+        txt.textContent = 'Обновление...';
+        ind.classList.remove('ready');
+        ind.classList.add('loading');
+        vibrate(15);
+        fetchKeys({ silent: true }).finally(() => {
+            setTimeout(() => {
+                ind.classList.remove('visible', 'loading');
+                txt.textContent = 'Потяните вниз';
+            }, 400);
+        });
+    } else {
+        ind.classList.remove('visible', 'ready');
+    }
+    pullDistance = 0;
+});
+
+// ============================================================
+//  SCROLL TO TOP
+// ============================================================
+function scrollToTop() { contentEl.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+// ============================================================
+//  MODAL OVERLAY CLICKS
+// ============================================================
 document.getElementById('editModal').addEventListener('click', function (e) { if (e.target === this) closeEditModal(); });
 document.getElementById('deleteModal').addEventListener('click', function (e) { if (e.target === this) closeDeleteModal(); });
 document.getElementById('avatarModal').addEventListener('click', function (e) { if (e.target === this) closeAvatarModal(); });
 document.getElementById('wheelModal').addEventListener('click', function (e) { if (e.target === this) closeWheelModal(); });
+document.getElementById('detailModal').addEventListener('click', function (e) { if (e.target === this) closeKeyDetail(); });
+
+// Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeKeyDetail(); closeWheelModal(); closeAvatarModal(); closeEditModal(); closeDeleteModal();
+        document.getElementById('sheetOverlay').classList.remove('show');
+    }
+});
 
 // Enter handlers
 document.getElementById('authPassword').addEventListener('keypress', e => { if (e.key === 'Enter') submitAuth(); });
@@ -1896,6 +2363,7 @@ async function initAppAfterAuth() {
     updateUIVisibility();
     applyFilters();
     renderFavorites();
+    renderHistory();
     refreshStatsUI();
     updateWheelAvailability();
     updateProfileUI();
@@ -1937,7 +2405,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateProfileUI();
     }
     document.getElementById('wheelFab').classList.add('show');
-    console.log('[VPN Keys] v2.5 loaded with JS Bridge avatar');
+    console.log('[VPN Keys] v2.6 loaded — pull-to-refresh, sort, QR, history, long-press');
 });
 </script>
 </body>
