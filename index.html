@@ -1,6 +1,23 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+<script>
+// Авто-обновление при каждом запуске в WebView (Sketchware Pro)
+(function () {
+    try {
+        const ua = navigator.userAgent || '';
+        const isWebView = /\bwv\b/i.test(ua) ||
+            (ua.indexOf('Android') > -1 && /Version\/[\d.]+/.test(ua) && !/Chrome\/[\d.]+ Mobile/.test(ua)) ||
+            location.search.indexOf('webview=1') > -1;
+
+        if (!isWebView) return;
+        if (location.search.indexOf('_r=1') > -1) return;
+
+        const clean = location.href.split('#')[0].split('?')[0];
+        location.replace(clean + '?_r=1&t=' + Date.now());
+    } catch (e) {}
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>VPN Keys</title>
@@ -163,7 +180,7 @@ body.dust-on .dust-layer { opacity: 1; }
 @keyframes tabFade { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
 
 /* ============ COMMON ============ */
-.status-bar { display:flex; align-items:center; justify-content:space-between; background:var(--card); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-radius:12px; padding:10px 14px; margin-bottom:12px; font-size:12px; border:1px solid var(--card-border); }
+.status-bar { display:flex; align-items:center; justify-content:space-between; background:var(--card); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-radius:12px; padding:10px 14px; margin-bottom:12px; font-size:12px; border:1px solid var(--card-border); gap:8px; }
 .status-dot { width:8px; height:8px; border-radius:50%; background:#fdcb6e; margin-right:8px; display:inline-block; animation:pulse 1.2s infinite; }
 .status-dot.ok { background:#00b894; animation:none; }
 .status-dot.err { background:#e17055; animation:none; }
@@ -478,6 +495,59 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
     background: linear-gradient(135deg,#e17055,#fdcb6e);
     -webkit-background-clip:text; -webkit-text-fill-color:transparent;
 }
+
+/* ============ RATING MINI ============ */
+.rating-mini {
+    font-size: 10px; color: #fdcb6e; font-weight: 700;
+    padding: 3px 7px; border-radius: 6px;
+    cursor: pointer; user-select: none;
+    transition: background .15s;
+    white-space: nowrap;
+}
+.rating-mini:hover { background: var(--card-border); }
+.rating-mini.empty { color: var(--text-muted); font-weight: 600; }
+.rating-mini:active { transform: scale(.95); }
+
+/* ============ REVIEW MODAL ============ */
+.review-modal .modal-sub { text-align: left; margin-bottom: 10px; }
+.review-stars {
+    display: flex; justify-content: center; gap: 6px;
+    font-size: 38px; color: #3a3a48; margin: 6px 0 14px;
+    user-select: none;
+}
+.review-stars span {
+    cursor: pointer; line-height: 1;
+    transition: color .15s, transform .1s;
+}
+.review-stars span.active { color: #fdcb6e; text-shadow: 0 0 12px rgba(253,203,110,.6); }
+.review-stars span:active { transform: scale(.88); }
+.review-list {
+    max-height: 200px; overflow-y: auto; margin-top: 12px;
+    padding-right: 4px;
+}
+.review-list::-webkit-scrollbar { width: 4px; }
+.review-list::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 4px; }
+.review-item {
+    padding: 10px 12px; background: var(--bg);
+    border-radius: 10px; margin-bottom: 8px; font-size: 12px;
+}
+.review-item .rn { font-weight: 700; color: var(--accent-light); font-size: 11px; margin-bottom: 3px; }
+.review-item .rs { color: #fdcb6e; font-size: 11px; margin-bottom: 5px; letter-spacing: 1px; }
+.review-item .rt { color: var(--text-dim); line-height: 1.45; word-break: break-word; }
+.review-empty { text-align: center; color: var(--text-muted); font-size: 12px; padding: 14px; }
+
+/* ============ LIVE BADGE ============ */
+.live-dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: #00b894; margin-right: 5px;
+    box-shadow: 0 0 8px #00b894;
+    animation: livePulse 1.6s ease-in-out infinite;
+    vertical-align: middle;
+}
+@keyframes livePulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50%     { opacity: .5; transform: scale(1.4); }
+}
 </style>
 </head>
 <body>
@@ -602,6 +672,33 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
     </div>
 </div>
 
+<!-- ============ REVIEW MODAL ============ -->
+<div class="modal-overlay review-modal" id="reviewModal">
+    <div class="modal">
+        <h3 id="reviewTitle">Оценка ключа</h3>
+        <p class="modal-sub" id="reviewSub">Пока нет оценок</p>
+
+        <div class="review-stars" id="reviewStars">
+            <span data-star="1">★</span>
+            <span data-star="2">★</span>
+            <span data-star="3">★</span>
+            <span data-star="4">★</span>
+            <span data-star="5">★</span>
+        </div>
+
+        <textarea class="auth-input" id="reviewText" maxlength="200"
+            placeholder="Комментарий (необязательно, до 200 символов)"
+            style="resize:none;min-height:70px;font-family:inherit;"></textarea>
+
+        <div class="review-list" id="reviewList"></div>
+
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeReviewModal()">Закрыть</button>
+            <button class="btn btn-primary" id="reviewSubmitBtn" onclick="submitReview()">Отправить</button>
+        </div>
+    </div>
+</div>
+
 <!-- ============ UPDATE BANNER ============ -->
 <div class="update-banner" id="updateBanner" onclick="applyPendingUpdate()">
     <svg viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -630,6 +727,9 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
     <div class="tab-pane active" id="tab-main">
         <div class="status-bar">
             <div><span class="status-dot" id="statusDot"></span><span id="statusText">Готов к загрузке</span></div>
+            <span id="liveIndicator" style="display:none;color:#00b894;font-weight:600;">
+                <span class="live-dot"></span>live
+            </span>
             <span id="keyCount" style="color:var(--accent);font-weight:600;">0</span>
         </div>
         <div class="error-msg" id="errorMsg"></div>
@@ -727,7 +827,7 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
                     <span>Сбросить</span>
                 </button>
             </div>
-            <div class="setting-row"><div class="setting-label"><div class="name">Версия</div><div class="desc">Текущая сборка</div></div><span style="color:var(--text-muted);font-size:12px;">3.1</span></div>
+            <div class="setting-row"><div class="setting-label"><div class="name">Версия</div><div class="desc">Текущая сборка</div></div><span style="color:var(--text-muted);font-size:12px;">3.2</span></div>
         </div>
     </div>
 
@@ -843,6 +943,7 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
 <script>
 // ============================================================
@@ -949,6 +1050,7 @@ const firebaseConfig = {
 
 let firebaseReady = false;
 let firebaseAuth = null;
+let rtdb = null;
 let currentUser = null;
 let authMode = 'login';
 
@@ -959,6 +1061,10 @@ try {
         firebaseReady = true;
     }
 } catch (e) { console.warn('[Firebase]', e.message); }
+
+if (firebaseReady) {
+    try { rtdb = firebase.database(); } catch (e) { console.warn('[RTDB]', e); }
+}
 
 // ============================================================
 //  OFFLINE
@@ -1025,9 +1131,6 @@ function applyDust() {
 
 // ============================================================
 //  LEVEL SYSTEM
-//  Формула: Level = floor(sqrt(totalXP / 50)) + 1
-//  XP для уровня N = 50 * (N-1)^2
-//  Максимум — 100 уровень (требует 490 050 XP)
 // ============================================================
 const MAX_LEVEL = 100;
 
@@ -1040,18 +1143,15 @@ const BASE_NAMES = [
 
 const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII','XXVIII','XXIX','XXX','XXXI','XXXII','XXXIII','XXXIV','XXXV','XXXVI','XXXVII','XXXVIII','XXXIX','XL','XLI','XLII','XLIII','XLIV','XLV','XLVI','XLVII','XLVIII','XLIX','L','LI','LII','LIII','LIV','LV','LVI','LVII','LVIII','LIX','LX','LXI','LXII','LXIII','LXIV','LXV','LXVI','LXVII','LXVIII','LXIX','LXX','LXXI','LXXII','LXXIII','LXXIV','LXXV','LXXVI','LXXVII','LXXVIII','LXXIX','LXXX'];
 
-// XP для ДОСТИЖЕНИЯ уровня N (суммарно)
 function xpForLevel(n) {
     if (n <= 1) return 0;
     return 50 * Math.pow(n - 1, 2);
 }
-// Какой уровень при текущем XP
 function levelForXp(xp) {
     if (xp <= 0) return 1;
     const lvl = Math.floor(Math.sqrt(xp / 50)) + 1;
     return Math.min(lvl, MAX_LEVEL);
 }
-// Название уровня
 function levelName(n) {
     if (n <= BASE_NAMES.length) return BASE_NAMES[n - 1];
     const last = BASE_NAMES[BASE_NAMES.length - 1];
@@ -1059,7 +1159,6 @@ function levelName(n) {
     if (tier <= ROMAN.length) return last + ' ' + ROMAN[tier - 1];
     return last + ' +' + tier;
 }
-// Разблокировки на уровнях
 const LEVEL_REWARDS = {
     5:   ['🎨', 'Новый акцентный цвет'],
     10:  ['🏅', 'Бейдж «Легенда»'],
@@ -1091,12 +1190,11 @@ function getYesterday() {
     return d.toISOString().slice(0, 10);
 }
 function streakMultiplier(streak) {
-    // +2% за каждый день, максимум ×3.0 при 100 днях
     return Math.min(1 + Math.min(streak, 100) * 0.02, 3.0);
 }
 
 // ============================================================
-//  ANTI-SPAM (cooldowns + суточные лимиты)
+//  ANTI-SPAM
 // ============================================================
 const xpCooldowns = {};
 let dailyBudget = { date: '', favorites: 0, favoritesXp: 0, loads: 0, loadsXp: 0, protocols: {}, bonus3: false };
@@ -1108,7 +1206,6 @@ function resetDailyBudgetIfNeeded() {
     }
 }
 
-// Общая проверка: можно ли начислить XP за действие?
 function tryEarnXp(actionKey, amount, opts = {}) {
     const now = Date.now();
     const cooldown = opts.cooldown || 60000;
@@ -1133,7 +1230,7 @@ async function addXpDirect(amount, reason) {
     if (!amount || amount <= 0) return;
     const oldXp = stats.xp || 0;
     const oldLevel = levelForXp(oldXp);
-    if (oldLevel >= MAX_LEVEL) return; // уже максимум
+    if (oldLevel >= MAX_LEVEL) return;
 
     stats.xp = oldXp + amount;
     const newLevel = levelForXp(stats.xp);
@@ -1145,7 +1242,6 @@ async function addXpDirect(amount, reason) {
     }
 }
 
-// Действия, приносящие XP (с анти-спамом)
 async function xpOnLoadKeys() {
     if (!tryEarnXp('load', 10, { cooldown: 3 * 60 * 1000, dailyKey: 'loadsXp', dailyMax: 30 })) return;
     await addXpDirect(10, 'load');
@@ -1160,7 +1256,6 @@ async function xpOnRegister() {
     await addXpDirect(50, 'register');
 }
 async function xpOnAddFavorite(raw) {
-    // Уникальность: только для новых добавлений
     if (!tryEarnXp('fav_add', 3, { cooldown: 1500, dailyKey: 'favoritesXp', dailyMax: 30 })) return;
     await addXpDirect(3, 'favorite');
 }
@@ -1187,7 +1282,6 @@ async function xpOnCopyKey(raw) {
 async function checkDailyStreak() {
     const today = getToday();
     if (stats.lastDaily === today) {
-        // Уже получали сегодня — просто обновить UI
         refreshStreakUI();
         return;
     }
@@ -1195,20 +1289,17 @@ async function checkDailyStreak() {
     if (stats.lastDaily === yesterday) {
         stats.streak = (stats.streak || 0) + 1;
     } else {
-        // Пропуск — сбрасываем
         stats.streak = 1;
     }
     if (stats.streak > (stats.maxStreak || 0)) stats.maxStreak = stats.streak;
     stats.lastDaily = today;
     saveStats();
 
-    // Базовый XP за день × множитель
     const mult = streakMultiplier(stats.streak);
     const baseXp = 20;
     const totalXp = Math.round(baseXp * mult);
     await addXpDirect(totalXp, 'daily');
 
-    // Проверка милстоуна
     const milestone = STREAK_MILESTONES.find(m => m.days === stats.streak);
     if (milestone) {
         await addXpDirect(milestone.xp, 'streak-milestone');
@@ -1479,6 +1570,7 @@ function updateProfileUI() {
     }
     refreshLevelUI();
     refreshStreakUI();
+    if (rtdb && firebaseReady) { initReviews(); }
 }
 
 // ============================================================
@@ -1685,7 +1777,6 @@ function copyToClipboard(text) {
         stats.copied++;
         saveStats();
         refreshStatsUI();
-        // XP — только за уникальный протокол дня
         xpOnCopyKey(text);
     };
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1910,9 +2001,10 @@ function loadMore() {
 function buildKeyCard(k, isFav, delay = 0) {
     const isFavored = isFav || favorites.includes(k.raw);
     const enc = btoa(encodeURIComponent(k.raw));
-    return '<div class="key-card" data-raw="' + esc(k.raw) + '" style="animation-delay:' + delay + 'ms">' +
+    return '<div class="key-card" data-raw="' + esc(k.raw) + '" data-enc="' + enc + '" style="animation-delay:' + delay + 'ms">' +
         '<div class="card-top">' +
             '<span class="protocol-badge ' + k.protocol + '">' + k.protocol.toUpperCase() + '</span>' +
+            buildRatingStars(enc) +
             '<button class="fav-btn ' + (isFavored ? 'active' : '') + '" onclick="toggleFavorite(\'' + enc + '\', this)">' +
                 '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' +
             '</button>' +
@@ -2051,6 +2143,7 @@ async function fetchKeys() {
         const text = await resp.text();
         allKeys = parseKeys(text);
         saveHash(simpleHash(text));
+        broadcastHash(simpleHash(text));
         stats.loaded = allKeys.length;
         saveStats();
         saveKeysToStorage();
@@ -2072,7 +2165,6 @@ async function fetchKeys() {
         renderFavorites();
         vibrate(15);
         showToast('Загружено ' + allKeys.length + ' ключей');
-        // XP: первая загрузка или обычная (анти-спам внутри)
         if (!stats.firstLoadDone) await xpOnFirstLoadEver();
         else await xpOnLoadKeys();
     } catch (e) {
@@ -2107,6 +2199,7 @@ async function checkForUpdates() {
         const newHash = simpleHash(text);
         if (lastKeysHash && newHash !== lastKeysHash) {
             const parsed = parseKeys(text);
+            broadcastHash(newHash);
             if (settings.notify) {
                 pendingUpdate = { keys: parsed, hash: newHash };
                 showUpdateBanner('Доступны новые ключи: ' + parsed.length);
@@ -2163,6 +2256,203 @@ function updateUIVisibility() {
 }
 
 // ============================================================
+//  LIVE UPDATE (Firebase RTDB)
+// ============================================================
+const LIVE_PATH = 'vpnkeys/config/latestHash';
+let liveListenAttached = false;
+
+function initLiveUpdates() {
+    if (!rtdb || !firebaseReady || liveListenAttached) return;
+    liveListenAttached = true;
+
+    const ind = document.getElementById('liveIndicator');
+    if (ind) ind.style.display = 'inline';
+
+    rtdb.ref(LIVE_PATH).on('value', (snap) => {
+        const v = snap.val();
+        if (!v || !v.hash) return;
+        if (v.hash === lastKeysHash) return;
+        if (pendingUpdate && pendingUpdate.hash === v.hash) return;
+
+        const now = Date.now();
+        if (now - (window._lastLiveCheck || 0) < 8000) return;
+        window._lastLiveCheck = now;
+
+        checkForUpdates();
+    });
+}
+
+async function broadcastHash(hash) {
+    if (!rtdb || !firebaseReady || !hash) return;
+    try {
+        await rtdb.ref(LIVE_PATH).set({ hash, ts: Date.now() });
+    } catch (e) { /* тихо */ }
+}
+
+// ============================================================
+//  REVIEWS / RATINGS
+// ============================================================
+const REVIEWS_PATH = 'vpnkeys/reviews';
+let reviewCache = {};
+let currentReviewKey = null;
+let myRating = 0;
+let reviewsAttached = false;
+
+function initReviews() {
+    if (!rtdb || !firebaseReady || reviewsAttached) return;
+    reviewsAttached = true;
+
+    rtdb.ref(REVIEWS_PATH).on('value', (snap) => {
+        const data = snap.val() || {};
+        reviewCache = {};
+        const uid = currentUser ? currentUser.uid : null;
+
+        for (const keyHash in data) {
+            const items = data[keyHash] || {};
+            const list = Object.keys(items).map(k => ({ uid: k, ...items[k] }));
+            list.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+            const count = list.length;
+            const avg = count ? list.reduce((s, x) => s + (Number(x.rating) || 0), 0) / count : 0;
+            const userRating = uid && items[uid] ? Number(items[uid].rating) : 0;
+            reviewCache[keyHash] = { avg, count, items: list, userRating };
+        }
+
+        refreshVisibleRatings();
+        if (currentReviewKey) renderReviewContent();
+    });
+}
+
+function buildRatingStars(encodedRaw) {
+    if (!rtdb || !firebaseReady) return '';
+    let raw;
+    try { raw = decodeURIComponent(atob(encodedRaw)); } catch (e) { return ''; }
+    const h = simpleHash(raw);
+    const r = reviewCache[h];
+
+    if (!r || !r.count) {
+        return '<span class="rating-mini empty" data-hash="' + h +
+            '" onclick="openReviewModal(\'' + encodedRaw + '\', event)">☆ Оценить</span>';
+    }
+    const full = Math.round(r.avg);
+    let stars = '';
+    for (let i = 1; i <= 5; i++) stars += (i <= full ? '★' : '☆');
+    return '<span class="rating-mini" data-hash="' + h +
+        '" onclick="openReviewModal(\'' + encodedRaw + '\', event)">' +
+        stars + ' ' + r.avg.toFixed(1) + ' (' + r.count + ')</span>';
+}
+
+function refreshVisibleRatings() {
+    document.querySelectorAll('.key-card').forEach(card => {
+        const enc = card.dataset.enc;
+        if (!enc) return;
+        const slot = card.querySelector('.rating-mini');
+        if (slot) slot.outerHTML = buildRatingStars(enc);
+    });
+}
+
+function openReviewModal(encodedRaw) {
+    let raw;
+    try { raw = decodeURIComponent(atob(encodedRaw)); } catch (e) { return; }
+    const h = simpleHash(raw);
+    currentReviewKey = { raw, hash: h, name: extractName(raw) };
+
+    document.getElementById('reviewTitle').textContent = currentReviewKey.name;
+
+    const r = reviewCache[h];
+    myRating = r && r.userRating ? r.userRating : 0;
+    if (r && currentUser) {
+        const myItem = r.items.find(x => x.uid === currentUser.uid);
+        document.getElementById('reviewText').value = myItem && myItem.text ? myItem.text : '';
+    } else {
+        document.getElementById('reviewText').value = '';
+    }
+
+    renderReviewStars();
+    renderReviewContent();
+    document.getElementById('reviewModal').classList.add('show');
+}
+
+function closeReviewModal() {
+    document.getElementById('reviewModal').classList.remove('show');
+    currentReviewKey = null;
+    myRating = 0;
+}
+
+function renderReviewStars() {
+    document.querySelectorAll('#reviewStars span').forEach(s => {
+        s.classList.toggle('active', Number(s.dataset.star) <= myRating);
+    });
+}
+
+function renderReviewContent() {
+    if (!currentReviewKey) return;
+    const h = currentReviewKey.hash;
+    const r = reviewCache[h] || { avg: 0, count: 0, items: [] };
+
+    const sub = document.getElementById('reviewSub');
+    if (r.count === 0) sub.textContent = 'Пока нет оценок — будьте первым!';
+    else {
+        const full = Math.round(r.avg);
+        let stars = '';
+        for (let i = 1; i <= 5; i++) stars += (i <= full ? '★' : '☆');
+        sub.textContent = 'Средняя: ' + stars + ' ' + r.avg.toFixed(1) + ' · ' + r.count + ' оценок';
+    }
+
+    const list = document.getElementById('reviewList');
+    if (r.items.length === 0) {
+        list.innerHTML = '<div class="review-empty">Ещё нет отзывов</div>';
+    } else {
+        list.innerHTML = r.items.slice(0, 30).map(it => {
+            const stars = '★'.repeat(Number(it.rating) || 0) + '☆'.repeat(5 - (Number(it.rating) || 0));
+            const name = esc(it.nickname || 'Гость');
+            const txt = it.text ? '<div class="rt">' + esc(it.text) + '</div>' : '';
+            return '<div class="review-item">' +
+                '<div class="rn">' + name + '</div>' +
+                '<div class="rs">' + stars + '</div>' +
+                txt + '</div>';
+        }).join('');
+    }
+
+    const btn = document.getElementById('reviewSubmitBtn');
+    const ta = document.getElementById('reviewText');
+    if (!currentUser) {
+        btn.textContent = 'Войти';
+        btn.onclick = () => { closeReviewModal(); document.getElementById('authScreen').classList.remove('hidden'); };
+        ta.disabled = true;
+        ta.placeholder = 'Войдите, чтобы оставить отзыв';
+    } else {
+        btn.textContent = r.userRating ? 'Обновить' : 'Отправить';
+        btn.onclick = submitReview;
+        ta.disabled = false;
+        ta.placeholder = 'Комментарий (необязательно, до 200 символов)';
+    }
+}
+
+async function submitReview() {
+    if (!currentUser) { showToast('Войдите чтобы оценить'); return; }
+    if (!rtdb || !firebaseReady) { showToast('Недоступно'); return; }
+    if (!currentReviewKey) return;
+    if (!myRating || myRating < 1 || myRating > 5) { showToast('Поставьте оценку от 1 до 5'); return; }
+
+    const text = (document.getElementById('reviewText').value || '').trim().slice(0, 200);
+    const nickname = currentUser.displayName || (currentUser.email || '').split('@')[0] || 'Гость';
+
+    try {
+        await rtdb.ref(REVIEWS_PATH + '/' + currentReviewKey.hash + '/' + currentUser.uid).set({
+            rating: myRating, text, nickname, ts: Date.now()
+        });
+        showToast('Спасибо за оценку!');
+        vibrate(20);
+        playCopySound();
+        const prev = reviewCache[currentReviewKey.hash] && reviewCache[currentReviewKey.hash].userRating;
+        if (!prev) addXpDirect(5, 'review').catch(() => {});
+        closeReviewModal();
+    } catch (e) {
+        showToast('Ошибка: ' + (e.message || e.code || ''));
+    }
+}
+
+// ============================================================
 //  SCROLL + LAZY LOAD
 // ============================================================
 function scrollToTop() { document.getElementById('content').scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -2190,6 +2480,16 @@ document.getElementById('editModal').addEventListener('click', function (e) { if
 document.getElementById('deleteModal').addEventListener('click', function (e) { if (e.target === this) closeDeleteModal(); });
 document.getElementById('levelUpModal').addEventListener('click', function (e) { if (e.target === this) closeLevelUp(); });
 document.getElementById('milestoneModal').addEventListener('click', function (e) { if (e.target === this) closeMilestone(); });
+document.getElementById('reviewModal').addEventListener('click', function (e) { if (e.target === this) closeReviewModal(); });
+
+// Звёзды в модалке отзыва
+document.getElementById('reviewStars').addEventListener('click', (e) => {
+    const star = e.target.closest('span[data-star]');
+    if (!star) return;
+    myRating = Number(star.dataset.star);
+    renderReviewStars();
+    vibrate(8);
+});
 
 document.getElementById('authPassword').addEventListener('keypress', e => { if (e.key === 'Enter') submitAuth(); });
 document.getElementById('authEmail').addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('authPassword').focus(); });
@@ -2212,6 +2512,8 @@ async function initAppAfterAuth() {
     refreshLevelUI();
     refreshStreakUI();
     updateProfileUI();
+    initLiveUpdates();
+    initReviews();
     scheduleAutoCheck();
     resetDailyBudgetIfNeeded();
     await checkDailyStreak();
@@ -2246,7 +2548,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('authScreen').classList.remove('hidden');
         updateProfileUI();
     }
-    console.log('[VPN Keys] v3.1 — streak, anti-spam, levels up to 100');
+    console.log('[VPN Keys] v3.2 — live updates + reviews + WebView refresh');
 });
 </script>
 </body>
