@@ -1460,10 +1460,8 @@ async function signOut() {
     if (!firebaseReady || !currentUser) { document.getElementById('authScreen').classList.remove('hidden'); return; }
     if (!confirm('Выйти из аккаунта? Прогресс сохранён в облаке.')) return;
     try {
-        // ПРИНУДИТЕЛЬНО сохраняем прогресс перед выходом
         await saveProgressToCloud(true);
         await firebaseAuth.signOut();
-        appInitialized = false;
         currentUsername = null;
         document.getElementById('authScreen').classList.remove('hidden');
         showToast('Вы вышли. Прогресс сохранён в облаке');
@@ -1512,7 +1510,6 @@ function cloudProgressPath() {
     return 'vpnkeys/users/' + currentUser.uid + '/progress';
 }
 
-// Немедленное сохранение в облако
 async function saveProgressToCloud(immediate = false) {
     if (!currentUser || !rtdb || !firebaseReady) return;
     if (!navigator.onLine) return;
@@ -1523,7 +1520,6 @@ async function saveProgressToCloud(immediate = false) {
 
     cloudSyncInFlight = true;
     try {
-        // Чистим stats от служебных полей перед сохранением (оставим всё нужное)
         const payload = {
             stats: {
                 loaded: stats.loaded || 0,
@@ -1548,7 +1544,6 @@ async function saveProgressToCloud(immediate = false) {
     }
 }
 
-// Отложенная синхронизация (debounce 1.2с)
 function scheduleCloudSave() {
     if (!currentUser || !rtdb || !firebaseReady) return;
     if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
@@ -1558,19 +1553,16 @@ function scheduleCloudSave() {
     }, 1200);
 }
 
-// Принудительная синхронизация (кнопка в настройках)
 async function forceCloudSync() {
     if (!currentUser) { showToast('Войдите в аккаунт'); return; }
     if (!rtdb || !firebaseReady) { showToast('Облако недоступно'); return; }
     if (!navigator.onLine) { showToast('Нет интернета'); return; }
     updateCloudStatus('sync');
     await saveProgressToCloud(true);
-    // Также подтягиваем и сливаем свежие данные
     await loadProgressFromCloud(true);
     showToast('Прогресс синхронизирован');
 }
 
-// Загрузка и слияние с облаком
 async function loadProgressFromCloud(silent = false) {
     if (!currentUser || !rtdb || !firebaseReady) return;
     if (!navigator.onLine) return;
@@ -1585,19 +1577,14 @@ async function loadProgressFromCloud(silent = false) {
 
         let changed = false;
 
-        // === Слияние stats ===
         if (remote.stats && typeof remote.stats === 'object') {
             const local = stats || {};
             const r = remote.stats || {};
 
-            // Опыт — берём максимум (не теряем заработанное)
             const mergedXp = Math.max(local.xp || 0, Number(r.xp) || 0);
-
-            // Copied / loaded — тоже максимум
             const mergedCopied = Math.max(local.copied || 0, Number(r.copied) || 0);
             const mergedLoaded = Math.max(local.loaded || 0, Number(r.loaded) || 0);
 
-            // Streak — берём тот, у которого lastDaily свежее
             const localDaily = local.lastDaily || '';
             const remoteDaily = r.lastDaily || '';
             let mergedStreak = local.streak || 0;
@@ -1635,7 +1622,6 @@ async function loadProgressFromCloud(silent = false) {
             }
         }
 
-        // === Слияние favorites (объединение множеств) ===
         if (Array.isArray(remote.favorites) && remote.favorites.length) {
             const set = new Set(favorites);
             let added = 0;
@@ -1652,7 +1638,6 @@ async function loadProgressFromCloud(silent = false) {
         updateCloudStatus('ok');
 
         if (changed) {
-            // Обновляем интерфейс
             refreshStatsUI();
             refreshLevelUI();
             refreshStreakUI();
@@ -1710,7 +1695,7 @@ async function saveProfile() {
             const result = await unameRef.transaction(current => {
                 if (current === null) return currentUser.uid;
                 if (current === currentUser.uid) return currentUser.uid;
-                return; // откат
+                return;
             });
 
             if (!result.committed) {
@@ -1781,7 +1766,6 @@ async function confirmDelete() {
         showToast('Аккаунт удалён');
         try { localStorage.clear(); } catch (e) {}
         await idbClearAll();
-        appInitialized = false;
         currentUser = null;
         currentUsername = null;
         document.getElementById('authScreen').classList.remove('hidden');
@@ -1927,11 +1911,11 @@ function applyAnimatedBg() {
 }
 function saveFavorites() {
     idbSet('vpn_favorites', favorites);
-    scheduleCloudSave(); // ☁
+    scheduleCloudSave();
 }
 function saveStats() {
     idbSet('vpn_stats', stats);
-    scheduleCloudSave(); // ☁
+    scheduleCloudSave();
 }
 function saveKeysToStorage() {
     if (!settings.saveKeys) { idbRemove('vpn_keys'); return; }
@@ -2201,6 +2185,7 @@ function applyFilters() {
     });
     visibleCount = PAGE_SIZE;
     renderKeys(true);
+    refreshVisibleRatings();
 }
 
 // ============================================================
@@ -2429,7 +2414,6 @@ async function resetAll() {
     refreshLevelUI();
     refreshStreakUI();
     updateProfileUI();
-    // Чистим облачный прогресс
     if (currentUser && rtdb) {
         try { await rtdb.ref(cloudProgressPath()).remove(); } catch (e) {}
     }
@@ -2612,7 +2596,7 @@ async function broadcastHash(hash) {
 }
 
 // ============================================================
-//  REVIEWS / RATINGS
+//  REVIEWS / RATINGS  ← ИСПРАВЛЕНО
 // ============================================================
 const REVIEWS_PATH = 'vpnkeys/reviews';
 let reviewCache = {};
@@ -2620,28 +2604,36 @@ let currentReviewKey = null;
 let myRating = 0;
 let reviewsAttached = false;
 
+function handleReviewsSnapshot(snap) {
+    const data = snap.val() || {};
+    reviewCache = {};
+    const uid = currentUser ? currentUser.uid : null;
+
+    for (const keyHash in data) {
+        const items = data[keyHash];
+        if (!items || typeof items !== 'object') continue;
+        const list = Object.keys(items).map(k => ({ uid: k, ...items[k] }));
+        list.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        const count = list.length;
+        const avg = count ? list.reduce((s, x) => s + (Number(x.rating) || 0), 0) / count : 0;
+        const userRating = uid && items[uid] ? Number(items[uid].rating) : 0;
+        reviewCache[keyHash] = { avg, count, items: list, userRating };
+    }
+
+    refreshVisibleRatings();
+    if (currentReviewKey) renderReviewContent();
+}
+
 function initReviews() {
-    if (!rtdb || !firebaseReady || reviewsAttached) return;
+    if (!rtdb || !firebaseReady) return;
+    // Снимаем предыдущий листенер (если был) и ставим новый с актуальным currentUser
+    try { rtdb.ref(REVIEWS_PATH).off('value'); } catch (e) {}
     reviewsAttached = true;
 
-    rtdb.ref(REVIEWS_PATH).on('value', (snap) => {
-        const data = snap.val() || {};
-        reviewCache = {};
-        const uid = currentUser ? currentUser.uid : null;
-
-        for (const keyHash in data) {
-            const items = data[keyHash] || {};
-            const list = Object.keys(items).map(k => ({ uid: k, ...items[k] }));
-            list.sort((a, b) => (b.ts || 0) - (a.ts || 0));
-            const count = list.length;
-            const avg = count ? list.reduce((s, x) => s + (Number(x.rating) || 0), 0) / count : 0;
-            const userRating = uid && items[uid] ? Number(items[uid].rating) : 0;
-            reviewCache[keyHash] = { avg, count, items: list, userRating };
-        }
-
-        refreshVisibleRatings();
-        if (currentReviewKey) renderReviewContent();
-    });
+    rtdb.ref(REVIEWS_PATH).on('value',
+        (snap) => handleReviewsSnapshot(snap),
+        (err) => console.warn('[Reviews] listen error:', err)
+    );
 }
 
 function refreshVisibleRatings() {
@@ -2649,12 +2641,11 @@ function refreshVisibleRatings() {
         const enc = card.dataset.enc;
         if (!enc) return;
         const old = card.querySelector('.reviews-btn');
-        if (old) {
-            const wrapper = document.createElement('div');
-            wrapper.innerHTML = buildReviewsButton(enc);
-            const newNode = wrapper.firstElementChild;
-            if (newNode) old.replaceWith(newNode);
-        }
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = buildReviewsButton(enc);
+        const newNode = wrapper.firstElementChild;
+        if (newNode && old) old.replaceWith(newNode);
+        else if (newNode && !old) card.appendChild(newNode);
     });
 }
 
@@ -2824,7 +2815,6 @@ document.getElementById('editUsername').addEventListener('input', (e) => {
     }
 });
 
-// Сохраняем прогресс в облако при закрытии/уходе
 window.addEventListener('beforeunload', () => {
     if (currentUser && rtdb && navigator.onLine) {
         try { saveProgressToCloud(true); } catch (e) {}
@@ -2843,10 +2833,8 @@ async function initAppAfterAuth() {
     if (appInitialized) return;
     appInitialized = true;
 
-    // 1. Загружаем локальные данные
     await loadFromStorage();
 
-    // 2. Сливаем с облаком (если залогинен) ДО отображения UI
     if (currentUser && rtdb) {
         await loadProgressFromCloud(true);
     }
@@ -2860,7 +2848,7 @@ async function initAppAfterAuth() {
     refreshStreakUI();
     updateProfileUI();
     initLiveUpdates();
-    initReviews();
+    initReviews();      // ← всегда инициализируем отзывы (даже без логина — читать можно)
     scheduleAutoCheck();
     resetDailyBudgetIfNeeded();
     await checkDailyStreak();
@@ -2884,20 +2872,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await loadCurrentUsername();
                 document.getElementById('authScreen').classList.add('hidden');
                 updateProfileUI();
-                initAppAfterAuth();
+                // Если приложение уже инициализировано (например, был логаут → снова логин),
+                // надо пересобрать листенер отзывов с новым currentUser и подтянуть облако
+                if (appInitialized && rtdb) {
+                    await loadProgressFromCloud(true);
+                    refreshStatsUI();
+                    refreshLevelUI();
+                    refreshStreakUI();
+                    renderFavorites();
+                }
             } else {
                 currentUser = null;
                 currentUsername = null;
                 updateProfileUI();
                 document.getElementById('authScreen').classList.remove('hidden');
             }
+            // Гарантированно инициализируем приложение при любом статусе
+            initAppAfterAuth();
+            // И всегда перевешиваем листенер отзывов с актуальным currentUser
+            if (rtdb && firebaseReady) initReviews();
         });
     } else {
         document.getElementById('splashScreen').classList.add('hidden');
         updateProfileUI();
         initAppAfterAuth();
     }
-    console.log('[VPN Keys] v3.5 — cloud progress sync');
+    console.log('[VPN Keys] v3.5.1 — reviews fix');
 });
 </script>
 </body>
