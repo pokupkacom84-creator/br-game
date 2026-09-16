@@ -20,12 +20,15 @@
     font-weight:bold; letter-spacing:1px; cursor:pointer; min-width:220px;
     transition:transform 0.1s; }
   button:active { transform:scale(0.96); }
+  button:disabled { opacity:0.5; cursor:default; }
   #btnBots { background:#4895ef; color:#fff; }
   #btnOnline { background:#06d6a0; color:#002a1e; }
   input { padding:12px 16px; border:2px solid #2b3a47; background:#101820;
     color:#fff; border-radius:8px; font-size:16px; text-align:center;
     letter-spacing:3px; text-transform:uppercase; width:220px; outline:none; }
   input:focus { border-color:#06d6a0; }
+  #nameInput { text-transform:none; letter-spacing:1px; border-color:#3a5266; }
+  #nameInput:focus { border-color:#4895ef; }
   .divider { color:#5c6b7a; font-size:12px; letter-spacing:2px; margin:4px 0; }
   #lobbyError { color:#ef476f; font-size:13px; min-height:18px; max-width:320px; }
   #waitingRoom { color:#06d6a0; font-size:20px; font-weight:bold;
@@ -35,6 +38,7 @@
     border-top-color:#06d6a0; border-radius:50%; animation:spin 0.8s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
   #connectMsg { color:#8899a8; font-size:13px; }
+  .hint { color:#5c6b7a; font-size:11px; letter-spacing:0; margin-top:-6px; }
 </style>
 </head>
 <body>
@@ -43,11 +47,18 @@
 <!-- ЛОББИ -->
 <div id="lobby" class="overlay">
   <h1>2D BATTLE ROYALE</h1>
+
+  <input id="nameInput" placeholder="ТВОЙ НИК" maxlength="14" autocomplete="off" spellcheck="false">
+  <div class="hint">до 14 символов · сохранится в браузере</div>
+
   <button id="btnBots">ИГРАТЬ С БОТАМИ</button>
+
   <div class="divider">— или —</div>
+
   <input id="roomInput" placeholder="КОД КОМНАТЫ" maxlength="8" autocomplete="off">
   <div class="sub">оставь пустым — создастся новая</div>
   <button id="btnOnline">ИГРАТЬ ОНЛАЙН</button>
+
   <div id="lobbyError"></div>
 </div>
 
@@ -61,6 +72,8 @@
 <div id="waiting" class="overlay hidden">
   <div class="sub">Код комнаты для друзей:</div>
   <div id="waitingRoom">------</div>
+  <div class="sub" style="margin-top:14px">Ты вошёл как
+    <b id="waitingName" style="color:#fff;letter-spacing:1px">PLAYER</b></div>
   <div class="sub" style="margin-top:20px">Старт через <span id="countdown">5</span>с</div>
 </div>
 
@@ -111,6 +124,7 @@ const INTERP_SPEED = 14;
 const START_DELAY = 6000;
 const SHOT_MAX_AGE = 2500;
 const LOOT_COUNT = 60;
+const NAME_KEY = 'br_name';
 
 const WEAPONS = {
   pistol:  { name:'PISTOL',  dmg:12, rate:0.28, spread:0.06, speed:750,  ammo:12, reload:1.1, color:'#ffd166', pellets:1 },
@@ -120,7 +134,7 @@ const WEAPONS = {
 };
 const WEAPON_KEYS = Object.keys(WEAPONS);
 
-/* ============ ДЕТЕРМИНИРОВАННЫЙ РАНДОМ ============ */
+/* ============ ХЭШ / РАНДОМ ============ */
 function hashStr(s){
   let h = 2166136261;
   for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -174,6 +188,26 @@ function withTimeout(p, ms, msg){
   ]);
 }
 
+/* ============ ИМЯ ИГРОКА ============ */
+const nameInput = document.getElementById('nameInput');
+
+function getPlayerName(){
+  let n = (nameInput.value || '').trim();
+  if (!n) n = 'PLAYER';
+  n = n.substring(0, 14).replace(/[<>&"]/g, '').replace(/\s+/g, ' ');
+  if (!n) n = 'PLAYER';
+  try { localStorage.setItem(NAME_KEY, n); } catch(e){}
+  nameInput.value = n;
+  return n;
+}
+
+(function loadName(){
+  try {
+    const saved = localStorage.getItem(NAME_KEY);
+    if (saved) nameInput.value = saved;
+  } catch(e){}
+})();
+
 /* ============ ENTITY ============ */
 function makeEntity(x, y, isBot, name){
   return {
@@ -185,6 +219,8 @@ function makeEntity(x, y, isBot, name){
     alive:true, kills:0,
     wanderAngle: rand(0, Math.PI*2), wanderTimer:0,
     targetX: x, targetY: y, targetAngle: 0,
+    // для prediction урона по врагам:
+    lastServerHp: 100, pendingDamage: 0,
   };
 }
 
@@ -277,6 +313,14 @@ function removeLootById(id){
   }
 }
 
+/* ============ РЕГ УРОНА: локальное предсказание ============ */
+function applyLocalDamage(e, dmg){
+  if (!e || !e.alive) return;
+  e.hp = Math.max(0, e.hp - dmg);
+  e.pendingDamage = (e.pendingDamage || 0) + dmg;
+  e.localHitAt = performance.now();
+}
+
 function killEntity(ent, killer){
   if (!ent || !ent.alive) return;
   ent.alive = false;
@@ -348,35 +392,46 @@ canvas.addEventListener('mousedown', () => {
 canvas.addEventListener('mouseup', () => { mouse.down = false; });
 
 /* ============ LOBBY UI ============ */
-const lobbyEl    = document.getElementById('lobby');
-const connectEl  = document.getElementById('connecting');
-const waitingEl  = document.getElementById('waiting');
-const roomInput  = document.getElementById('roomInput');
-const errorEl    = document.getElementById('lobbyError');
-const waitRoomEl = document.getElementById('waitingRoom');
+const lobbyEl     = document.getElementById('lobby');
+const connectEl   = document.getElementById('connecting');
+const waitingEl   = document.getElementById('waiting');
+const roomInput   = document.getElementById('roomInput');
+const errorEl     = document.getElementById('lobbyError');
+const waitRoomEl  = document.getElementById('waitingRoom');
+const waitNameEl  = document.getElementById('waitingName');
 const countdownEl = document.getElementById('countdown');
 const connectMsgEl = document.getElementById('connectMsg');
+const btnOnlineEl = document.getElementById('btnOnline');
+
+nameInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); getPlayerName(); roomInput.focus(); }
+});
+roomInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); goOnline(); }
+});
 
 document.getElementById('btnBots').onclick = () => {
+  myName = getPlayerName();
   netMode = 'offline';
   lobbyEl.classList.add('hidden');
   resetGame();
 };
 
-document.getElementById('btnOnline').onclick = goOnline;
+btnOnlineEl.onclick = goOnline;
 
 async function goOnline(){
-  if (document.getElementById('btnOnline').disabled) return;
-  document.getElementById('btnOnline').disabled = true;
+  if (btnOnlineEl.disabled) return;
 
+  myName = getPlayerName();
   errorEl.textContent = '';
+
   const typed = roomInput.value.trim().toUpperCase();
   if (typed && !/^[A-Z0-9]{4,8}$/.test(typed)){
     errorEl.textContent = 'Код: 4-8 символов (A-Z, 0-9)';
-    document.getElementById('btnOnline').disabled = false;
     return;
   }
 
+  btnOnlineEl.disabled = true;
   lobbyEl.classList.add('hidden');
   connectEl.classList.remove('hidden');
   connectMsgEl.textContent = 'Подключение к серверу...';
@@ -384,11 +439,10 @@ async function goOnline(){
   try {
     if (!db) initFirebase();
 
-    log('signing in...');
+    log('signing in as', myName);
     connectMsgEl.textContent = 'Авторизация...';
     const cred = await withTimeout(auth.signInAnonymously(), 12000, 'Не удалось войти (таймаут)');
     myUid = cred.user.uid;
-    myName = 'P' + myUid.substring(0, 4).toUpperCase();
     log('signed in', myUid);
 
     connectMsgEl.textContent = 'Синхронизация времени...';
@@ -416,7 +470,6 @@ async function goOnline(){
     }
     let meta = metaSnap.val();
 
-    /* ВАЖНО: если введён код и комнаты нет — не создаём новую, а показываем ошибку */
     if (!creating && (!meta || !meta.startAt)){
       throw new Error('Комната "' + roomId + '" не найдена. Проверь код.');
     }
@@ -447,6 +500,7 @@ async function goOnline(){
     connectEl.classList.add('hidden');
     waitingEl.classList.remove('hidden');
     waitRoomEl.textContent = roomId;
+    waitNameEl.textContent = myName;
 
     if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
     const tick = () => {
@@ -468,12 +522,12 @@ async function goOnline(){
     lobbyEl.classList.remove('hidden');
     errorEl.textContent = (err && (err.message || err.code)) || 'Ошибка подключения';
   } finally {
-    document.getElementById('btnOnline').disabled = false;
+    btnOnlineEl.disabled = false;
   }
 }
 
 function startOnlineMatch(){
-  log('starting match');
+  log('starting match as', myName);
   waitingEl.classList.add('hidden');
   netMode = 'online';
   resetGame();
@@ -510,7 +564,7 @@ function backToMenu(){
   roomInput.value = '';
 }
 
-/* ============ NETWORK: вступление в комнату ============ */
+/* ============ NETWORK: вступление ============ */
 async function joinRoom(){
   const sp = spawnPointFor(myUid);
   const me = {
@@ -536,30 +590,56 @@ async function joinRoom(){
 
       let e = remotePlayers.get(uid);
       if (!e){
+        /* --- новая сущность --- */
         e = makeEntity(p.x, p.y, false, p.name || uid.substring(0,4));
         e.uid = uid;
         e.x = e.targetX = p.x;
         e.y = e.targetY = p.y;
         e.angle = e.targetAngle = p.angle || 0;
         e.hp = p.hp != null ? p.hp : 100;
+        e.lastServerHp = e.hp;
+        e.pendingDamage = 0;
         e.weaponKey = p.weapon || 'pistol';
         e.weapon = WEAPONS[e.weaponKey] || WEAPONS.pistol;
         e.alive = p.alive !== false;
         e.kills = p.kills || 0;
         remotePlayers.set(uid, e);
       } else {
+        /* --- обновление существующей --- */
         e.targetX = p.x;
         e.targetY = p.y;
         e.targetAngle = p.angle || 0;
-        e.hp = p.hp != null ? p.hp : e.hp;
+
+        /* РЕКОНСИЛЯЦИЯ HP: серверное значение + неподтверждённое предсказание */
+        const serverHp   = (p.hp != null) ? p.hp : e.hp;
+        const prevServer = (e.lastServerHp != null) ? e.lastServerHp : serverHp;
+        const serverDrop = Math.max(0, prevServer - serverHp);
+
+        if (serverDrop > 0){
+          /* сервер подтвердил часть урона — списываем его с pending */
+          e.pendingDamage = Math.max(0, (e.pendingDamage || 0) - serverDrop);
+        } else {
+          /* сервер ещё не подтвердил — плавно рассасываем предсказание */
+          e.pendingDamage = Math.max(0, (e.pendingDamage || 0) - 2);
+        }
+        e.lastServerHp = serverHp;
+        e.hp = Math.max(0, serverHp - (e.pendingDamage || 0));
+
         e.weaponKey = p.weapon || e.weaponKey;
         e.weapon = WEAPONS[e.weaponKey] || e.weapon;
+
         const wasAlive = e.alive;
         e.alive = p.alive !== false;
+        if (!e.alive){
+          e.hp = 0;
+          e.pendingDamage = 0;
+        }
         if (wasAlive && !e.alive && gameState === 'playing'){
-          killFeed.push({ text: `${e.name} устранён`, t: 4 });
+          const mine = (p.killedBy && p.killedBy === myUid);
+          killFeed.push({ text: mine ? `YOU → ${e.name}` : `${e.name} устранён`, t: 4 });
           if (killFeed.length > 4) killFeed.shift();
         }
+
         e.name = p.name || e.name;
         e.kills = p.kills != null ? p.kills : e.kills;
       }
@@ -579,7 +659,6 @@ async function joinRoom(){
   });
   listeners.push({ ref: playersRef, type: 'value', cb: pCb });
 
-  /* предзагрузка taken (уже подобранный лут) */
   try {
     const takenSnap = await db.ref(`rooms/${roomId}/taken`).once('value');
     const takenVal = takenSnap.val() || {};
@@ -622,8 +701,12 @@ function setupGameListeners(){
       killEntity(player, { name: d.byName || 'ENEMY' });
       gameState = 'lost';
       if (d.by){
+        /* +1 фраг убийце */
         db.ref(`rooms/${roomId}/players/${d.by}/kills`)
           .transaction(v => (v || 0) + 1).catch(()=>{});
+        /* сообщаем всем, кто именно убил — для killfeed "YOU → Имя" */
+        db.ref(`rooms/${roomId}/players/${myUid}/killedBy`)
+          .set(d.by).catch(()=>{});
       }
     }
   });
@@ -833,7 +916,9 @@ function updateBullets(dt){
       if (!t || !t.alive || t === b.owner) continue;
       if (Math.hypot(t.x - b.x, t.y - b.y) < t.r + 4){
         if (netMode === 'online' && t.uid){
+          /* отправляем урон жертве + мгновенно снимаем HP у себя */
           sendDamage(t.uid, b.dmg);
+          applyLocalDamage(t, b.dmg);
         } else {
           t.hp -= b.dmg;
           if (t.hp <= 0) killEntity(t, b.owner);
@@ -1003,8 +1088,8 @@ function drawEntity(ent, color){
     ctx.fillRect(sx - bw/2, sy - ent.r - 13, bw * ratio, 5);
   }
   if (ent.name && ent !== player){
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    ctx.font = '10px sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(ent.name, sx, sy - ent.r - 18);
   }
