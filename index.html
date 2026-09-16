@@ -96,8 +96,8 @@
         .btn-secondary:active { background: #3d3d4a; }
 
         .btn-sm {
-            padding: 6px 12px;
-            font-size: 12px;
+            padding: 10px 12px;
+            font-size: 13px;
             border-radius: 8px;
         }
 
@@ -165,6 +165,10 @@
         .key-card .card-actions {
             display: flex;
             gap: 8px;
+        }
+
+        .key-card .card-actions .btn {
+            flex: 1; /* Кнопка теперь растягивается на всю ширину */
         }
 
         .empty-state {
@@ -324,7 +328,7 @@
     function copyToClipboard(text) {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(text).then(() => {
-                showToast('✅ Скопировано в буфер');
+                showToast('✅ Скопировано! Вставьте в Happ');
             }).catch(() => fallbackCopy(text));
         } else {
             fallbackCopy(text);
@@ -338,7 +342,7 @@
         helper.setSelectionRange(0, 99999);
         try {
             document.execCommand('copy');
-            showToast('✅ Скопировано в буфер');
+            showToast('✅ Скопировано! Вставьте в Happ');
         } catch (e) {
             showToast('❌ Не удалось скопировать');
         }
@@ -522,8 +526,7 @@
                     <div class="key-name">${esc(k.name)}</div>
                     <div class="key-preview">${esc(truncate(k.raw, 70))}</div>
                     <div class="card-actions">
-                        <button class="btn btn-primary btn-sm" onclick="copyKey(${i})">📋 Копировать</button>
-                        <button class="btn btn-secondary btn-sm" onclick="openInHapp(${i})">📋 Копировать для Happ</button>
+                        <button class="btn btn-primary btn-sm" onclick="copyKey(${i})">📋 Скопировать ключ</button>
                     </div>
                 </div>`;
         }
@@ -535,16 +538,6 @@
         const sorted = getSortedKeys();
         const k = sorted[index];
         if (k) copyToClipboard(k.raw);
-    }
-
-    // ИЗМЕНЕНО: Теперь кнопка не пытается открыть приложение, а просто копирует и подсказывает
-    function openInHapp(index) {
-        const sorted = getSortedKeys();
-        const k = sorted[index];
-        if (!k) return;
-
-        copyToClipboard(k.raw);
-        showToast('📋 Ключ скопирован! Откройте Happ и вставьте ключ из буфера обмена.', 4000);
     }
 
     function getSortedKeys() {
