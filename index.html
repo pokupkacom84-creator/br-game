@@ -16,8 +16,8 @@
         }
     } catch(e){}
     try {
-        if (localStorage.getItem('nft_app_ver') !== 'v12') {
-            localStorage.setItem('nft_app_ver', 'v12');
+        if (localStorage.getItem('nft_app_ver') !== 'v13') {
+            localStorage.setItem('nft_app_ver', 'v13');
             if (location.search.indexOf('_fresh=1') === -1) {
                 var clean = location.href.split('#')[0].split('?')[0];
                 location.replace(clean + '?_fresh=1&t=' + Date.now());
@@ -447,7 +447,8 @@ body.light .level-progress{background:rgba(0,0,0,.08)}
 .attach-menu.show{display:flex;animation:menuIn .2s ease}
 .attach-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:none;border:none;color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;border-radius:8px;text-align:left;width:100%}
 .attach-item:hover{background:var(--card-border)}
-.attach-item .emo{font-size:18px;width:24px;text-align:center}
+.attach-item .emo{font-size:18px;width:24px;text-align:center;pointer-events:none}
+.attach-item input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:2}
 .rec-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:5000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:30px}
 .rec-overlay.show{display:flex}
 .rec-circle{width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,#e17055,#fdcb6e);display:flex;align-items:center;justify-content:center;position:relative;animation:recPulse 1.2s ease-in-out infinite}
@@ -635,11 +636,20 @@ body.light .level-progress{background:rgba(0,0,0,.08)}
         <div class="view-input-bar" id="channelInputBar">
             <button class="attach-btn" onclick="toggleAttachMenu()" id="attachBtn">📎</button>
             <div class="attach-menu" id="attachMenu">
-                <button class="attach-item" onclick="pickFile('photo')"><span class="emo">📷</span>Фото</button>
-                <button class="attach-item" onclick="pickFile('video')"><span class="emo">🎬</span>Видео</button>
+                <label class="attach-item" style="position:relative;overflow:hidden">
+                    <span class="emo">📷</span>Фото
+                    <input type="file" id="filePhoto" accept="image/*" onchange="onFileSelected(event,'photo')">
+                </label>
+                <label class="attach-item" style="position:relative;overflow:hidden">
+                    <span class="emo">🎬</span>Видео
+                    <input type="file" id="fileVideo" accept="video/*" onchange="onFileSelected(event,'video')">
+                </label>
                 <button class="attach-item" onclick="startRecording('voice')"><span class="emo">🎤</span>Голосовое</button>
                 <button class="attach-item" onclick="startRecording('circle')"><span class="emo">⚪</span>Кружок</button>
-                <button class="attach-item" onclick="pickFile('file')"><span class="emo">📎</span>Файл</button>
+                <label class="attach-item" style="position:relative;overflow:hidden">
+                    <span class="emo">📎</span>Файл
+                    <input type="file" id="fileAny" onchange="onFileSelected(event,'file')">
+                </label>
             </div>
             <input type="text" id="channelInput" placeholder="Сообщение..." maxlength="500">
             <button class="send-btn" onclick="sendChannelMessage()"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
@@ -648,10 +658,6 @@ body.light .level-progress{background:rgba(0,0,0,.08)}
 </div>
 
 <div class="msg-menu" id="msgMenu"></div>
-
-<input type="file" id="filePhoto" accept="image/*" style="display:none" onchange="onFileSelected(event,'photo')">
-<input type="file" id="fileVideo" accept="video/*" style="display:none" onchange="onFileSelected(event,'video')">
-<input type="file" id="fileAny" style="display:none" onchange="onFileSelected(event,'file')">
 
 <div class="rec-overlay" id="recOverlay">
     <div class="rec-circle" id="recCircle"><svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg></div>
@@ -757,7 +763,7 @@ body.light .level-progress{background:rgba(0,0,0,.08)}
     <div class="settings-title">Данные</div>
     <div class="settings-section">
         <div class="setting-row"><div class="setting-label"><div class="name">Очистить кэш</div></div><button class="btn btn-secondary btn-sm" onclick="resetAll()">Сбросить</button></div>
-        <div class="setting-row"><div class="setting-label"><div class="name">Версия</div></div><span style="color:var(--text-muted);font-size:12px;">12.0</span></div>
+        <div class="setting-row"><div class="setting-label"><div class="name">Версия</div></div><span style="color:var(--text-muted);font-size:12px;">13.0</span></div>
     </div>
 </div>
 
@@ -2807,12 +2813,7 @@ function toggleAttachMenu() {
     m.classList.toggle('show');
 }
 function closeAttachMenu() { document.getElementById('attachMenu').classList.remove('show'); }
-function pickFile(type) {
-    closeAttachMenu();
-    if (type === 'photo') document.getElementById('filePhoto').click();
-    else if (type === 'video') document.getElementById('fileVideo').click();
-    else if (type === 'file') document.getElementById('fileAny').click();
-}
+
 function readFileAsDataUrl(file) {
     return new Promise(function(resolve, reject) {
         var r = new FileReader();
@@ -2842,6 +2843,7 @@ function compressImage(file) {
     });
 }
 function onFileSelected(event, kind) {
+    closeAttachMenu();
     var file = event.target.files && event.target.files[0];
     event.target.value = '';
     if (!file) return;
