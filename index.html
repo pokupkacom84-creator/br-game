@@ -906,9 +906,6 @@ body.light .level-progress { background: rgba(0,0,0,.08); }
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
 <script>
-// ============================================================
-//  SERVICE WORKER
-// ============================================================
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
@@ -917,9 +914,6 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// ============================================================
-//  INDEXEDDB
-// ============================================================
 const DB_NAME = 'vpnkeys';
 const DB_VERSION = 1;
 let dbPromise = null;
@@ -994,9 +988,6 @@ async function migrateFromLocalStorage() {
     await idbSet('_migrated_v4', true);
 }
 
-// ============================================================
-//  FIREBASE
-// ============================================================
 const firebaseConfig = {
     apiKey: "AIzaSyAfNoV7tt_6eP1gRQxLc4Yk5FJzwVxDMQw",
     authDomain: "game-cd07d.firebaseapp.com",
@@ -1028,9 +1019,6 @@ if (firebaseReady) {
     try { rtdb = firebase.database(); } catch (e) { console.warn('[RTDB]', e); }
 }
 
-// ============================================================
-//  OFFLINE
-// ============================================================
 function showOfflineScreen() { document.getElementById('offlineScreen').classList.remove('hidden'); }
 function hideOfflineScreen() { document.getElementById('offlineScreen').classList.add('hidden'); }
 function retryConnection() {
@@ -1042,9 +1030,6 @@ function retryConnection() {
 window.addEventListener('online', () => { hideOfflineScreen(); showToast('Соединение восстановлено'); });
 window.addEventListener('offline', () => { showOfflineScreen(); });
 
-// ============================================================
-//  THEME EXPLOSION
-// ============================================================
 function explodeWave(x, y, color) {
     const wave = document.createElement('div');
     wave.className = 'theme-wave';
@@ -1065,9 +1050,6 @@ function explodeWave(x, y, color) {
     }, 650);
 }
 
-// ============================================================
-//  DUST
-// ============================================================
 function initDust() {
     const layer = document.getElementById('dustLayer');
     layer.innerHTML = '';
@@ -1091,9 +1073,6 @@ function applyDust() {
     initDust();
 }
 
-// ============================================================
-//  LEVEL SYSTEM
-// ============================================================
 const MAX_LEVEL = 100;
 const BASE_NAMES = [
     'Новичок', 'Ученик', 'Практик', 'Знаток', 'Опытный',
@@ -1125,9 +1104,6 @@ const LEVEL_REWARDS = {
     100: ['♾',  'Максимальный уровень']
 };
 
-// ============================================================
-//  STREAK SYSTEM
-// ============================================================
 const STREAK_MILESTONES = [
     { days: 3,   xp: 50,    emoji: '🔥', title: 'Streak 3 дня!',   sub: 'Первая искра постоянства' },
     { days: 7,   xp: 150,   emoji: '🔥', title: 'Streak 7 дней!',  sub: 'Целая неделя подряд' },
@@ -1146,9 +1122,6 @@ function getYesterday() {
 }
 function streakMultiplier(streak) { return Math.min(1 + Math.min(streak, 100) * 0.02, 3.0); }
 
-// ============================================================
-//  ANTI-SPAM + PERSISTENT DAILY BUDGET
-// ============================================================
 const xpCooldowns = {};
 const DAILY_BUDGET_KEY = 'vpn_daily_budget_v1';
 
@@ -1208,9 +1181,6 @@ function tryEarnXp(actionKey, amount, opts = {}) {
     return true;
 }
 
-// ============================================================
-//  XP ACTIONS
-// ============================================================
 async function addXpDirect(amount, reason) {
     if (!amount || amount <= 0) return;
     const oldXp = stats.xp || 0;
@@ -1261,9 +1231,6 @@ async function xpOnCopyKey(raw) {
     }
 }
 
-// ============================================================
-//  DAILY STREAK CHECK
-// ============================================================
 async function checkDailyStreak() {
     const today = getToday();
     if (stats.lastDaily === today) { refreshStreakUI(); return; }
@@ -1301,9 +1268,6 @@ function refreshStreakUI() {
     setTxt('streakMult', mult.toFixed(2));
 }
 
-// ============================================================
-//  LEVEL UI
-// ============================================================
 function refreshLevelUI() {
     const xp = stats.xp || 0;
     let lvl = levelForXp(xp);
@@ -1353,17 +1317,11 @@ function showMilestone(m) {
 }
 function closeMilestone() { document.getElementById('milestoneModal').classList.remove('show'); }
 
-// ============================================================
-//  HAPTIC
-// ============================================================
 function vibrate(pattern) {
     if (!settings.haptic) return;
     try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {}
 }
 
-// ============================================================
-//  AUTH UI
-// ============================================================
 function switchAuthMode(mode) {
     authMode = mode;
     const isLogin = mode === 'login';
@@ -1452,16 +1410,13 @@ async function resetPassword() {
     }
 }
 
-// ⬇ ВЫХОД БЕЗ ПОДТВЕРЖДЕНИЯ
 async function signOut() {
     if (!firebaseReady || !currentUser) {
         document.getElementById('authScreen').classList.remove('hidden');
         return;
     }
-    // Показываем индикатор
     showToast('Выход...');
     try {
-        // Сохраняем прогресс в облако перед выходом
         try { await saveProgressToCloud(true); } catch (e) { console.warn('[SignOut] save error:', e); }
         await firebaseAuth.signOut();
         currentUsername = null;
@@ -1472,9 +1427,6 @@ async function signOut() {
     }
 }
 
-// ============================================================
-//  USERNAME
-// ============================================================
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 function normalizeUsername(input) {
     if (!input) return '';
@@ -1499,9 +1451,6 @@ function displayHandleForReviews() {
     return 'Пользователь';
 }
 
-// ============================================================
-//  ☁ CLOUD SYNC
-// ============================================================
 let cloudSaveTimer = null;
 let cloudSyncInFlight = false;
 let lastCloudSyncAt = 0;
@@ -1659,9 +1608,6 @@ function updateCloudStatus(state) {
     else el.textContent = 'Прогресс сохраняется в облако';
 }
 
-// ============================================================
-//  EDIT PROFILE
-// ============================================================
 function openEditModal() {
     if (!currentUser) { showToast('Войдите в аккаунт'); return; }
     document.getElementById('editNickname').value = currentUser.displayName || '';
@@ -1727,9 +1673,6 @@ async function saveProfile() {
     }
 }
 
-// ============================================================
-//  DELETE ACCOUNT
-// ============================================================
 function openDeleteModal() {
     if (!currentUser) { showToast('Войдите в аккаунт'); return; }
     document.getElementById('deletePassword').value = '';
@@ -1804,9 +1747,6 @@ function updateProfileUI() {
     refreshStreakUI();
 }
 
-// ============================================================
-//  CONFIG
-// ============================================================
 const SOURCES = {
     '26': 'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/main/githubmirror/26.txt',
     '20': 'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/main/githubmirror/20.txt',
@@ -1828,9 +1768,6 @@ const DEFAULT_SETTINGS = {
     lightTheme: false, accent: 'violet', source: '26', animatedBg: true, dust: true
 };
 
-// ============================================================
-//  STATE
-// ============================================================
 let allKeys = [];
 let filteredKeys = [];
 let currentFilter = 'all';
@@ -1844,9 +1781,6 @@ let pendingUpdate = null;
 let appInitialized = false;
 let visibleCount = PAGE_SIZE;
 
-// ============================================================
-//  STORAGE
-// ============================================================
 async function loadFromStorage() {
     await migrateFromLocalStorage();
     try {
@@ -1901,9 +1835,6 @@ function saveKeysToStorage() {
 }
 function saveHash(h) { lastKeysHash = h; idbSet('vpn_hash', h); }
 
-// ============================================================
-//  THEME / ACCENT
-// ============================================================
 function applyAccent(name) {
     const c = ACCENTS[name] || ACCENTS.violet;
     document.documentElement.style.setProperty('--accent', c[0]);
@@ -1944,9 +1875,6 @@ function toggleTheme(event) {
     }, 230);
 }
 
-// ============================================================
-//  NOTIFICATIONS
-// ============================================================
 function onNotifyToggle() {
     settings.notify = document.getElementById('optNotify').checked;
     saveSettings();
@@ -1970,9 +1898,6 @@ function sendSystemNotification(title, body) {
     } catch (e) {}
 }
 
-// ============================================================
-//  UTILS
-// ============================================================
 function showToast(msg, duration = 2200) {
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -2080,9 +2005,6 @@ function parseKeys(text) {
     return unique;
 }
 
-// ============================================================
-//  CONFETTI
-// ============================================================
 function launchConfetti() {
     try {
         const canvas = document.createElement('canvas');
@@ -2121,9 +2043,6 @@ function launchConfetti() {
     } catch (e) {}
 }
 
-// ============================================================
-//  NAVIGATION
-// ============================================================
 function switchTab(tab, el) {
     vibrate(8);
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -2144,9 +2063,6 @@ function switchTab(tab, el) {
     if (tab === 'profile') { refreshStatsUI(); refreshLevelUI(); refreshStreakUI(); renderFavorites(); }
 }
 
-// ============================================================
-//  FILTERS
-// ============================================================
 function setFilter(f, el) {
     vibrate(8);
     currentFilter = f;
@@ -2166,9 +2082,6 @@ function applyFilters() {
     refreshVisibleRatings();
 }
 
-// ============================================================
-//  LAZY LOADING
-// ============================================================
 function showSkeletons() {
     const list = document.getElementById('keyList');
     let html = '';
@@ -2341,7 +2254,6 @@ function renderFavorites() {
     setTimeout(refreshVisibleRatings, 50);
 }
 
-// ⬇ БЕЗ confirm() — просто очищаем
 function clearFavorites() {
     document.querySelectorAll('#favList .key-card').forEach((c, i) => {
         setTimeout(() => c.classList.add('removing'), i * 40);
@@ -2373,7 +2285,6 @@ function refreshStatsUI() {
     document.getElementById('statFavs').textContent = favorites.length;
     document.getElementById('statProtocols').textContent = new Set(allKeys.map(k => k.protocol)).size;
 }
-// ⬇ БЕЗ confirm() — просто сбрасываем
 async function resetAll() {
     try { localStorage.clear(); } catch (e) {}
     await idbClearAll();
@@ -2399,9 +2310,6 @@ async function resetAll() {
     showToast('Все данные сброшены');
 }
 
-// ============================================================
-//  FETCH
-// ============================================================
 function getSourceUrl() { return SOURCES[settings.source] || SOURCES['26']; }
 async function fetchKeys() {
     if (isFetching) return;
@@ -2468,9 +2376,6 @@ async function fetchKeys() {
     }
 }
 
-// ============================================================
-//  UPDATES
-// ============================================================
 async function checkForUpdates() {
     if (isFetching || !navigator.onLine) return;
     try {
@@ -2540,9 +2445,6 @@ function updateUIVisibility() {
     document.getElementById('keyCount').textContent = allKeys.length;
 }
 
-// ============================================================
-//  LIVE UPDATE
-// ============================================================
 const LIVE_PATH = 'vpnkeys/config/latestHash';
 let liveListenAttached = false;
 
@@ -2569,9 +2471,6 @@ async function broadcastHash(hash) {
     try { await rtdb.ref(LIVE_PATH).set({ hash, ts: Date.now() }); } catch (e) {}
 }
 
-// ============================================================
-//  REVIEWS / RATINGS
-// ============================================================
 const REVIEWS_PATH = 'vpnkeys/reviews';
 let reviewCache = {};
 let currentReviewKey = null;
@@ -2769,9 +2668,6 @@ async function submitReview() {
     }
 }
 
-// ============================================================
-//  SCROLL + LAZY LOAD
-// ============================================================
 function scrollToTop() { document.getElementById('content').scrollTo({ top: 0, behavior: 'smooth' }); }
 document.getElementById('content').addEventListener('scroll', function () {
     const btn = document.getElementById('backToTop');
@@ -2787,9 +2683,6 @@ document.getElementById('content').addEventListener('scroll', function () {
     }
 });
 
-// ============================================================
-//  MODAL OVERLAY
-// ============================================================
 document.getElementById('editModal').addEventListener('click', function (e) { if (e.target === this) closeEditModal(); });
 document.getElementById('deleteModal').addEventListener('click', function (e) { if (e.target === this) closeDeleteModal(); });
 document.getElementById('levelUpModal').addEventListener('click', function (e) { if (e.target === this) closeLevelUp(); });
@@ -2836,9 +2729,6 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-// ============================================================
-//  INIT
-// ============================================================
 async function initAppAfterAuth() {
     if (appInitialized) return;
     appInitialized = true;
