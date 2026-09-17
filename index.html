@@ -16,8 +16,8 @@
         }
     } catch(e){}
     try {
-        if (localStorage.getItem('nft_app_ver') !== 'v14') {
-            localStorage.setItem('nft_app_ver', 'v14');
+        if (localStorage.getItem('nft_app_ver') !== 'v15') {
+            localStorage.setItem('nft_app_ver', 'v15');
             if (location.search.indexOf('_fresh=1') === -1) {
                 var clean = location.href.split('#')[0].split('?')[0];
                 location.replace(clean + '?_fresh=1&t=' + Date.now());
@@ -535,8 +535,6 @@ body.light .level-progress{background:rgba(0,0,0,.08)}
 .schedule-option:active{background:var(--card-border)}
 .schedule-option .emo{font-size:18px}
 .avatar-colored{display:flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-weight:700;flex-shrink:0}
-.swipe-hint{position:absolute;top:50%;transform:translateY(-50%);background:var(--accent);color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px;pointer-events:none;opacity:0;transition:opacity .15s}
-.saved-note{background:rgba(253,203,110,.1);border:1px dashed rgba(253,203,110,.3);border-radius:10px;padding:8px 12px;font-size:11px;color:var(--text-dim);margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -891,7 +889,7 @@ body.light .level-progress{background:rgba(0,0,0,.08)}
     <div class="settings-title">Данные</div>
     <div class="settings-section">
         <div class="setting-row"><div class="setting-label"><div class="name">Очистить кэш</div></div><button class="btn btn-secondary btn-sm" onclick="resetAll()">Сбросить</button></div>
-        <div class="setting-row"><div class="setting-label"><div class="name">Версия</div></div><span style="color:var(--text-muted);font-size:12px;">14.0</span></div>
+        <div class="setting-row"><div class="setting-label"><div class="name">Версия</div></div><span style="color:var(--text-muted);font-size:12px;">15.0</span></div>
     </div>
 </div>
 
@@ -1672,6 +1670,7 @@ var scheduledTimerId = null;
 var joinedByLink = false;
 var currentChatSearchQuery = '';
 var browseCache = [];
+var directStatusListener = null;
 
 var CHAT_FOLDERS = [
     { id: 'all', name: 'Все' },
@@ -2287,7 +2286,34 @@ var STATUS_PATH = 'vpnkeys/status', TYPING_PATH = 'vpnkeys/typing';
 var CHANNEL_NAMES_PATH = 'vpnkeys/channelNames';
 var INVITES_PATH = 'vpnkeys/invites';
 var SCHEDULED_PATH = 'vpnkeys/scheduled';
-var statusListenerRef = null;
+
+function formatOnlineStatus(s) {
+    if (!s) return { online: false, text: 'не в сети', dot: false };
+    var age = Date.now() - (s.ts || 0);
+    if (s.online && age < 90000) return { online: true, text: 'в сети', dot: true };
+    if (age < 60000) return { online: false, text: 'был(а) только что', dot: false };
+    if (age < 3600000) return { online: false, text: 'был(а) ' + Math.floor(age / 60000) + ' мин назад', dot: false };
+    if (age < 86400000) return { online: false, text: 'был(а) ' + Math.floor(age / 3600000) + ' ч назад', dot: false };
+    if (age < 604800000) return { online: false, text: 'был(а) ' + Math.floor(age / 86400000) + ' д назад', dot: false };
+    return { online: false, text: 'был(а) давно', dot: false };
+}
+function listenUserStatus(uid, cb) {
+    if (!rtdb || !uid) return null;
+    var ref = rtdb.ref(STATUS_PATH + '/' + uid);
+    var handler = function(snap) { cb(formatOnlineStatus(snap.val())); };
+    ref.on('value', handler);
+    return { ref: ref, handler: handler, uid: uid };
+}
+function detachStatusListener(l) {
+    if (!l) return;
+    try { l.ref.off('value', l.handler); } catch (e) {}
+}
+function fetchUserStatusOnce(uid) {
+    if (!rtdb || !uid) return Promise.resolve(formatOnlineStatus(null));
+    return rtdb.ref(STATUS_PATH + '/' + uid).get()
+        .then(function(s) { return formatOnlineStatus(s.val()); })
+        .catch(function() { return formatOnlineStatus(null); });
+}
 
 function initOnlineStatus() {
     if (!currentUser || !rtdb || !firebaseReady) return;
@@ -2297,6 +2323,22 @@ function initOnlineStatus() {
     statusRef.onDisconnect().set({ online: false, ts: Date.now() });
     statusIntervalId = setInterval(function() { if (currentUser && statusRef) statusRef.update({ online: true, ts: Date.now() }); }, 30000);
     window.addEventListener('beforeunload', function(){ try { statusRef.set({ online: false, ts: Date.now() }); } catch (e) {} });
+}
+
+function ensureDirectStatusListener() {
+    if (currentViewType !== 'direct' || !rtdb || !currentUser) return;
+    var meta = currentViewData.meta;
+    if (!meta) return;
+    var other = (meta.uids || []).find(function(x) { return x !== currentUser.uid; });
+    if (!other) return;
+    if (directStatusListener && directStatusListener.uid === other) return;
+    detachStatusListener(directStatusListener);
+    directStatusListener = listenUserStatus(other, function(st) {
+        var sub = document.getElementById('channelViewSub');
+        if (!sub) return;
+        if (sub.querySelector('.typing-indicator')) return;
+        sub.innerHTML = '<span class="online-dot' + (st.dot ? '' : ' offline') + '" style="margin-right:5px"></span>' + st.text;
+    });
 }
 
 function syncPublicProfile() {
@@ -2846,6 +2888,8 @@ function closeChannelView() {
     document.getElementById('channelView').classList.remove('show');
     detachViewListener();
     detachTypingListener();
+    detachStatusListener(directStatusListener);
+    directStatusListener = null;
     closeAttachMenu();
     hideMsgMenu();
     cancelReply();
@@ -2953,8 +2997,8 @@ function renderChannelView(data) {
         var other = (meta.uids || []).find(function(x){ return x !== (currentUser && currentUser.uid); });
         var otherName = (meta.members && meta.members[other] && meta.members[other].name) || 'Пользователь';
         titleEl.textContent = otherName;
-        var otherStatus = '✉ Личный чат';
-        subEl.textContent = otherStatus;
+        subEl.textContent = '✉ Личный чат';
+        setTimeout(ensureDirectStatusListener, 0);
     } else {
         var membersCount = data.members ? Object.keys(data.members).length : 0;
         titleEl.textContent = data.name || (currentViewType === 'channel' ? 'Канал' : 'Группа');
@@ -3435,7 +3479,6 @@ function renderForwardList() {
     Promise.all(chatPromises.concat(chanPromises)).then(function(names){
         var map = {};
         names.forEach(function(n){ if (n) map[n.id] = n.name; });
-        c.querySelectorAll('.forward-item').forEach(function(el){});
         var html = '';
         Object.keys(myDirects).forEach(function(id){
             var d = myDirects[id];
@@ -3976,13 +4019,22 @@ function renderMembersList() {
             else actions += '<button class="btn-mini promote" onclick="promoteMember(\'' + m.uid + '\')" style="margin-right:4px">Админ</button>';
             actions += '<button class="btn-mini danger" onclick="kickMember(\'' + m.uid + '\')" style="margin-left:4px">Кик</button>';
         }
-        return '<div class="member-row">' +
+        return '<div class="member-row" data-uid="' + m.uid + '">' +
             '<div class="minfo" onclick="closeMembersModal();openUserProfile(\'' + m.uid + '\')" style="cursor:pointer">' +
             '<div class="mname">' + esc(m.data.name || 'Участник') + ' <span class="role-tag ' + roleClass + '">' + roleLabel + '</span></div>' +
             '<div class="msub">Присоединился ' + timeAgo(m.data.joinedAt || Date.now()) + '</div></div>' +
             actions + '</div>';
     }).join('');
     container.innerHTML = html;
+    uidList.forEach(function(m) {
+        fetchUserStatusOnce(m.uid).then(function(st) {
+            var row = container.querySelector('.member-row[data-uid="' + m.uid + '"]');
+            if (!row) return;
+            var msub = row.querySelector('.msub');
+            if (!msub) return;
+            msub.innerHTML = '<span class="online-dot' + (st.dot ? '' : ' offline') + '" style="margin-right:5px"></span>' + st.text;
+        });
+    });
 }
 function kickMember(uid) {
     if (!currentUser || !rtdb) return;
@@ -4235,7 +4287,8 @@ function openUserProfile(uid) {
                 coloredAvatar(p.name || 'Пользователь', p.nft, 80) +
                 '<div class="name">' + esc(p.name || 'Пользователь') + badge + '</div>' +
                 (p.handle ? '<div class="handle">@' + esc(p.handle) + '</div>' : '') +
-                (p.email ? '<div class="email">' + esc(p.email) + '</div>' : '') + '</div>' +
+                (p.email ? '<div class="email">' + esc(p.email) + '</div>' : '') +
+                '<div class="email" id="userProfileStatus" style="margin-top:4px;color:var(--text-muted)">—</div></div>' +
                 '<div class="user-profile-stats">' +
                 '<div class="user-profile-stat"><div class="v">' + (p.xp || 0) + '</div><div class="l">XP</div></div>' +
                 '<div class="user-profile-stat"><div class="v">' + lvl + '</div><div class="l">Ур.</div></div>' +
@@ -4246,6 +4299,10 @@ function openUserProfile(uid) {
                 (isFriend ? '<button class="btn btn-secondary btn-full" onclick="removeFriend(\'' + uid + '\');closeUserProfile()">Убрать из друзей</button>' : '<button class="btn btn-secondary btn-full" onclick="addFriend(\'' + uid + '\',\'' + esc(p.name || '').replace(/\'/g, '') + '\',\'' + esc(p.handle || '') + '\');closeUserProfile()">+ Добавить в друзья</button>') +
                 '<button class="btn btn-gold btn-full" onclick="closeUserProfile();sendStarTo(\'' + uid + '\',\'' + esc(p.name || '').replace(/\'/g, '') + '\')">⭐ Подарить звезду</button>' +
                 '</div>';
+            fetchUserStatusOnce(uid).then(function(st) {
+                var el = document.getElementById('userProfileStatus');
+                if (el) el.innerHTML = '<span class="online-dot' + (st.dot ? '' : ' offline') + '" style="margin-right:5px"></span>' + st.text;
+            });
         });
     }).catch(function(){ c.innerHTML = '<div class="empty-state"><p>Не удалось загрузить</p></div>'; });
 }
@@ -4315,7 +4372,12 @@ document.addEventListener('click', function(e) {
 });
 
 window.addEventListener('beforeunload', function(){ if (currentUser && rtdb && navigator.onLine) { try { saveProgressToCloud(true); } catch (e) {} } });
-document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden' && currentUser && rtdb && navigator.onLine) { try { saveProgressToCloud(); } catch (e) {} } });
+document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'hidden' && currentUser && rtdb && navigator.onLine) { try { saveProgressToCloud(); } catch (e) {} }
+    if (document.visibilityState === 'visible' && currentUser && statusRef && rtdb) {
+        statusRef.update({ online: true, ts: Date.now() }).catch(function(){});
+    }
+});
 
 function initStarListener() {
     if (!currentUser || !rtdb) return;
