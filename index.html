@@ -16,8 +16,8 @@
         }
     } catch(e){}
     try {
-        if (localStorage.getItem('nft_app_ver') !== 'v8') {
-            localStorage.setItem('nft_app_ver', 'v8');
+        if (localStorage.getItem('nft_app_ver') !== 'v9') {
+            localStorage.setItem('nft_app_ver', 'v9');
             if (location.search.indexOf('_fresh=1') === -1) {
                 var clean = location.href.split('#')[0].split('?')[0];
                 location.replace(clean + '?_fresh=1&t=' + Date.now());
@@ -90,9 +90,8 @@ body.dust-on .dust-layer{opacity:1}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
 .btn:active{transform:scale(.97)}
-.btn svg{width:16px;height:16px;stroke-width:2.2}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-light));color:#fff}
-.btn-primary svg{stroke:#fff}
 .btn-secondary{background:var(--card-border);color:var(--text-dim)}
 .btn-danger{background:#e1705522;color:#e17055;border:1px solid #e1705540}
 .btn-gold{background:linear-gradient(135deg,#fdcb6e,#ffeaa7);color:#1a1a22}
@@ -100,6 +99,7 @@ body.dust-on .dust-layer{opacity:1}
 .btn-full{width:100%}
 .controls{display:flex;gap:8px;margin-bottom:12px}
 .controls .btn{flex:1}
+.controls .btn-icon-only{flex:0 0 auto;padding:10px 16px}
 .search-box{position:relative;margin-bottom:10px}
 .search-box input{width:100%;background:var(--card);backdrop-filter:blur(14px);border:1px solid var(--card-border);border-radius:10px;padding:10px 14px 10px 38px;color:var(--text);font-size:14px;outline:none}
 .search-box input:focus{border-color:var(--accent)}
@@ -160,8 +160,6 @@ body.dust-on .dust-layer{opacity:1}
 .accent-dot.active{border-color:var(--text);transform:scale(1.1)}
 .accent-dot.active::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:900}
 .profile-header{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:18px;margin-bottom:14px}
-
-/* === TELEGRAM-STYLE AVATAR + NFT BADGE === */
 .avatar-wrap{position:relative;display:inline-flex;flex-shrink:0;line-height:0;vertical-align:middle}
 .avatar-static{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-light));display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:24px;font-weight:700;color:#fff;text-transform:uppercase;overflow:hidden;position:relative}
 .avatar-static svg{width:28px;height:28px;stroke:#fff;fill:none;stroke-width:2}
@@ -173,7 +171,6 @@ body.dust-on .dust-layer{opacity:1}
 .avatar-wrap .nft-badge.legendary{border-color:#e84393;box-shadow:0 0 14px rgba(232,67,147,.9),0 2px 6px rgba(0,0,0,.55)}
 .avatar-wrap .nft-badge.mythic{border-color:#fdcb6e;box-shadow:0 0 14px rgba(253,203,110,1),0 0 26px rgba(232,67,147,.55),0 2px 6px rgba(0,0,0,.55);animation:mythicBadgeGlow 2s ease-in-out infinite}
 @keyframes mythicBadgeGlow{0%,100%{box-shadow:0 0 14px rgba(253,203,110,1),0 0 26px rgba(232,67,147,.55),0 2px 6px rgba(0,0,0,.55)}50%{box-shadow:0 0 20px rgba(253,203,110,1),0 0 36px rgba(232,67,147,.75),0 2px 6px rgba(0,0,0,.55)}}
-
 .profile-info{flex:1;overflow:hidden}
 .profile-info .name{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
 .profile-info .sub{font-size:12px;color:var(--text-muted);margin-top:3px;word-break:break-all}
@@ -500,10 +497,10 @@ body.light .level-progress{background:rgba(0,0,0,.08)}
     </div>
     <div class="error-msg" id="errorMsg"></div>
     <div class="controls">
-        <button class="btn btn-primary" id="fetchBtn" onclick="fetchKeys()"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Загрузить</span></button>
-        <button class="btn btn-secondary" onclick="clearKeys()"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+        <button class="btn btn-primary" id="fetchBtn" onclick="fetchKeys()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Загрузить</span></button>
+        <button class="btn btn-secondary btn-icon-only" onclick="clearKeys()" title="Очистить список"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
     </div>
-    <div class="search-box" id="searchWrap" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="searchInput" placeholder="Поиск..." oninput="applyFilters()"></div>
+    <div class="search-box" id="searchWrap" style="display:none;"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="searchInput" placeholder="Поиск..." oninput="applyFilters()"></div>
     <div class="filter-chips" id="filterChips" style="display:none;">
         <button class="chip active" data-filter="all" onclick="setFilter('all', this)">Все</button>
         <button class="chip" data-filter="vless" onclick="setFilter('vless', this)">VLESS</button>
@@ -565,7 +562,7 @@ body.light .level-progress{background:rgba(0,0,0,.08)}
     <div class="settings-title">Данные</div>
     <div class="settings-section">
         <div class="setting-row"><div class="setting-label"><div class="name">Очистить кэш</div></div><button class="btn btn-secondary btn-sm" onclick="resetAll()">Сбросить</button></div>
-        <div class="setting-row"><div class="setting-label"><div class="name">Версия</div></div><span style="color:var(--text-muted);font-size:12px;">8.0</span></div>
+        <div class="setting-row"><div class="setting-label"><div class="name">Версия</div></div><span style="color:var(--text-muted);font-size:12px;">9.0</span></div>
     </div>
 </div>
 
@@ -625,20 +622,20 @@ body.light .level-progress{background:rgba(0,0,0,.08)}
 
 <nav class="bottom-nav">
     <button class="nav-item active" data-tab="main" onclick="switchTab('main', this)">
-        <svg class="icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <svg class="icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         <span class="label">Главное</span>
         <span class="nav-badge" id="navBadge">0</span>
     </button>
     <button class="nav-item" data-tab="social" onclick="switchTab('social', this)">
-        <svg class="icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span class="label">Соцсеть</span>
     </button>
     <button class="nav-item" data-tab="settings" onclick="switchTab('settings', this)">
-        <svg class="icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         <span class="label">Настройки</span>
     </button>
     <button class="nav-item" data-tab="profile" onclick="switchTab('profile', this)">
-        <svg class="icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <svg class="icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span class="label">Профиль</span>
     </button>
 </nav>
@@ -875,7 +872,6 @@ function getNftSvg(id, size) {
     return art[id] || '';
 }
 
-/* === Telegram-style avatar with NFT badge === */
 function avatarWrap(name, nftId, size) {
     size = size || 64;
     var def = nftId ? getNftById(nftId) : null;
@@ -887,14 +883,6 @@ function avatarWrap(name, nftId, size) {
         html += '<span class="nft-badge '+def.rarity+'" style="width:'+bs+'px;height:'+bs+'px">'+getNftSvg(def.id, bs)+'</span>';
     }
     return html + '</span>';
-}
-function emptyAvatar(size) {
-    size = size || 64;
-    var inner = Math.round(size * 0.44);
-    return '<span class="avatar-wrap"><div class="avatar-static" style="width:'+size+'px;height:'+size+'px">'
-        + '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" style="width:'+inner+'px;height:'+inner+'px;stroke:#fff;fill:none;stroke-width:2">'
-        + '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
-        + '</div></span>';
 }
 /* ========== END NFT ART ========== */
 
