@@ -7,21 +7,21 @@
 <title>Flux</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:15px;transition:background .2s,color .2s;-webkit-font-smoothing:antialiased}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:15px;transition:background .2s,color .2s;-webkit-font-smoothing:antialiased;user-select:none}
 :root{
   --bg:#0e1621;--panel:#17212b;--panel2:#242f3d;--hover:#202b36;--active:#2b5278;
   --text:#fff;--text2:#8b9aa8;--text3:#6c7883;--accent:#4ea4f6;--accent2:#64b5ef;
   --bubble-in:#212d3b;--bubble-out:#2b5278;--border:#0b1219;--menu:#1c2733;
-  --divider:#101921;--section:#1a2533;--icon-bg:#222f3e;
+  --divider:#101921;--section:#1a2533;
 }
 body.light{
   --bg:#fff;--panel:#fff;--panel2:#f1f3f5;--hover:#f4f4f5;--active:#e8f1fb;
   --text:#000;--text2:#707579;--text3:#9aa0a6;--accent:#3390ec;--accent2:#3390ec;
   --bubble-in:#fff;--bubble-out:#effdde;--border:#e4e6e8;--menu:#fff;
-  --divider:#eaecef;--section:#f7f8fa;--icon-bg:#eef1f4;
+  --divider:#eaecef;--section:#f7f8fa;
 }
-button,input,textarea{font-family:inherit;font-size:inherit;color:inherit;background:none;border:none;outline:none}
+button,input,textarea{font-family:inherit;font-size:inherit;color:inherit;background:none;border:none;outline:none;-webkit-user-select:text;user-select:text}
 button{cursor:pointer}
 ::-webkit-scrollbar{width:0;height:0}
 .screen{display:none;height:100vh;height:100dvh;overflow:hidden}
@@ -49,7 +49,7 @@ button{cursor:pointer}
 .spinner{width:42px;height:42px;border:3px solid var(--panel2);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* APP */
+/* APP LAYOUT */
 #app{flex-direction:column;background:var(--bg);position:relative}
 .app-content{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column}
 .app-view{display:none;flex-direction:column;height:100%;overflow:hidden}
@@ -95,6 +95,7 @@ body.light .folder-tab.active{background:var(--accent);color:#fff}
 .ci-bot{display:flex;align-items:center;gap:6px}
 .ci-prev{font-size:14px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;flex:1;min-width:0}
 .ci-ticks{color:var(--accent);font-weight:800;font-size:11px;letter-spacing:-1px;margin-right:2px;flex-shrink:0}
+.ci-ticks.read{color:var(--accent)}
 .ci-mute{width:14px;height:14px;stroke:var(--text3);fill:none;stroke-width:2;flex-shrink:0}
 .ci-badge{background:var(--accent);color:#fff;font-size:12px;font-weight:700;min-width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;padding:0 7px;flex-shrink:0}
 .ci-badge.muted{background:var(--text3)}
@@ -180,13 +181,18 @@ body.light .folder-tab.active{background:var(--accent);color:#fff}
 #chatSearchBar button{color:var(--text2);padding:6px;display:flex}
 #chatSearchBar svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 
-#messages{flex:1;overflow-y:auto;padding:14px 10px 6px;display:flex;flex-direction:column;position:relative;background-image:radial-gradient(circle at 15% 25%,rgba(78,164,246,.05) 0,transparent 45%),radial-gradient(circle at 85% 75%,rgba(155,89,182,.04) 0,transparent 45%);-webkit-overflow-scrolling:touch}
-body.light #messages{background-image:radial-gradient(circle at 15% 25%,rgba(78,164,246,.07) 0,transparent 45%),radial-gradient(circle at 85% 75%,rgba(155,89,182,.07) 0,transparent 45%)}
+#messages{flex:1;overflow-y:auto;padding:14px 10px 6px;display:flex;flex-direction:column;position:relative;background-image:
+  radial-gradient(circle at 15% 25%,rgba(78,164,246,.05) 0,transparent 45%),
+  radial-gradient(circle at 85% 75%,rgba(155,89,182,.04) 0,transparent 45%);
+  -webkit-overflow-scrolling:touch}
+body.light #messages{background-image:
+  radial-gradient(circle at 15% 25%,rgba(78,164,246,.07) 0,transparent 45%),
+  radial-gradient(circle at 85% 75%,rgba(155,89,182,.07) 0,transparent 45%)}
 
 #loadMore{text-align:center;padding:10px;font-size:13px;color:var(--accent);cursor:pointer;flex-shrink:0;font-weight:500}
 
 .date-sep{align-self:center;background:rgba(0,0,0,.35);color:#fff;font-size:12.5px;padding:4px 12px;border-radius:12px;margin:14px 0 10px;font-weight:500;backdrop-filter:blur(8px)}
-body.light .date-sep{background:rgba(0,0,0,.18)}
+body.light .date-sep{background:rgba(0,0,0,.18);color:#fff}
 
 .msg{display:flex;align-items:flex-end;gap:6px;margin-top:2px;max-width:82%;position:relative;animation:msgIn .18s ease}
 .msg.in{align-self:flex-start}
@@ -212,7 +218,7 @@ body.light .msg.out.group-end .bubble::after{background:#d2f5c2}
 .author{font-size:13.5px;font-weight:600;color:#64b5ef;margin-bottom:2px;padding-top:1px}
 body.light .msg.in .author{color:#3390ec}
 
-.text{font-size:15px;line-height:1.35;white-space:pre-wrap;word-wrap:break-word;padding-bottom:1px}
+.text{font-size:15px;line-height:1.35;white-space:pre-wrap;word-wrap:break-word;padding-bottom:1px;user-select:text}
 .text.deleted{font-style:italic;color:var(--text3);font-size:13.5px}
 .msg.out .text.deleted{color:rgba(255,255,255,.6)}
 body.light .msg.out .text.deleted{color:#6fb56f}
@@ -345,7 +351,7 @@ body.light .rxn.mine{background:#d0e7ff;color:#145a9e}
 
 #lightbox{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:950;display:none;align-items:center;justify-content:center}
 #lightbox.show{display:flex}
-#lightbox img{max-width:96vw;max-height:88vh;object-fit:contain}
+#lightbox img{max-width:96vw;max-height:88vh;object-fit:contain;border-radius:6px}
 #lightbox .close{position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center}
 
 #recOv{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:920;display:none;flex-direction:column;align-items:center;justify-content:center;gap:22px}
@@ -652,6 +658,7 @@ let me = LS.load(LS.ME);
 let chats = LS.load(LS.CHATS) || {};
 let settings = LS.load(LS.SET) || { theme:'dark', accent:'#4ea4f6', sound:true };
 document.documentElement.style.setProperty('--accent', settings.accent);
+document.documentElement.style.setProperty('--accent2', settings.accent);
 document.body.classList.toggle('light', settings.theme === 'light');
 
 let currentChatId = null;
@@ -1062,7 +1069,7 @@ function closeChatView(){
 }
 $('#backBtn').addEventListener('click', closeChatView);
 
-/* MARK READ */
+/* MARK ALL READ */
 function markAllRead(chatId){
   if(!me || !chatId) return;
   db.ref('flux/chats/'+chatId+'/reads/'+me.uid).set(now()).catch(()=>{});
@@ -2034,6 +2041,7 @@ function openAccentPicker(){
 function setAccent(c){
   settings.accent = c;
   document.documentElement.style.setProperty('--accent', c);
+  document.documentElement.style.setProperty('--accent2', c);
   LS.save(LS.SET, settings);
   closeModal();
   renderSettings();
@@ -2305,7 +2313,7 @@ async function askNotificationPermission(){
   if(Notification.permission === 'denied'){ toast('Уведомления заблокированы'); return; }
   try {
     const p = await Notification.requestPermission();
-    if(p === 'granted') toast('Уведомления включены');
+    if(p === 'granted'){ toast('Уведомления включены'); try { new Notification('Flux', { body: 'Уведомления включены ✓' }); } catch(e){} }
     else toast('Уведомления не разрешены');
   } catch(e){}
 }
@@ -2325,10 +2333,7 @@ function showNotification(chatId, msg){
   const title = 'Flux · ' + name;
 
   if(window.Android && typeof window.Android.notifyWithChat === 'function'){
-    try {
-      window.Android.notifyWithChat(title, body.slice(0, 140), chatId);
-      return;
-    } catch(e){}
+    try { window.Android.notifyWithChat(title, body.slice(0, 140), chatId); return; } catch(e){}
   }
 
   if(!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -2342,7 +2347,7 @@ function showNotification(chatId, msg){
   } catch(e){}
 }
 
-/* GLOBAL INCOMING LISTENER */
+/* GLOBAL INCOMING */
 let globalIncomingRefs = {};
 function setupGlobalIncomingListener(){
   if(!me) return;
