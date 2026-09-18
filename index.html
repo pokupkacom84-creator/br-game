@@ -56,7 +56,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .chat-item-time{font-size:12px;color:var(--text-2);flex-shrink:0}
 .chat-item-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:3px}
 .chat-item-msg{font-size:14px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.chat-item-msg em{font-style:normal;display:inline-flex;align-items:center;gap:4px;color:var(--text-2)}
 .chat-item-unread{min-width:22px;height:22px;padding:0 7px;border-radius:11px;background:var(--unread-bg);color:var(--unread-text);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center}
 .fab{position:absolute;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.25);z-index:10}
 .fab:active{background:var(--accent-2)}
@@ -316,6 +315,9 @@ body.dark .msg-file:active{background:rgba(255,255,255,.05)}
 </div>
 
 <script>
+/* =========================================================================
+   Firebase init
+   ========================================================================= */
 const firebaseConfig = {
   apiKey: "AIzaSyAfNoV7tt_6eP1gRQxLc4Yk5FJzwVxDMQw",
   authDomain: "game-cd07d.firebaseapp.com",
@@ -326,7 +328,7 @@ const firebaseConfig = {
   appId: "1:1001558545053:web:b99f86362c1b93aad13a74"
 };
 
-let auth, db, storage, TS;
+let auth = null, db = null, storage = null, TS = null, INCR = null;
 let firebaseReady = false;
 
 try {
@@ -335,19 +337,24 @@ try {
   db = firebase.database();
   storage = firebase.storage();
   TS = firebase.database.ServerValue.TIMESTAMP;
+  // ServerValue.increment может отсутствовать в очень старых SDK — fallback через transaction
+  INCR = (firebase.database.ServerValue && firebase.database.ServerValue.increment)
+    ? firebase.database.ServerValue.increment
+    : null;
   firebaseReady = true;
-} catch(e){
+} catch (e) {
   setTimeout(function(){ toast('Ошибка Firebase: ' + e.message); }, 100);
 }
 
+/* =========================================================================
+   Константы / env
+   ========================================================================= */
 const SAVED_CHAT_PREFIX = 'saved_';
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const TYPING_TTL_MS = 5000;
 const PLAY_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
 const PAUSE_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
 
-/* ============================================================
-   FIX-WEBVIEW: Определение возможностей окружения (Sketchware Pro)
-   ============================================================ */
 const _UA = navigator.userAgent || '';
 const IS_ANDROID_WEBVIEW = /Android/i.test(_UA) && (/;\s*wv\)/i.test(_UA) || /\bwv\b/i.test(_UA));
 const IS_SECURE_CTX =
@@ -359,28 +366,50 @@ const IS_SECURE_CTX =
   location.protocol === 'file:';
 const HAS_MEDIARECORDER = (typeof MediaRecorder !== 'undefined');
 const HAS_USERMEDIA = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-// FIX-WEBVIEW: запись возможна только если есть и MediaRecorder, и getUserMedia, и secure-context
 const CAN_RECORD = HAS_MEDIARECORDER && HAS_USERMEDIA && IS_SECURE_CTX;
 
-const screenHistory = ['splash-screen'];
-let currentScreenId = 'splash-screen';
-
+/* =========================================================================
+   Глобальное состояние
+   ========================================================================= */
 let currentUser = null;
 let currentUserData = null;
 let currentChatId = null;
 let currentChatUser = null;
+let currentChatMeta = null;        // { members, typing:{uid:ts}, readBy:{uid:ts} }
 let savedLastMessage = null;
 let savedLastTime = null;
-let unsubUserChats = null;
-let unsubMessages = null;
-let unsubChatUser = null;
-let unsubSelfDoc = null;
-let unsubSavedMeta = null;
+
+// Subscriptions
+let unsubUserChats = null;         // userChats/{uid}
+let unsubSelfDoc = null;           // users/{uid}
+let unsubSavedMeta = null;         // saved/{uid}
+let unsubChatMeta = null;          // chats/{id}/meta
+let unsubMessages = null;          // chats/{id}/messages
+let unsubChatUser = null;          // users/{otherUid}
+let visibilityHandler = null;
+let beforeUnloadHandler = null;
+
+// Caches
+let chatsData = {};                // { chatId: {otherUid, lastMessage, unread, ...} }
+const userCache = {};
+let lastMessages = [];
+
+let searchQuery = '';
 let onbAvatarFile = null;
 let typingTimer = null;
-let chatsData = {};
-let userChatsMap = {};
-let searchQuery = '';
+
+// Render batching
+let renderChatsScheduled = false;
+function scheduleRenderChats(){
+  if(renderChatsScheduled) return;
+  renderChatsScheduled = true;
+  requestAnimationFrame(function(){
+    renderChatsScheduled = false;
+    try { renderChats(); } catch(e){ console.error(e); }
+  });
+}
+
+// Recording / audio
 let mediaRecorder = null;
 let mediaChunks = [];
 let mediaStream = null;
@@ -389,130 +418,50 @@ let recordTimer = null;
 let recordMode = null;
 let currentAudio = null;
 let currentAudioBtn = null;
-const userCache = {};
-const chatUnsubs = {};
 
+/* =========================================================================
+   Helpers
+   ========================================================================= */
 function $(id){ return document.getElementById(id); }
 
-// FIX-WEBVIEW: безопасный триггер нативного <input type="file">
-// - сбрасывает value, чтобы повторный выбор того же файла срабатывал
-// - ловит исключения, если WebView не смог открыть диалог (нет onShowFileChooser)
-function triggerFileInput(inputEl){
-  if(!inputEl){ toast('Внутренняя ошибка: файловый input не найден'); return; }
-  try { inputEl.value = ''; } catch(e){}
-  try {
-    inputEl.click();
-  } catch(e){
-    toast('WebView не открыл выбор файла. Проверьте onShowFileChooser в активности.');
-    console.error('[FIX-WEBVIEW] input.click() failed', e);
-  }
-}
-
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
-  var el = $(id);
-  if(el) el.classList.add('active');
-}
-
-function isSavedChat(chatId){
-  return chatId && chatId.indexOf(SAVED_CHAT_PREFIX) === 0;
-}
-
-function leaveChat(){
-  stopAudio();
-  if(unsubMessages && unsubMessages.off){ try { unsubMessages.off(); } catch(e){} }
-  if(unsubChatUser && unsubChatUser.off){ try { unsubChatUser.off(); } catch(e){} }
-  unsubMessages = null;
-  unsubChatUser = null;
-  if(currentUser && currentUser.uid && currentChatId && !isSavedChat(currentChatId)){
-    db.ref('users/' + currentUser.uid).update({ typing: null }).catch(function(){});
-  }
-  currentChatId = null;
-  currentChatUser = null;
-  closeAttachMenu();
-  hideUploadProgress();
-  stopRecordingSilently();
-}
-
-function goScreen(id, replace){
-  if(currentScreenId === id) return;
-  if(currentScreenId === 'chat-screen' && id !== 'chat-screen'){
-    leaveChat();
-  }
-  if(replace || currentScreenId === null || currentScreenId === 'splash-screen'){
-    screenHistory.length = 0;
-    screenHistory.push(id);
-    try { history.replaceState({s: id}, ''); } catch(e){}
-  } else {
-    screenHistory.push(id);
-    try { history.pushState({s: id}, ''); } catch(e){}
-  }
-  currentScreenId = id;
-  showScreen(id);
-  if(id === 'main-screen'){
-    try { renderChats(); } catch(e){}
-  }
-}
-
-window.addEventListener('popstate', function(){
-  if(screenHistory.length > 1){
-    screenHistory.pop();
-    var prev = screenHistory[screenHistory.length - 1];
-    if(prev === 'splash-screen'){
-      try { history.pushState({s: currentScreenId}, ''); } catch(e){}
-      return;
-    }
-    if(currentScreenId === 'chat-screen' && prev !== 'chat-screen'){
-      leaveChat();
-    }
-    currentScreenId = prev;
-    showScreen(prev);
-    if(prev === 'main-screen') renderChats();
-    try { history.pushState({s: prev}, ''); } catch(e){}
-  } else {
-    try { history.pushState({s: currentScreenId}, ''); } catch(e){}
-  }
-});
-
-try { history.replaceState({s: 'splash-screen'}, ''); } catch(e){}
-
-function toast(msg){
-  var t = $('toast');
-  if(!t) return;
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(t._tm);
-  t._tm = setTimeout(function(){ t.classList.remove('show'); }, 3500);
-}
 function esc(s){
-  return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
   });
 }
-function escAttr(s){
-  return String(s==null?'':s).replace(/[&<>"']/g,function(c){
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
-  });
-}
+function escAttr(s){ return esc(s); }
+
 function initials(name){
   if(!name) return '?';
   var p = name.trim().split(/\s+/);
   return ((p[0]?p[0][0]:'') + (p[1]?p[1][0]:'')).toUpperCase();
 }
+
+/**
+ * Безопасный avatar HTML: URL передаём через data-атрибут,
+ * а сам URL применяем через element.style (нет инъекции в HTML).
+ */
 function avatarHtml(user){
   if(!user) return '<div class="avatar">?</div>';
   var url = user.photoURL || '';
-  var txt = url ? '' : initials(user.name || user.username || '?');
-  return '<div class="avatar" style="' + (url?'background-image:url(\''+url+'\')':'') + '">' + esc(txt) + '</div>';
+  if(url){
+    return '<div class="avatar" data-avatar-url="' + escAttr(url) + '"></div>';
+  }
+  return '<div class="avatar">' + esc(initials(user.name || user.username || '?')) + '</div>';
 }
+function applyAvatarUrls(root){
+  (root || document).querySelectorAll('[data-avatar-url]').forEach(function(el){
+    try { el.style.backgroundImage = 'url("' + el.dataset.avatarUrl + '")'; } catch(e){}
+  });
+}
+
 function pad(n){ return n < 10 ? '0' + n : '' + n; }
 function formatTime(ts){
   if(!ts) return '';
-  var d = new Date(ts);
-  var now = new Date();
+  var d = new Date(ts), now = new Date();
   if(d.toDateString() === now.toDateString()) return pad(d.getHours()) + ':' + pad(d.getMinutes());
   var diff = (now - d) / 86400000;
-  if(diff < 7){ var days=['Вс','Пн','Вт','Ср','Чт','Пт','Сб']; return days[d.getDay()]; }
+  if(diff < 7){ var days = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб']; return days[d.getDay()]; }
   return pad(d.getDate()) + '.' + pad(d.getMonth()+1) + '.' + String(d.getFullYear()).slice(2);
 }
 function formatFullTime(ts){
@@ -522,9 +471,7 @@ function formatFullTime(ts){
 }
 function formatLastSeen(ts){
   if(!ts) return 'был(а) недавно';
-  var d = new Date(ts);
-  var now = new Date();
-  var diff = (now - d) / 1000;
+  var d = new Date(ts), now = new Date(), diff = (now - d) / 1000;
   if(diff < 60) return 'был(а) только что';
   if(diff < 3600) return 'был(а) ' + Math.floor(diff/60) + ' мин назад';
   if(d.toDateString() === now.toDateString()) return 'был(а) в ' + formatFullTime(ts);
@@ -538,16 +485,89 @@ function formatSize(bytes){
   return (bytes/1073741824).toFixed(2) + ' ГБ';
 }
 function formatDur(sec){
-  sec = Math.max(0, Math.round(sec||0));
-  var m = Math.floor(sec/60);
-  var s = sec % 60;
-  return m + ':' + pad(s);
+  sec = Math.max(0, Math.round(sec || 0));
+  return Math.floor(sec/60) + ':' + pad(sec % 60);
 }
 function cleanMime(t){
   if(!t) return 'application/octet-stream';
   var c = String(t).split(';')[0].trim();
   return c || 'application/octet-stream';
 }
+function truncate(s, n){
+  s = String(s == null ? '' : s);
+  return s.length > n ? s.slice(0, n - 1) + '…' : s;
+}
+function isSavedChat(chatId){ return !!(chatId && chatId.indexOf(SAVED_CHAT_PREFIX) === 0); }
+
+function toast(msg){
+  var t = $('toast');
+  if(!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._tm);
+  t._tm = setTimeout(function(){ t.classList.remove('show'); }, 3500);
+}
+
+/* FIX-WEBVIEW: безопасный клик по file input */
+function triggerFileInput(inputEl){
+  if(!inputEl){ toast('Внутренняя ошибка: input не найден'); return; }
+  try { inputEl.value = ''; } catch(e){}
+  try { inputEl.click(); }
+  catch(e){
+    toast('WebView не открыл выбор файла. Проверьте onShowFileChooser.');
+    console.error('[FIX-WEBVIEW] click failed', e);
+  }
+}
+
+/* =========================================================================
+   Navigation (history stack)
+   ========================================================================= */
+const screenHistory = ['splash-screen'];
+let currentScreenId = 'splash-screen';
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  var el = $(id);
+  if(el) el.classList.add('active');
+}
+function goScreen(id, replace){
+  if(currentScreenId === id) return;
+  if(currentScreenId === 'chat-screen' && id !== 'chat-screen') leaveChat();
+  if(replace || currentScreenId === null || currentScreenId === 'splash-screen'){
+    screenHistory.length = 0;
+    screenHistory.push(id);
+    try { history.replaceState({s:id}, ''); } catch(e){}
+  } else {
+    screenHistory.push(id);
+    try { history.pushState({s:id}, ''); } catch(e){}
+  }
+  currentScreenId = id;
+  showScreen(id);
+  if(id === 'main-screen') scheduleRenderChats();
+}
+
+window.addEventListener('popstate', function(){
+  if(screenHistory.length > 1){
+    screenHistory.pop();
+    var prev = screenHistory[screenHistory.length - 1];
+    if(prev === 'splash-screen'){
+      try { history.pushState({s:currentScreenId}, ''); } catch(e){}
+      return;
+    }
+    if(currentScreenId === 'chat-screen' && prev !== 'chat-screen') leaveChat();
+    currentScreenId = prev;
+    showScreen(prev);
+    if(prev === 'main-screen') scheduleRenderChats();
+    try { history.pushState({s:prev}, ''); } catch(e){}
+  } else {
+    try { history.pushState({s:currentScreenId}, ''); } catch(e){}
+  }
+});
+try { history.replaceState({s:'splash-screen'}, ''); } catch(e){}
+
+/* =========================================================================
+   Theme
+   ========================================================================= */
 function setTheme(dark){
   if(dark) document.body.classList.add('dark');
   else document.body.classList.remove('dark');
@@ -555,6 +575,11 @@ function setTheme(dark){
   var tg = $('theme-toggle');
   if(tg) tg.classList.toggle('on', dark);
 }
+setTheme(localStorage.getItem('tg_theme') === 'dark');
+
+/* =========================================================================
+   Auth UI
+   ========================================================================= */
 function authError(code){
   var m = {
     'auth/invalid-email':'Неверный email',
@@ -568,8 +593,8 @@ function authError(code){
     'auth/too-many-requests':'Слишком много попыток',
     'auth/operation-not-allowed':'Email/Password не включён в Firebase Console',
     'auth/configuration-not-found':'Включите Email/Password в Firebase Console',
-    'auth/api-key-not-valid':'Неверный API-ключ. Проверьте ограничения в Google Cloud',
-    'auth/internal-error':'Внутренняя ошибка. Проверьте интернет'
+    'auth/api-key-not-valid':'Неверный API-ключ',
+    'auth/internal-error':'Внутренняя ошибка'
   };
   return m[code] || ('Ошибка: ' + code);
 }
@@ -590,38 +615,23 @@ $('login-btn').onclick = async function(){
   var email = $('login-email').value.trim();
   var pass = $('login-password').value;
   if(!email || !pass){ toast('Заполните все поля'); return; }
-  this.disabled = true;
-  var old = this.textContent;
-  this.textContent = 'Вход...';
-  try {
-    await auth.signInWithEmailAndPassword(email, pass);
-    toast('Вход выполнен');
-  } catch(e){
-    toast(authError(e.code));
-  }
-  this.disabled = false;
-  this.textContent = old;
+  this.disabled = true; var old = this.textContent; this.textContent = 'Вход...';
+  try { await auth.signInWithEmailAndPassword(email, pass); toast('Вход выполнен'); }
+  catch(e){ toast(authError(e.code)); }
+  this.disabled = false; this.textContent = old;
 };
 
 $('register-btn').onclick = async function(){
   if(!firebaseReady){ toast('Firebase не инициализирован'); return; }
   var email = $('reg-email').value.trim();
-  var p1 = $('reg-password').value;
-  var p2 = $('reg-password2').value;
+  var p1 = $('reg-password').value, p2 = $('reg-password2').value;
   if(!email || !p1){ toast('Заполните все поля'); return; }
   if(p1.length < 6){ toast('Пароль минимум 6 символов'); return; }
   if(p1 !== p2){ toast('Пароли не совпадают'); return; }
-  this.disabled = true;
-  var old = this.textContent;
-  this.textContent = 'Регистрация...';
-  try {
-    await auth.createUserWithEmailAndPassword(email, p1);
-    toast('Аккаунт создан');
-  } catch(e){
-    toast(authError(e.code));
-  }
-  this.disabled = false;
-  this.textContent = old;
+  this.disabled = true; var old = this.textContent; this.textContent = 'Регистрация...';
+  try { await auth.createUserWithEmailAndPassword(email, p1); toast('Аккаунт создан'); }
+  catch(e){ toast(authError(e.code)); }
+  this.disabled = false; this.textContent = old;
 };
 
 if(firebaseReady){
@@ -634,6 +644,9 @@ if(firebaseReady){
   } catch(e){}
 }
 
+/* =========================================================================
+   Auth state
+   ========================================================================= */
 auth.onAuthStateChanged(async function(user){
   if(!user){
     if(currentScreenId === 'chat-screen') leaveChat();
@@ -647,17 +660,13 @@ auth.onAuthStateChanged(async function(user){
   if(currentUser && currentUser.uid === user.uid) return;
   currentUser = user;
   let snap;
-  try {
-    snap = await db.ref('users/' + user.uid).once('value');
-  } catch(e){
-    toast('Ошибка соединения с базой');
-    return;
-  }
+  try { snap = await db.ref('users/' + user.uid).once('value'); }
+  catch(e){ toast('Ошибка соединения с базой'); return; }
   var data = snap.val();
   if(!data || !data.name){
     goScreen('onboarding-screen', true);
   } else {
-    currentUserData = Object.assign({uid: user.uid}, data);
+    currentUserData = Object.assign({uid:user.uid}, data);
     userCache[user.uid] = currentUserData;
     goScreen('main-screen', true);
     startSelfListener();
@@ -670,28 +679,61 @@ auth.onAuthStateChanged(async function(user){
 function cleanupListeners(){
   try {
     if(unsubUserChats && unsubUserChats.off) unsubUserChats.off();
-    if(unsubMessages && unsubMessages.off) unsubMessages.off();
-    if(unsubChatUser && unsubChatUser.off) unsubChatUser.off();
     if(unsubSelfDoc && unsubSelfDoc.off) unsubSelfDoc.off();
     if(unsubSavedMeta && unsubSavedMeta.off) unsubSavedMeta.off();
+    if(unsubChatMeta && unsubChatMeta.off) unsubChatMeta.off();
+    if(unsubMessages && unsubMessages.off) unsubMessages.off();
+    if(unsubChatUser && unsubChatUser.off) unsubChatUser.off();
   } catch(e){}
-  unsubUserChats = null;
-  unsubMessages = null;
-  unsubChatUser = null;
-  unsubSelfDoc = null;
-  unsubSavedMeta = null;
-  Object.keys(chatUnsubs).forEach(function(k){
-    var c = chatUnsubs[k];
-    try {
-      if(c && c.off) c.off();
-      if(c && c.unreadOff) c.unreadOff();
-    } catch(e){}
-    delete chatUnsubs[k];
-  });
+  unsubUserChats = unsubSelfDoc = unsubSavedMeta = unsubChatMeta = unsubMessages = unsubChatUser = null;
+
+  if(visibilityHandler){
+    document.removeEventListener('visibilitychange', visibilityHandler);
+    visibilityHandler = null;
+  }
+  if(beforeUnloadHandler){
+    window.removeEventListener('beforeunload', beforeUnloadHandler);
+    beforeUnloadHandler = null;
+  }
   chatsData = {};
-  userChatsMap = {};
+  lastMessages = [];
+  currentChatMeta = null;
 }
 
+/* =========================================================================
+   Self listener (online / lastSeen)
+   ========================================================================= */
+function startSelfListener(){
+  if(unsubSelfDoc && unsubSelfDoc.off) unsubSelfDoc.off();
+
+  var ref = db.ref('users/' + currentUser.uid);
+  ref.update({ online: true, lastSeen: TS }).catch(function(){});
+
+  unsubSelfDoc = ref.on('value', function(s){
+    var v = s.val();
+    if(v){
+      currentUserData = Object.assign({uid:currentUser.uid}, v);
+      userCache[currentUser.uid] = currentUserData;
+      updateSettingsUI();
+    }
+  });
+
+  // FIX: убираем утечку обработчиков — храним ссылки
+  visibilityHandler = function(){
+    var r = db.ref('users/' + currentUser.uid);
+    if(document.hidden) r.update({ online: false, lastSeen: TS }).catch(function(){});
+    else r.update({ online: true }).catch(function(){});
+  };
+  beforeUnloadHandler = function(){
+    try { db.ref('users/' + currentUser.uid).update({ online: false, lastSeen: TS }).catch(function(){}); } catch(e){}
+  };
+  document.addEventListener('visibilitychange', visibilityHandler);
+  window.addEventListener('beforeunload', beforeUnloadHandler);
+}
+
+/* =========================================================================
+   Saved messages meta
+   ========================================================================= */
 function startSavedMetaListener(){
   if(unsubSavedMeta && unsubSavedMeta.off) unsubSavedMeta.off();
   var ref = db.ref('saved/' + currentUser.uid);
@@ -699,35 +741,110 @@ function startSavedMetaListener(){
     var v = s.val() || {};
     savedLastMessage = v.lastMessage || '';
     savedLastTime = v.lastTime || null;
-    renderChats();
+    scheduleRenderChats();
   });
 }
 
-function startSelfListener(){
-  if(unsubSelfDoc && unsubSelfDoc.off) unsubSelfDoc.off();
-  var ref = db.ref('users/' + currentUser.uid);
-  ref.update({ online: true, lastSeen: TS }).catch(function(){});
-  unsubSelfDoc = ref.on('value', function(s){
-    var v = s.val();
-    if(v){
-      currentUserData = Object.assign({uid: currentUser.uid}, v);
-      userCache[currentUser.uid] = currentUserData;
-      updateSettingsUI();
-    }
-  });
-  document.addEventListener('visibilitychange', function(){
-    if(document.hidden){
-      ref.update({ online: false, lastSeen: TS, typing: null }).catch(function(){});
-    } else {
-      ref.update({ online: true }).catch(function(){});
-    }
-  });
-  window.addEventListener('beforeunload', function(){
-    ref.update({ online: false, lastSeen: TS, typing: null }).catch(function(){});
+/* =========================================================================
+   Chats list — один listener на userChats/{uid}
+   ========================================================================= */
+function startUserChatsListener(){
+  if(unsubUserChats && unsubUserChats.off) unsubUserChats.off();
+  unsubUserChats = db.ref('userChats/' + currentUser.uid).on('value', function(snap){
+    chatsData = snap.val() || {};
+    scheduleRenderChats();
   });
 }
 
-// FIX-WEBVIEW: используем безопасный триггер вместо прямого .click()
+async function fetchUser(uid){
+  if(userCache[uid]) return userCache[uid];
+  try {
+    var s = await db.ref('users/' + uid).once('value');
+    if(s.exists()){
+      var v = s.val();
+      if(v && v.name){
+        userCache[uid] = Object.assign({uid:uid}, v);
+        return userCache[uid];
+      }
+    }
+  } catch(e){}
+  return { uid: uid, name: '', username: '' };
+}
+
+function renderSavedItem(){
+  var hasMessage = !!(savedLastMessage && savedLastMessage.length);
+  var msg = hasMessage ? truncate(savedLastMessage, 60) : 'сохранённые сообщения';
+  var prefix = hasMessage ? 'Вы: ' : '';
+  var time = savedLastTime ? formatTime(savedLastTime) : '';
+  return '<div class="chat-item saved-item" data-saved="1">' +
+    '<div class="avatar saved"><svg viewBox="0 0 24 24" width="26" height="26" fill="#ffffff"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg></div>' +
+    '<div class="chat-item-info">' +
+      '<div class="chat-item-top"><div class="chat-item-name">Избранное</div><div class="chat-item-time">' + esc(time) + '</div></div>' +
+      '<div class="chat-item-bottom"><div class="chat-item-msg">' + esc(prefix + msg) + '</div></div>' +
+    '</div>' +
+  '</div>';
+}
+
+async function renderChats(){
+  var list = $('chats-list');
+  if(!list || !currentUser) return;
+
+  var q = searchQuery.toLowerCase();
+  var savedHtml = '';
+  if(!q || 'избранное'.indexOf(q) !== -1 || 'сохранённые сообщения'.indexOf(q) !== -1){
+    savedHtml = renderSavedItem();
+  }
+
+  var ids = Object.keys(chatsData);
+  var arr = ids.map(function(id){ return {id:id, data:chatsData[id]}; })
+               .filter(function(x){ return x.data && x.data.otherUid; });
+
+  await Promise.all(arr.map(function(x){ return fetchUser(x.data.otherUid); }));
+
+  arr = arr.filter(function(x){
+    var u = userCache[x.data.otherUid];
+    return u && u.name;
+  });
+  arr.sort(function(a,b){ return (b.data.lastMessageTime || 0) - (a.data.lastMessageTime || 0); });
+
+  var html = savedHtml;
+  arr.forEach(function(x){
+    var u = userCache[x.data.otherUid];
+    var unread = x.data.unread || 0;
+    var time = formatTime(x.data.lastMessageTime);
+    var last = truncate(x.data.lastMessage || '', 60) || 'Нет сообщений';
+    var prefix = (x.data.lastSender === currentUser.uid && x.data.lastMessage) ? 'Вы: ' : '';
+    if(q){
+      var hay = ((u.name||'') + ' ' + (u.username||'') + ' ' + last).toLowerCase();
+      if(hay.indexOf(q) === -1) return;
+    }
+    html += '<div class="chat-item" data-chat="' + escAttr(x.id) + '" data-user="' + escAttr(x.data.otherUid) + '">' +
+      avatarHtml(u) +
+      '<div class="chat-item-info">' +
+        '<div class="chat-item-top"><div class="chat-item-name">' + esc(u.name) + '</div><div class="chat-item-time">' + esc(time) + '</div></div>' +
+        '<div class="chat-item-bottom">' +
+          '<div class="chat-item-msg">' + esc(prefix + last) + '</div>' +
+          (unread > 0 ? '<div class="chat-item-unread">' + unread + '</div>' : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  });
+  if(!html) html = '<div class="empty">Нет чатов. Начните новую переписку.</div>';
+  list.innerHTML = html;
+  applyAvatarUrls(list);
+
+  var savedEl = list.querySelector('.saved-item');
+  if(savedEl) savedEl.onclick = openSavedMessages;
+
+  list.querySelectorAll('.chat-item').forEach(function(el){
+    if(el.classList.contains('saved-item')) return;
+    el.onclick = function(){ openChat(el.dataset.chat, el.dataset.user); };
+  });
+}
+
+/* =========================================================================
+   Onboarding
+   ========================================================================= */
 $('onb-avatar').onclick = function(){ triggerFileInput($('onb-avatar-input')); };
 $('onb-avatar-input').onchange = function(e){
   var f = e.target.files[0];
@@ -735,7 +852,7 @@ $('onb-avatar-input').onchange = function(e){
   onbAvatarFile = f;
   var url = URL.createObjectURL(f);
   var p = $('onb-avatar-preview');
-  p.style.backgroundImage = 'url(\'' + url + '\')';
+  p.style.backgroundImage = 'url("' + url + '")';
   p.innerHTML = '';
 };
 
@@ -759,21 +876,15 @@ $('onb-continue').onclick = async function(){
         var ref = storage.ref('avatars/' + currentUser.uid + '_' + Date.now());
         await ref.put(onbAvatarFile);
         photoURL = await ref.getDownloadURL();
-      } catch(e){
-        toast('Аватар не загружен');
-      }
+      } catch(e){ toast('Аватар не загружен'); }
     }
     var updates = {};
     updates['users/' + currentUser.uid] = {
-      name: name,
-      username: username,
-      photoURL: photoURL,
-      lastSeen: TS,
-      online: true
+      name: name, username: username, photoURL: photoURL, lastSeen: TS, online: true
     };
     updates['usernames/' + username] = currentUser.uid;
     await db.ref().update(updates);
-    currentUserData = { uid: currentUser.uid, name: name, username: username, photoURL: photoURL };
+    currentUserData = { uid:currentUser.uid, name:name, username:username, photoURL:photoURL };
     userCache[currentUser.uid] = currentUserData;
     goScreen('main-screen', true);
     startSelfListener();
@@ -786,154 +897,33 @@ $('onb-continue').onclick = async function(){
   this.disabled = false;
 };
 
-function startUserChatsListener(){
-  if(unsubUserChats && unsubUserChats.off) unsubUserChats.off();
-  unsubUserChats = db.ref('userChats/' + currentUser.uid).on('value', function(snap){
-    userChatsMap = snap.val() || {};
-    attachChatListeners();
-    renderChats();
-  });
-}
+/* =========================================================================
+   Chat screen
+   ========================================================================= */
+function leaveChat(){
+  stopAudio();
+  if(unsubMessages && unsubMessages.off){ try { unsubMessages.off(); } catch(e){} }
+  if(unsubChatMeta && unsubChatMeta.off){ try { unsubChatMeta.off(); } catch(e){} }
+  if(unsubChatUser && unsubChatUser.off){ try { unsubChatUser.off(); } catch(e){} }
+  unsubMessages = unsubChatMeta = unsubChatUser = null;
 
-function attachChatListeners(){
-  Object.keys(chatUnsubs).forEach(function(id){
-    if(!userChatsMap[id]){
-      var c = chatUnsubs[id];
-      try {
-        if(c && c.off) c.off();
-        if(c && c.unreadOff) c.unreadOff();
-      } catch(e){}
-      delete chatUnsubs[id];
-      delete chatsData[id];
-    }
-  });
-  Object.keys(userChatsMap).forEach(function(id){
-    if(chatUnsubs[id]) return;
-    var obj = {};
-    var metaRef = db.ref('chats/' + id);
-    obj.cb = function(s){
-      chatsData[id] = s.val() || {};
-      renderChats();
-    };
-    metaRef.on('value', obj.cb);
-    obj.off = function(){ metaRef.off('value', obj.cb); };
-    var unreadRef = db.ref('chats/' + id + '/unread/' + currentUser.uid);
-    obj.unreadCb = function(){ renderChats(); };
-    unreadRef.on('value', obj.unreadCb);
-    obj.unreadOff = function(){ unreadRef.off('value', obj.unreadCb); };
-    chatUnsubs[id] = obj;
-  });
-}
-
-async function fetchUser(uid){
-  if(userCache[uid]) return userCache[uid];
-  try {
-    var s = await db.ref('users/' + uid).once('value');
-    if(s.exists()){
-      var v = s.val();
-      if(!v || !v.name){
-        return {uid: uid, name: '', username: ''};
-      }
-      userCache[uid] = Object.assign({uid: uid}, v);
-      return userCache[uid];
-    }
-  } catch(e){}
-  return {uid: uid, name: '', username: ''};
-}
-
-function previewTextFor(m){
-  if(!m) return 'Нет сообщений';
-  return m.lastMessage || 'Нет сообщений';
-}
-
-function renderSavedItem(){
-  var hasMessage = savedLastMessage && savedLastMessage.length > 0;
-  var msg = hasMessage ? savedLastMessage : 'сохранённые сообщения';
-  var prefix = hasMessage ? 'Вы: ' : '';
-  var time = savedLastTime ? formatTime(savedLastTime) : '';
-  return '<div class="chat-item saved-item" data-saved="1">' +
-    '<div class="avatar saved"><svg viewBox="0 0 24 24" width="26" height="26" fill="#ffffff"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg></div>' +
-    '<div class="chat-item-info">' +
-      '<div class="chat-item-top">' +
-        '<div class="chat-item-name">Избранное</div>' +
-        '<div class="chat-item-time">' + esc(time) + '</div>' +
-      '</div>' +
-      '<div class="chat-item-bottom">' +
-        '<div class="chat-item-msg">' + esc(prefix + msg) + '</div>' +
-      '</div>' +
-    '</div>' +
-  '</div>';
-}
-
-async function renderChats(){
-  var list = $('chats-list');
-  if(!list || !currentUser) return;
-
-  var q = searchQuery.toLowerCase();
-  var savedHtml = '';
-  if(!q || 'избранное'.indexOf(q) !== -1 || 'сохранённые сообщения'.indexOf(q) !== -1){
-    savedHtml = renderSavedItem();
+  // Очищаем typing (не мешаем собеседнику видеть вечный «печатает...»)
+  if(currentUser && currentChatId && !isSavedChat(currentChatId)){
+    db.ref('chats/' + currentChatId + '/meta/typing/' + currentUser.uid).remove().catch(function(){});
   }
-
-  var ids = Object.keys(chatsData);
-  var arr = [];
-  ids.forEach(function(id){
-    var c = chatsData[id];
-    if(!c || !c.members) return;
-    var otherId = Object.keys(c.members).find(function(m){ return m !== currentUser.uid; });
-    if(!otherId) return;
-    arr.push({id: id, data: c, otherId: otherId});
-  });
-  await Promise.all(arr.map(function(x){ return fetchUser(x.otherId); }));
-  arr = arr.filter(function(x){
-    var u = userCache[x.otherId];
-    return u && u.name;
-  });
-  arr.sort(function(a,b){
-    var ta = a.data.lastMessageTime || 0;
-    var tb = b.data.lastMessageTime || 0;
-    return tb - ta;
-  });
-  var html = savedHtml;
-  arr.forEach(function(x){
-    var u = userCache[x.otherId];
-    var unread = (x.data.unread && x.data.unread[currentUser.uid]) || 0;
-    var time = formatTime(x.data.lastMessageTime);
-    var last = previewTextFor(x.data);
-    var prefix = (x.data.lastSender === currentUser.uid && x.data.lastMessage) ? 'Вы: ' : '';
-    if(q){
-      var hay = ((u.name||'') + ' ' + (u.username||'') + ' ' + last).toLowerCase();
-      if(hay.indexOf(q) === -1) return;
-    }
-    html += '<div class="chat-item" data-chat="' + x.id + '" data-user="' + x.otherId + '">' +
-      avatarHtml(u) +
-      '<div class="chat-item-info">' +
-        '<div class="chat-item-top">' +
-          '<div class="chat-item-name">' + esc(u.name) + '</div>' +
-          '<div class="chat-item-time">' + esc(time) + '</div>' +
-        '</div>' +
-        '<div class="chat-item-bottom">' +
-          '<div class="chat-item-msg">' + esc(prefix + last) + '</div>' +
-          (unread > 0 ? '<div class="chat-item-unread">' + unread + '</div>' : '') +
-        '</div>' +
-      '</div>' +
-    '</div>';
-  });
-  if(!html) html = '<div class="empty">Нет чатов. Начните новую переписку.</div>';
-  list.innerHTML = html;
-
-  var savedEl = list.querySelector('.saved-item');
-  if(savedEl) savedEl.onclick = openSavedMessages;
-
-  list.querySelectorAll('.chat-item').forEach(function(el){
-    if(el.classList.contains('saved-item')) return;
-    el.onclick = function(){ openChat(el.dataset.chat, el.dataset.user); };
-  });
+  currentChatId = null;
+  currentChatUser = null;
+  currentChatMeta = null;
+  lastMessages = [];
+  closeAttachMenu();
+  hideUploadProgress();
+  stopRecordingSilently();
 }
 
 async function openSavedMessages(){
   currentChatId = SAVED_CHAT_PREFIX + currentUser.uid;
   currentChatUser = null;
+  currentChatMeta = null;
   $('chat-name').textContent = 'Избранное';
   var st = $('chat-status');
   st.textContent = 'сохранённые сообщения';
@@ -948,22 +938,34 @@ async function openSavedMessages(){
 async function openChat(chatId, otherUid){
   currentChatId = chatId;
   var u = await fetchUser(otherUid);
-  currentChatUser = Object.assign({uid: otherUid}, u);
+  currentChatUser = Object.assign({uid:otherUid}, u);
   $('chat-name').textContent = currentChatUser.name || 'Пользователь';
   var av = $('chat-avatar');
-  av.style.backgroundImage = currentChatUser.photoURL ? 'url(\'' + currentChatUser.photoURL + '\')' : '';
-  av.innerHTML = currentChatUser.photoURL ? '' : esc(initials(currentChatUser.name));
+  if(currentChatUser.photoURL){
+    av.style.backgroundImage = 'url("' + currentChatUser.photoURL + '")';
+    av.innerHTML = '';
+  } else {
+    av.style.backgroundImage = '';
+    av.innerHTML = esc(initials(currentChatUser.name));
+  }
+
   updateChatStatus();
-  db.ref('chats/' + chatId + '/unread/' + currentUser.uid).set(0).catch(function(){});
+
+  // Сбрасываем непрочитанные у себя
+  db.ref('userChats/' + currentUser.uid + '/' + chatId + '/unread').set(0).catch(function(){});
+
   goScreen('chat-screen');
+  startChatMetaListener();
   startMessagesListener();
   startChatUserListener(otherUid);
 }
 
 function updateChatStatus(){
   var el = $('chat-status');
-  if(!el || !currentChatUser){ if(el) el.textContent = ''; return; }
-  if(currentChatUser.typing && currentChatUser.typing === currentChatId){
+  if(!el) return;
+  if(!currentChatUser){ el.textContent = ''; return; }
+  var t = currentChatMeta && currentChatMeta.typing && currentChatMeta.typing[currentChatUser.uid];
+  if(t && (Date.now() - t) < TYPING_TTL_MS){
     el.textContent = 'печатает...';
     el.style.color = '#a8d7ff';
     return;
@@ -982,10 +984,21 @@ function startChatUserListener(uid){
   unsubChatUser = db.ref('users/' + uid).on('value', function(s){
     var v = s.val();
     if(v){
-      currentChatUser = Object.assign({uid: uid}, v);
+      currentChatUser = Object.assign({uid:uid}, v);
       userCache[uid] = currentChatUser;
       updateChatStatus();
     }
+  });
+}
+
+function startChatMetaListener(){
+  if(unsubChatMeta && unsubChatMeta.off) unsubChatMeta.off();
+  if(isSavedChat(currentChatId)) return;
+  var ref = db.ref('chats/' + currentChatId + '/meta');
+  unsubChatMeta = ref.on('value', function(s){
+    currentChatMeta = s.val() || {};
+    updateChatStatus();
+    updateMessageChecks();
   });
 }
 
@@ -995,14 +1008,15 @@ function startMessagesListener(){
     .orderByChild('timestamp').limitToLast(300)
     .on('value', function(snap){
       var msgs = [];
-      snap.forEach(function(child){
-        msgs.push(Object.assign({id: child.key}, child.val()));
-      });
+      snap.forEach(function(child){ msgs.push(Object.assign({id:child.key}, child.val())); });
       renderMessages(msgs);
       if(!isSavedChat(currentChatId)) markAsRead();
     });
 }
 
+/* =========================================================================
+   Message rendering
+   ========================================================================= */
 function formatDateLabel(d){
   var now = new Date();
   var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -1016,15 +1030,12 @@ function checkSingle(){
   return '<span class="msg-check"><svg viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 5.5L5.5 10L14 1"/></svg></span>';
 }
 function checkDouble(){
-  return '<span class="msg-check"><svg viewBox="0 0 19 11" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 5.5L5.5 10L14 1"/><path d="M6 5.5L10.5 10L19 1"/></svg></span>';
+  return '<span class="msg-check double"><svg viewBox="0 0 19 11" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 5.5L5.5 10L14 1"/><path d="M6 5.5L10.5 10L19 1"/></svg></span>';
 }
 
 function waveBars(seed){
-  var s = 0;
-  var str = String(seed || 'x');
-  for(var i = 0; i < str.length; i++){
-    s = (s * 31 + str.charCodeAt(i)) >>> 0;
-  }
+  var s = 0, str = String(seed || 'x');
+  for(var i = 0; i < str.length; i++) s = (s * 31 + str.charCodeAt(i)) >>> 0;
   var html = '';
   for(var j = 0; j < 26; j++){
     s = (s * 1103515245 + 12345) >>> 0;
@@ -1047,12 +1058,9 @@ function renderMessageInner(m){
   if(type === 'file'){
     return '<a class="msg-file" href="' + escAttr(m.fileURL||'') + '" target="_blank" rel="noopener" download="' + escAttr(m.fileName || 'file') + '">' +
       '<div class="msg-file-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg></div>' +
-      '<div class="msg-file-info">' +
-        '<div class="msg-file-name">' + esc(m.fileName || 'Файл') + '</div>' +
-        '<div class="msg-file-size">' + formatSize(m.fileSize || 0) + '</div>' +
-      '</div>' +
-    '</a>' +
-    (m.text ? '<div class="msg-text msg-caption">' + esc(m.text) + '</div>' : '');
+      '<div class="msg-file-info"><div class="msg-file-name">' + esc(m.fileName || 'Файл') + '</div>' +
+      '<div class="msg-file-size">' + formatSize(m.fileSize || 0) + '</div></div>' +
+    '</a>' + (m.text ? '<div class="msg-text msg-caption">' + esc(m.text) + '</div>' : '');
   }
   if(type === 'voice'){
     return '<div class="msg-voice">' +
@@ -1068,9 +1076,16 @@ function renderMessageInner(m){
 }
 
 function renderMessages(msgs){
+  lastMessages = msgs;
   var box = $('messages');
   if(!box || !currentUser) return;
   var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+
+  var savedMode = isSavedChat(currentChatId);
+  var otherUid = currentChatUser ? currentChatUser.uid : null;
+  var otherReadTs = (currentChatMeta && currentChatMeta.readBy && otherUid)
+    ? (currentChatMeta.readBy[otherUid] || 0) : 0;
+
   var html = '';
   var lastDate = '';
   msgs.forEach(function(m){
@@ -1083,9 +1098,12 @@ function renderMessages(msgs){
     var isOut = m.senderId === currentUser.uid;
     var time = formatFullTime(m.timestamp);
     var check = '';
-    if(isOut && !isSavedChat(currentChatId)) check = m.read ? checkDouble() : checkSingle();
+    if(isOut && !savedMode){
+      var isRead = otherReadTs && m.timestamp <= otherReadTs;
+      check = isRead ? checkDouble() : checkSingle();
+    }
     var mediaClass = (m.type && m.type !== 'text') ? ' media-msg' : '';
-    html += '<div class="msg ' + (isOut?'out':'in') + mediaClass + '">' +
+    html += '<div class="msg ' + (isOut?'out':'in') + mediaClass + '" data-ts="' + (m.timestamp||0) + '">' +
       renderMessageInner(m) +
       '<span class="msg-time">' + time + check + '</span>' +
     '</div>';
@@ -1094,48 +1112,64 @@ function renderMessages(msgs){
   if(atBottom) box.scrollTop = box.scrollHeight;
 
   box.querySelectorAll('.msg-media[data-media-type="photo"]').forEach(function(el){
-    el.onclick = function(){
-      openMediaViewer(el.dataset.mediaUrl, 'photo');
-    };
+    el.onclick = function(){ openMediaViewer(el.dataset.mediaUrl, 'photo'); };
   });
   box.querySelectorAll('.voice-play').forEach(function(btn){
-    btn.onclick = function(e){
-      e.stopPropagation();
-      toggleAudio(btn, btn.dataset.audioUrl);
-    };
+    btn.onclick = function(e){ e.stopPropagation(); toggleAudio(btn, btn.dataset.audioUrl); };
   });
 }
 
+/**
+ * Обновляет только галочки в уже отрендеренных исходящих сообщениях,
+ * без полного ререндера списка.
+ */
+function updateMessageChecks(){
+  if(!currentChatUser || isSavedChat(currentChatId)) return;
+  var box = $('messages');
+  if(!box) return;
+  var otherUid = currentChatUser.uid;
+  var otherReadTs = (currentChatMeta && currentChatMeta.readBy && currentChatMeta.readBy[otherUid]) || 0;
+
+  box.querySelectorAll('.msg.out[data-ts]').forEach(function(el){
+    var ts = +el.dataset.ts;
+    var shouldDouble = otherReadTs && ts <= otherReadTs;
+    var checkEl = el.querySelector('.msg-check');
+    if(!checkEl) return;
+    var isDouble = checkEl.classList.contains('double');
+    if(shouldDouble !== isDouble){
+      checkEl.outerHTML = shouldDouble ? checkDouble() : checkSingle();
+    }
+  });
+}
+
+/* =========================================================================
+   Media viewer
+   ========================================================================= */
 function openMediaViewer(url, type){
-  var viewer = $('media-viewer');
-  var content = $('media-viewer-content');
-  if(type === 'photo'){
-    content.innerHTML = '<img src="' + escAttr(url) + '">';
-  } else if(type === 'video'){
-    content.innerHTML = '<video src="' + escAttr(url) + '" controls autoplay playsinline></video>';
-  }
+  var viewer = $('media-viewer'), content = $('media-viewer-content');
+  if(type === 'photo') content.innerHTML = '<img src="' + escAttr(url) + '">';
+  else if(type === 'video') content.innerHTML = '<video src="' + escAttr(url) + '" controls autoplay playsinline></video>';
   viewer.classList.add('show');
 }
 $('media-viewer-close').onclick = function(){
-  var viewer = $('media-viewer');
-  var content = $('media-viewer-content');
+  var viewer = $('media-viewer'), content = $('media-viewer-content');
   content.innerHTML = '';
   viewer.classList.remove('show');
 };
 
+/* =========================================================================
+   Voice playback
+   ========================================================================= */
 function resetWave(btn){
   if(!btn || !btn.parentNode) return;
   var wave = btn.parentNode.querySelector('.voice-wave');
   if(!wave) return;
   wave.querySelectorAll('span').forEach(function(b){ b.style.opacity = '.55'; });
 }
-
 function stopAudio(){
   if(currentAudio){
     try { currentAudio.pause(); } catch(e){}
-    currentAudio.onended = null;
-    currentAudio.onerror = null;
-    currentAudio.ontimeupdate = null;
+    currentAudio.onended = currentAudio.onerror = currentAudio.ontimeupdate = null;
     currentAudio = null;
   }
   if(currentAudioBtn){
@@ -1144,61 +1178,41 @@ function stopAudio(){
     currentAudioBtn = null;
   }
 }
-
 function toggleAudio(btn, url){
   if(!url){ toast('Файл недоступен'); return; }
-  if(currentAudioBtn === btn && currentAudio && !currentAudio.paused){
-    stopAudio();
-    return;
-  }
+  if(currentAudioBtn === btn && currentAudio && !currentAudio.paused){ stopAudio(); return; }
   stopAudio();
   currentAudioBtn = btn;
   var audio = new Audio();
   audio.preload = 'auto';
   audio.src = url;
   currentAudio = audio;
-
   var wave = btn.parentNode ? btn.parentNode.querySelector('.voice-wave') : null;
   var bars = wave ? wave.querySelectorAll('span') : [];
-
   var setProgress = function(p){
     if(!bars.length) return;
     var n = Math.round(bars.length * Math.max(0, Math.min(1, p)));
-    for(var i = 0; i < bars.length; i++){
-      bars[i].style.opacity = i < n ? '1' : '.55';
-    }
+    for(var i = 0; i < bars.length; i++) bars[i].style.opacity = i < n ? '1' : '.55';
   };
-
   audio.ontimeupdate = function(){
-    if(audio.duration && isFinite(audio.duration) && audio.duration > 0){
+    if(audio.duration && isFinite(audio.duration) && audio.duration > 0)
       setProgress(audio.currentTime / audio.duration);
-    }
   };
   audio.onended = function(){ setProgress(0); stopAudio(); };
   audio.onerror = function(){ toast('Не удалось воспроизвести'); stopAudio(); };
-
-  audio.play().then(function(){
-    btn.innerHTML = PAUSE_ICON;
-  }).catch(function(){
-    toast('Не удалось воспроизвести');
-    stopAudio();
+  audio.play().then(function(){ btn.innerHTML = PAUSE_ICON; }).catch(function(){
+    toast('Не удалось воспроизвести'); stopAudio();
   });
 }
 
+/* =========================================================================
+   Sending messages
+   ========================================================================= */
 async function markAsRead(){
   if(!currentChatId || !currentUser || isSavedChat(currentChatId)) return;
   try {
-    var snap = await db.ref('chats/' + currentChatId + '/messages')
-      .orderByChild('read').equalTo(false).limitToFirst(200).once('value');
-    if(!snap.exists()) return;
-    var updates = {};
-    snap.forEach(function(child){
-      var v = child.val();
-      if(v.senderId !== currentUser.uid){
-        updates['chats/' + currentChatId + '/messages/' + child.key + '/read'] = true;
-      }
-    });
-    if(Object.keys(updates).length) await db.ref().update(updates);
+    db.ref('chats/' + currentChatId + '/meta/readBy/' + currentUser.uid).set(TS).catch(function(){});
+    db.ref('userChats/' + currentUser.uid + '/' + currentChatId + '/unread').set(0).catch(function(){});
   } catch(e){}
 }
 
@@ -1207,21 +1221,21 @@ async function sendMessage(){
   var text = inp.value.trim();
   if(!text || !currentChatId) return;
   inp.value = '';
-  if(currentUser && !isSavedChat(currentChatId)){
-    db.ref('users/' + currentUser.uid + '/typing').set(null).catch(function(){});
+  if(!isSavedChat(currentChatId)){
+    db.ref('chats/' + currentChatId + '/meta/typing/' + currentUser.uid).remove().catch(function(){});
   }
-  await pushMessage({ type: 'text', text: text });
+  await pushMessage({ type:'text', text:text });
 }
 
-function resolveOtherUid(chatId, opts){
-  if(opts && opts.otherUid) return opts.otherUid;
-  if(currentChatUser && currentChatUser.uid && chatId === currentChatId) return currentChatUser.uid;
-  var c = chatsData[chatId];
-  if(c && c.members){
-    var found = Object.keys(c.members).find(function(m){ return m !== currentUser.uid; });
-    if(found) return found;
-  }
-  return null;
+function previewFromMsg(msg){
+  var s;
+  if(msg.type === 'photo') s = '📷 Фото' + (msg.text ? ': ' + msg.text : '');
+  else if(msg.type === 'video') s = '🎬 Видео' + (msg.text ? ': ' + msg.text : '');
+  else if(msg.type === 'file') s = '📎 ' + (msg.fileName || 'Файл');
+  else if(msg.type === 'voice') s = '🎤 Голосовое сообщение';
+  else if(msg.type === 'circle') s = '⭕ Видеосообщение';
+  else s = msg.text || '';
+  return truncate(s, 60);
 }
 
 async function pushMessage(msgExtra, opts){
@@ -1232,61 +1246,76 @@ async function pushMessage(msgExtra, opts){
   var msg = Object.assign({
     senderId: currentUser.uid,
     timestamp: TS,
-    read: false
+    type: 'text'
   }, msgExtra);
 
+  /* --- Saved messages --- */
   if(isSavedChat(chatId)){
     try {
-      var msgRef = db.ref('chats/' + chatId + '/messages').push();
-      msg.read = true;
-      await msgRef.set(msg);
+      var ref = db.ref('chats/' + chatId + '/messages').push();
+      await ref.set(msg);
       await db.ref('saved/' + currentUser.uid).update({
         lastMessage: previewFromMsg(msg),
         lastTime: TS
       });
-    } catch(e){
-      toast('Ошибка сохранения');
-    }
+    } catch(e){ toast('Ошибка сохранения'); }
     return;
   }
 
   var otherUid = resolveOtherUid(chatId, opts);
-  if(!otherUid){
-    toast('Ошибка: получатель не найден');
-    return;
-  }
+  if(!otherUid){ toast('Ошибка: получатель не найден'); return; }
 
   try {
-    var msgRef2 = db.ref('chats/' + chatId + '/messages').push();
+    var msgRef = db.ref('chats/' + chatId + '/messages').push();
+    var preview = previewFromMsg(msg);
     var updates = {};
-    updates['chats/' + chatId + '/messages/' + msgRef2.key] = msg;
-    updates['chats/' + chatId + '/lastMessage'] = previewFromMsg(msg);
-    updates['chats/' + chatId + '/lastMessageTime'] = TS;
-    updates['chats/' + chatId + '/lastSender'] = currentUser.uid;
-    updates['chats/' + chatId + '/lastType'] = msg.type || 'text';
 
-    var u = await db.ref('chats/' + chatId + '/unread').once('value');
-    var unread = u.val() || {};
-    unread[otherUid] = (unread[otherUid] || 0) + 1;
-    unread[currentUser.uid] = 0;
-    updates['chats/' + chatId + '/unread'] = unread;
-    updates['users/' + currentUser.uid + '/typing'] = null;
+    updates['chats/' + chatId + '/messages/' + msgRef.key] = msg;
+
+    // Fan-out: обновляем preview у обоих пользователей
+    [currentUser.uid, otherUid].forEach(function(uid){
+      var base = 'userChats/' + uid + '/' + chatId;
+      updates[base + '/otherUid'] = uid === currentUser.uid ? otherUid : currentUser.uid;
+      updates[base + '/lastMessage'] = preview;
+      updates[base + '/lastMessageTime'] = TS;
+      updates[base + '/lastSender'] = currentUser.uid;
+      updates[base + '/lastType'] = msg.type;
+    });
+    // Себе unread=0
+    updates['userChats/' + currentUser.uid + '/' + chatId + '/unread'] = 0;
+
+    // Собеседнику: атомарный инкремент
+    if(INCR){
+      updates['userChats/' + otherUid + '/' + chatId + '/unread'] = INCR(1);
+    }
+
+    // Убираем typing
+    updates['chats/' + chatId + '/meta/typing/' + currentUser.uid] = null;
 
     await db.ref().update(updates);
+
+    // Fallback: если ServerValue.increment недоступен — transaction
+    if(!INCR){
+      await db.ref('userChats/' + otherUid + '/' + chatId + '/unread')
+        .transaction(function(v){ return (v || 0) + 1; });
+    }
   } catch(e){
     toast('Ошибка отправки');
+    console.error(e);
   }
 }
 
-function previewFromMsg(msg){
-  if(msg.type === 'photo') return '📷 Фото' + (msg.text ? ': ' + msg.text : '');
-  if(msg.type === 'video') return '🎬 Видео' + (msg.text ? ': ' + msg.text : '');
-  if(msg.type === 'file') return '📎 ' + (msg.fileName || 'Файл');
-  if(msg.type === 'voice') return '🎤 Голосовое сообщение';
-  if(msg.type === 'circle') return '⭕ Видеосообщение';
-  return msg.text || '';
+function resolveOtherUid(chatId, opts){
+  if(opts && opts.otherUid) return opts.otherUid;
+  if(currentChatUser && currentChatUser.uid && chatId === currentChatId) return currentChatUser.uid;
+  var c = chatsData[chatId];
+  if(c && c.otherUid) return c.otherUid;
+  return null;
 }
 
+/* =========================================================================
+   Uploading media
+   ========================================================================= */
 function showUploadProgress(text){
   var p = $('upload-progress');
   if(!p) return;
@@ -1304,33 +1333,28 @@ function hideUploadProgress(){
   setUploadProgress(0);
 }
 
-async function uploadFileAndGetURL(file, folder){
+function uploadFileAndGetURL(file, folder){
   var safeName = (file.name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
   var path = folder + '/' + currentUser.uid + '_' + Date.now() + '_' + safeName;
   var ref = storage.ref(path);
-  var contentType = cleanMime(file.type);
-  var metadata = { contentType: contentType, cacheControl: 'public,max-age=31536000' };
+  var task = ref.put(file, { contentType: cleanMime(file.type), cacheControl: 'public,max-age=31536000' });
 
-  var task = ref.put(file, metadata);
-
+  // FIX: без гонки resolve/reject
   return new Promise(function(resolve, reject){
-    var done = false;
+    var settled = false;
     task.on('state_changed', function(snap){
       var pct = snap.totalBytes ? (snap.bytesTransferred / snap.totalBytes) * 100 : 0;
       setUploadProgress(pct);
       var txt = $('upload-text');
       if(txt) txt.textContent = 'Загрузка ' + Math.round(pct) + '%';
     }, function(err){
-      if(done) return;
-      done = true;
+      if(settled) return;
+      settled = true;
       reject(err);
-    }, async function(){
-      if(done) return;
-      done = true;
-      try {
-        var url = await task.snapshot.ref.getDownloadURL();
-        resolve(url);
-      } catch(e){ reject(e); }
+    }, function(){
+      if(settled) return;
+      settled = true;
+      task.snapshot.ref.getDownloadURL().then(resolve, reject);
     });
   });
 }
@@ -1338,7 +1362,6 @@ async function uploadFileAndGetURL(file, folder){
 async function handleMediaFile(file, forceType, extra, ctx){
   if(!file) return;
   if(!currentUser){ toast('Нет авторизации'); return; }
-
   var chatId = (ctx && ctx.chatId) || currentChatId;
   if(!chatId){ toast('Откройте чат'); return; }
   var otherUid = (ctx && ctx.otherUid) || (currentChatUser ? currentChatUser.uid : null);
@@ -1347,10 +1370,7 @@ async function handleMediaFile(file, forceType, extra, ctx){
     toast('Файл слишком большой (макс. ' + formatSize(MAX_FILE_SIZE) + ')');
     return;
   }
-  if(file.size === 0){
-    toast('Файл пустой');
-    return;
-  }
+  if(file.size === 0){ toast('Файл пустой'); return; }
 
   var type = forceType;
   if(!type){
@@ -1359,44 +1379,32 @@ async function handleMediaFile(file, forceType, extra, ctx){
     else type = 'file';
   }
 
-  var folder = 'media/' + chatId;
   showUploadProgress('Подготовка...');
-
   try {
-    var url = await uploadFileAndGetURL(file, folder);
+    var url = await uploadFileAndGetURL(file, 'media/' + chatId);
     setUploadProgress(100);
     hideUploadProgress();
 
-    var msgExtra = Object.assign({ type: type, fileURL: url }, extra || {});
+    var msgExtra = Object.assign({ type:type, fileURL:url }, extra || {});
     if(type === 'file'){
       msgExtra.fileName = file.name || 'Файл';
       msgExtra.fileSize = file.size;
       msgExtra.mimeType = cleanMime(file.type);
-    }
-    if(type === 'voice' || type === 'circle' || type === 'video' || type === 'photo'){
+    } else {
       msgExtra.mimeType = cleanMime(file.type);
     }
-
-    await pushMessage(msgExtra, { chatId: chatId, otherUid: otherUid });
+    await pushMessage(msgExtra, { chatId:chatId, otherUid:otherUid });
   } catch(e){
     hideUploadProgress();
-    var m = e && (e.message || e.code) ? (e.message || e.code) : 'неизвестная ошибка';
+    var m = (e && (e.message || e.code)) ? (e.message || e.code) : 'неизвестная ошибка';
     toast('Ошибка загрузки: ' + m);
     console.error('upload error', e);
   }
 }
 
-$('media-photo-input').onchange = function(){
-  var f = this.files[0];
-  this.value = '';
-  if(f) handleMediaFile(f, null);
-};
-$('media-file-input').onchange = function(){
-  var f = this.files[0];
-  this.value = '';
-  if(f) handleMediaFile(f, 'file');
-};
-
+/* =========================================================================
+   Attach menu
+   ========================================================================= */
 function openAttachMenu(){
   $('attach-menu').classList.add('show');
   $('attach-overlay').classList.add('show');
@@ -1407,21 +1415,24 @@ function closeAttachMenu(){
 }
 $('attach-btn').onclick = function(e){
   e.stopPropagation();
-  if($('attach-menu').classList.contains('show')) closeAttachMenu();
-  else openAttachMenu();
+  if($('attach-menu').classList.contains('show')) closeAttachMenu(); else openAttachMenu();
 };
 $('attach-overlay').onclick = closeAttachMenu;
 
-// FIX-WEBVIEW: используем безопасный триггер
-$('attach-photo').onclick = function(){
-  closeAttachMenu();
-  triggerFileInput($('media-photo-input'));
+$('attach-photo').onclick = function(){ closeAttachMenu(); triggerFileInput($('media-photo-input')); };
+$('attach-file').onclick = function(){ closeAttachMenu(); triggerFileInput($('media-file-input')); };
+$('media-photo-input').onchange = function(){
+  var f = this.files[0]; this.value = '';
+  if(f) handleMediaFile(f, null);
 };
-$('attach-file').onclick = function(){
-  closeAttachMenu();
-  triggerFileInput($('media-file-input'));
+$('media-file-input').onchange = function(){
+  var f = this.files[0]; this.value = '';
+  if(f) handleMediaFile(f, 'file');
 };
 
+/* =========================================================================
+   Recording
+   ========================================================================= */
 function pickMimeType(list){
   if(typeof MediaRecorder === 'undefined') return '';
   if(!MediaRecorder.isTypeSupported) return '';
@@ -1447,25 +1458,14 @@ function stopRecordingSilently(){
 async function startRecording(mode){
   if(!currentChatId){ toast('Откройте чат'); return; }
   if(!currentUser){ toast('Нет авторизации'); return; }
-
-  // FIX-WEBVIEW: единая проверка всех условий
   if(!CAN_RECORD){
-    if(!IS_SECURE_CTX){
-      toast('⚠ Запись недоступна: WebView не в https-контексте. Нужен WebViewAssetLoader.');
-    } else if(!HAS_MEDIARECORDER){
-      toast('WebView не поддерживает MediaRecorder');
-    } else if(!HAS_USERMEDIA){
-      toast('WebView не даёт доступ к медиаустройствам');
-    } else {
-      toast('Запись недоступна');
-    }
+    if(!IS_SECURE_CTX) toast('⚠ Нужен https-контекст (WebViewAssetLoader)');
+    else if(!HAS_MEDIARECORDER) toast('WebView не поддерживает MediaRecorder');
+    else if(!HAS_USERMEDIA) toast('WebView не даёт доступ к медиа');
+    else toast('Запись недоступна');
     return;
   }
-
-  if(mediaRecorder){
-    toast('Запись уже идёт');
-    return;
-  }
+  if(mediaRecorder){ toast('Запись уже идёт'); return; }
 
   recordMode = mode;
   var ctx = {
@@ -1475,13 +1475,9 @@ async function startRecording(mode){
 
   try {
     var constraints = (mode === 'circle')
-      ? {
-          audio: { echoCancellation: true, noiseSuppression: true },
-          video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } }
-        }
-      : {
-          audio: { echoCancellation: true, noiseSuppression: true }
-        };
+      ? { audio:{ echoCancellation:true, noiseSuppression:true },
+          video:{ facingMode:'user', width:{ideal:480}, height:{ideal:480} } }
+      : { audio:{ echoCancellation:true, noiseSuppression:true } };
 
     mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
 
@@ -1493,33 +1489,25 @@ async function startRecording(mode){
     if(mimeType) opts.mimeType = mimeType;
     if(mode === 'circle') opts.videoBitsPerSecond = 900000;
 
-    try {
-      mediaRecorder = new MediaRecorder(mediaStream, opts);
-    } catch(err){
-      mediaRecorder = new MediaRecorder(mediaStream);
-    }
+    try { mediaRecorder = new MediaRecorder(mediaStream, opts); }
+    catch(err){ mediaRecorder = new MediaRecorder(mediaStream); }
 
     mediaChunks = [];
-
     mediaRecorder.ondataavailable = function(e){
       if(e.data && e.data.size > 0) mediaChunks.push(e.data);
     };
-
     mediaRecorder.onerror = function(e){
       console.error('MediaRecorder error', e);
       toast('Ошибка записи');
       stopRecordingSilently();
     };
-
     mediaRecorder.onstop = async function(){
       var mode2 = recordMode;
       var chunks = mediaChunks.slice();
       mediaChunks = [];
-
       var fallbackType = mode2 === 'circle' ? 'video/webm' : 'audio/webm';
       var rawType = (chunks[0] && chunks[0].type) ? chunks[0].type : fallbackType;
       var blob = new Blob(chunks, { type: rawType });
-
       var duration = Math.max(1, Math.round((Date.now() - recordStart) / 1000));
 
       closeRecordingOverlay();
@@ -1527,10 +1515,7 @@ async function startRecording(mode){
       mediaRecorder = null;
       recordMode = null;
 
-      if(blob.size < 200){
-        toast('Запись не удалась');
-        return;
-      }
+      if(blob.size < 200){ toast('Запись не удалась'); return; }
 
       var mime = cleanMime(rawType);
       var ext = 'webm';
@@ -1539,24 +1524,21 @@ async function startRecording(mode){
 
       var name = (mode2 === 'circle' ? 'circle_' : 'voice_') + Date.now() + '.' + ext;
       var file = new File([blob], name, { type: mime });
-
-      await handleMediaFile(file, mode2, { duration: duration, mimeType: mime }, ctx);
+      await handleMediaFile(file, mode2, { duration:duration, mimeType:mime }, ctx);
     };
 
-    mediaRecorder.start(250);
+    // FIX: без timeslice — надёжнее на Android WebView
+    mediaRecorder.start();
     recordStart = Date.now();
     showRecordingOverlay(mode);
     updateRecordingTimer();
-
   } catch(e){
-    var msg = e && e.name ? e.name : 'ошибка';
-    if(msg === 'NotAllowedError' || msg === 'PermissionDeniedError'){
+    var msg = (e && e.name) ? e.name : 'ошибка';
+    if(msg === 'NotAllowedError' || msg === 'PermissionDeniedError')
       toast('Доступ к ' + (mode === 'circle' ? 'камере' : 'микрофону') + ' запрещён');
-    } else if(msg === 'NotFoundError' || msg === 'DevicesNotFoundError'){
+    else if(msg === 'NotFoundError' || msg === 'DevicesNotFoundError')
       toast('Устройство не найдено');
-    } else {
-      toast('Не удалось начать запись: ' + msg);
-    }
+    else toast('Не удалось начать запись: ' + msg);
     stopRecordingSilently();
   }
 }
@@ -1569,17 +1551,13 @@ function stopMediaStream(){
 }
 
 function showRecordingOverlay(mode){
-  var overlay = $('recording-overlay');
-  var preview = $('recording-preview');
-  var hint = $('recording-hint');
+  var overlay = $('recording-overlay'), preview = $('recording-preview'), hint = $('recording-hint');
   if(mode === 'circle'){
     preview.style.display = 'block';
     preview.innerHTML = '';
     if(mediaStream){
       var v = document.createElement('video');
-      v.autoplay = true;
-      v.muted = true;
-      v.playsInline = true;
+      v.autoplay = true; v.muted = true; v.playsInline = true;
       v.setAttribute('playsinline','');
       v.srcObject = mediaStream;
       preview.appendChild(v);
@@ -1608,9 +1586,7 @@ function updateRecordingTimer(){
   var update = function(){
     var sec = Math.floor((Date.now() - recordStart) / 1000);
     el.textContent = pad(Math.floor(sec/60)) + ':' + pad(sec % 60);
-    if(sec >= 60){
-      stopRecording();
-    }
+    if(sec >= 60) stopRecording();
   };
   update();
   recordTimer = setInterval(update, 250);
@@ -1619,47 +1595,78 @@ function updateRecordingTimer(){
 function stopRecording(){
   if(recordTimer){ clearInterval(recordTimer); recordTimer = null; }
   try {
-    if(mediaRecorder && mediaRecorder.state !== 'inactive'){
-      mediaRecorder.stop();
-    } else {
-      stopRecordingSilently();
-    }
-  } catch(e){
-    stopRecordingSilently();
-  }
+    if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    else stopRecordingSilently();
+  } catch(e){ stopRecordingSilently(); }
 }
 
-$('recording-stop').onclick = function(){
-  stopRecording();
-};
+$('recording-stop').onclick = function(){ stopRecording(); };
+$('attach-voice').onclick = function(){ closeAttachMenu(); startRecording('voice'); };
+$('attach-circle').onclick = function(){ closeAttachMenu(); startRecording('circle'); };
 
-$('attach-voice').onclick = function(){
-  closeAttachMenu();
-  startRecording('voice');
-};
-$('attach-circle').onclick = function(){
-  closeAttachMenu();
-  startRecording('circle');
-};
-
+/* =========================================================================
+   Input & send
+   ========================================================================= */
 $('send-btn').onclick = sendMessage;
 $('msg-input').addEventListener('keydown', function(e){
   if(e.key === 'Enter'){ e.preventDefault(); sendMessage(); }
 });
 $('msg-input').addEventListener('input', function(){
   if(!currentUser || !currentChatId || isSavedChat(currentChatId)) return;
-  var ref = db.ref('users/' + currentUser.uid);
-  ref.update({ typing: currentChatId }).catch(function(){});
+  // typing теперь в chats/{id}/meta/typing/{uid}
+  var ref = db.ref('chats/' + currentChatId + '/meta/typing/' + currentUser.uid);
+  ref.set(TS).catch(function(){});
   clearTimeout(typingTimer);
-  typingTimer = setTimeout(function(){
-    ref.update({ typing: null }).catch(function(){});
-  }, 1500);
+  typingTimer = setTimeout(function(){ ref.remove().catch(function(){}); }, 1500);
 });
 
 $('chat-back').onclick = function(){
   try { history.back(); } catch(e){ goScreen('main-screen'); }
 };
 
+/* =========================================================================
+   Contacts
+   ========================================================================= */
+async function loadContacts(){
+  var list = $('contacts-list');
+  list.innerHTML = '<div class="empty">Загрузка...</div>';
+  try {
+    var snap = await db.ref('users').limitToFirst(200).once('value');
+    var arr = [];
+    snap.forEach(function(child){
+      if(child.key === currentUser.uid) return;
+      var v = child.val();
+      if(!v || !v.name || !v.name.trim()) return;
+      if(!v.username || !v.username.trim()) return;
+      var u = Object.assign({uid:child.key}, v);
+      userCache[child.key] = u;
+      arr.push(u);
+    });
+    arr.sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
+    var html = '';
+    arr.forEach(function(u){
+      html += '<div class="chat-item" data-uid="' + escAttr(u.uid) + '">' +
+        avatarHtml(u) +
+        '<div class="chat-item-info">' +
+          '<div class="chat-item-top"><div class="chat-item-name">' + esc(u.name) + '</div></div>' +
+          '<div class="chat-item-bottom"><div class="chat-item-msg">' + (u.online ? 'в сети' : formatLastSeen(u.lastSeen)) + '</div></div>' +
+        '</div>' +
+      '</div>';
+    });
+    if(!html) html = '<div class="empty">Нет пользователей</div>';
+    list.innerHTML = html;
+    applyAvatarUrls(list);
+    list.querySelectorAll('.chat-item').forEach(function(el){
+      el.onclick = function(){ startChatWith(el.dataset.uid); };
+    });
+  } catch(e){
+    list.innerHTML = '<div class="empty">Ошибка загрузки</div>';
+  }
+}
+
+/* =========================================================================
+   New chat
+   ========================================================================= */
 $('fab-new').onclick = function(){
   goScreen('newchat-screen');
   $('newchat-search').value = '';
@@ -1675,10 +1682,7 @@ $('newchat-search').addEventListener('input', function(){
   var q = this.value.trim().replace(/^@/,'').toLowerCase();
   clearTimeout(newChatTimer);
   var list = $('newchat-list');
-  if(q.length < 1){
-    list.innerHTML = '<div class="empty">Введите @username</div>';
-    return;
-  }
+  if(q.length < 1){ list.innerHTML = '<div class="empty">Введите @username</div>'; return; }
   newChatTimer = setTimeout(async function(){
     try {
       var snap = await db.ref('usernames').orderByKey()
@@ -1689,7 +1693,7 @@ $('newchat-search').addEventListener('input', function(){
       var html = '';
       users.forEach(function(u){
         if(!u || !u.uid || !u.name) return;
-        html += '<div class="chat-item" data-uid="' + u.uid + '">' +
+        html += '<div class="chat-item" data-uid="' + escAttr(u.uid) + '">' +
           avatarHtml(u) +
           '<div class="chat-item-info">' +
             '<div class="chat-item-top"><div class="chat-item-name">' + esc(u.name) + '</div></div>' +
@@ -1699,6 +1703,7 @@ $('newchat-search').addEventListener('input', function(){
       });
       if(!html) html = '<div class="empty">Ничего не найдено</div>';
       list.innerHTML = html;
+      applyAvatarUrls(list);
       list.querySelectorAll('.chat-item').forEach(function(el){
         el.onclick = function(){ startChatWith(el.dataset.uid); };
       });
@@ -1712,25 +1717,25 @@ async function startChatWith(uid){
   if(!uid || uid === currentUser.uid) return;
   var chatId = [currentUser.uid, uid].sort().join('_');
   try {
-    var ref = db.ref('chats/' + chatId);
+    var ref = db.ref('chats/' + chatId + '/meta');
     var s = await ref.once('value');
     if(!s.exists()){
       var members = {};
       members[currentUser.uid] = true;
       members[uid] = true;
-      var unread = {};
-      unread[currentUser.uid] = 0;
-      unread[uid] = 0;
+
       var updates = {};
-      updates['chats/' + chatId] = {
-        members: members,
-        lastMessage: '',
-        lastMessageTime: TS,
-        lastSender: '',
-        unread: unread
-      };
-      updates['userChats/' + currentUser.uid + '/' + chatId] = true;
-      updates['userChats/' + uid + '/' + chatId] = true;
+      updates['chats/' + chatId + '/meta/members'] = members;
+
+      // Fan-out: создаём/инициализируем userChats у обоих
+      [currentUser.uid, uid].forEach(function(u){
+        var base = 'userChats/' + u + '/' + chatId;
+        updates[base + '/otherUid'] = u === currentUser.uid ? uid : currentUser.uid;
+        updates[base + '/lastMessage'] = '';
+        updates[base + '/lastMessageTime'] = TS;
+        updates[base + '/lastSender'] = '';
+        updates[base + '/unread'] = 0;
+      });
       await db.ref().update(updates);
     }
     openChat(chatId, uid);
@@ -1739,21 +1744,27 @@ async function startChatWith(uid){
   }
 }
 
+/* =========================================================================
+   Settings
+   ========================================================================= */
 function updateSettingsUI(){
   if(!currentUserData) return;
   $('settings-name').textContent = currentUserData.name || '';
   $('settings-username').textContent = currentUserData.username ? '@' + currentUserData.username : '';
   var av = $('settings-avatar');
-  av.style.backgroundImage = currentUserData.photoURL ? 'url(\'' + currentUserData.photoURL + '\')' : '';
-  av.innerHTML = currentUserData.photoURL ? '' : esc(initials(currentUserData.name));
+  if(currentUserData.photoURL){
+    av.style.backgroundImage = 'url("' + currentUserData.photoURL + '")';
+    av.innerHTML = '';
+  } else {
+    av.style.backgroundImage = '';
+    av.innerHTML = esc(initials(currentUserData.name));
+  }
 }
 
-$('btn-theme').onclick = function(){
-  setTheme(!document.body.classList.contains('dark'));
-};
+$('btn-theme').onclick = function(){ setTheme(!document.body.classList.contains('dark')); };
 $('btn-logout').onclick = async function(){
-  try { await db.ref('users/' + currentUser.uid).update({ online: false, lastSeen: TS, typing: null }); } catch(e){}
-  await auth.signOut();
+  try { await db.ref('users/' + currentUser.uid).update({ online:false, lastSeen:TS }); } catch(e){}
+  try { await auth.signOut(); } catch(e){}
 };
 
 document.querySelectorAll('.nav-item').forEach(function(el){
@@ -1768,69 +1779,32 @@ document.querySelectorAll('.nav-item').forEach(function(el){
   };
 });
 
-async function loadContacts(){
-  var list = $('contacts-list');
-  list.innerHTML = '<div class="empty">Загрузка...</div>';
-  try {
-    var snap = await db.ref('users').limitToFirst(200).once('value');
-    var arr = [];
-    snap.forEach(function(child){
-      if(child.key === currentUser.uid) return;
-      var v = child.val();
-      if(!v || !v.name || !v.name.trim()) return;
-      if(!v.username || !v.username.trim()) return;
-      var u = Object.assign({uid: child.key}, v);
-      userCache[child.key] = u;
-      arr.push(u);
-    });
-    arr.sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
-    var html = '';
-    arr.forEach(function(u){
-      html += '<div class="chat-item" data-uid="' + u.uid + '">' +
-        avatarHtml(u) +
-        '<div class="chat-item-info">' +
-          '<div class="chat-item-top"><div class="chat-item-name">' + esc(u.name) + '</div></div>' +
-          '<div class="chat-item-bottom"><div class="chat-item-msg">' + (u.online ? 'в сети' : formatLastSeen(u.lastSeen)) + '</div></div>' +
-        '</div>' +
-      '</div>';
-    });
-    if(!html) html = '<div class="empty">Нет пользователей</div>';
-    list.innerHTML = html;
-    list.querySelectorAll('.chat-item').forEach(function(el){
-      el.onclick = function(){ startChatWith(el.dataset.uid); };
-    });
-  } catch(e){
-    list.innerHTML = '<div class="empty">Ошибка загрузки</div>';
-  }
-}
-
+/* =========================================================================
+   Search
+   ========================================================================= */
 $('search-toggle').onclick = function(){
   var sb = $('search-bar');
   sb.classList.toggle('hidden');
   if(!sb.classList.contains('hidden')) $('chat-search').focus();
-  else { searchQuery = ''; $('chat-search').value = ''; renderChats(); }
+  else { searchQuery = ''; $('chat-search').value = ''; scheduleRenderChats(); }
 };
 $('chat-search').addEventListener('input', function(){
   searchQuery = this.value.trim();
-  renderChats();
+  scheduleRenderChats();
 });
 
-setTheme(localStorage.getItem('tg_theme') === 'dark');
-
-/* FIX-WEBVIEW: прячем кнопки записи, если WebView не умеет getUserMedia/MediaRecorder
-   или мы не в secure-context. Так пользователь не тыкает в нерабочие кнопки. */
+/* =========================================================================
+   Init warnings
+   ========================================================================= */
 if(!CAN_RECORD){
-  var _av = $('attach-voice');  if(_av) _av.style.display = 'none';
+  var _av = $('attach-voice'); if(_av) _av.style.display = 'none';
   var _ac = $('attach-circle'); if(_ac) _ac.style.display = 'none';
 }
-
-/* FIX-WEBVIEW: предупреждение о небезопасном контексте */
 if(!IS_SECURE_CTX && IS_ANDROID_WEBVIEW){
   setTimeout(function(){
-    toast('⚠ Для записи голосовых и кружков загрузите страницу через https://appassets.androidplatform.net/');
+    toast('⚠ Для записи загружайте страницу через https://appassets.androidplatform.net/');
   }, 1500);
 }
-
 if(!firebaseReady){
   setTimeout(function(){ toast('Проверьте интернет и настройки WebView'); }, 500);
 }
