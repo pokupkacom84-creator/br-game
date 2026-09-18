@@ -73,10 +73,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .chat-header-status{font-size:13px;opacity:.85}
 .messages{flex:1;overflow-y:auto;padding:10px 10px 6px;background:var(--chat-bg);display:flex;flex-direction:column;gap:3px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;position:relative}
 .messages::-webkit-scrollbar{display:none}
-.msg{max-width:82%;padding:7px 11px;border-radius:16px;font-size:var(--fs);line-height:1.35;position:relative;word-wrap:break-word;overflow-wrap:break-word;cursor:pointer}
+.msg{max-width:82%;padding:7px 11px;border-radius:16px;font-size:var(--fs);line-height:1.35;position:relative;word-wrap:break-word;overflow-wrap:break-word;cursor:pointer;transform-origin:center}
 .msg.out{align-self:flex-end;background:var(--bubble-out);border-bottom-right-radius:5px}
 .msg.in{align-self:flex-start;background:var(--bubble-in);border-bottom-left-radius:5px}
-.msg.deleted{opacity:.55;font-style:italic}
+.msg.msg-deleting{animation:msgDelete .32s cubic-bezier(.4,0,.6,1) forwards;pointer-events:none;will-change:transform,opacity}
+@keyframes msgDelete{
+  0%{opacity:1;transform:scale(1)}
+  40%{opacity:.55;transform:scale(.9)}
+  100%{opacity:0;transform:scale(.55);margin-top:-40px;padding-top:0;padding-bottom:0;max-height:0}
+}
 .msg-text{white-space:pre-wrap;display:block;word-break:break-word}
 .msg-time{float:right;margin:5px -2px -2px 8px;font-size:11px;opacity:.7;white-space:nowrap;display:inline-flex;align-items:center;gap:3px;color:var(--text-2)}
 .msg.out .msg-time{color:var(--time-out)}
@@ -406,6 +411,7 @@ try{
 
 const SAVED_CHAT_PREFIX='saved_';
 const TYPING_TTL_MS=5000;
+const DELETE_ANIM_MS=340;
 const PLAY_ICON='<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
 const PAUSE_ICON='<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
 const VPN_SOURCE_URL='https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/26.txt';
@@ -423,6 +429,7 @@ let currentAudio=null,currentAudioBtn=null;
 let replyToMsg=null;
 let notifyEnabled=localStorage.getItem('flux_notify')!=='0';
 let hideOnline=localStorage.getItem('flux_hide_online')==='1';
+let pendingPaintTimer=null;
 
 function $(id){return document.getElementById(id);}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
@@ -672,6 +679,7 @@ function leaveChat(){
   if(currentUser&&currentChatId&&!isSavedChat(currentChatId)){
     db.ref('chats/'+currentChatId+'/meta/typing/'+currentUser.uid).remove().catch(function(){});
   }
+  if(pendingPaintTimer){clearTimeout(pendingPaintTimer);pendingPaintTimer=null;}
   currentChatId=null;currentChatUser=null;currentChatMeta=null;lastMessages=[];
   replyToMsg=null;updateReplyBar();
   chatSearchQuery='';var csb=$('chat-search-bar');if(csb)csb.classList.add('hidden');
@@ -750,8 +758,47 @@ function renderMessageInner(m){
   return '<span class="msg-text">'+esc(m.text||'')+'</span>';
 }
 
-function renderMessages(msgs){
-  lastMessages=msgs;
+/* Плавное удаление: если сообщение стало deleted — сначала проигрываем анимацию, потом перерисовываем */
+function renderMessages(rawMsgs){
+  var box=$('messages');
+  if(!box||!currentUser){lastMessages=rawMsgs;return;}
+
+  var justDeleted=[];
+  rawMsgs.forEach(function(m){
+    if(m.deleted){
+      var prev=lastMessages.find(function(x){return x.id===m.id;});
+      if(prev&&!prev.deleted)justDeleted.push(m.id);
+    }
+  });
+
+  var visibleMsgs=rawMsgs.filter(function(m){return !m.deleted;});
+
+  if(justDeleted.length>0){
+    var animated=false;
+    justDeleted.forEach(function(id){
+      var el=box.querySelector('.msg[data-msgid="'+id+'"]');
+      if(el&&!el.classList.contains('msg-deleting')){
+        el.classList.add('msg-deleting');
+        animated=true;
+      }
+    });
+    if(animated){
+      lastMessages=rawMsgs;
+      if(pendingPaintTimer)clearTimeout(pendingPaintTimer);
+      pendingPaintTimer=setTimeout(function(){
+        pendingPaintTimer=null;
+        paintMessages(visibleMsgs);
+      },DELETE_ANIM_MS);
+      return;
+    }
+  }
+
+  lastMessages=rawMsgs;
+  paintMessages(visibleMsgs);
+}
+
+/* Непосредственная отрисовка сообщений */
+function paintMessages(msgs){
   var box=$('messages');if(!box||!currentUser)return;
   var atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<120;
   var savedMode=isSavedChat(currentChatId);
@@ -789,11 +836,9 @@ function renderMessages(msgs){
     }
     if(q&&!m.text)return;
     if(q&&m.text&&m.text.toLowerCase().indexOf(q)===-1)return;
-    var deletedClass=m.deleted?' deleted':'';
-    var body=m.deleted?'<span class="msg-text">Сообщение удалено</span>':renderMessageInner(m);
     var editedMark=m.editedAt?'<span class="msg-edited">изм.</span>':'';
-    html+='<div class="msg '+(isOut?'out':'in')+deletedClass+'" data-msgid="'+escAttr(m.id)+'" data-ts="'+(m.timestamp||0)+'" data-sender="'+escAttr(m.senderId||'')+'">'+
-      replyHtml+body+reactionsHtml+
+    html+='<div class="msg '+(isOut?'out':'in')+'" data-msgid="'+escAttr(m.id)+'" data-ts="'+(m.timestamp||0)+'" data-sender="'+escAttr(m.senderId||'')+'">'+
+      replyHtml+renderMessageInner(m)+reactionsHtml+
       '<span class="msg-time">'+editedMark+time+check+'</span></div>';
   });
   if(!html)html='<div class="empty">Нет сообщений</div>';
@@ -955,9 +1000,11 @@ function deleteMessage(msg){
       m.querySelector('#m-cancel').onclick=close;
       m.querySelector('#m-ok').onclick=async function(){
         close();
+        /* Запускаем анимацию сразу локально, чтобы не ждать ответа Firebase */
+        var el=document.querySelector('.msg[data-msgid="'+msg.id+'"]');
+        if(el&&!el.classList.contains('msg-deleting'))el.classList.add('msg-deleting');
         try{
-          await db.ref('chats/'+currentChatId+'/messages/'+msg.id).update({deleted:true,text:'',fileURL:null,fileName:null,fileSize:null});
-          toast('Удалено');
+          await db.ref('chats/'+currentChatId+'/messages/'+msg.id).update({deleted:true,text:'',fileURL:null,fileName:null,fileSize:null,replyTo:null,reactions:null});
         }catch(e){toast('Ошибка');}
       };
     }
