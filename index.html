@@ -153,8 +153,7 @@ body.dark .msg-file:active{background:rgba(255,255,255,.05)}
 .empty{padding:40px 20px;text-align:center;color:var(--text-2);font-size:14px}
 .spinner{width:28px;height:28px;border:3px solid rgba(51,144,236,.25);border-top-color:#3390ec;border-radius:50%;animation:spin .8s linear infinite;margin-top:16px}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* --- Flux VPN tab --- */
-.vpn-container{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.vpn-container{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;-webkit-overflow-scrolling:touch}
 .vpn-card{background:var(--bg-2);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
 .vpn-card-title{font-size:16px;font-weight:600;margin-bottom:4px}
 .vpn-card-desc{font-size:13px;color:var(--text-2);line-height:1.4}
@@ -164,10 +163,10 @@ body.dark .msg-file:active{background:rgba(255,255,255,.05)}
 .vpn-btn.outline{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
 .vpn-btn.outline:active{background:rgba(51,144,236,.1)}
 .vpn-key-list{display:flex;flex-direction:column;gap:8px;margin-top:4px}
-.vpn-key-item{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px}
+.vpn-key-item{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px;min-height:78px;content-visibility:auto;contain-intrinsic-size:auto 78px}
 .vpn-key-info{flex:1;min-width:0}
 .vpn-key-proto{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--accent);letter-spacing:.5px}
-.vpn-key-text{font-size:12px;color:var(--text);word-break:break-all;margin-top:2px;line-height:1.3;max-height:60px;overflow:hidden}
+.vpn-key-text{font-size:12px;color:var(--text);word-break:break-all;margin-top:2px;line-height:1.3;max-height:48px;overflow:hidden}
 .vpn-key-copy{flex-shrink:0;width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center}
 .vpn-key-copy:active{background:var(--accent-2)}
 .vpn-empty{text-align:center;color:var(--text-2);font-size:14px;padding:20px}
@@ -240,7 +239,7 @@ body.dark .msg-file:active{background:rgba(255,255,255,.05)}
 <div class="vpn-container" id="vpn-container">
 <div class="vpn-card">
 <div class="vpn-card-title">Источник ключей</div>
-<div class="vpn-card-desc">Список 26 — AvenCores/goida-vpn-configs (githubmirror). Автоматически обновляемая коллекция VLESS / VMess / Trojan / Shadowsocks / Hysteria2.</div>
+<div class="vpn-card-desc">Автоматически обновляемая коллекция VLESS / VMess / Trojan / Shadowsocks / Hysteria2.</div>
 <button class="vpn-btn" id="vpn-load-btn">
 <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
 <span>Загрузить ключи</span>
@@ -356,9 +355,6 @@ body.dark .msg-file:active{background:rgba(255,255,255,.05)}
 </div>
 
 <script>
-/* =========================================================================
-   Firebase init
-   ========================================================================= */
 const firebaseConfig = {
   apiKey: "AIzaSyAfNoV7tt_6eP1gRQxLc4Yk5FJzwVxDMQw",
   authDomain: "game-cd07d.firebaseapp.com",
@@ -386,9 +382,6 @@ try {
   setTimeout(function(){ toast('Ошибка Firebase: ' + e.message); }, 100);
 }
 
-/* =========================================================================
-   Константы / env
-   ========================================================================= */
 const SAVED_CHAT_PREFIX = 'saved_';
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const TYPING_TTL_MS = 5000;
@@ -410,9 +403,6 @@ const HAS_MEDIARECORDER = (typeof MediaRecorder !== 'undefined');
 const HAS_USERMEDIA = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 const CAN_RECORD = HAS_MEDIARECORDER && HAS_USERMEDIA && IS_SECURE_CTX;
 
-/* =========================================================================
-   Глобальное состояние
-   ========================================================================= */
 let currentUser = null;
 let currentUserData = null;
 let currentChatId = null;
@@ -457,9 +447,6 @@ let recordMode = null;
 let currentAudio = null;
 let currentAudioBtn = null;
 
-/* =========================================================================
-   Helpers
-   ========================================================================= */
 function $(id){ return document.getElementById(id); }
 
 function esc(s){
@@ -552,9 +539,6 @@ function triggerFileInput(inputEl){
   }
 }
 
-/* =========================================================================
-   Navigation (history stack)
-   ========================================================================= */
 const screenHistory = ['splash-screen'];
 let currentScreenId = 'splash-screen';
 
@@ -598,9 +582,6 @@ window.addEventListener('popstate', function(){
 });
 try { history.replaceState({s:'splash-screen'}, ''); } catch(e){}
 
-/* =========================================================================
-   Theme
-   ========================================================================= */
 function setTheme(dark){
   if(dark) document.body.classList.add('dark');
   else document.body.classList.remove('dark');
@@ -610,9 +591,6 @@ function setTheme(dark){
 }
 setTheme(localStorage.getItem('tg_theme') === 'dark');
 
-/* =========================================================================
-   Auth UI
-   ========================================================================= */
 function authError(code){
   var m = {
     'auth/invalid-email':'Неверный email',
@@ -677,9 +655,6 @@ if(firebaseReady){
   } catch(e){}
 }
 
-/* =========================================================================
-   Auth state
-   ========================================================================= */
 auth.onAuthStateChanged(async function(user){
   if(!user){
     if(currentScreenId === 'chat-screen') leaveChat();
@@ -733,9 +708,6 @@ function cleanupListeners(){
   currentChatMeta = null;
 }
 
-/* =========================================================================
-   Self listener (online / lastSeen)
-   ========================================================================= */
 function startSelfListener(){
   if(unsubSelfDoc && unsubSelfDoc.off) unsubSelfDoc.off();
 
@@ -763,9 +735,6 @@ function startSelfListener(){
   window.addEventListener('beforeunload', beforeUnloadHandler);
 }
 
-/* =========================================================================
-   Saved messages meta
-   ========================================================================= */
 function startSavedMetaListener(){
   if(unsubSavedMeta && unsubSavedMeta.off) unsubSavedMeta.off();
   var ref = db.ref('saved/' + currentUser.uid);
@@ -777,9 +746,6 @@ function startSavedMetaListener(){
   });
 }
 
-/* =========================================================================
-   Chats list
-   ========================================================================= */
 function startUserChatsListener(){
   if(unsubUserChats && unsubUserChats.off) unsubUserChats.off();
   unsubUserChats = db.ref('userChats/' + currentUser.uid).on('value', function(snap){
@@ -874,9 +840,6 @@ async function renderChats(){
   });
 }
 
-/* =========================================================================
-   Onboarding
-   ========================================================================= */
 $('onb-avatar').onclick = function(){ triggerFileInput($('onb-avatar-input')); };
 $('onb-avatar-input').onchange = function(e){
   var f = e.target.files[0];
@@ -929,9 +892,6 @@ $('onb-continue').onclick = async function(){
   this.disabled = false;
 };
 
-/* =========================================================================
-   Chat screen
-   ========================================================================= */
 function leaveChat(){
   stopAudio();
   if(unsubMessages && unsubMessages.off){ try { unsubMessages.off(); } catch(e){} }
@@ -1044,9 +1004,6 @@ function startMessagesListener(){
     });
 }
 
-/* =========================================================================
-   Message rendering
-   ========================================================================= */
 function formatDateLabel(d){
   var now = new Date();
   var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -1168,9 +1125,6 @@ function updateMessageChecks(){
   });
 }
 
-/* =========================================================================
-   Media viewer
-   ========================================================================= */
 function openMediaViewer(url, type){
   var viewer = $('media-viewer'), content = $('media-viewer-content');
   if(type === 'photo') content.innerHTML = '<img src="' + escAttr(url) + '">';
@@ -1183,9 +1137,6 @@ $('media-viewer-close').onclick = function(){
   viewer.classList.remove('show');
 };
 
-/* =========================================================================
-   Voice playback
-   ========================================================================= */
 function resetWave(btn){
   if(!btn || !btn.parentNode) return;
   var wave = btn.parentNode.querySelector('.voice-wave');
@@ -1231,9 +1182,6 @@ function toggleAudio(btn, url){
   });
 }
 
-/* =========================================================================
-   Sending messages
-   ========================================================================= */
 async function markAsRead(){
   if(!currentChatId || !currentUser || isSavedChat(currentChatId)) return;
   try {
@@ -1333,9 +1281,6 @@ function resolveOtherUid(chatId, opts){
   return null;
 }
 
-/* =========================================================================
-   Uploading media
-   ========================================================================= */
 function showUploadProgress(text){
   var p = $('upload-progress');
   if(!p) return;
@@ -1421,9 +1366,6 @@ async function handleMediaFile(file, forceType, extra, ctx){
   }
 }
 
-/* =========================================================================
-   Attach menu
-   ========================================================================= */
 function openAttachMenu(){
   $('attach-menu').classList.add('show');
   $('attach-overlay').classList.add('show');
@@ -1449,9 +1391,6 @@ $('media-file-input').onchange = function(){
   if(f) handleMediaFile(f, 'file');
 };
 
-/* =========================================================================
-   Recording
-   ========================================================================= */
 function pickMimeType(list){
   if(typeof MediaRecorder === 'undefined') return '';
   if(!MediaRecorder.isTypeSupported) return '';
@@ -1622,9 +1561,6 @@ $('recording-stop').onclick = function(){ stopRecording(); };
 $('attach-voice').onclick = function(){ closeAttachMenu(); startRecording('voice'); };
 $('attach-circle').onclick = function(){ closeAttachMenu(); startRecording('circle'); };
 
-/* =========================================================================
-   Input & send
-   ========================================================================= */
 $('send-btn').onclick = sendMessage;
 $('msg-input').addEventListener('keydown', function(e){
   if(e.key === 'Enter'){ e.preventDefault(); sendMessage(); }
@@ -1641,9 +1577,6 @@ $('chat-back').onclick = function(){
   try { history.back(); } catch(e){ goScreen('main-screen'); }
 };
 
-/* =========================================================================
-   Contacts
-   ========================================================================= */
 async function loadContacts(){
   var list = $('contacts-list');
   list.innerHTML = '<div class="empty">Загрузка...</div>';
@@ -1681,9 +1614,6 @@ async function loadContacts(){
   }
 }
 
-/* =========================================================================
-   New chat
-   ========================================================================= */
 $('fab-new').onclick = function(){
   goScreen('newchat-screen');
   $('newchat-search').value = '';
@@ -1760,9 +1690,6 @@ async function startChatWith(uid){
   }
 }
 
-/* =========================================================================
-   Settings
-   ========================================================================= */
 function updateSettingsUI(){
   if(!currentUserData) return;
   $('settings-name').textContent = currentUserData.name || '';
@@ -1792,13 +1719,9 @@ document.querySelectorAll('.nav-item').forEach(function(el){
     $('tab-' + tab).classList.add('active');
     if(tab === 'contacts') loadContacts();
     if(tab === 'settings') updateSettingsUI();
-    if(tab === 'vpn') { /* VPN keys are loaded on demand */ }
   };
 });
 
-/* =========================================================================
-   Search
-   ========================================================================= */
 $('search-toggle').onclick = function(){
   var sb = $('search-bar');
   sb.classList.toggle('hidden');
@@ -1810,10 +1733,10 @@ $('chat-search').addEventListener('input', function(){
   scheduleRenderChats();
 });
 
-/* =========================================================================
-   VPN keys (Flux VPN tab)
-   ========================================================================= */
 let vpnKeys = [];
+let vpnRenderedUpTo = 0;
+let vpnRafId = 0;
+const VPN_BATCH_SIZE = 30;
 
 function parseVpnKeys(text){
   var lines = text.split(/\r?\n/);
@@ -1824,11 +1747,88 @@ function parseVpnKeys(text){
     if(!line || line.charAt(0) === '#') continue;
     var m = line.match(protoRegex);
     if(m){
-      var proto = m[1].toLowerCase();
-      keys.push({ proto: proto, raw: line });
+      keys.push({ proto: m[1].toLowerCase(), raw: line });
     }
   }
   return keys;
+}
+
+function vpnKeyItemHtml(k, idx){
+  var display = k.raw.length > 220 ? k.raw.slice(0, 217) + '…' : k.raw;
+  return '<div class="vpn-key-item">' +
+    '<div class="vpn-key-info">' +
+      '<div class="vpn-key-proto">' + esc(k.proto) + '</div>' +
+      '<div class="vpn-key-text">' + esc(display) + '</div>' +
+    '</div>' +
+    '<button class="vpn-key-copy" data-idx="' + idx + '">' +
+      '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>' +
+    '</button>' +
+  '</div>';
+}
+
+function bindVpnCopyButtons(root){
+  root.querySelectorAll('.vpn-key-copy').forEach(function(btn){
+    if(btn._bound) return;
+    btn._bound = true;
+    btn.onclick = function(){
+      var idx = +btn.dataset.idx;
+      var key = vpnKeys[idx];
+      if(!key) return;
+      var text = key.raw;
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){
+          toast('Ключ скопирован');
+        }).catch(function(){ fallbackCopy(text); });
+      } else {
+        fallbackCopy(text);
+      }
+    };
+  });
+}
+
+function appendVpnBatch(){
+  var list = $('vpn-key-list');
+  if(!list) return;
+  if(vpnRenderedUpTo >= vpnKeys.length) return;
+  var start = vpnRenderedUpTo;
+  var end = Math.min(vpnKeys.length, start + VPN_BATCH_SIZE);
+  var html = '';
+  for(var i = start; i < end; i++){
+    html += vpnKeyItemHtml(vpnKeys[i], i);
+  }
+  var tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  while(tmp.firstChild){
+    list.appendChild(tmp.firstChild);
+  }
+  vpnRenderedUpTo = end;
+  bindVpnCopyButtons(list);
+}
+
+function scheduleVpnAppend(){
+  if(vpnRafId) return;
+  vpnRafId = requestAnimationFrame(function(){
+    vpnRafId = 0;
+    appendVpnBatch();
+  });
+}
+
+function isVpnItemVisible(){
+  var container = $('vpn-container');
+  if(!container) return false;
+  var list = $('vpn-key-list');
+  if(!list) return false;
+  var last = list.lastElementChild;
+  if(!last) return true;
+  var cRect = container.getBoundingClientRect();
+  var lRect = last.getBoundingClientRect();
+  return lRect.top < cRect.bottom + 400;
+}
+
+function onVpnScroll(){
+  if(vpnRenderedUpTo < vpnKeys.length && isVpnItemVisible()){
+    scheduleVpnAppend();
+  }
 }
 
 function renderVpnKeys(){
@@ -1838,6 +1838,9 @@ function renderVpnKeys(){
   var loadBtn = $('vpn-load-btn');
 
   if(!list) return;
+
+  list.innerHTML = '';
+  vpnRenderedUpTo = 0;
 
   if(!vpnKeys.length){
     list.innerHTML = '<div class="vpn-empty">Нет ключей. Попробуйте обновить.</div>';
@@ -1851,38 +1854,16 @@ function renderVpnKeys(){
   if(refreshBtn) refreshBtn.style.display = 'flex';
   if(count) count.textContent = 'Найдено ключей: ' + vpnKeys.length;
 
-  var html = '';
-  vpnKeys.forEach(function(k, idx){
-    var display = k.raw.length > 220 ? k.raw.slice(0, 217) + '…' : k.raw;
-    html += '<div class="vpn-key-item">' +
-      '<div class="vpn-key-info">' +
-        '<div class="vpn-key-proto">' + esc(k.proto) + '</div>' +
-        '<div class="vpn-key-text">' + esc(display) + '</div>' +
-      '</div>' +
-      '<button class="vpn-key-copy" data-idx="' + idx + '">' +
-        '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>' +
-      '</button>' +
-    '</div>';
-  });
-  list.innerHTML = html;
+  appendVpnBatch();
 
-  list.querySelectorAll('.vpn-key-copy').forEach(function(btn){
-    btn.onclick = function(){
-      var idx = +btn.dataset.idx;
-      var key = vpnKeys[idx];
-      if(!key) return;
-      var text = key.raw;
-      if(navigator.clipboard && navigator.clipboard.writeText){
-        navigator.clipboard.writeText(text).then(function(){
-          toast('Ключ скопирован');
-        }).catch(function(){
-          fallbackCopy(text);
-        });
-      } else {
-        fallbackCopy(text);
-      }
-    };
-  });
+  var container = $('vpn-container');
+  if(container && !container._vpnScrollBound){
+    container._vpnScrollBound = true;
+    container.addEventListener('scroll', onVpnScroll, { passive: true });
+  }
+  setTimeout(function(){
+    if(vpnRenderedUpTo < vpnKeys.length && isVpnItemVisible()) scheduleVpnAppend();
+  }, 60);
 }
 
 function fallbackCopy(text){
@@ -1939,9 +1920,6 @@ async function loadVpnKeys(){
 $('vpn-load-btn').onclick = loadVpnKeys;
 $('vpn-refresh-btn').onclick = loadVpnKeys;
 
-/* =========================================================================
-   Init warnings
-   ========================================================================= */
 if(!CAN_RECORD){
   var _av = $('attach-voice'); if(_av) _av.style.display = 'none';
   var _ac = $('attach-circle'); if(_ac) _ac.style.display = 'none';
