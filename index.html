@@ -17,6 +17,16 @@ button{cursor:pointer}
 .screen{display:none;height:100vh;height:100dvh}
 .screen.show{display:flex}
 
+/* SPLASH */
+#splashScreen{align-items:center;justify-content:center;flex-direction:column;gap:20px;background:#0e1621}
+.spinner{width:44px;height:44px;border:3px solid #1c2733;border-top-color:#5288c1;
+  border-radius:50%;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#splashScreen .logo{width:72px;height:72px;border-radius:50%;
+  background:linear-gradient(135deg,#5288c1,#64b5ef);display:flex;align-items:center;
+  justify-content:center;font-size:32px}
+#splashScreen .loading{color:#8b9aa8;font-size:13px}
+
 /* AUTH / PROFILE */
 .center{align-items:center;justify-content:center;padding:20px;background:#0e1621}
 .card{background:#17212b;border-radius:18px;padding:32px 26px;width:100%;max-width:400px;
@@ -38,7 +48,6 @@ button{cursor:pointer}
 .primary:disabled{opacity:.6;cursor:default}
 .ghost{padding:10px 16px;border-radius:9px;color:#64b5ef;font-weight:500}
 .ghost:hover{background:#ffffff11}
-.danger{background:#e0483d;color:#fff;padding:10px 16px;border-radius:9px;font-weight:600}
 .small{font-size:12px;color:#8b9aa8}
 
 /* APP LAYOUT */
@@ -84,6 +93,7 @@ button{cursor:pointer}
 .ci-preview{font-size:13.5px;color:#8b9aa8;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;line-height:1.3}
 .chat-item.active .ci-preview{color:#dbe9f7}
+.ci-dot{width:9px;height:9px;border-radius:50%;background:#e0483d;flex-shrink:0}
 .empty{text-align:center;color:#6c7883;font-size:14px;padding:40px 20px;line-height:1.5}
 
 #newChatBtn{position:absolute;right:16px;bottom:16px;width:56px;height:56px;
@@ -174,12 +184,27 @@ button{cursor:pointer}
   pointer-events:none;max-width:88vw;text-align:center;
   box-shadow:0 6px 24px rgba(0,0,0,.5)}
 #toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* Offline indicator */
+#offlineBar{position:fixed;top:0;left:0;right:0;background:#e0483d;color:#fff;
+  font-size:12.5px;text-align:center;padding:6px;z-index:9998;
+  transform:translateY(-100%);transition:transform .25s}
+#offlineBar.show{transform:none}
 </style>
 </head>
 <body>
 
+<div id="offlineBar">Нет подключения к интернету</div>
+
+<!-- SPLASH -->
+<div class="screen center show" id="splashScreen">
+  <div class="logo">💬</div>
+  <div class="spinner"></div>
+  <div class="loading" id="splashText">Загрузка...</div>
+</div>
+
 <!-- AUTH -->
-<div class="screen show center" id="authScreen">
+<div class="screen center" id="authScreen">
   <div class="card">
     <h1>Telegram</h1>
     <p class="sub">Онлайн-мессенджер</p>
@@ -187,8 +212,8 @@ button{cursor:pointer}
       <button class="tab active" data-mode="login">Вход</button>
       <button class="tab" data-mode="register">Регистрация</button>
     </div>
-    <input class="field-input" id="email" type="email" placeholder="Email">
-    <input class="field-input" id="password" type="password" placeholder="Пароль (мин. 6 символов)">
+    <input class="field-input" id="email" type="email" placeholder="Email" autocomplete="email">
+    <input class="field-input" id="password" type="password" placeholder="Пароль (мин. 6 символов)" autocomplete="current-password">
     <div class="error" id="authError"></div>
     <button class="primary" id="authBtn">Войти</button>
   </div>
@@ -278,6 +303,9 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.database();
 
+/* Сохраняем сессию в localStorage — автологин при перезапуске браузера */
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.warn);
+
 /* ========== HELPERS ========== */
 const $  = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -305,19 +333,32 @@ function toast(msg, ms){
   toastTimer = setTimeout(() => t.classList.remove('show'), ms || 2200);
 }
 
+/* ========== LOCAL CACHE ========== */
+const LS = {
+  ME:      'tg_me_profile',
+  CHATS:   'tg_chats_cache',
+  LAST:    'tg_last_chat',
+  save(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} },
+  load(k){ try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : null; } catch(e){ return null; } },
+  del(k){ try { localStorage.removeItem(k); } catch(e){} }
+};
+
 /* ========== STATE ========== */
-let me = null;              // {uid, email, name, username}
-let chats = {};             // chatId -> meta
-const metaListeners = {};   // chatId -> ref
+let me = LS.load(LS.ME);         // кэш профиля — показываем мгновенно
+let chats = LS.load(LS.CHATS) || {};
 let chatListRef = null;
 let msgRef = null;
 let statusRef = null;
+let presenceRef = null;
 let currentOtherUid = null;
 let currentChatId = null;
+let restoringChatId = LS.load(LS.LAST);   // последний открытый чат
+let appStarted = false;
+let authResolved = false;
 
 /* ========== SCREEN NAV ========== */
 function showScreen(id){
-  ['authScreen','profileScreen','appScreen'].forEach(s =>
+  ['splashScreen','authScreen','profileScreen','appScreen'].forEach(s =>
     $('#' + s).classList.toggle('show', s === id));
 }
 
@@ -327,6 +368,7 @@ $$('.tab').forEach(t => t.addEventListener('click', () => {
   authMode = t.dataset.mode;
   $$('.tab').forEach(x => x.classList.toggle('active', x === t));
   $('#authBtn').textContent = authMode === 'login' ? 'Войти' : 'Создать аккаунт';
+  $('#authError').textContent = '';
 }));
 
 $('#authBtn').addEventListener('click', doAuth);
@@ -349,6 +391,7 @@ async function doAuth(){
     } else {
       await auth.createUserWithEmailAndPassword(email, password);
     }
+    // onAuthStateChanged сам разберётся дальше
   } catch (e){
     const MSGS = {
       'auth/user-not-found': 'Пользователь с таким email не найден',
@@ -362,7 +405,6 @@ async function doAuth(){
       'auth/too-many-requests': 'Слишком много попыток. Попробуйте позже'
     };
     $('#authError').textContent = MSGS[e.code] || ('Ошибка: ' + (e.message || e.code));
-  } finally {
     btn.disabled = false;
     btn.textContent = oldText;
   }
@@ -371,6 +413,8 @@ async function doAuth(){
 $('#logoutBtn').addEventListener('click', async () => {
   if (!confirm('Выйти из аккаунта?')) return;
   try { if (statusRef) await statusRef.set({ online: false, ts: now() }); } catch(e){}
+  // Чистим кэш
+  LS.del(LS.ME); LS.del(LS.CHATS); LS.del(LS.LAST);
   await auth.signOut();
 });
 
@@ -404,6 +448,7 @@ function showProfileSetup(user){
         name, username, email: user.email, createdAt: now()
       });
       me = { uid: user.uid, email: user.email, name, username };
+      LS.save(LS.ME, me);
       showScreen('appScreen');
       startApp();
     } catch (e){
@@ -415,12 +460,27 @@ function showProfileSetup(user){
 
 /* ========== AUTH STATE ========== */
 auth.onAuthStateChanged(async user => {
+  authResolved = true;
   if (!user){
     me = null;
+    LS.del(LS.ME);
     stopApp();
     showScreen('authScreen');
     return;
   }
+
+  // 1. Если есть кэш профиля для ЭТОГО uid — показываем приложение сразу
+  const cached = LS.load(LS.ME);
+  if (cached && cached.uid === user.uid){
+    me = cached;
+    renderMyHeader();
+    showScreen('appScreen');
+    startApp();
+  } else {
+    $('#splashText').textContent = 'Загрузка профиля...';
+  }
+
+  // 2. В фоне синхронизируем с сервером
   try {
     const snap = await db.ref('messenger/users/' + user.uid + '/profile').get();
     if (!snap.exists()){
@@ -428,27 +488,59 @@ auth.onAuthStateChanged(async user => {
       return;
     }
     const p = snap.val();
-    me = { uid: user.uid, email: user.email, name: p.name, username: p.username };
-    showScreen('appScreen');
-    startApp();
+    const fresh = { uid: user.uid, email: user.email, name: p.name, username: p.username };
+    const changed = !me || me.name !== fresh.name || me.username !== fresh.username;
+    me = fresh;
+    LS.save(LS.ME, me);
+    renderMyHeader();
+    if (changed && !appStarted){
+      showScreen('appScreen');
+      startApp();
+    }
   } catch (e){
     console.error(e);
-    showScreen('authScreen');
-    toast('Ошибка загрузки профиля');
+    // Оффлайн, но есть кэш — работаем
+    if (!me){
+      LS.del(LS.ME);
+      showScreen('authScreen');
+      toast('Ошибка загрузки профиля');
+    }
   }
 });
 
-/* ========== START APP ========== */
-function startApp(){
+/* ========== RENDER MY HEADER ========== */
+function renderMyHeader(){
+  if (!me) return;
   $('#meName').textContent = me.name;
   $('#meUser').textContent = '@' + me.username;
   const av = $('#meAvatar');
   av.outerHTML = avatarEl(me.name, me.uid).replace('class="avatar"', 'class="avatar" id="meAvatar"');
+}
+
+/* ========== START APP ========== */
+function startApp(){
+  if (appStarted) return;
+  appStarted = true;
+
+  renderMyHeader();
 
   // Presence
   statusRef = db.ref('messenger/status/' + me.uid);
-  statusRef.set({ online: true, ts: now() });
-  statusRef.onDisconnect().set({ online: false, ts: now() });
+  statusRef.set({ online: true, ts: now() }).catch(()=>{});
+  statusRef.onDisconnect().set({ online: false, ts: now() }).catch(()=>{});
+  presenceRef = setInterval(() => {
+    if (statusRef) statusRef.update({ online: true, ts: now() }).catch(()=>{});
+  }, 30000);
+
+  // Рендерим кэшированные чаты сразу
+  renderChatList();
+
+  // Восстанавливаем последний чат
+  if (restoringChatId && chats[restoringChatId]){
+    const id = restoringChatId;
+    restoringChatId = null;
+    setTimeout(() => openChat(id), 250);
+  }
 
   loadChats();
 }
@@ -456,43 +548,35 @@ function startApp(){
 function stopApp(){
   if (chatListRef){ chatListRef.off(); chatListRef = null; }
   if (msgRef){ msgRef.off(); msgRef = null; }
-  Object.keys(metaListeners).forEach(k => {
-    metaListeners[k].off(); delete metaListeners[k];
-  });
-  chats = {};
-  currentChatId = null;
-  currentOtherUid = null;
+  Object.values(chats).forEach(c => {}); // no-op
+  chats = LS.load(LS.CHATS) || {};
+  if (presenceRef){ clearInterval(presenceRef); presenceRef = null; }
+  appStarted = false;
 }
+
+window.addEventListener('beforeunload', () => {
+  if (statusRef) statusRef.set({ online: false, ts: now() }).catch(()=>{});
+});
 
 /* ========== CHAT LIST ========== */
 function loadChats(){
   if (chatListRef) chatListRef.off();
   chatListRef = db.ref('messenger/userChats/' + me.uid);
-  chatListRef.on('value', snap => {
+  chatListRef.on('value', async snap => {
     const ids = Object.keys(snap.val() || {});
 
-    // Удаляем чаты, которых больше нет
-    Object.keys(metaListeners).forEach(id => {
-      if (!ids.includes(id)){
-        metaListeners[id].off();
-        delete metaListeners[id];
-        delete chats[id];
-      }
-    });
+    // Грузим меты пачкой
+    const metas = await Promise.all(ids.map(id =>
+      db.ref('messenger/chats/' + id + '/meta').get().then(s => ({ id, meta: s.val() })).catch(() => null)
+    ));
 
-    // Добавляем новые
-    ids.forEach(id => {
-      if (!metaListeners[id]){
-        metaListeners[id] = db.ref('messenger/chats/' + id + '/meta');
-        metaListeners[id].on('value', ms => {
-          if (ms.exists()){
-            chats[id] = ms.val();
-            renderChatList();
-          }
-        });
-      }
-    });
+    const freshChats = {};
+    metas.forEach(m => { if (m && m.meta) freshChats[m.id] = m.meta; });
+    chats = freshChats;
+    LS.save(LS.CHATS, chats);
     renderChatList();
+  }, err => {
+    console.warn('chats listener error', err);
   });
 }
 
@@ -501,14 +585,17 @@ function renderChatList(){
   const box = $('#chatList');
 
   const items = Object.values(chats).map(c => {
-    const otherUid = (c.members || []).find(u => u !== me.uid);
+    const otherUid = (c.members || []).find(u => u !== me.uid) || me.uid;
     const otherName = (c.memberNames && c.memberNames[otherUid]) || 'Чат';
+    const lastRead = (c.reads && c.reads[me.uid]) || 0;
+    const unread = (c.lastTs && c.lastTs > lastRead && c.lastFrom && c.lastFrom !== me.uid);
     return {
       id: c.id,
       otherUid,
       name: otherName,
       lastMessage: c.lastMessage || 'Нет сообщений',
-      lastTs: c.lastTs || c.createdAt || 0
+      lastTs: c.lastTs || c.createdAt || 0,
+      unread
     };
   }).filter(c => {
     if (!q) return true;
@@ -523,7 +610,7 @@ function renderChatList(){
 
   box.innerHTML = items.map(c => `
     <div class="chat-item ${c.id === currentChatId ? 'active' : ''}" data-id="${c.id}">
-      ${avatarEl(c.name, c.otherUid || c.id)}
+      ${avatarEl(c.name, c.otherUid)}
       <div class="ci-body">
         <div class="ci-top">
           <div class="ci-name">${esc(c.name)}</div>
@@ -531,6 +618,7 @@ function renderChatList(){
         </div>
         <div class="ci-preview">${esc(c.lastMessage)}</div>
       </div>
+      ${c.unread ? '<div class="ci-dot"></div>' : ''}
     </div>
   `).join('');
 
@@ -547,7 +635,8 @@ function openChat(chatId){
   if (!chat) return;
 
   currentChatId = chatId;
-  currentOtherUid = (chat.members || []).find(u => u !== me.uid);
+  currentOtherUid = (chat.members || []).find(u => u !== me.uid) || null;
+  LS.save(LS.LAST, chatId);
 
   $('#emptyState').style.display = 'none';
   $('#chatView').style.display = 'flex';
@@ -559,7 +648,7 @@ function openChat(chatId){
   av.outerHTML = avatarEl(otherName, currentOtherUid || chatId, 'sm')
     .replace('class="avatar sm"', 'class="avatar sm" id="chatAvatar"');
 
-  // Presence подписка
+  // Presence
   if (currentOtherUid){
     const stRef = db.ref('messenger/status/' + currentOtherUid);
     stRef.on('value', s => {
@@ -577,7 +666,7 @@ function openChat(chatId){
     $('#chatSub').textContent = '';
   }
 
-  // Messages listener
+  // Messages
   if (msgRef){ msgRef.off(); msgRef = null; }
   msgRef = db.ref('messenger/messages/' + chatId).orderByChild('ts').limitToLast(200);
   msgRef.on('value', snap => {
@@ -586,7 +675,6 @@ function openChat(chatId){
       .map(k => Object.assign({ id: k }, data[k]))
       .sort((a,b) => (a.ts || 0) - (b.ts || 0));
     renderMessages(list);
-    // Помечаем прочитанным
     db.ref('messenger/chats/' + chatId + '/reads/' + me.uid).set(now()).catch(()=>{});
   });
 
@@ -599,6 +687,7 @@ $('#backBtn').addEventListener('click', () => {
   if (msgRef){ msgRef.off(); msgRef = null; }
   currentChatId = null;
   currentOtherUid = null;
+  LS.del(LS.LAST);
   renderChatList();
 });
 
@@ -660,7 +749,8 @@ async function sendMessage(){
     await newRef.set({ from: me.uid, text, ts: now() });
     await db.ref('messenger/chats/' + currentChatId + '/meta').update({
       lastMessage: text.slice(0, 60),
-      lastTs: now()
+      lastTs: now(),
+      lastFrom: me.uid
     });
   } catch (e){
     console.error(e);
@@ -766,12 +856,29 @@ $('#modal').addEventListener('click', e => {
   if (e.target === $('#modal')) closeModal();
 });
 
-/* ========== STARTUP ========== */
-window.addEventListener('load', () => {
-  if (!navigator.onLine) toast('Нет подключения к сети', 3500);
-});
-window.addEventListener('online', () => toast('Соединение восстановлено'));
-window.addEventListener('offline', () => toast('Нет подключения к сети', 3500));
+/* ========== OFFLINE / ONLINE ========== */
+function updateOfflineBar(){
+  $('#offlineBar').classList.toggle('show', !navigator.onLine);
+}
+window.addEventListener('online', () => { updateOfflineBar(); toast('Соединение восстановлено'); });
+window.addEventListener('offline', () => { updateOfflineBar(); toast('Нет подключения', 3000); });
+updateOfflineBar();
+
+/* ========== FALLBACK — если Firebase долго не отвечает ========== */
+setTimeout(() => {
+  if (!authResolved && me){
+    // Показываем приложение с кэшем даже без ответа от Firebase
+    showScreen('appScreen');
+    startApp();
+  }
+}, 4000);
+
+/* Fallback: если совсем ничего не пришло за 8 сек — покажем форму входа */
+setTimeout(() => {
+  if (!authResolved){
+    showScreen('authScreen');
+  }
+}, 8000);
 
 </script>
 </body>
