@@ -104,12 +104,22 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(0,0,0,.9);color:#fff;padding:12px 18px;border-radius:20px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:9999;max-width:88%;text-align:center;line-height:1.4;word-break:break-word}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .empty{padding:40px 20px;text-align:center;color:var(--text-2);font-size:14px}
+.spinner{width:28px;height:28px;border:3px solid rgba(51,144,236,.25);border-top-color:#3390ec;border-radius:50%;animation:spin .8s linear infinite;margin-top:16px}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 <div id="toast" class="toast"></div>
 
-<div id="auth-screen" class="screen active">
+<div id="splash-screen" class="screen active">
+<div class="auth-container">
+<div class="auth-logo"><svg viewBox="0 0 24 24" width="76" height="76" fill="#3390ec"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg></div>
+<h1 class="auth-title">Telegram</h1>
+<div class="spinner"></div>
+</div>
+</div>
+
+<div id="auth-screen" class="screen">
 <div class="auth-container">
 <div class="auth-logo"><svg viewBox="0 0 24 24" width="76" height="76" fill="#3390ec"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg></div>
 <h1 class="auth-title">Telegram</h1>
@@ -238,8 +248,8 @@ try {
   setTimeout(function(){ toast('Ошибка Firebase: ' + e.message); }, 100);
 }
 
-const screenHistory = [];
-let currentScreenId = null;
+const screenHistory = ['splash-screen'];
+let currentScreenId = 'splash-screen';
 
 function $(id){ return document.getElementById(id); }
 
@@ -264,7 +274,7 @@ function goScreen(id, replace){
   if(currentScreenId === 'chat-screen' && id !== 'chat-screen'){
     leaveChat();
   }
-  if(replace || currentScreenId === null){
+  if(replace || currentScreenId === null || currentScreenId === 'splash-screen'){
     screenHistory.length = 0;
     screenHistory.push(id);
     try { history.replaceState({s: id}, ''); } catch(e){}
@@ -283,6 +293,10 @@ window.addEventListener('popstate', function(){
   if(screenHistory.length > 1){
     screenHistory.pop();
     var prev = screenHistory[screenHistory.length - 1];
+    if(prev === 'splash-screen'){
+      try { history.pushState({s: currentScreenId}, ''); } catch(e){}
+      return;
+    }
     if(currentScreenId === 'chat-screen' && prev !== 'chat-screen'){
       leaveChat();
     }
@@ -295,7 +309,7 @@ window.addEventListener('popstate', function(){
   }
 });
 
-try { history.replaceState({s: 'auth-screen'}, ''); } catch(e){}
+try { history.replaceState({s: 'splash-screen'}, ''); } catch(e){}
 
 function toast(msg){
   var t = $('toast');
@@ -454,7 +468,6 @@ auth.onAuthStateChanged(async function(user){
     cleanupListeners();
     currentUser = null;
     currentUserData = null;
-    userCache = userCache;
     Object.keys(userCache).forEach(function(k){ delete userCache[k]; });
     goScreen('auth-screen', true);
     return;
