@@ -91,6 +91,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .icon-btn:active{background:var(--bg-2)}
 #send-btn{width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 #send-btn:active{background:var(--accent-2)}
+#send-btn:disabled{opacity:.5}
 .attach-menu{position:absolute;bottom:calc(100% + 8px);left:8px;background:var(--bg);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.2);padding:6px 0;min-width:220px;opacity:0;transform:translateY(8px) scale(.95);transform-origin:bottom left;pointer-events:none;transition:opacity .15s,transform .15s;z-index:50;overflow:hidden}
 .attach-menu.show{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
 .attach-item{display:flex;align-items:center;gap:14px;padding:12px 16px;cursor:pointer;font-size:15px;color:var(--text)}
@@ -112,10 +113,10 @@ body.dark .msg-file:active{background:rgba(255,255,255,.05)}
 .voice-play{width:38px;height:38px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;transition:background .15s}
 .voice-play:active{background:var(--accent-2)}
 .voice-wave{flex:1;height:22px;display:flex;align-items:center;gap:2px;overflow:hidden}
-.voice-wave span{width:3px;background:var(--accent);border-radius:2px;opacity:.55;flex-shrink:0}
+.voice-wave span{width:3px;background:var(--accent);border-radius:2px;opacity:.55;flex-shrink:0;transition:opacity .1s linear}
 .voice-dur{font-size:12px;color:var(--text-2);flex-shrink:0;font-variant-numeric:tabular-nums}
 .msg-circle{width:200px;height:200px;border-radius:50%;overflow:hidden;background:#000;position:relative;margin:2px}
-.msg-circle video{width:100%;height:100%;object-fit:cover;display:block}
+.msg-circle video{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
 .media-viewer{position:fixed;inset:0;background:#000;z-index:9998;display:none;align-items:center;justify-content:center;flex-direction:column}
 .media-viewer.show{display:flex}
 .media-viewer img,.media-viewer video{max-width:100%;max-height:100%;object-fit:contain}
@@ -264,9 +265,6 @@ body.dark .msg-file:active{background:rgba(255,255,255,.05)}
 <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg>
 </button>
 <input type="text" id="msg-input" placeholder="Сообщение" autocomplete="off">
-<button class="icon-btn" id="voice-btn" style="display:none">
-<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-</button>
 <button id="send-btn"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
 <div class="attach-overlay" id="attach-overlay"></div>
 <div class="attach-menu" id="attach-menu">
@@ -344,6 +342,8 @@ try {
 
 const SAVED_CHAT_PREFIX = 'saved_';
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const PLAY_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+const PAUSE_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
 
 const screenHistory = ['splash-screen'];
 let currentScreenId = 'splash-screen';
@@ -393,13 +393,14 @@ function leaveChat(){
   if(unsubChatUser && unsubChatUser.off){ try { unsubChatUser.off(); } catch(e){} }
   unsubMessages = null;
   unsubChatUser = null;
-  if(currentUser && currentUser.uid && !isSavedChat(currentChatId)){
+  if(currentUser && currentUser.uid && currentChatId && !isSavedChat(currentChatId)){
     db.ref('users/' + currentUser.uid).update({ typing: null }).catch(function(){});
   }
   currentChatId = null;
   currentChatUser = null;
   closeAttachMenu();
   hideUploadProgress();
+  stopRecordingSilently();
 }
 
 function goScreen(id, replace){
@@ -510,6 +511,11 @@ function formatDur(sec){
   var m = Math.floor(sec/60);
   var s = sec % 60;
   return m + ':' + pad(s);
+}
+function cleanMime(t){
+  if(!t) return 'application/octet-stream';
+  var c = String(t).split(';')[0].trim();
+  return c || 'application/octet-stream';
 }
 function setTheme(dark){
   if(dark) document.body.classList.add('dark');
@@ -805,11 +811,6 @@ async function fetchUser(uid){
 
 function previewTextFor(m){
   if(!m) return 'Нет сообщений';
-  if(m.type === 'photo') return '📷 Фото';
-  if(m.type === 'video') return '🎬 Видео';
-  if(m.type === 'file') return '📎 ' + (m.fileName || 'Файл');
-  if(m.type === 'voice') return '🎤 Голосовое сообщение';
-  if(m.type === 'circle') return '⭕ Видеосообщение';
   return m.lastMessage || 'Нет сообщений';
 }
 
@@ -988,10 +989,17 @@ function checkDouble(){
   return '<span class="msg-check"><svg viewBox="0 0 19 11" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 5.5L5.5 10L14 1"/><path d="M6 5.5L10.5 10L19 1"/></svg></span>';
 }
 
-function waveBars(){
+/* Детерминированная "волна" — не «прыгает» при перерисовке */
+function waveBars(seed){
+  var s = 0;
+  var str = String(seed || 'x');
+  for(var i = 0; i < str.length; i++){
+    s = (s * 31 + str.charCodeAt(i)) >>> 0;
+  }
   var html = '';
-  for(var i = 0; i < 26; i++){
-    var h = 6 + Math.round(Math.random()*14);
+  for(var j = 0; j < 26; j++){
+    s = (s * 1103515245 + 12345) >>> 0;
+    var h = 6 + (s % 15);
     html += '<span style="height:' + h + 'px"></span>';
   }
   return html;
@@ -1004,11 +1012,11 @@ function renderMessageInner(m){
       (m.text ? '<div class="msg-text msg-caption">' + esc(m.text) + '</div>' : '');
   }
   if(type === 'video'){
-    return '<div class="msg-media"><video src="' + escAttr(m.fileURL||'') + '" controls preload="metadata" playsinline></video></div>' +
+    return '<div class="msg-media"><video src="' + escAttr(m.fileURL||'') + '" controls preload="metadata" playsinline webkit-playsinline></video></div>' +
       (m.text ? '<div class="msg-text msg-caption">' + esc(m.text) + '</div>' : '');
   }
   if(type === 'file'){
-    return '<a class="msg-file" href="' + escAttr(m.fileURL||'') + '" target="_blank" rel="noopener" download>' +
+    return '<a class="msg-file" href="' + escAttr(m.fileURL||'') + '" target="_blank" rel="noopener" download="' + escAttr(m.fileName || 'file') + '">' +
       '<div class="msg-file-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg></div>' +
       '<div class="msg-file-info">' +
         '<div class="msg-file-name">' + esc(m.fileName || 'Файл') + '</div>' +
@@ -1019,13 +1027,13 @@ function renderMessageInner(m){
   }
   if(type === 'voice'){
     return '<div class="msg-voice">' +
-      '<button class="voice-play" data-audio-url="' + escAttr(m.fileURL||'') + '"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>' +
-      '<div class="voice-wave">' + waveBars() + '</div>' +
+      '<button class="voice-play" data-audio-url="' + escAttr(m.fileURL||'') + '">' + PLAY_ICON + '</button>' +
+      '<div class="voice-wave">' + waveBars(m.id) + '</div>' +
       '<span class="voice-dur">' + formatDur(m.duration || 0) + '</span>' +
     '</div>';
   }
   if(type === 'circle'){
-    return '<div class="msg-circle"><video src="' + escAttr(m.fileURL||'') + '" controls playsinline preload="metadata"></video></div>';
+    return '<div class="msg-circle"><video src="' + escAttr(m.fileURL||'') + '" controls playsinline webkit-playsinline preload="metadata"></video></div>';
   }
   return '<span class="msg-text">' + esc(m.text || '') + '</span>';
 }
@@ -1086,36 +1094,70 @@ $('media-viewer-close').onclick = function(){
   viewer.classList.remove('show');
 };
 
+/* ---------- АУДИО ---------- */
+function resetWave(btn){
+  if(!btn || !btn.parentNode) return;
+  var wave = btn.parentNode.querySelector('.voice-wave');
+  if(!wave) return;
+  wave.querySelectorAll('span').forEach(function(b){ b.style.opacity = '.55'; });
+}
+
 function stopAudio(){
   if(currentAudio){
     try { currentAudio.pause(); } catch(e){}
+    currentAudio.onended = null;
+    currentAudio.onerror = null;
+    currentAudio.ontimeupdate = null;
     currentAudio = null;
   }
   if(currentAudioBtn){
-    currentAudioBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+    currentAudioBtn.innerHTML = PLAY_ICON;
+    resetWave(currentAudioBtn);
     currentAudioBtn = null;
   }
 }
 
 function toggleAudio(btn, url){
+  if(!url){ toast('Файл недоступен'); return; }
   if(currentAudioBtn === btn && currentAudio && !currentAudio.paused){
     stopAudio();
     return;
   }
   stopAudio();
   currentAudioBtn = btn;
-  currentAudio = new Audio(url);
-  currentAudio.play().then(function(){
-    btn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+  var audio = new Audio();
+  audio.preload = 'auto';
+  audio.src = url;
+  currentAudio = audio;
+
+  var wave = btn.parentNode ? btn.parentNode.querySelector('.voice-wave') : null;
+  var bars = wave ? wave.querySelectorAll('span') : [];
+
+  var setProgress = function(p){
+    if(!bars.length) return;
+    var n = Math.round(bars.length * Math.max(0, Math.min(1, p)));
+    for(var i = 0; i < bars.length; i++){
+      bars[i].style.opacity = i < n ? '1' : '.55';
+    }
+  };
+
+  audio.ontimeupdate = function(){
+    if(audio.duration && isFinite(audio.duration) && audio.duration > 0){
+      setProgress(audio.currentTime / audio.duration);
+    }
+  };
+  audio.onended = function(){ setProgress(0); stopAudio(); };
+  audio.onerror = function(){ toast('Не удалось воспроизвести'); stopAudio(); };
+
+  audio.play().then(function(){
+    btn.innerHTML = PAUSE_ICON;
   }).catch(function(){
     toast('Не удалось воспроизвести');
     stopAudio();
   });
-  currentAudio.onended = function(){
-    stopAudio();
-  };
 }
 
+/* ---------- ПРОЧТЕНИЕ ---------- */
 async function markAsRead(){
   if(!currentChatId || !currentUser || isSavedChat(currentChatId)) return;
   try {
@@ -1133,30 +1175,48 @@ async function markAsRead(){
   } catch(e){}
 }
 
+/* ---------- ОТПРАВКА ---------- */
 async function sendMessage(){
   var inp = $('msg-input');
   var text = inp.value.trim();
   if(!text || !currentChatId) return;
   inp.value = '';
+  if(currentUser && !isSavedChat(currentChatId)){
+    db.ref('users/' + currentUser.uid + '/typing').set(null).catch(function(){});
+  }
   await pushMessage({ type: 'text', text: text });
 }
 
-async function pushMessage(msgExtra){
-  if(!currentChatId || !currentUser) return;
+function resolveOtherUid(chatId, opts){
+  if(opts && opts.otherUid) return opts.otherUid;
+  if(currentChatUser && currentChatUser.uid && chatId === currentChatId) return currentChatUser.uid;
+  var c = chatsData[chatId];
+  if(c && c.members){
+    var found = Object.keys(c.members).find(function(m){ return m !== currentUser.uid; });
+    if(found) return found;
+  }
+  return null;
+}
+
+async function pushMessage(msgExtra, opts){
+  opts = opts || {};
+  var chatId = opts.chatId || currentChatId;
+  if(!chatId || !currentUser) return;
+
   var msg = Object.assign({
     senderId: currentUser.uid,
     timestamp: TS,
     read: false
   }, msgExtra);
 
-  if(isSavedChat(currentChatId)){
+  /* Избранное */
+  if(isSavedChat(chatId)){
     try {
-      var msgRef = db.ref('chats/' + currentChatId + '/messages').push();
+      var msgRef = db.ref('chats/' + chatId + '/messages').push();
       msg.read = true;
       await msgRef.set(msg);
-      var summary = previewFromMsg(msg);
       await db.ref('saved/' + currentUser.uid).update({
-        lastMessage: summary,
+        lastMessage: previewFromMsg(msg),
         lastTime: TS
       });
     } catch(e){
@@ -1165,22 +1225,28 @@ async function pushMessage(msgExtra){
     return;
   }
 
-  if(!currentChatUser) return;
+  var otherUid = resolveOtherUid(chatId, opts);
+  if(!otherUid){
+    toast('Ошибка: получатель не найден');
+    return;
+  }
+
   try {
-    var msgRef2 = db.ref('chats/' + currentChatId + '/messages').push();
+    var msgRef2 = db.ref('chats/' + chatId + '/messages').push();
     var updates = {};
-    updates['chats/' + currentChatId + '/messages/' + msgRef2.key] = msg;
-    var summary2 = previewFromMsg(msg);
-    updates['chats/' + currentChatId + '/lastMessage'] = summary2;
-    updates['chats/' + currentChatId + '/lastMessageTime'] = TS;
-    updates['chats/' + currentChatId + '/lastSender'] = currentUser.uid;
-    updates['chats/' + currentChatId + '/lastType'] = msg.type || 'text';
-    var u = await db.ref('chats/' + currentChatId + '/unread').once('value');
+    updates['chats/' + chatId + '/messages/' + msgRef2.key] = msg;
+    updates['chats/' + chatId + '/lastMessage'] = previewFromMsg(msg);
+    updates['chats/' + chatId + '/lastMessageTime'] = TS;
+    updates['chats/' + chatId + '/lastSender'] = currentUser.uid;
+    updates['chats/' + chatId + '/lastType'] = msg.type || 'text';
+
+    var u = await db.ref('chats/' + chatId + '/unread').once('value');
     var unread = u.val() || {};
-    unread[currentChatUser.uid] = (unread[currentChatUser.uid] || 0) + 1;
+    unread[otherUid] = (unread[otherUid] || 0) + 1;
     unread[currentUser.uid] = 0;
-    updates['chats/' + currentChatId + '/unread'] = unread;
+    updates['chats/' + chatId + '/unread'] = unread;
     updates['users/' + currentUser.uid + '/typing'] = null;
+
     await db.ref().update(updates);
   } catch(e){
     toast('Ошибка отправки');
@@ -1196,10 +1262,11 @@ function previewFromMsg(msg){
   return msg.text || '';
 }
 
+/* ---------- ЗАГРУЗКА ---------- */
 function showUploadProgress(text){
   var p = $('upload-progress');
   if(!p) return;
-  $('upload-text').textContent = text;
+  $('upload-text').textContent = text || 'Загрузка...';
   $('upload-fill').style.width = '0%';
   p.classList.add('show');
 }
@@ -1210,20 +1277,32 @@ function setUploadProgress(percent){
 function hideUploadProgress(){
   var p = $('upload-progress');
   if(p) p.classList.remove('show');
+  setUploadProgress(0);
 }
 
 async function uploadFileAndGetURL(file, folder){
-  var safeName = (file.name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+  var safeName = (file.name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
   var path = folder + '/' + currentUser.uid + '_' + Date.now() + '_' + safeName;
   var ref = storage.ref(path);
-  var task = ref.put(file, { contentType: file.type || 'application/octet-stream' });
+  var contentType = cleanMime(file.type);
+  var metadata = { contentType: contentType, cacheControl: 'public,max-age=31536000' };
+
+  var task = ref.put(file, metadata);
+
   return new Promise(function(resolve, reject){
+    var done = false;
     task.on('state_changed', function(snap){
-      var pct = (snap.bytesTransferred / snap.totalBytes) * 100;
+      var pct = snap.totalBytes ? (snap.bytesTransferred / snap.totalBytes) * 100 : 0;
       setUploadProgress(pct);
+      var txt = $('upload-text');
+      if(txt) txt.textContent = 'Загрузка ' + Math.round(pct) + '%';
     }, function(err){
+      if(done) return;
+      done = true;
       reject(err);
     }, async function(){
+      if(done) return;
+      done = true;
       try {
         var url = await task.snapshot.ref.getDownloadURL();
         resolve(url);
@@ -1232,45 +1311,73 @@ async function uploadFileAndGetURL(file, folder){
   });
 }
 
-async function handleMediaFile(file, forceType){
+/**
+ * Универсальная отправка медиа.
+ * @param {File}   file
+ * @param {string} forceType  'photo' | 'video' | 'file' | 'voice' | 'circle' | null
+ * @param {object} extra      дополнительные поля сообщения (duration и т.п.)
+ * @param {object} ctx        {chatId, otherUid} — фиксируем контекст на время загрузки
+ */
+async function handleMediaFile(file, forceType, extra, ctx){
   if(!file) return;
-  if(!currentChatId){ toast('Откройте чат'); return; }
+  if(!currentUser){ toast('Нет авторизации'); return; }
+
+  var chatId = (ctx && ctx.chatId) || currentChatId;
+  if(!chatId){ toast('Откройте чат'); return; }
+  var otherUid = (ctx && ctx.otherUid) || (currentChatUser ? currentChatUser.uid : null);
+
   if(file.size > MAX_FILE_SIZE){
     toast('Файл слишком большой (макс. ' + formatSize(MAX_FILE_SIZE) + ')');
     return;
   }
+  if(file.size === 0){
+    toast('Файл пустой');
+    return;
+  }
+
   var type = forceType;
   if(!type){
     if(file.type.indexOf('image/') === 0) type = 'photo';
     else if(file.type.indexOf('video/') === 0) type = 'video';
     else type = 'file';
   }
-  var folder = 'media/' + currentChatId;
-  showUploadProgress('Загрузка ' + formatSize(file.size) + '...');
+
+  var folder = 'media/' + chatId;
+  showUploadProgress('Подготовка...');
+
   try {
     var url = await uploadFileAndGetURL(file, folder);
+    setUploadProgress(100);
     hideUploadProgress();
-    var extra = { type: type, fileURL: url };
+
+    var msgExtra = Object.assign({ type: type, fileURL: url }, extra || {});
     if(type === 'file'){
-      extra.fileName = file.name || 'Файл';
-      extra.fileSize = file.size;
+      msgExtra.fileName = file.name || 'Файл';
+      msgExtra.fileSize = file.size;
+      msgExtra.mimeType = cleanMime(file.type);
     }
-    await pushMessage(extra);
+    if(type === 'voice' || type === 'circle' || type === 'video' || type === 'photo'){
+      msgExtra.mimeType = cleanMime(file.type);
+    }
+
+    await pushMessage(msgExtra, { chatId: chatId, otherUid: otherUid });
   } catch(e){
     hideUploadProgress();
-    toast('Ошибка загрузки: ' + (e.message || e.code));
+    var m = e && (e.message || e.code) ? (e.message || e.code) : 'неизвестная ошибка';
+    toast('Ошибка загрузки: ' + m);
+    console.error('upload error', e);
   }
 }
 
 $('media-photo-input').onchange = function(){
   var f = this.files[0];
-  if(f) handleMediaFile(f, null);
   this.value = '';
+  if(f) handleMediaFile(f, null);
 };
 $('media-file-input').onchange = function(){
   var f = this.files[0];
-  if(f) handleMediaFile(f, 'file');
   this.value = '';
+  if(f) handleMediaFile(f, 'file');
 };
 
 function openAttachMenu(){
@@ -1297,51 +1404,136 @@ $('attach-file').onclick = function(){
   $('media-file-input').click();
 };
 
+/* ---------- ЗАПИСЬ ГОЛОСОВЫХ И КРУЖКОВ ---------- */
+function pickMimeType(list){
+  if(typeof MediaRecorder === 'undefined') return '';
+  if(!MediaRecorder.isTypeSupported) return '';
+  for(var i = 0; i < list.length; i++){
+    try { if(MediaRecorder.isTypeSupported(list[i])) return list[i]; } catch(e){}
+  }
+  return '';
+}
+
+function stopRecordingSilently(){
+  try {
+    if(mediaRecorder && mediaRecorder.state !== 'inactive'){
+      mediaRecorder.onstop = null;
+      mediaRecorder.stop();
+    }
+  } catch(e){}
+  mediaRecorder = null;
+  mediaChunks = [];
+  stopMediaStream();
+  closeRecordingOverlay();
+}
+
 async function startRecording(mode){
   if(!currentChatId){ toast('Откройте чат'); return; }
+  if(!currentUser){ toast('Нет авторизации'); return; }
+  if(typeof MediaRecorder === 'undefined'){
+    toast('Запись не поддерживается браузером');
+    return;
+  }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    toast('Нет доступа к медиаустройствам (нужен HTTPS)');
+    return;
+  }
+  if(mediaRecorder){
+    toast('Запись уже идёт');
+    return;
+  }
+
   recordMode = mode;
+  var ctx = {
+    chatId: currentChatId,
+    otherUid: currentChatUser ? currentChatUser.uid : null
+  };
+
   try {
     var constraints = (mode === 'circle')
-      ? { audio: true, video: { facingMode: 'user', width: {ideal: 480}, height: {ideal: 480} } }
-      : { audio: true };
+      ? {
+          audio: { echoCancellation: true, noiseSuppression: true },
+          video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } }
+        }
+      : {
+          audio: { echoCancellation: true, noiseSuppression: true }
+        };
+
     mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-    var mimeType = '';
-    if(mode === 'circle'){
-      if(MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) mimeType = 'video/webm;codecs=vp9';
-      else if(MediaRecorder.isTypeSupported('video/webm')) mimeType = 'video/webm';
-      else if(MediaRecorder.isTypeSupported('video/mp4')) mimeType = 'video/mp4';
-    } else {
-      if(MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
-      else if(MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
-      else if(MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+
+    var mimeType = (mode === 'circle')
+      ? pickMimeType(['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'])
+      : pickMimeType(['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg','audio/mp4','audio/mpeg']);
+
+    var opts = {};
+    if(mimeType) opts.mimeType = mimeType;
+    if(mode === 'circle') opts.videoBitsPerSecond = 900000;
+
+    try {
+      mediaRecorder = new MediaRecorder(mediaStream, opts);
+    } catch(err){
+      mediaRecorder = new MediaRecorder(mediaStream);
     }
-    var opts = mimeType ? { mimeType: mimeType } : {};
-    mediaRecorder = new MediaRecorder(mediaStream, opts);
+
     mediaChunks = [];
+
     mediaRecorder.ondataavailable = function(e){
       if(e.data && e.data.size > 0) mediaChunks.push(e.data);
     };
+
+    mediaRecorder.onerror = function(e){
+      console.error('MediaRecorder error', e);
+      toast('Ошибка записи');
+      stopRecordingSilently();
+    };
+
     mediaRecorder.onstop = async function(){
-      var blob = new Blob(mediaChunks, { type: mediaChunks[0] ? mediaChunks[0].type : (mode === 'circle' ? 'video/webm' : 'audio/webm') });
-      var duration = Math.round((Date.now() - recordStart) / 1000);
+      var mode2 = recordMode;
+      var chunks = mediaChunks.slice();
+      mediaChunks = [];
+
+      var fallbackType = mode2 === 'circle' ? 'video/webm' : 'audio/webm';
+      var rawType = (chunks[0] && chunks[0].type) ? chunks[0].type : fallbackType;
+      var blob = new Blob(chunks, { type: rawType });
+
+      var duration = Math.max(1, Math.round((Date.now() - recordStart) / 1000));
+
       closeRecordingOverlay();
       stopMediaStream();
-      if(duration < 1){
-        toast('Слишком коротко');
+      mediaRecorder = null;
+      recordMode = null;
+
+      if(blob.size < 200){
+        toast('Запись не удалась');
         return;
       }
-      var ext = mode === 'circle' ? 'webm' : 'webm';
-      if(blob.type.indexOf('mp4') !== -1) ext = 'mp4';
-      var file = new File([blob], (mode === 'circle' ? 'circle_' : 'voice_') + Date.now() + '.' + ext, { type: blob.type });
-      await handleMediaFile(file, mode);
+
+      var mime = cleanMime(rawType);
+      var ext = 'webm';
+      if(mime.indexOf('mp4') !== -1) ext = 'mp4';
+      else if(mime.indexOf('ogg') !== -1) ext = 'ogg';
+
+      var name = (mode2 === 'circle' ? 'circle_' : 'voice_') + Date.now() + '.' + ext;
+      var file = new File([blob], name, { type: mime });
+
+      await handleMediaFile(file, mode2, { duration: duration, mimeType: mime }, ctx);
     };
-    mediaRecorder.start();
+
+    mediaRecorder.start(250);
     recordStart = Date.now();
     showRecordingOverlay(mode);
     updateRecordingTimer();
+
   } catch(e){
-    toast('Нет доступа к ' + (mode === 'circle' ? 'камере' : 'микрофону'));
-    stopMediaStream();
+    var msg = e && e.name ? e.name : 'ошибка';
+    if(msg === 'NotAllowedError' || msg === 'PermissionDeniedError'){
+      toast('Доступ к ' + (mode === 'circle' ? 'камере' : 'микрофону') + ' запрещён');
+    } else if(msg === 'NotFoundError' || msg === 'DevicesNotFoundError'){
+      toast('Устройство не найдено');
+    } else {
+      toast('Не удалось начать запись: ' + msg);
+    }
+    stopRecordingSilently();
   }
 }
 
@@ -1359,12 +1551,15 @@ function showRecordingOverlay(mode){
   if(mode === 'circle'){
     preview.style.display = 'block';
     preview.innerHTML = '';
-    var v = document.createElement('video');
-    v.autoplay = true;
-    v.muted = true;
-    v.playsInline = true;
-    v.srcObject = mediaStream;
-    preview.appendChild(v);
+    if(mediaStream){
+      var v = document.createElement('video');
+      v.autoplay = true;
+      v.muted = true;
+      v.playsInline = true;
+      v.setAttribute('playsinline','');
+      v.srcObject = mediaStream;
+      preview.appendChild(v);
+    }
     hint.textContent = 'Запись видеокружка. Нажмите стоп, чтобы отправить.';
   } else {
     preview.style.display = 'none';
@@ -1376,15 +1571,16 @@ function showRecordingOverlay(mode){
 
 function closeRecordingOverlay(){
   var overlay = $('recording-overlay');
-  overlay.classList.remove('show');
+  if(overlay) overlay.classList.remove('show');
   var preview = $('recording-preview');
-  preview.innerHTML = '';
+  if(preview) preview.innerHTML = '';
   if(recordTimer){ clearInterval(recordTimer); recordTimer = null; }
 }
 
 function updateRecordingTimer(){
   if(recordTimer) clearInterval(recordTimer);
   var el = $('recording-timer');
+  if(!el) return;
   var update = function(){
     var sec = Math.floor((Date.now() - recordStart) / 1000);
     el.textContent = pad(Math.floor(sec/60)) + ':' + pad(sec % 60);
@@ -1397,12 +1593,16 @@ function updateRecordingTimer(){
 }
 
 function stopRecording(){
+  if(recordTimer){ clearInterval(recordTimer); recordTimer = null; }
   try {
     if(mediaRecorder && mediaRecorder.state !== 'inactive'){
       mediaRecorder.stop();
+    } else {
+      stopRecordingSilently();
     }
-  } catch(e){}
-  mediaRecorder = null;
+  } catch(e){
+    stopRecordingSilently();
+  }
 }
 
 $('recording-stop').onclick = function(){
@@ -1418,12 +1618,13 @@ $('attach-circle').onclick = function(){
   startRecording('circle');
 };
 
+/* ---------- ВВОД / ОТПРАВКА ТЕКСТА ---------- */
 $('send-btn').onclick = sendMessage;
 $('msg-input').addEventListener('keydown', function(e){
   if(e.key === 'Enter'){ e.preventDefault(); sendMessage(); }
 });
 $('msg-input').addEventListener('input', function(){
-  if(!currentUser || isSavedChat(currentChatId)) return;
+  if(!currentUser || !currentChatId || isSavedChat(currentChatId)) return;
   var ref = db.ref('users/' + currentUser.uid);
   ref.update({ typing: currentChatId }).catch(function(){});
   clearTimeout(typingTimer);
