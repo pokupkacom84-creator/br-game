@@ -49,6 +49,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .chat-item{display:flex;align-items:center;padding:10px 16px;gap:12px;cursor:pointer;transition:background .1s}
 .chat-item:active{background:var(--bg-2)}
 .avatar{width:54px;height:54px;border-radius:50%;background:var(--accent);background-size:cover;background-position:center;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:500;overflow:hidden}
+.avatar.saved{background:#3390ec}
 .chat-item-info{flex:1;min-width:0}
 .chat-item-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .chat-item-name{font-size:16px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -248,6 +249,8 @@ try {
   setTimeout(function(){ toast('Ошибка Firebase: ' + e.message); }, 100);
 }
 
+const SAVED_CHAT_PREFIX = 'saved_';
+
 const screenHistory = ['splash-screen'];
 let currentScreenId = 'splash-screen';
 
@@ -259,14 +262,21 @@ function showScreen(id){
   if(el) el.classList.add('active');
 }
 
+function isSavedChat(chatId){
+  return chatId && chatId.indexOf(SAVED_CHAT_PREFIX) === 0;
+}
+
 function leaveChat(){
   if(unsubMessages && unsubMessages.off){ try { unsubMessages.off(); } catch(e){} }
   if(unsubChatUser && unsubChatUser.off){ try { unsubChatUser.off(); } catch(e){} }
   unsubMessages = null;
   unsubChatUser = null;
-  if(currentUser && currentUser.uid) db.ref('users/' + currentUser.uid).update({ typing: null }).catch(function(){});
+  if(currentUser && currentUser.uid && !isSavedChat(currentChatId)){
+    db.ref('users/' + currentUser.uid).update({ typing: null }).catch(function(){});
+  }
   currentChatId = null;
   currentChatUser = null;
+  savedLastMessage = null;
 }
 
 function goScreen(id, replace){
@@ -450,10 +460,13 @@ let currentUser = null;
 let currentUserData = null;
 let currentChatId = null;
 let currentChatUser = null;
+let savedLastMessage = null;
+let savedLastTime = null;
 let unsubUserChats = null;
 let unsubMessages = null;
 let unsubChatUser = null;
 let unsubSelfDoc = null;
+let unsubSavedMeta = null;
 let onbAvatarFile = null;
 let typingTimer = null;
 let chatsData = {};
@@ -490,6 +503,7 @@ auth.onAuthStateChanged(async function(user){
     goScreen('main-screen', true);
     startSelfListener();
     startUserChatsListener();
+    startSavedMetaListener();
     updateSettingsUI();
   }
 });
@@ -500,11 +514,13 @@ function cleanupListeners(){
     if(unsubMessages && unsubMessages.off) unsubMessages.off();
     if(unsubChatUser && unsubChatUser.off) unsubChatUser.off();
     if(unsubSelfDoc && unsubSelfDoc.off) unsubSelfDoc.off();
+    if(unsubSavedMeta && unsubSavedMeta.off) unsubSavedMeta.off();
   } catch(e){}
   unsubUserChats = null;
   unsubMessages = null;
   unsubChatUser = null;
   unsubSelfDoc = null;
+  unsubSavedMeta = null;
   Object.keys(chatUnsubs).forEach(function(k){
     var c = chatUnsubs[k];
     try {
@@ -515,6 +531,17 @@ function cleanupListeners(){
   });
   chatsData = {};
   userChatsMap = {};
+}
+
+function startSavedMetaListener(){
+  if(unsubSavedMeta && unsubSavedMeta.off) unsubSavedMeta.off();
+  var ref = db.ref('saved/' + currentUser.uid);
+  unsubSavedMeta = ref.on('value', function(s){
+    var v = s.val() || {};
+    savedLastMessage = v.lastMessage || '';
+    savedLastTime = v.lastTime || null;
+    renderChats();
+  });
 }
 
 function startSelfListener(){
@@ -591,6 +618,7 @@ $('onb-continue').onclick = async function(){
     goScreen('main-screen', true);
     startSelfListener();
     startUserChatsListener();
+    startSavedMetaListener();
     updateSettingsUI();
   } catch(e){
     toast('Ошибка: ' + (e.message || e.code));
@@ -642,21 +670,47 @@ async function fetchUser(uid){
   try {
     var s = await db.ref('users/' + uid).once('value');
     if(s.exists()){
-      userCache[uid] = Object.assign({uid: uid}, s.val());
+      var v = s.val();
+      if(!v || !v.name){
+        return {uid: uid, name: '', username: ''};
+      }
+      userCache[uid] = Object.assign({uid: uid}, v);
       return userCache[uid];
     }
   } catch(e){}
-  return {uid: uid, name: 'Пользователь', username: ''};
+  return {uid: uid, name: '', username: ''};
+}
+
+function renderSavedItem(){
+  var hasMessage = savedLastMessage && savedLastMessage.length > 0;
+  var msg = hasMessage ? savedLastMessage : 'сохранённые сообщения';
+  var prefix = hasMessage ? 'Вы: ' : '';
+  var time = savedLastTime ? formatTime(savedLastTime) : '';
+  return '<div class="chat-item saved-item" data-saved="1">' +
+    '<div class="avatar saved"><svg viewBox="0 0 24 24" width="26" height="26" fill="#ffffff"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg></div>' +
+    '<div class="chat-item-info">' +
+      '<div class="chat-item-top">' +
+        '<div class="chat-item-name">Избранное</div>' +
+        '<div class="chat-item-time">' + esc(time) + '</div>' +
+      '</div>' +
+      '<div class="chat-item-bottom">' +
+        '<div class="chat-item-msg">' + esc(prefix + msg) + '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
 }
 
 async function renderChats(){
   var list = $('chats-list');
   if(!list || !currentUser) return;
-  var ids = Object.keys(chatsData);
-  if(!ids.length){
-    list.innerHTML = '<div class="empty">Нет чатов. Начните новую переписку.</div>';
-    return;
+
+  var q = searchQuery.toLowerCase();
+  var savedHtml = '';
+  if(!q || 'избранное'.indexOf(q) !== -1 || 'сохранённые сообщения'.indexOf(q) !== -1){
+    savedHtml = renderSavedItem();
   }
+
+  var ids = Object.keys(chatsData);
   var arr = [];
   ids.forEach(function(id){
     var c = chatsData[id];
@@ -666,15 +720,18 @@ async function renderChats(){
     arr.push({id: id, data: c, otherId: otherId});
   });
   await Promise.all(arr.map(function(x){ return fetchUser(x.otherId); }));
+  arr = arr.filter(function(x){
+    var u = userCache[x.otherId];
+    return u && u.name;
+  });
   arr.sort(function(a,b){
     var ta = a.data.lastMessageTime || 0;
     var tb = b.data.lastMessageTime || 0;
     return tb - ta;
   });
-  var q = searchQuery.toLowerCase();
-  var html = '';
+  var html = savedHtml;
   arr.forEach(function(x){
-    var u = userCache[x.otherId] || {name:'Пользователь'};
+    var u = userCache[x.otherId];
     var unread = (x.data.unread && x.data.unread[currentUser.uid]) || 0;
     var time = formatTime(x.data.lastMessageTime);
     var last = x.data.lastMessage || 'Нет сообщений';
@@ -697,11 +754,31 @@ async function renderChats(){
       '</div>' +
     '</div>';
   });
-  if(!html) html = '<div class="empty">Ничего не найдено</div>';
+  if(!html) html = '<div class="empty">Нет чатов. Начните новую переписку.</div>';
   list.innerHTML = html;
+
+  var savedEl = list.querySelector('.saved-item');
+  if(savedEl) savedEl.onclick = openSavedMessages;
+
   list.querySelectorAll('.chat-item').forEach(function(el){
+    if(el.classList.contains('saved-item')) return;
     el.onclick = function(){ openChat(el.dataset.chat, el.dataset.user); };
   });
+}
+
+async function openSavedMessages(){
+  currentChatId = SAVED_CHAT_PREFIX + currentUser.uid;
+  currentChatUser = null;
+  $('chat-name').textContent = 'Избранное';
+  var st = $('chat-status');
+  st.textContent = 'сохранённые сообщения';
+  st.style.color = '#a8d7ff';
+  var av = $('chat-avatar');
+  av.style.backgroundImage = '';
+  av.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="#ffffff"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>';
+  goScreen('chat-screen');
+  startMessagesListener();
+  setTimeout(function(){ var i = $('msg-input'); if(i) i.focus(); }, 300);
 }
 
 async function openChat(chatId, otherUid){
@@ -711,7 +788,7 @@ async function openChat(chatId, otherUid){
   $('chat-name').textContent = currentChatUser.name || 'Пользователь';
   var av = $('chat-avatar');
   av.style.backgroundImage = currentChatUser.photoURL ? 'url(\'' + currentChatUser.photoURL + '\')' : '';
-  av.textContent = currentChatUser.photoURL ? '' : initials(currentChatUser.name);
+  av.innerHTML = currentChatUser.photoURL ? '' : esc(initials(currentChatUser.name));
   updateChatStatus();
   db.ref('chats/' + chatId + '/unread/' + currentUser.uid).set(0).catch(function(){});
   goScreen('chat-screen');
@@ -759,7 +836,7 @@ function startMessagesListener(){
         msgs.push(Object.assign({id: child.key}, child.val()));
       });
       renderMessages(msgs);
-      markAsRead();
+      if(!isSavedChat(currentChatId)) markAsRead();
     });
 }
 
@@ -795,7 +872,7 @@ function renderMessages(msgs){
     var isOut = m.senderId === currentUser.uid;
     var time = formatFullTime(m.timestamp);
     var check = '';
-    if(isOut) check = m.read ? checkDouble() : checkSingle();
+    if(isOut && !isSavedChat(currentChatId)) check = m.read ? checkDouble() : checkSingle();
     html += '<div class="msg ' + (isOut?'out':'in') + '">' +
       '<span class="msg-text">' + esc(m.text) + '</span>' +
       '<span class="msg-time">' + time + check + '</span>' +
@@ -806,7 +883,7 @@ function renderMessages(msgs){
 }
 
 async function markAsRead(){
-  if(!currentChatId || !currentUser) return;
+  if(!currentChatId || !currentUser || isSavedChat(currentChatId)) return;
   try {
     var snap = await db.ref('chats/' + currentChatId + '/messages')
       .orderByChild('read').equalTo(false).limitToFirst(200).once('value');
@@ -825,10 +902,31 @@ async function markAsRead(){
 async function sendMessage(){
   var inp = $('msg-input');
   var text = inp.value.trim();
-  if(!text || !currentChatId || !currentChatUser) return;
+  if(!text || !currentChatId) return;
   inp.value = '';
+
+  if(isSavedChat(currentChatId)){
+    try {
+      var msgRef = db.ref('chats/' + currentChatId + '/messages').push();
+      await msgRef.set({
+        senderId: currentUser.uid,
+        text: text,
+        timestamp: TS,
+        read: true
+      });
+      await db.ref('saved/' + currentUser.uid).update({
+        lastMessage: text,
+        lastTime: TS
+      });
+    } catch(e){
+      toast('Ошибка сохранения');
+    }
+    return;
+  }
+
+  if(!currentChatUser) return;
   try {
-    var msgRef = db.ref('chats/' + currentChatId + '/messages').push();
+    var msgRef2 = db.ref('chats/' + currentChatId + '/messages').push();
     var msg = {
       senderId: currentUser.uid,
       text: text,
@@ -836,7 +934,7 @@ async function sendMessage(){
       read: false
     };
     var updates = {};
-    updates['chats/' + currentChatId + '/messages/' + msgRef.key] = msg;
+    updates['chats/' + currentChatId + '/messages/' + msgRef2.key] = msg;
     updates['chats/' + currentChatId + '/lastMessage'] = text;
     updates['chats/' + currentChatId + '/lastMessageTime'] = TS;
     updates['chats/' + currentChatId + '/lastSender'] = currentUser.uid;
@@ -857,7 +955,7 @@ $('msg-input').addEventListener('keydown', function(e){
   if(e.key === 'Enter'){ e.preventDefault(); sendMessage(); }
 });
 $('msg-input').addEventListener('input', function(){
-  if(!currentUser) return;
+  if(!currentUser || isSavedChat(currentChatId)) return;
   var ref = db.ref('users/' + currentUser.uid);
   ref.update({ typing: currentChatId }).catch(function(){});
   clearTimeout(typingTimer);
@@ -898,7 +996,7 @@ $('newchat-search').addEventListener('input', function(){
       var users = await Promise.all(uids.filter(function(u){ return u !== currentUser.uid; }).map(fetchUser));
       var html = '';
       users.forEach(function(u){
-        if(!u || !u.uid) return;
+        if(!u || !u.uid || !u.name) return;
         html += '<div class="chat-item" data-uid="' + u.uid + '">' +
           avatarHtml(u) +
           '<div class="chat-item-info">' +
@@ -955,7 +1053,7 @@ function updateSettingsUI(){
   $('settings-username').textContent = currentUserData.username ? '@' + currentUserData.username : '';
   var av = $('settings-avatar');
   av.style.backgroundImage = currentUserData.photoURL ? 'url(\'' + currentUserData.photoURL + '\')' : '';
-  av.textContent = currentUserData.photoURL ? '' : initials(currentUserData.name);
+  av.innerHTML = currentUserData.photoURL ? '' : esc(initials(currentUserData.name));
 }
 
 $('btn-theme').onclick = function(){
@@ -986,7 +1084,10 @@ async function loadContacts(){
     var arr = [];
     snap.forEach(function(child){
       if(child.key === currentUser.uid) return;
-      var u = Object.assign({uid: child.key}, child.val());
+      var v = child.val();
+      if(!v || !v.name || !v.name.trim()) return;
+      if(!v.username || !v.username.trim()) return;
+      var u = Object.assign({uid: child.key}, v);
       userCache[child.key] = u;
       arr.push(u);
     });
