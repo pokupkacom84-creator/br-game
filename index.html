@@ -389,12 +389,10 @@ const chatUnsubs = {};
 
 function $(id){ return document.getElementById(id); }
 
-/* ============================================================
-   FIX: правильная подписка на .on('value') с возможностью .off()
-   Firebase compat .on() возвращает callback, а не subscription.
-   ============================================================ */
 function subscribeValue(ref, cb){
-  ref.on('value', cb);
+  ref.on('value', cb, function(err){
+    console.error('[subscribeValue error]', ref.toString(), err && (err.code || err.message));
+  });
   return {
     off: function(){
       try { ref.off('value', cb); } catch(e){}
@@ -485,7 +483,7 @@ function toast(msg){
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(t._tm);
-  t._tm = setTimeout(function(){ t.classList.remove('show'); }, 3500);
+  t._tm = setTimeout(function(){ t.classList.remove('show'); }, 4000);
 }
 function esc(s){
   return String(s==null?'':s).replace(/[&<>"']/g,function(c){
@@ -992,7 +990,7 @@ function startChatUserListener(uid){
 function startMessagesListener(){
   if(unsubMessages){ unsubMessages.off(); unsubMessages = null; }
   unsubMessages = subscribeValue(
-    db.ref('chats/' + currentChatId + '/messages').orderByChild('timestamp').limitToLast(300),
+    db.ref('chats/' + currentChatId + '/messages').orderByKey().limitToLast(300),
     function(snap){
       var msgs = [];
       snap.forEach(function(child){
@@ -1186,31 +1184,35 @@ function toggleAudio(btn, url){
   });
 }
 
-/* FIX: перешли с индексированного запроса .equalTo(false) на разметку
-   непрочитанных из уже загруженного среза. Так не нужен index по 'read'
-   в правилах и не будет warning от Firebase. */
 async function markAsReadFrom(msgs){
   if(!currentChatId || !currentUser || isSavedChat(currentChatId)) return;
-  var updates = {};
   var chatIdAtCall = currentChatId;
+  var updates = {};
   msgs.forEach(function(m){
     if(m.senderId !== currentUser.uid && !m.read){
       updates['chats/' + chatIdAtCall + '/messages/' + m.id + '/read'] = true;
     }
   });
   if(!Object.keys(updates).length) return;
-  try { await db.ref().update(updates); } catch(e){}
+  try { await db.ref().update(updates); }
+  catch(e){ console.warn('[markAsReadFrom]', e && (e.code || e.message)); }
 }
 
+/* ============================================================
+   FIX: отправка сообщения разбита на отдельные шаги.
+   Если упадёт запись самого сообщения — покажем реальную ошибку.
+   Если упадёт metadata/unread/typing — просто залогируем,
+   сообщение всё равно уже отправлено.
+   ============================================================ */
 async function sendMessage(){
   var inp = $('msg-input');
   var text = inp.value.trim();
-  if(!text || !currentChatId) return;
-  inp.value = '';
-  if(currentUser && !isSavedChat(currentChatId)){
-    db.ref('users/' + currentUser.uid + '/typing').set(null).catch(function(){});
-  }
-  await pushMessage({ type: 'text', text: text });
+  if(!text){ return; }
+  if(!currentChatId){ toast('Чат не открыт'); return; }
+  if(!currentUser){ toast('Нет авторизации'); return; }
+
+  var ok = await pushMessage({ type: 'text', text: text });
+  if(ok) inp.value = '';
 }
 
 function resolveOtherUid(chatId, opts){
@@ -1227,7 +1229,7 @@ function resolveOtherUid(chatId, opts){
 async function pushMessage(msgExtra, opts){
   opts = opts || {};
   var chatId = opts.chatId || currentChatId;
-  if(!chatId || !currentUser) return;
+  if(!chatId || !currentUser){ toast('Чат не открыт'); return false; }
 
   var msg = Object.assign({
     senderId: currentUser.uid,
@@ -1235,47 +1237,76 @@ async function pushMessage(msgExtra, opts){
     read: false
   }, msgExtra);
 
+  // ---- ИЗБРАННОЕ ----
   if(isSavedChat(chatId)){
     try {
       var msgRef = db.ref('chats/' + chatId + '/messages').push();
       msg.read = true;
       await msgRef.set(msg);
-      await db.ref('saved/' + currentUser.uid).update({
-        lastMessage: previewFromMsg(msg),
-        lastTime: TS
-      });
+      try {
+        await db.ref('saved/' + currentUser.uid).update({
+          lastMessage: previewFromMsg(msg),
+          lastTime: TS
+        });
+      } catch(e2){ console.warn('[saved meta]', e2 && e2.code); }
+      return true;
     } catch(e){
-      toast('Ошибка сохранения');
+      console.error('[pushMessage saved]', e, 'path=chats/' + chatId + '/messages');
+      toast('Ошибка отправки: ' + (e.code || e.message || 'unknown'));
+      return false;
     }
-    return;
   }
 
   var otherUid = resolveOtherUid(chatId, opts);
   if(!otherUid){
     toast('Ошибка: получатель не найден');
-    return;
+    console.error('[pushMessage] otherUid not found', {chatId: chatId, chatsData: chatsData[chatId], currentChatUser: currentChatUser});
+    return false;
   }
 
+  // ---- ШАГ 1: само сообщение (критично) ----
   try {
     var msgRef2 = db.ref('chats/' + chatId + '/messages').push();
-    var updates = {};
-    updates['chats/' + chatId + '/messages/' + msgRef2.key] = msg;
-    updates['chats/' + chatId + '/lastMessage'] = previewFromMsg(msg);
-    updates['chats/' + chatId + '/lastMessageTime'] = TS;
-    updates['chats/' + chatId + '/lastSender'] = currentUser.uid;
-    updates['chats/' + chatId + '/lastType'] = msg.type || 'text';
-
-    var u = await db.ref('chats/' + chatId + '/unread').once('value');
-    var unread = u.val() || {};
-    unread[otherUid] = (unread[otherUid] || 0) + 1;
-    unread[currentUser.uid] = 0;
-    updates['chats/' + chatId + '/unread'] = unread;
-    updates['users/' + currentUser.uid + '/typing'] = null;
-
-    await db.ref().update(updates);
+    await msgRef2.set(msg);
+    console.log('[pushMessage] message saved:', chatId + '/messages/' + msgRef2.key);
   } catch(e){
-    toast('Ошибка отправки');
+    console.error('[pushMessage] message write FAILED', e, 'path=chats/' + chatId + '/messages');
+    toast('Ошибка отправки: ' + (e.code || e.message || 'unknown'));
+    return false;
   }
+
+  // ---- ШАГ 2: метаданные чата (некритично) ----
+  try {
+    await db.ref('chats/' + chatId).update({
+      lastMessage: previewFromMsg(msg),
+      lastMessageTime: TS,
+      lastSender: currentUser.uid,
+      lastType: msg.type || 'text'
+    });
+  } catch(e){
+    console.warn('[pushMessage meta]', e && (e.code || e.message));
+  }
+
+  // ---- ШАГ 3: unread-счётчики (некритично) ----
+  try {
+    await db.ref('chats/' + chatId + '/unread/' + otherUid).transaction(function(v){
+      return (v || 0) + 1;
+    });
+  } catch(e){
+    console.warn('[pushMessage unread other]', e && (e.code || e.message));
+  }
+  try {
+    await db.ref('chats/' + chatId + '/unread/' + currentUser.uid).set(0);
+  } catch(e){
+    console.warn('[pushMessage unread self]', e && (e.code || e.message));
+  }
+
+  // ---- ШАГ 4: снять «печатает…» (некритично) ----
+  try {
+    await db.ref('users/' + currentUser.uid + '/typing').set(null);
+  } catch(e){}
+
+  return true;
 }
 
 function previewFromMsg(msg){
@@ -1640,7 +1671,10 @@ $('attach-circle').onclick = function(){
   startRecording('circle');
 };
 
-$('send-btn').onclick = sendMessage;
+$('send-btn').onclick = function(e){
+  e.preventDefault();
+  sendMessage();
+};
 $('msg-input').addEventListener('keydown', function(e){
   if(e.key === 'Enter'){ e.preventDefault(); sendMessage(); }
 });
@@ -1733,7 +1767,8 @@ async function startChatWith(uid){
     }
     openChat(chatId, uid);
   } catch(e){
-    toast('Ошибка: ' + (e.message || e.code));
+    console.error('[startChatWith]', e);
+    toast('Ошибка: ' + (e.code || e.message));
   }
 }
 
