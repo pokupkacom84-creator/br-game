@@ -154,15 +154,75 @@ button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;backgrou
 .fab{position:absolute!important;bottom:calc(var(--s-5) + env(safe-area-inset-bottom))!important;right:calc(var(--s-4) + env(safe-area-inset-right))!important;left:auto!important;width:60px;height:60px;border-radius:20px;background:var(--accent-grad);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--accent-glow),0 16px 32px rgba(0,0,0,.16);z-index:100;transition:transform var(--dur) var(--ease-spring),filter var(--dur),box-shadow var(--dur);}
 .fab:active{transform:scale(.9) rotate(90deg);filter:brightness(.95)}
 .fab svg{filter:drop-shadow(0 1px 2px rgba(0,0,0,.15))}
-.bottom-nav{display:flex;background:var(--nav-bg);backdrop-filter:var(--blur-glass);-webkit-backdrop-filter:var(--blur-glass);border-top:1px solid var(--divider);padding-bottom:env(safe-area-inset-bottom);position:relative;z-index:50;flex-shrink:0;}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 8px;color:var(--text-3);font-size:11px;font-weight:600;cursor:pointer;position:relative;letter-spacing:-.01em;}
-.nav-item::before{content:'';position:absolute;top:5px;left:50%;width:56px;height:34px;transform:translateX(-50%) scale(.4);opacity:0;background:var(--accent-grad);border-radius:17px;transition:transform var(--dur-slow) var(--ease-spring),opacity var(--dur),box-shadow var(--dur);pointer-events:none;z-index:0;box-shadow:0 8px 20px var(--accent-glow);}
-.nav-item.active::before{transform:translateX(-50%) scale(1);opacity:1}
-.nav-item svg{position:relative;z-index:1;transition:transform var(--dur-slow) var(--ease-spring),color var(--dur) var(--ease-out)}
-.nav-item.active svg{transform:translateY(-1px) scale(1.06);color:#ffffff}
-.nav-item span{position:relative;z-index:1;transition:color var(--dur) var(--ease-out);color:var(--text-3);}
+
+/* ===== BOTTOM NAV — исправлено ===== */
+.bottom-nav{
+  display:flex;
+  background:var(--nav-bg);
+  backdrop-filter:var(--blur-glass);
+  -webkit-backdrop-filter:var(--blur-glass);
+  border-top:1px solid var(--divider);
+  padding:4px 4px calc(4px + env(safe-area-inset-bottom));
+  position:relative;
+  z-index:50;
+  flex-shrink:0;
+}
+.nav-item{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  padding:8px 0 4px;
+  color:var(--text-3);
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+  position:relative;
+  letter-spacing:-.01em;
+  min-width:0;
+  -webkit-user-select:none;
+  user-select:none;
+}
+.nav-item::before{
+  content:'';
+  position:absolute;
+  top:5px;
+  left:50%;
+  width:52px;
+  height:28px;
+  transform:translateX(-50%) scale(.5);
+  opacity:0;
+  background:var(--accent-grad);
+  border-radius:14px;
+  transition:transform var(--dur-slow) var(--ease-spring),opacity var(--dur),box-shadow var(--dur);
+  pointer-events:none;
+  z-index:0;
+  box-shadow:0 4px 14px var(--accent-glow);
+}
+.nav-item.active::before{transform:translateX(-50%) scale(1);opacity:1;}
+.nav-item svg{
+  position:relative;
+  z-index:1;
+  display:block;
+  width:24px;
+  height:24px;
+  transition:transform var(--dur-slow) var(--ease-spring),color var(--dur) var(--ease-out);
+}
+.nav-item.active svg{transform:translateY(-1px);color:#ffffff;}
+.nav-item span{
+  position:relative;
+  z-index:1;
+  transition:color var(--dur) var(--ease-out);
+  color:var(--text-3);
+  white-space:nowrap;
+  line-height:1.1;
+}
 .nav-item.active span{color:var(--accent);font-weight:700;}
 .nav-item svg,.nav-item span{pointer-events:none}
+/* ===== /BOTTOM NAV ===== */
+
 .search-bar{padding:var(--s-2) var(--s-4) var(--s-3);background:var(--bg)}
 .search-bar input{width:100%;padding:11px 16px;border-radius:var(--r-lg);border:none;background:var(--bg-2);color:var(--text);font-size:15px;outline:none;transition:background var(--dur),box-shadow var(--dur);}
 .search-bar input:focus{background:var(--surface);box-shadow:0 0 0 4px var(--accent-soft)}
@@ -977,62 +1037,44 @@ function applyTheme(themeId){
 function playThemeWave(opts){
   opts=opts||{};
   if(!opts.fill){ if(opts.apply)opts.apply(); return; }
-
-  // Уважение к настройке "уменьшить движение"
   if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){
     if(opts.apply)opts.apply();
     return;
   }
-
   var w=window.innerWidth||document.documentElement.clientWidth;
   var h=window.innerHeight||document.documentElement.clientHeight;
   var cx=(opts.origin&&typeof opts.origin.x==='number')?opts.origin.x:w/2;
   var cy=(opts.origin&&typeof opts.origin.y==='number')?opts.origin.y:h/2;
-  // радиус до самого дальнего угла + запас
   var R=Math.hypot(Math.max(cx,w-cx),Math.max(cy,h-cy))+60;
   var at=' at '+cx.toFixed(1)+'px '+cy.toFixed(1)+'px';
-
   var layer=document.createElement('div');
   layer.className='theme-wave-layer';
-
   var glow=document.createElement('div');
   glow.className='theme-wave-glow';
   glow.style.background=opts.glow||opts.fill;
-
   var fill=document.createElement('div');
   fill.className='theme-wave-fill';
   fill.style.background=opts.fill;
-
   layer.appendChild(glow);
   layer.appendChild(fill);
   document.body.appendChild(layer);
-
-  var D_FILL=540;   // длительность заливки
-  var D_GLOW=820;   // свечение идёт впереди и дольше
-
-  // стартовое состояние
+  var D_FILL=540;
+  var D_GLOW=820;
   fill.style.transition='none';
   glow.style.transition='none';
   fill.style.clipPath='circle(0px'+at+')';
   glow.style.clipPath='circle(0px'+at+')';
   glow.style.opacity='0.95';
-
-  // принудительный reflow, чтобы transition сработал
   void layer.offsetWidth;
-
   fill.style.transition='clip-path '+D_FILL+'ms cubic-bezier(.20,.72,.26,1)';
   glow.style.transition='clip-path '+D_GLOW+'ms cubic-bezier(.20,.72,.26,1),opacity '+D_GLOW+'ms cubic-bezier(.4,0,.7,1)';
-
   requestAnimationFrame(function(){
     fill.style.clipPath='circle('+R.toFixed(1)+'px'+at+')';
     glow.style.clipPath='circle('+(R*1.10).toFixed(1)+'px'+at+')';
     glow.style.opacity='0';
   });
-
-  // Пока экран полностью закрыт — применяем тему
   setTimeout(function(){
     try{ if(opts.apply)opts.apply(); }catch(e){ console.warn('wave apply',e); }
-    // Затем красиво растворяем волну, чтобы она словно «впиталась» в интерфейс
     setTimeout(function(){
       fill.style.transition='opacity 320ms cubic-bezier(.4,0,.2,1)';
       fill.style.opacity='0';
@@ -1041,19 +1083,14 @@ function playThemeWave(opts){
       },360);
     },50);
   },D_FILL);
-
-  // страховка от «зависшего» оверлея
   setTimeout(function(){ if(layer.parentNode)layer.parentNode.removeChild(layer); },2600);
 }
-
-// Собирает цвета для волны при смене цветовой темы
 function buildThemeWaveConfig(theme){
   return {
     fill:'radial-gradient(circle at 50% 50%, '+theme.c2+' 0%, '+theme.c1+' 68%, '+theme.c1+' 100%)',
     glow:theme.c2
   };
 }
-// Собирает цвета для волны при смене светлая/тёмная
 function buildModeWaveConfig(toDark){
   var accent=THEMES.find(function(x){return x.id===currentTheme;})||THEMES[0];
   if(toDark){
@@ -1102,7 +1139,6 @@ function setTheme(dark){
   var tg=$('theme-toggle');if(tg)tg.classList.toggle('on',dark);
   applyTheme(currentTheme);
 }
-// По умолчанию — тёмная тема (как в Telegram), если пользователь ещё не выбирал
 var savedTheme=localStorage.getItem('tg_theme');
 setTheme(savedTheme?savedTheme==='dark':true);
 applyTheme(currentTheme);
@@ -2168,7 +2204,6 @@ function updateTogglesUI(){
   var tv=$('theme-color-value');if(tv){var t=THEMES.find(function(x){return x.id===currentTheme;});tv.textContent=t?t.name:'Violet';}
 }
 
-/* ---- Переключатель светлая/тёмная — с волной ---- */
 $('btn-theme').onclick=function(){
   var willBeDark=!document.body.classList.contains('dark');
   var cfg=buildModeWaveConfig(willBeDark);
@@ -2182,7 +2217,6 @@ $('btn-theme').onclick=function(){
   });
 };
 
-/* ---- Выбор цветовой темы — с волной ---- */
 $('btn-theme-color').onclick=function(){
   var sheet=$('theme-sheet');sheet.classList.add('show');
   var g=$('theme-grid');
@@ -2193,13 +2227,10 @@ $('btn-theme-color').onclick=function(){
     el.onclick=function(){
       var t=THEMES.find(function(x){return x.id===el.dataset.id;});
       if(!t)return;
-      // визуальный отклик выбора
       g.querySelectorAll('.theme-item').forEach(function(x){x.classList.remove('selected');});
       el.classList.add('selected');
       if(navigator.vibrate)try{navigator.vibrate(12);}catch(e){}
-      // сворачиваем меню тем
       sheet.classList.remove('show');
-      // запускаем взрывную волну из центра экрана
       var cfg=buildThemeWaveConfig(t);
       playThemeWave({
         fill:cfg.fill,
