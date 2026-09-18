@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#517da2">
-<title>Telegram</title>
+<title>Flux Client</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -153,6 +153,25 @@ body.dark .msg-file:active{background:rgba(255,255,255,.05)}
 .empty{padding:40px 20px;text-align:center;color:var(--text-2);font-size:14px}
 .spinner{width:28px;height:28px;border:3px solid rgba(51,144,236,.25);border-top-color:#3390ec;border-radius:50%;animation:spin .8s linear infinite;margin-top:16px}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* --- Flux VPN tab --- */
+.vpn-container{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.vpn-card{background:var(--bg-2);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.vpn-card-title{font-size:16px;font-weight:600;margin-bottom:4px}
+.vpn-card-desc{font-size:13px;color:var(--text-2);line-height:1.4}
+.vpn-btn{width:100%;padding:12px;border-radius:10px;background:var(--accent);color:#fff;font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px}
+.vpn-btn:active{background:var(--accent-2)}
+.vpn-btn:disabled{opacity:.6}
+.vpn-btn.outline{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+.vpn-btn.outline:active{background:rgba(51,144,236,.1)}
+.vpn-key-list{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.vpn-key-item{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px}
+.vpn-key-info{flex:1;min-width:0}
+.vpn-key-proto{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--accent);letter-spacing:.5px}
+.vpn-key-text{font-size:12px;color:var(--text);word-break:break-all;margin-top:2px;line-height:1.3;max-height:60px;overflow:hidden}
+.vpn-key-copy{flex-shrink:0;width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center}
+.vpn-key-copy:active{background:var(--accent-2)}
+.vpn-empty{text-align:center;color:var(--text-2);font-size:14px;padding:20px}
+.vpn-count{font-size:12px;color:var(--text-2);text-align:center}
 </style>
 </head>
 <body>
@@ -161,7 +180,7 @@ body.dark .msg-file:active{background:rgba(255,255,255,.05)}
 <div id="splash-screen" class="screen active">
 <div class="auth-container">
 <div class="auth-logo"><svg viewBox="0 0 24 24" width="76" height="76" fill="#3390ec"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg></div>
-<h1 class="auth-title">Telegram</h1>
+<h1 class="auth-title">Flux Client</h1>
 <div class="spinner"></div>
 </div>
 </div>
@@ -169,7 +188,7 @@ body.dark .msg-file:active{background:rgba(255,255,255,.05)}
 <div id="auth-screen" class="screen">
 <div class="auth-container">
 <div class="auth-logo"><svg viewBox="0 0 24 24" width="76" height="76" fill="#3390ec"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg></div>
-<h1 class="auth-title">Telegram</h1>
+<h1 class="auth-title">Flux Client</h1>
 <p class="auth-subtitle" id="auth-subtitle">Войдите, чтобы продолжить</p>
 <div class="auth-form" id="login-form">
 <input id="login-email" type="email" placeholder="Email">
@@ -205,7 +224,7 @@ body.dark .msg-file:active{background:rgba(255,255,255,.05)}
 <div class="main-body">
 <div id="tab-chats" class="tab-content active">
 <div class="header">
-<div class="header-title">Telegram</div>
+<div class="header-title">Flux Client</div>
 <button class="header-btn" id="search-toggle"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
 </div>
 <div class="search-bar hidden" id="search-bar"><input id="chat-search" placeholder="Поиск"></div>
@@ -215,6 +234,27 @@ body.dark .msg-file:active{background:rgba(255,255,255,.05)}
 <div id="tab-contacts" class="tab-content">
 <div class="header"><div class="header-title">Контакты</div></div>
 <div class="list" id="contacts-list"></div>
+</div>
+<div id="tab-vpn" class="tab-content">
+<div class="header"><div class="header-title">VPN-ключи</div></div>
+<div class="vpn-container" id="vpn-container">
+<div class="vpn-card">
+<div class="vpn-card-title">Источник ключей</div>
+<div class="vpn-card-desc">Список 26 — AvenCores/goida-vpn-configs (githubmirror). Автоматически обновляемая коллекция VLESS / VMess / Trojan / Shadowsocks / Hysteria2.</div>
+<button class="vpn-btn" id="vpn-load-btn">
+<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+<span>Загрузить ключи</span>
+</button>
+<button class="vpn-btn outline" id="vpn-refresh-btn" style="display:none;">
+<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+<span>Обновить</span>
+</button>
+<div class="vpn-count" id="vpn-count"></div>
+</div>
+<div class="vpn-key-list" id="vpn-key-list">
+<div class="vpn-empty">Нажмите «Загрузить ключи», чтобы получить список</div>
+</div>
+</div>
 </div>
 <div id="tab-settings" class="tab-content">
 <div class="header"><div class="header-title">Настройки</div></div>
@@ -241,6 +281,7 @@ body.dark .msg-file:active{background:rgba(255,255,255,.05)}
 <div class="bottom-nav">
 <div class="nav-item active" data-tab="chats"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg><span>Чаты</span></div>
 <div class="nav-item" data-tab="contacts"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg><span>Контакты</span></div>
+<div class="nav-item" data-tab="vpn"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg><span>VPN</span></div>
 <div class="nav-item" data-tab="settings"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg><span>Настройки</span></div>
 </div>
 </div>
@@ -337,7 +378,6 @@ try {
   db = firebase.database();
   storage = firebase.storage();
   TS = firebase.database.ServerValue.TIMESTAMP;
-  // ServerValue.increment может отсутствовать в очень старых SDK — fallback через transaction
   INCR = (firebase.database.ServerValue && firebase.database.ServerValue.increment)
     ? firebase.database.ServerValue.increment
     : null;
@@ -354,6 +394,8 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const TYPING_TTL_MS = 5000;
 const PLAY_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
 const PAUSE_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+
+const VPN_SOURCE_URL = 'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/26.txt';
 
 const _UA = navigator.userAgent || '';
 const IS_ANDROID_WEBVIEW = /Android/i.test(_UA) && (/;\s*wv\)/i.test(_UA) || /\bwv\b/i.test(_UA));
@@ -375,22 +417,20 @@ let currentUser = null;
 let currentUserData = null;
 let currentChatId = null;
 let currentChatUser = null;
-let currentChatMeta = null;        // { members, typing:{uid:ts}, readBy:{uid:ts} }
+let currentChatMeta = null;
 let savedLastMessage = null;
 let savedLastTime = null;
 
-// Subscriptions
-let unsubUserChats = null;         // userChats/{uid}
-let unsubSelfDoc = null;           // users/{uid}
-let unsubSavedMeta = null;         // saved/{uid}
-let unsubChatMeta = null;          // chats/{id}/meta
-let unsubMessages = null;          // chats/{id}/messages
-let unsubChatUser = null;          // users/{otherUid}
+let unsubUserChats = null;
+let unsubSelfDoc = null;
+let unsubSavedMeta = null;
+let unsubChatMeta = null;
+let unsubMessages = null;
+let unsubChatUser = null;
 let visibilityHandler = null;
 let beforeUnloadHandler = null;
 
-// Caches
-let chatsData = {};                // { chatId: {otherUid, lastMessage, unread, ...} }
+let chatsData = {};
 const userCache = {};
 let lastMessages = [];
 
@@ -398,7 +438,6 @@ let searchQuery = '';
 let onbAvatarFile = null;
 let typingTimer = null;
 
-// Render batching
 let renderChatsScheduled = false;
 function scheduleRenderChats(){
   if(renderChatsScheduled) return;
@@ -409,7 +448,6 @@ function scheduleRenderChats(){
   });
 }
 
-// Recording / audio
 let mediaRecorder = null;
 let mediaChunks = [];
 let mediaStream = null;
@@ -437,10 +475,6 @@ function initials(name){
   return ((p[0]?p[0][0]:'') + (p[1]?p[1][0]:'')).toUpperCase();
 }
 
-/**
- * Безопасный avatar HTML: URL передаём через data-атрибут,
- * а сам URL применяем через element.style (нет инъекции в HTML).
- */
 function avatarHtml(user){
   if(!user) return '<div class="avatar">?</div>';
   var url = user.photoURL || '';
@@ -508,7 +542,6 @@ function toast(msg){
   t._tm = setTimeout(function(){ t.classList.remove('show'); }, 3500);
 }
 
-/* FIX-WEBVIEW: безопасный клик по file input */
 function triggerFileInput(inputEl){
   if(!inputEl){ toast('Внутренняя ошибка: input не найден'); return; }
   try { inputEl.value = ''; } catch(e){}
@@ -718,7 +751,6 @@ function startSelfListener(){
     }
   });
 
-  // FIX: убираем утечку обработчиков — храним ссылки
   visibilityHandler = function(){
     var r = db.ref('users/' + currentUser.uid);
     if(document.hidden) r.update({ online: false, lastSeen: TS }).catch(function(){});
@@ -746,7 +778,7 @@ function startSavedMetaListener(){
 }
 
 /* =========================================================================
-   Chats list — один listener на userChats/{uid}
+   Chats list
    ========================================================================= */
 function startUserChatsListener(){
   if(unsubUserChats && unsubUserChats.off) unsubUserChats.off();
@@ -907,7 +939,6 @@ function leaveChat(){
   if(unsubChatUser && unsubChatUser.off){ try { unsubChatUser.off(); } catch(e){} }
   unsubMessages = unsubChatMeta = unsubChatUser = null;
 
-  // Очищаем typing (не мешаем собеседнику видеть вечный «печатает...»)
   if(currentUser && currentChatId && !isSavedChat(currentChatId)){
     db.ref('chats/' + currentChatId + '/meta/typing/' + currentUser.uid).remove().catch(function(){});
   }
@@ -951,7 +982,6 @@ async function openChat(chatId, otherUid){
 
   updateChatStatus();
 
-  // Сбрасываем непрочитанные у себя
   db.ref('userChats/' + currentUser.uid + '/' + chatId + '/unread').set(0).catch(function(){});
 
   goScreen('chat-screen');
@@ -1119,10 +1149,6 @@ function renderMessages(msgs){
   });
 }
 
-/**
- * Обновляет только галочки в уже отрендеренных исходящих сообщениях,
- * без полного ререндера списка.
- */
 function updateMessageChecks(){
   if(!currentChatUser || isSavedChat(currentChatId)) return;
   var box = $('messages');
@@ -1249,7 +1275,6 @@ async function pushMessage(msgExtra, opts){
     type: 'text'
   }, msgExtra);
 
-  /* --- Saved messages --- */
   if(isSavedChat(chatId)){
     try {
       var ref = db.ref('chats/' + chatId + '/messages').push();
@@ -1272,7 +1297,6 @@ async function pushMessage(msgExtra, opts){
 
     updates['chats/' + chatId + '/messages/' + msgRef.key] = msg;
 
-    // Fan-out: обновляем preview у обоих пользователей
     [currentUser.uid, otherUid].forEach(function(uid){
       var base = 'userChats/' + uid + '/' + chatId;
       updates[base + '/otherUid'] = uid === currentUser.uid ? otherUid : currentUser.uid;
@@ -1281,20 +1305,16 @@ async function pushMessage(msgExtra, opts){
       updates[base + '/lastSender'] = currentUser.uid;
       updates[base + '/lastType'] = msg.type;
     });
-    // Себе unread=0
     updates['userChats/' + currentUser.uid + '/' + chatId + '/unread'] = 0;
 
-    // Собеседнику: атомарный инкремент
     if(INCR){
       updates['userChats/' + otherUid + '/' + chatId + '/unread'] = INCR(1);
     }
 
-    // Убираем typing
     updates['chats/' + chatId + '/meta/typing/' + currentUser.uid] = null;
 
     await db.ref().update(updates);
 
-    // Fallback: если ServerValue.increment недоступен — transaction
     if(!INCR){
       await db.ref('userChats/' + otherUid + '/' + chatId + '/unread')
         .transaction(function(v){ return (v || 0) + 1; });
@@ -1339,7 +1359,6 @@ function uploadFileAndGetURL(file, folder){
   var ref = storage.ref(path);
   var task = ref.put(file, { contentType: cleanMime(file.type), cacheControl: 'public,max-age=31536000' });
 
-  // FIX: без гонки resolve/reject
   return new Promise(function(resolve, reject){
     var settled = false;
     task.on('state_changed', function(snap){
@@ -1527,7 +1546,6 @@ async function startRecording(mode){
       await handleMediaFile(file, mode2, { duration:duration, mimeType:mime }, ctx);
     };
 
-    // FIX: без timeslice — надёжнее на Android WebView
     mediaRecorder.start();
     recordStart = Date.now();
     showRecordingOverlay(mode);
@@ -1613,7 +1631,6 @@ $('msg-input').addEventListener('keydown', function(e){
 });
 $('msg-input').addEventListener('input', function(){
   if(!currentUser || !currentChatId || isSavedChat(currentChatId)) return;
-  // typing теперь в chats/{id}/meta/typing/{uid}
   var ref = db.ref('chats/' + currentChatId + '/meta/typing/' + currentUser.uid);
   ref.set(TS).catch(function(){});
   clearTimeout(typingTimer);
@@ -1727,7 +1744,6 @@ async function startChatWith(uid){
       var updates = {};
       updates['chats/' + chatId + '/meta/members'] = members;
 
-      // Fan-out: создаём/инициализируем userChats у обоих
       [currentUser.uid, uid].forEach(function(u){
         var base = 'userChats/' + u + '/' + chatId;
         updates[base + '/otherUid'] = u === currentUser.uid ? uid : currentUser.uid;
@@ -1776,6 +1792,7 @@ document.querySelectorAll('.nav-item').forEach(function(el){
     $('tab-' + tab).classList.add('active');
     if(tab === 'contacts') loadContacts();
     if(tab === 'settings') updateSettingsUI();
+    if(tab === 'vpn') { /* VPN keys are loaded on demand */ }
   };
 });
 
@@ -1792,6 +1809,135 @@ $('chat-search').addEventListener('input', function(){
   searchQuery = this.value.trim();
   scheduleRenderChats();
 });
+
+/* =========================================================================
+   VPN keys (Flux VPN tab)
+   ========================================================================= */
+let vpnKeys = [];
+
+function parseVpnKeys(text){
+  var lines = text.split(/\r?\n/);
+  var keys = [];
+  var protoRegex = /^(vless|vmess|trojan|ss|hysteria2|hy2|socks):\/\//i;
+  for(var i = 0; i < lines.length; i++){
+    var line = lines[i].trim();
+    if(!line || line.charAt(0) === '#') continue;
+    var m = line.match(protoRegex);
+    if(m){
+      var proto = m[1].toLowerCase();
+      keys.push({ proto: proto, raw: line });
+    }
+  }
+  return keys;
+}
+
+function renderVpnKeys(){
+  var list = $('vpn-key-list');
+  var count = $('vpn-count');
+  var refreshBtn = $('vpn-refresh-btn');
+  var loadBtn = $('vpn-load-btn');
+
+  if(!list) return;
+
+  if(!vpnKeys.length){
+    list.innerHTML = '<div class="vpn-empty">Нет ключей. Попробуйте обновить.</div>';
+    if(count) count.textContent = '';
+    if(refreshBtn) refreshBtn.style.display = 'none';
+    if(loadBtn) loadBtn.style.display = 'flex';
+    return;
+  }
+
+  if(loadBtn) loadBtn.style.display = 'none';
+  if(refreshBtn) refreshBtn.style.display = 'flex';
+  if(count) count.textContent = 'Найдено ключей: ' + vpnKeys.length;
+
+  var html = '';
+  vpnKeys.forEach(function(k, idx){
+    var display = k.raw.length > 220 ? k.raw.slice(0, 217) + '…' : k.raw;
+    html += '<div class="vpn-key-item">' +
+      '<div class="vpn-key-info">' +
+        '<div class="vpn-key-proto">' + esc(k.proto) + '</div>' +
+        '<div class="vpn-key-text">' + esc(display) + '</div>' +
+      '</div>' +
+      '<button class="vpn-key-copy" data-idx="' + idx + '">' +
+        '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>' +
+      '</button>' +
+    '</div>';
+  });
+  list.innerHTML = html;
+
+  list.querySelectorAll('.vpn-key-copy').forEach(function(btn){
+    btn.onclick = function(){
+      var idx = +btn.dataset.idx;
+      var key = vpnKeys[idx];
+      if(!key) return;
+      var text = key.raw;
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){
+          toast('Ключ скопирован');
+        }).catch(function(){
+          fallbackCopy(text);
+        });
+      } else {
+        fallbackCopy(text);
+      }
+    };
+  });
+}
+
+function fallbackCopy(text){
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    toast('Ключ скопирован');
+  } catch(e){
+    toast('Не удалось скопировать');
+  }
+  document.body.removeChild(ta);
+}
+
+async function loadVpnKeys(){
+  var loadBtn = $('vpn-load-btn');
+  var refreshBtn = $('vpn-refresh-btn');
+  var list = $('vpn-key-list');
+
+  if(loadBtn) loadBtn.disabled = true;
+  if(refreshBtn) refreshBtn.disabled = true;
+  if(list) list.innerHTML = '<div class="vpn-empty"><div class="spinner" style="margin:0 auto"></div>Загрузка...</div>';
+
+  try {
+    var resp = await fetch(VPN_SOURCE_URL + '?t=' + Date.now(), { cache: 'no-store' });
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    var text = await resp.text();
+    vpnKeys = parseVpnKeys(text);
+    renderVpnKeys();
+    if(vpnKeys.length === 0){
+      if(list) list.innerHTML = '<div class="vpn-empty">Ключи не найдены в источнике</div>';
+      if(loadBtn) loadBtn.style.display = 'flex';
+      if(refreshBtn) refreshBtn.style.display = 'none';
+    } else {
+      toast('Загружено ключей: ' + vpnKeys.length);
+    }
+  } catch(e){
+    console.error('VPN load error', e);
+    if(list) list.innerHTML = '<div class="vpn-empty">Ошибка загрузки: ' + esc(e.message || 'неизвестно') + '<br>Проверьте интернет-соединение.</div>';
+    if(loadBtn) loadBtn.style.display = 'flex';
+    if(refreshBtn) refreshBtn.style.display = 'none';
+    if($('vpn-count')) $('vpn-count').textContent = '';
+    toast('Не удалось загрузить ключи');
+  } finally {
+    if(loadBtn) loadBtn.disabled = false;
+    if(refreshBtn) refreshBtn.disabled = false;
+  }
+}
+
+$('vpn-load-btn').onclick = loadVpnKeys;
+$('vpn-refresh-btn').onclick = loadVpnKeys;
 
 /* =========================================================================
    Init warnings
