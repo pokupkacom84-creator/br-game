@@ -238,12 +238,65 @@ try {
   setTimeout(function(){ toast('Ошибка Firebase: ' + e.message); }, 100);
 }
 
+const screenHistory = [];
+let currentScreenId = null;
+
 function $(id){ return document.getElementById(id); }
+
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
   var el = $(id);
   if(el) el.classList.add('active');
 }
+
+function leaveChat(){
+  if(unsubMessages && unsubMessages.off){ try { unsubMessages.off(); } catch(e){} }
+  if(unsubChatUser && unsubChatUser.off){ try { unsubChatUser.off(); } catch(e){} }
+  unsubMessages = null;
+  unsubChatUser = null;
+  if(currentUser && currentUser.uid) db.ref('users/' + currentUser.uid).update({ typing: null }).catch(function(){});
+  currentChatId = null;
+  currentChatUser = null;
+}
+
+function goScreen(id, replace){
+  if(currentScreenId === id) return;
+  if(currentScreenId === 'chat-screen' && id !== 'chat-screen'){
+    leaveChat();
+  }
+  if(replace || currentScreenId === null){
+    screenHistory.length = 0;
+    screenHistory.push(id);
+    try { history.replaceState({s: id}, ''); } catch(e){}
+  } else {
+    screenHistory.push(id);
+    try { history.pushState({s: id}, ''); } catch(e){}
+  }
+  currentScreenId = id;
+  showScreen(id);
+  if(id === 'main-screen'){
+    try { renderChats(); } catch(e){}
+  }
+}
+
+window.addEventListener('popstate', function(){
+  if(screenHistory.length > 1){
+    screenHistory.pop();
+    var prev = screenHistory[screenHistory.length - 1];
+    if(currentScreenId === 'chat-screen' && prev !== 'chat-screen'){
+      leaveChat();
+    }
+    currentScreenId = prev;
+    showScreen(prev);
+    if(prev === 'main-screen') renderChats();
+    try { history.pushState({s: prev}, ''); } catch(e){}
+  } else {
+    try { history.pushState({s: currentScreenId}, ''); } catch(e){}
+  }
+});
+
+try { history.replaceState({s: 'auth-screen'}, ''); } catch(e){}
+
 function toast(msg){
   var t = $('toast');
   if(!t) return;
@@ -313,7 +366,7 @@ function authError(code){
     'auth/too-many-requests':'Слишком много попыток',
     'auth/operation-not-allowed':'Email/Password не включён в Firebase Console',
     'auth/configuration-not-found':'Включите Email/Password в Firebase Console',
-    'auth/api-key-not-valid':'Неверный API-ключ',
+    'auth/api-key-not-valid':'Неверный API-ключ. Проверьте ограничения в Google Cloud',
     'auth/internal-error':'Внутренняя ошибка. Проверьте интернет'
   };
   return m[code] || ('Ошибка: ' + code);
@@ -370,7 +423,13 @@ $('register-btn').onclick = async function(){
 };
 
 if(firebaseReady){
-  auth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(function(){});
+  try {
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){
+      auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(function(){
+        auth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(function(){});
+      });
+    });
+  } catch(e){}
 }
 
 let currentUser = null;
@@ -391,12 +450,16 @@ const chatUnsubs = {};
 
 auth.onAuthStateChanged(async function(user){
   if(!user){
+    if(currentScreenId === 'chat-screen') leaveChat();
+    cleanupListeners();
     currentUser = null;
     currentUserData = null;
-    cleanupListeners();
-    showScreen('auth-screen');
+    userCache = userCache;
+    Object.keys(userCache).forEach(function(k){ delete userCache[k]; });
+    goScreen('auth-screen', true);
     return;
   }
+  if(currentUser && currentUser.uid === user.uid) return;
   currentUser = user;
   let snap;
   try {
@@ -407,11 +470,11 @@ auth.onAuthStateChanged(async function(user){
   }
   var data = snap.val();
   if(!data || !data.name){
-    showScreen('onboarding-screen');
+    goScreen('onboarding-screen', true);
   } else {
     currentUserData = Object.assign({uid: user.uid}, data);
     userCache[user.uid] = currentUserData;
-    showScreen('main-screen');
+    goScreen('main-screen', true);
     startSelfListener();
     startUserChatsListener();
     updateSettingsUI();
@@ -442,7 +505,7 @@ function cleanupListeners(){
 }
 
 function startSelfListener(){
-  if(unsubSelfDoc) unsubSelfDoc.off();
+  if(unsubSelfDoc && unsubSelfDoc.off) unsubSelfDoc.off();
   var ref = db.ref('users/' + currentUser.uid);
   ref.update({ online: true, lastSeen: TS }).catch(function(){});
   unsubSelfDoc = ref.on('value', function(s){
@@ -512,7 +575,7 @@ $('onb-continue').onclick = async function(){
     await db.ref().update(updates);
     currentUserData = { uid: currentUser.uid, name: name, username: username, photoURL: photoURL };
     userCache[currentUser.uid] = currentUserData;
-    showScreen('main-screen');
+    goScreen('main-screen', true);
     startSelfListener();
     startUserChatsListener();
     updateSettingsUI();
@@ -523,7 +586,7 @@ $('onb-continue').onclick = async function(){
 };
 
 function startUserChatsListener(){
-  if(unsubUserChats) unsubUserChats.off();
+  if(unsubUserChats && unsubUserChats.off) unsubUserChats.off();
   unsubUserChats = db.ref('userChats/' + currentUser.uid).on('value', function(snap){
     userChatsMap = snap.val() || {};
     attachChatListeners();
@@ -575,7 +638,7 @@ async function fetchUser(uid){
 
 async function renderChats(){
   var list = $('chats-list');
-  if(!list) return;
+  if(!list || !currentUser) return;
   var ids = Object.keys(chatsData);
   if(!ids.length){
     list.innerHTML = '<div class="empty">Нет чатов. Начните новую переписку.</div>';
@@ -638,7 +701,7 @@ async function openChat(chatId, otherUid){
   av.textContent = currentChatUser.photoURL ? '' : initials(currentChatUser.name);
   updateChatStatus();
   db.ref('chats/' + chatId + '/unread/' + currentUser.uid).set(0).catch(function(){});
-  showScreen('chat-screen');
+  goScreen('chat-screen');
   startMessagesListener();
   startChatUserListener(otherUid);
   setTimeout(function(){ var i = $('msg-input'); if(i) i.focus(); }, 300);
@@ -662,7 +725,7 @@ function updateChatStatus(){
 }
 
 function startChatUserListener(uid){
-  if(unsubChatUser) unsubChatUser.off();
+  if(unsubChatUser && unsubChatUser.off) unsubChatUser.off();
   unsubChatUser = db.ref('users/' + uid).on('value', function(s){
     var v = s.val();
     if(v){
@@ -674,7 +737,7 @@ function startChatUserListener(uid){
 }
 
 function startMessagesListener(){
-  if(unsubMessages) unsubMessages.off();
+  if(unsubMessages && unsubMessages.off) unsubMessages.off();
   unsubMessages = db.ref('chats/' + currentChatId + '/messages')
     .orderByChild('timestamp').limitToLast(300)
     .on('value', function(snap){
@@ -705,7 +768,7 @@ function checkDouble(){
 
 function renderMessages(msgs){
   var box = $('messages');
-  if(!box) return;
+  if(!box || !currentUser) return;
   var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
   var html = '';
   var lastDate = '';
@@ -791,22 +854,18 @@ $('msg-input').addEventListener('input', function(){
 });
 
 $('chat-back').onclick = function(){
-  if(unsubMessages){ unsubMessages.off(); unsubMessages = null; }
-  if(unsubChatUser){ unsubChatUser.off(); unsubChatUser = null; }
-  if(currentUser) db.ref('users/' + currentUser.uid).update({ typing: null }).catch(function(){});
-  currentChatId = null;
-  currentChatUser = null;
-  showScreen('main-screen');
-  renderChats();
+  try { history.back(); } catch(e){ goScreen('main-screen'); }
 };
 
 $('fab-new').onclick = function(){
-  showScreen('newchat-screen');
+  goScreen('newchat-screen');
   $('newchat-search').value = '';
   $('newchat-list').innerHTML = '<div class="empty">Введите @username</div>';
   setTimeout(function(){ $('newchat-search').focus(); }, 200);
 };
-$('newchat-back').onclick = function(){ showScreen('main-screen'); };
+$('newchat-back').onclick = function(){
+  try { history.back(); } catch(e){ goScreen('main-screen'); }
+};
 
 var newChatTimer = null;
 $('newchat-search').addEventListener('input', function(){
