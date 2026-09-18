@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#17212b">
-<title>Flux</title>
+<title>Flux — Messenger 2026</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
@@ -2431,5 +2431,172 @@ startApp = function(){
   setTimeout(setupGlobalIncomingListener, 1000);
 };
 </script>
+<style>
+
+/* ===== Flux 2026 Modern UI Layer ===== */
+:root{
+  --fx-accent:#3390ec;
+  --fx-accent-2:#2aabee;
+  --fx-glass:rgba(255,255,255,.72);
+  --fx-shadow:0 12px 40px rgba(0,0,0,.10);
+}
+body{overflow-x:hidden}
+*{scrollbar-width:thin}
+.app-shell,.app-container,.main-content{transition:background .25s ease,color .25s ease}
+.chat-list,.messages,.sidebar,.chat-panel,.settings-panel{
+  scrollbar-color:rgba(120,130,145,.35) transparent;
+}
+.chat-item{
+  position:relative;
+  border-radius:14px;
+  margin:2px 7px;
+  transition:transform .16s ease,background .16s ease,box-shadow .16s ease;
+}
+.chat-item:hover{transform:translateX(2px);box-shadow:0 4px 18px rgba(0,0,0,.06)}
+.chat-item.active{box-shadow:inset 3px 0 0 var(--fx-accent),0 5px 18px rgba(51,144,236,.08)}
+.avatar{box-shadow:0 0 0 1px rgba(255,255,255,.18),0 3px 10px rgba(0,0,0,.10)}
+.chat-header{
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+.message{
+  animation:fxMessageIn .18s ease both;
+}
+@keyframes fxMessageIn{
+  from{opacity:0;transform:translateY(5px) scale(.99)}
+  to{opacity:1;transform:none}
+}
+.message-bubble{
+  box-shadow:0 2px 9px rgba(0,0,0,.055);
+}
+.message-bubble:hover{box-shadow:0 4px 15px rgba(0,0,0,.08)}
+.composer{
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  border-top:1px solid rgba(127,127,127,.10);
+}
+.composer textarea,.composer input{
+  transition:box-shadow .18s ease,border-color .18s ease,background .18s ease;
+}
+.composer textarea:focus,.composer input:focus{
+  outline:none;
+  box-shadow:0 0 0 3px rgba(51,144,236,.14);
+}
+button,.icon-btn,.send-btn{
+  transition:transform .14s ease,filter .14s ease,background .14s ease;
+}
+button:active,.icon-btn:active,.send-btn:active{transform:scale(.94)}
+.fx-topbar{
+  display:flex;align-items:center;gap:8px;padding:7px 12px;
+  background:linear-gradient(90deg,rgba(51,144,236,.10),rgba(42,171,238,.03));
+  border-bottom:1px solid rgba(127,127,127,.10);
+  font-size:12px;color:var(--text-secondary,#78828f);
+}
+.fx-online-dot{
+  width:7px;height:7px;border-radius:50%;background:#35c759;
+  box-shadow:0 0 0 4px rgba(53,199,89,.12);
+}
+.fx-feature-strip{
+  display:flex;gap:7px;padding:8px 10px;overflow:auto;
+  border-bottom:1px solid rgba(127,127,127,.08);
+}
+.fx-chip{
+  border:0;border-radius:999px;padding:7px 11px;white-space:nowrap;
+  background:rgba(127,127,127,.09);color:inherit;cursor:pointer;
+  font-size:12px;
+}
+.fx-chip:hover{background:rgba(51,144,236,.14);color:var(--fx-accent)}
+.fx-fab{
+  position:fixed;right:24px;bottom:86px;width:54px;height:54px;
+  border-radius:50%;border:0;background:var(--fx-accent);color:#fff;
+  font-size:25px;box-shadow:0 10px 28px rgba(51,144,236,.32);
+  z-index:50;cursor:pointer;
+}
+.fx-fab:hover{transform:translateY(-2px)}
+.fx-toast{
+  position:fixed;left:50%;bottom:24px;transform:translate(-50%,18px);
+  opacity:0;pointer-events:none;z-index:1000;
+  padding:10px 15px;border-radius:12px;background:rgba(25,29,34,.92);
+  color:#fff;font-size:13px;box-shadow:var(--fx-shadow);
+  transition:.22s ease;
+}
+.fx-toast.show{opacity:1;transform:translate(-50%,0)}
+@media (max-width:700px){
+  .fx-fab{right:16px;bottom:76px}
+  .fx-topbar{font-size:11px}
+}
+
+</style>
+
+<script>
+/* ===== Flux 2026 UX Enhancements ===== */
+(function(){
+  const $ = (s,r=document)=>r.querySelector(s);
+  const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+
+  function toast(text){
+    let t=$('.fx-toast');
+    if(!t){t=document.createElement('div');t.className='fx-toast';document.body.appendChild(t)}
+    t.textContent=text;t.classList.add('show');
+    clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove('show'),2200);
+  }
+
+  function addModernLayer(){
+    if($('.fx-topbar')) return;
+
+    const top=document.createElement('div');
+    top.className='fx-topbar';
+    top.innerHTML='<span class="fx-online-dot"></span><span>Flux • современный режим</span><span style="margin-left:auto">быстрый поиск · реакции · медиа</span>';
+
+    const main=document.querySelector('.main-content,.chat-panel');
+    if(main) main.prepend(top);
+
+    const chips=document.createElement('div');
+    chips.className='fx-feature-strip';
+    chips.innerHTML=[
+      ['🔎','Поиск'],['📌','Закреплённые'],['🔕','Без звука'],['📁','Папки'],['🎨','Оформление']
+    ].map(x=>'<button class="fx-chip" type="button" data-fx="'+x[1]+'">'+x[0]+' '+x[1]+'</button>').join('');
+    if(main) main.insertBefore(chips,main.children[1]||null);
+
+    chips.addEventListener('click',e=>{
+      const b=e.target.closest('[data-fx]'); if(!b)return;
+      toast(b.dataset.fx==='Поиск'?'Используй поиск в шапке чата':b.dataset.fx+' — раздел подготовлен в новом интерфейсе');
+    });
+
+    const fab=document.createElement('button');
+    fab.className='fx-fab';fab.type='button';fab.title='Новое сообщение';fab.textContent='✎';
+    fab.onclick=()=>{
+      const candidates=$$('button,[role="button"]');
+      const target=candidates.find(x=>/нов|созд|сообщ|new|create/i.test((x.innerText||x.getAttribute('aria-label')||'')));
+      if(target && target!==fab) target.click(); else toast('Нажми «Новое сообщение» в меню');
+    };
+    document.body.appendChild(fab);
+  }
+
+  function enhanceSearch(){
+    const inputs=$$('input,textarea');
+    inputs.forEach(i=>{
+      if(i.dataset.fxEnhanced)return;
+      i.dataset.fxEnhanced='1';
+      const ph=(i.placeholder||'').toLowerCase();
+      if(ph.includes('поиск')||ph.includes('search')){
+        i.setAttribute('autocomplete','off');
+        i.setAttribute('spellcheck','false');
+        i.addEventListener('keydown',e=>{
+          if(e.key==='Escape'){i.value='';i.dispatchEvent(new Event('input',{bubbles:true}));i.blur()}
+        });
+      }
+    });
+  }
+
+  function observe(){
+    new MutationObserver(()=>{enhanceSearch()}).observe(document.body,{subtree:true,childList:true});
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>{addModernLayer();enhanceSearch();observe()});
+  else {addModernLayer();enhanceSearch();observe()}
+})();
+</script>
+
 </body>
 </html>
