@@ -44,8 +44,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .username-status.err{color:#e53935}
 .net-banner{position:fixed;top:0;left:0;right:0;background:#e53935;color:#fff;text-align:center;padding:6px 12px;font-size:13px;z-index:9990;display:none;padding-top:calc(6px + env(safe-area-inset-top))}
 .net-banner.show{display:block}
-.main-body{flex:1;position:relative;overflow:hidden;display:flex;flex-direction:column}
-.tab-content{display:none;flex-direction:column;flex:1;overflow:hidden;position:relative}
+.main-body{flex:1;position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.tab-content{display:none;flex-direction:column;flex:1;overflow:hidden;position:relative;min-height:0}
 .tab-content.active{display:flex}
 .header{display:flex;align-items:center;padding:12px 16px;background:var(--header-bg);color:var(--header-text);min-height:56px;gap:12px;padding-top:calc(12px + env(safe-area-inset-top))}
 .header-title{font-size:18px;font-weight:600;flex:1}
@@ -68,8 +68,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .chat-item-unread{min-width:22px;height:22px;padding:0 7px;border-radius:11px;background:var(--unread-bg);color:var(--unread-text);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center}
 .fab{position:absolute;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.25);z-index:10}
 .fab:active{background:var(--accent-2)}
-.bottom-nav{display:flex;background:var(--nav-bg);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom)}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;color:var(--text-2);font-size:11px;cursor:pointer}
+.bottom-nav{display:flex;background:var(--nav-bg);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom);position:relative;z-index:5;flex-shrink:0}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;color:var(--text-2);font-size:11px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .nav-item.active{color:var(--accent)}
 .search-bar{padding:8px 16px;background:var(--bg)}
 .search-bar input{width:100%;padding:10px 14px;border-radius:10px;border:none;background:var(--bg-2);color:var(--text);font-size:15px;outline:none}
@@ -78,7 +78,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .chat-header-info{flex:1;min-width:0}
 .chat-header-name{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chat-header-status{font-size:13px;opacity:.85}
-.messages{flex:1;overflow-y:auto;padding:10px 10px 6px;background:var(--chat-bg);display:flex;flex-direction:column;gap:3px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;position:relative}
+.messages{flex:1;overflow-y:auto;padding:10px 10px 6px;background:var(--chat-bg);display:flex;flex-direction:column;gap:3px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;position:relative;min-height:0}
 .messages::-webkit-scrollbar{display:none}
 .msg{max-width:82%;padding:7px 11px;border-radius:16px;font-size:var(--fs);line-height:1.35;position:relative;word-wrap:break-word;overflow-wrap:break-word;cursor:pointer;transform-origin:center;will-change:transform,opacity}
 .msg.out{align-self:flex-end;background:var(--bubble-out);border-bottom-right-radius:5px}
@@ -349,7 +349,7 @@ body.dark .reaction-chip{background:rgba(255,255,255,.08)}
 </div>
 </div>
 </div>
-<div class="bottom-nav">
+<div class="bottom-nav" id="bottom-nav">
 <div class="nav-item active" data-tab="chats"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg><span>Чаты</span></div>
 <div class="nav-item" data-tab="contacts"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg><span>Контакты</span></div>
 <div class="nav-item" data-tab="vpn"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg><span>VPN</span></div>
@@ -469,7 +469,7 @@ let hideOnline=localStorage.getItem('flux_hide_online')==='1';
 let pendingPaintTimer=null;
 let statusRefreshInterval=null;
 let usernameCheckTimer=null;
-let pendingMessages=[];  /* оптимистичные отправки */
+let pendingMessages=[];
 let forwardMsg=null;
 
 function $(id){return document.getElementById(id);}
@@ -694,7 +694,6 @@ async function renderChats(){
 $('onb-avatar').onclick=function(){triggerFileInput($('onb-avatar-input'));};
 $('onb-avatar-input').onchange=function(e){var f=e.target.files[0];if(!f)return;onbAvatarFile=f;var url=URL.createObjectURL(f);var p=$('onb-avatar-preview');p.style.backgroundImage='url("'+url+'")';p.innerHTML='';};
 
-/* ===== 9. Проверка @username при вводе ===== */
 $('onb-username').addEventListener('input',function(){
   var raw=this.value.trim().replace(/^@/,'').toLowerCase();
   var el=this;
@@ -756,7 +755,7 @@ function leaveChat(){
   currentChatId=null;currentChatUser=null;currentChatMeta=null;lastMessages=[];
   replyToMsg=null;updateReplyBar();
   chatSearchQuery='';var csb=$('chat-search-bar');if(csb)csb.classList.add('hidden');
-  hideChatMenu();
+  hideChatMenu();hideMsgMenu();
 }
 
 async function openSavedMessages(){
@@ -766,7 +765,6 @@ async function openSavedMessages(){
   var av=$('chat-avatar');av.style.backgroundImage='';
   av.innerHTML='<svg viewBox="0 0 24 24" width="24" height="24" fill="#ffffff"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>';
   goScreen('chat-screen');startMessagesListener();
-  /* 10. Автофокус на поле ввода */
   setTimeout(function(){var inp=$('msg-input');if(inp)inp.focus();},120);
 }
 
@@ -782,10 +780,8 @@ async function openChat(chatId,otherUid){
   db.ref('userChats/'+currentUser.uid+'/'+chatId+'/unread').set(0).catch(function(){});
   goScreen('chat-screen');
   startChatMetaListener();startMessagesListener();startChatUserListener(otherUid);
-  /* 7. Обновление "был(а) N минут назад" каждые 30 сек */
   if(statusRefreshInterval)clearInterval(statusRefreshInterval);
   statusRefreshInterval=setInterval(updateChatStatus,30000);
-  /* 10. Автофокус */
   setTimeout(function(){var inp=$('msg-input');if(inp)inp.focus();},120);
 }
 
@@ -839,12 +835,10 @@ function renderMessageInner(m){
   return '<span class="msg-text">'+esc(m.text||'')+'</span>';
 }
 
-/* Плавное удаление + фильтр по deleted / deletedFor / clearedAt */
 function renderMessages(rawMsgs){
   var box=$('messages');
   if(!box||!currentUser){lastMessages=rawMsgs;return;}
 
-  /* Очистка чата: скрываем сообщения до clearedAt */
   var clearedAt=(chatsData[currentChatId]&&chatsData[currentChatId].clearedAt)||0;
   if(clearedAt)rawMsgs=rawMsgs.filter(function(m){return (m.timestamp||0)>clearedAt;});
 
@@ -882,11 +876,9 @@ function renderMessages(rawMsgs){
   paintMessages(visibleMsgs);
 }
 
-/* Отрисовка + анимация появления новых */
 function paintMessages(msgs){
   var box=$('messages');if(!box||!currentUser)return;
 
-  /* Запоминаем существующие ID, чтобы анимировать только новые */
   var oldIds=new Set();
   box.querySelectorAll('.msg[data-msgid]').forEach(function(el){oldIds.add(el.dataset.msgid);});
 
@@ -896,7 +888,6 @@ function paintMessages(msgs){
   var otherReadTs=(currentChatMeta&&currentChatMeta.readBy&&otherUid)?(currentChatMeta.readBy[otherUid]||0):0;
   var q=chatSearchQuery.toLowerCase();
 
-  /* Подмешиваем оптимистичные (pending) сообщения для текущего чата */
   var pendingForChat=pendingMessages.filter(function(p){return p.chatId===currentChatId;}).map(function(p){return p.msg;});
   var allMsgs=msgs.slice();
   pendingForChat.forEach(function(pm){
@@ -957,7 +948,6 @@ function paintMessages(msgs){
   if(!html)html='<div class="empty">Нет сообщений</div>';
   box.innerHTML=html;
 
-  /* Плавное появление новых */
   box.querySelectorAll('.msg[data-msgid]').forEach(function(el){
     if(!oldIds.has(el.dataset.msgid)&&!el.classList.contains('msg-deleting')){
       el.classList.add('msg-enter');
@@ -1017,12 +1007,10 @@ function openMediaViewer(url,type){
   viewer.classList.add('show');
 }
 
-/* ===== 3, 4. Меню: копировать, переслать, ответить, удалить ===== */
 function openMsgMenu(el){
   var menu=$('msg-menu');
   var msgId=el.dataset.msgid;
   var msg=lastMessages.find(function(m){return m.id===msgId;});
-  /* Ищем и среди pending */
   if(!msg){
     var pm=pendingMessages.find(function(p){return p.msg.id===msgId;});
     if(pm)msg=pm.msg;
@@ -1070,10 +1058,9 @@ function openMsgMenu(el){
     };
   });
 }
-function hideMsgMenu(){$('msg-menu').classList.remove('show');}
+function hideMsgMenu(){var m=$('msg-menu');if(m)m.classList.remove('show');}
 document.addEventListener('click',function(e){if(!e.target.closest('#msg-menu')&&!e.target.closest('.msg'))hideMsgMenu();});
 
-/* ===== 3. Копировать ===== */
 function copyMessage(msg){
   var t=msg.text||'';
   if(!t){toast('Нечего копировать');return;}
@@ -1088,7 +1075,6 @@ function fallbackCopyText(text){
   document.body.removeChild(ta);
 }
 
-/* ===== 4. Пересылка ===== */
 async function openForwardSheet(msg){
   forwardMsg=msg;
   var sheet=$('forward-sheet');sheet.classList.add('show');
@@ -1190,7 +1176,6 @@ function editMessage(msg){
   );
 }
 
-/* ===== 1. Удалить у всех / у себя ===== */
 function deleteMessage(msg){
   var isMine=msg.senderId===currentUser.uid;
   var html='<div class="modal-title">Удалить сообщение?</div>'+
@@ -1236,7 +1221,6 @@ async function hideMessageForMe(msg){
   }catch(e){toast('Ошибка');}
 }
 
-/* ===== 2. Меню чата: очистить историю ===== */
 function showChatMenu(anchorEl){
   var menu=$('chat-menu');
   var html='';
@@ -1255,7 +1239,7 @@ function showChatMenu(anchorEl){
     };
   });
 }
-function hideChatMenu(){$('chat-menu').classList.remove('show');}
+function hideChatMenu(){var m=$('chat-menu');if(m)m.classList.remove('show');}
 document.addEventListener('click',function(e){if(!e.target.closest('#chat-menu')&&!e.target.closest('#chat-menu-btn'))hideChatMenu();});
 
 function confirmClearChat(){
@@ -1280,13 +1264,11 @@ async function clearChat(){
   if(!currentChatId||!currentUser)return;
   try{
     if(isSavedChat(currentChatId)){
-      /* Для Избранного реально удаляем все сообщения */
       await db.ref('chats/'+currentChatId+'/messages').remove();
       await db.ref('saved/'+currentUser.uid).update({lastMessage:'',lastTime:null});
     }else{
       await db.ref('userChats/'+currentUser.uid+'/'+currentChatId+'/clearedAt').set(TS);
       await db.ref('userChats/'+currentUser.uid+'/'+currentChatId+'/unread').set(0);
-      /* Локально тоже обновим, чтобы отфильтровалось моментально */
       if(!chatsData[currentChatId])chatsData[currentChatId]={};
       chatsData[currentChatId].clearedAt=Date.now();
       var box=$('messages');
@@ -1321,7 +1303,6 @@ async function markAsRead(){
   try{db.ref('chats/'+currentChatId+'/meta/readBy/'+currentUser.uid).set(TS).catch(function(){});db.ref('userChats/'+currentUser.uid+'/'+currentChatId+'/unread').set(0).catch(function(){});}catch(e){}
 }
 
-/* ===== 8. Отправка с оптимистичным UI ===== */
 async function sendMessage(){
   var inp=$('msg-input');var text=inp.value.trim();
   if(!text||!currentChatId)return;
@@ -1351,7 +1332,6 @@ async function pushMessage(msgExtra,opts){
   var otherUid=isSavedChat(chatId)?null:resolveOtherUid(chatId,opts);
   if(!isSavedChat(chatId)&&!otherUid){toast('Получатель не найден');return;}
 
-  /* Локальный оптимистичный ID */
   var tmpId='_pend_'+Date.now()+'_'+Math.floor(Math.random()*100000);
   var pendingMsg=Object.assign({
     id:tmpId,
@@ -1361,7 +1341,6 @@ async function pushMessage(msgExtra,opts){
     _pending:true
   },msgExtra);
 
-  /* Показываем сразу */
   var inThisChat=(chatId===currentChatId);
   if(inThisChat){
     pendingMessages.push({chatId:chatId,msg:pendingMsg});
@@ -1434,7 +1413,11 @@ $('msg-input').addEventListener('input',function(){
 });
 
 $('chat-back').onclick=function(){try{history.back();}catch(e){goScreen('main-screen');}};
-$('chat-search-btn').onclick=function(){};
+$('chat-search-btn').onclick=function(){
+  var sb=$('chat-search-bar');sb.classList.toggle('hidden');
+  if(!sb.classList.contains('hidden'))$('chat-msg-search').focus();
+  else{chatSearchQuery='';$('chat-msg-search').value='';renderMessages(lastMessages);}
+};
 $('chat-msg-search').addEventListener('input',function(){chatSearchQuery=this.value.trim();renderMessages(lastMessages);});
 $('chat-avatar').onclick=function(){if(currentChatUser)showProfileSheet(currentChatUser);};
 
@@ -1639,16 +1622,19 @@ function showProfileSheet(u){
 $('profile-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
 $('edit-profile-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
 
-document.querySelectorAll('.nav-item').forEach(function(el){
-  el.onclick=function(){
-    var tab=el.dataset.tab;
-    document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
-    el.classList.add('active');
-    document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active');});
-    $('tab-'+tab).classList.add('active');
-    if(tab==='contacts')loadContacts();
-    if(tab==='settings'){updateSettingsUI();updateTogglesUI();}
-  };
+document.addEventListener('click',function(e){
+  var navItem=e.target.closest('.nav-item');
+  if(!navItem)return;
+  if(!navItem.closest('#bottom-nav'))return;
+  var tab=navItem.dataset.tab;
+  if(!tab)return;
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+  navItem.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active');});
+  var tc=$('tab-'+tab);
+  if(tc)tc.classList.add('active');
+  if(tab==='contacts')loadContacts();
+  if(tab==='settings'){updateSettingsUI();updateTogglesUI();}
 });
 
 $('search-toggle').onclick=function(){
