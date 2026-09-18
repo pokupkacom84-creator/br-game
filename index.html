@@ -49,7 +49,6 @@ button{cursor:pointer}
 .spinner{width:42px;height:42px;border:3px solid var(--panel2);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* APP LAYOUT */
 #app{flex-direction:column;background:var(--bg);position:relative}
 .app-content{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column}
 .app-view{display:none;flex-direction:column;height:100%;overflow:hidden}
@@ -152,7 +151,6 @@ body.light .folder-tab.active{background:var(--accent);color:#fff}
 .profile-info-row .lbl{font-size:15px;color:var(--text);margin-bottom:2px}
 .profile-info-row .sub{font-size:13px;color:var(--text3)}
 
-/* CHAT VIEW */
 #chatView{position:fixed;inset:0;background:var(--bg);z-index:100;display:none;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
 #chatView.show{display:flex;transform:none}
 
@@ -585,6 +583,7 @@ body.light .rxn.mine{background:#d0e7ff;color:#145a9e}
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 <script>
 'use strict';
 const CFG = {
@@ -599,6 +598,8 @@ const CFG = {
 firebase.initializeApp(CFG);
 const auth = firebase.auth();
 const db = firebase.database();
+let storage = null;
+try { storage = firebase.storage(); } catch(e){ console.warn('Storage недоступен:', e); }
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
 
 const $ = s => document.querySelector(s);
@@ -606,6 +607,7 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const now = () => Date.now();
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+const debounce = (fn, ms) => { let t; return function(...a){ clearTimeout(t); t = setTimeout(() => fn.apply(this, a), ms); }; };
 const fmtT = ts => { const d = new Date(ts); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
 const fmtD = s => { s=Math.max(0,Math.round(s)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
 const fmtS = b => b<1024?b+' Б':b<1048576?(b/1024).toFixed(1)+' КБ':(b/1048576).toFixed(1)+' МБ';
@@ -632,12 +634,20 @@ const ICO = {
   info:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
   check:'<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>'
 };
+
 function avatarEl(name, uid, cls, url){
   const c = cls || '';
   if(url) return `<div class="avatar ${c}" style="background-image:url(${url})"></div>`;
   const col = colorFor(uid || name);
   return `<div class="avatar ${c}" style="background:linear-gradient(135deg,${col},${col}bb)">${esc(initial(name))}</div>`;
 }
+function setAvatarEl(el, name, uid, url){
+  if(!el) return;
+  el.style.backgroundImage = url ? `url(${url})` : '';
+  el.style.background = url ? '' : `linear-gradient(135deg,${colorFor(uid||name)}bb,${colorFor(uid||name)})`;
+  el.textContent = url ? '' : initial(name);
+}
+
 let toastTimer;
 function toast(msg, ms){
   const t=$('#toast');
@@ -668,6 +678,7 @@ let appStarted = false;
 let authResolved = false;
 let chatListRef = null, msgRef = null, chatMetaRef = null, statusWatchRef = null, typingWatchRef = null, statusRef = null, presenceRef = null;
 let currentMessages = [];
+let msgNodeMap = new Map();
 let currentChatData = null;
 let replyTo = null;
 let editingId = null;
@@ -678,6 +689,7 @@ let currentTab = 'all';
 let msgLimit = 50;
 let typingTimeout = null;
 let audioCache = {};
+let audioCacheOrder = [];
 let currentView = 'chats';
 let chatSearchQuery = '';
 let friends = {};
@@ -750,10 +762,14 @@ function showProfileSetup(user){
     const btn = $('#profileBtn');
     btn.disabled = true; btn.textContent = 'Проверка...';
     try {
+      // ✅ Транзакция — защита от race condition
       const uRef = db.ref('flux/usernames/'+username);
-      const s = await uRef.get();
-      if(s.exists() && s.val()!==user.uid) throw new Error('Username занят');
-      await uRef.set(user.uid);
+      const res = await uRef.transaction(cur => {
+        if(cur === null) return user.uid;
+        if(cur === user.uid) return user.uid;
+        return undefined; // abort
+      });
+      if(!res.committed) throw new Error('Username занят');
       const profile = { name, username, email: user.email, avatar: setupAvatarData||'', bio:'', createdAt: now() };
       await db.ref('flux/users/'+user.uid+'/profile').set(profile);
       me = { uid:user.uid, email:user.email, ...profile };
@@ -809,7 +825,7 @@ function startApp(){
   statusRef = db.ref('flux/status/'+me.uid);
   statusRef.set({ online:true, ts:now() }).catch(()=>{});
   statusRef.onDisconnect().set({ online:false, ts:now() }).catch(()=>{});
-  presenceRef = setInterval(() => { if(statusRef) statusRef.update({ online:true, ts:now() }).catch(()=>{}); }, 30000);
+  presenceRef = setInterval(() => { if(statusRef) statusRef.update({ online:true, ts:now() }).catch(()=>{}); }, 60000);
   renderChatList();
   if(restoringChatId && chats[restoringChatId]){
     const id = restoringChatId;
@@ -881,7 +897,7 @@ function updateUnread(){
   if(cntAll) cntAll.textContent = Object.keys(chats).length;
 }
 
-$('#sbSearch').addEventListener('input', renderChatList);
+$('#sbSearch').addEventListener('input', debounce(renderChatList, 150));
 $$('.folder-tab').forEach(t => t.addEventListener('click', () => {
   $$('.folder-tab').forEach(x => x.classList.remove('active'));
   t.classList.add('active');
@@ -959,6 +975,15 @@ function listTime(ts){
   if(diff < 7) return ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][d.getDay()];
   return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0');
 }
+function dateLabel(ts){
+  const d = new Date(ts);
+  const today = new Date().toDateString();
+  const yd = new Date(Date.now() - 86400000).toDateString();
+  const dayKey = d.toDateString();
+  if(dayKey === today) return 'Сегодня';
+  if(dayKey === yd) return 'Вчера';
+  return d.toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
+}
 
 function showChatContext(x,y,chatId){
   const chat = chats[chatId]; if(!chat) return;
@@ -995,8 +1020,7 @@ function openChat(chatId){
   const otherName = chat.type==='private' ? ((chat.memberNames && chat.memberNames[currentOtherUid]) || 'Чат') : (chat.name||'Чат');
   const avatarUrl = chat.type==='private' ? ((chat.memberAvatars && chat.memberAvatars[currentOtherUid])||'') : (chat.avatar||'');
   $('#cvTitle').textContent = otherName;
-  const av = $('#cvAvatar');
-  av.outerHTML = avatarEl(otherName, currentOtherUid||chatId, 'sm', avatarUrl).replace('class="avatar sm"', 'class="avatar sm" id="cvAvatar"');
+  setAvatarEl($('#cvAvatar'), otherName, currentOtherUid||chatId, avatarUrl);
   $('#chatView').classList.add('show');
   chatSearchQuery = '';
   $('#chatSearchBar').classList.remove('show');
@@ -1069,52 +1093,95 @@ function closeChatView(){
 }
 $('#backBtn').addEventListener('click', closeChatView);
 
-/* MARK ALL READ */
+/* MARK ALL READ — оптимизировано: обновляем только загруженные сообщения */
 function markAllRead(chatId){
   if(!me || !chatId) return;
-  db.ref('flux/chats/'+chatId+'/reads/'+me.uid).set(now()).catch(()=>{});
-  db.ref('flux/messages/'+chatId).once('value').then(s => {
-    const data = s.val() || {};
-    const updates = {};
-    let hasIncoming = false;
-    Object.keys(data).forEach(k => {
-      const m = data[k];
-      if(m && m.from && m.from !== me.uid && !m.read){ updates[k+'/read'] = true; hasIncoming = true; }
-    });
-    if(hasIncoming) db.ref('flux/messages/'+chatId).update(updates).catch(()=>{});
-  }).catch(()=>{});
+  const t = now();
+  db.ref('flux/chats/'+chatId+'/reads/'+me.uid).set(t).catch(()=>{});
+  if(currentChatId !== chatId) return;
+  const updates = {};
+  let has = false;
+  currentMessages.forEach(m => {
+    if(m && m.from && m.from !== me.uid && !m.read){ updates[m.id+'/read'] = true; has = true; }
+  });
+  if(has) db.ref('flux/messages/'+chatId).update(updates).catch(()=>{});
 }
 
-/* MESSAGES */
+/* =========================================================
+   MESSAGES — инкрементальный рендер
+   ========================================================= */
 function loadMessages(chatId){
   if(msgRef) msgRef.off();
-  msgRef = db.ref('flux/messages/'+chatId).orderByChild('ts').limitToLast(msgLimit);
-  msgRef.on('value', snap => {
-    const data = snap.val()||{};
-    const list = Object.keys(data).map(k => Object.assign({ id:k }, data[k])).sort((a,b) => (a.ts||0)-(b.ts||0));
-    renderMessages(list);
-    if(list.length > lastMsgCount && lastMsgCount > 0){
-      const last = list[list.length-1];
-      if(last && last.from !== me.uid){
-        if(currentChatId !== chatId){
-          if(!chats[chatId] || !chats[chatId].muted){
-            playPop();
-            showNotification(chatId, last);
-          }
-        }
-      }
+  currentMessages = [];
+  msgNodeMap.clear();
+  lastMsgCount = 0;
+  $('#messages').innerHTML = '';
+
+  const q = db.ref('flux/messages/'+chatId).orderByChild('ts').limitToLast(msgLimit);
+  msgRef = q;
+
+  q.on('child_added', snap => {
+    const m = Object.assign({ id: snap.key }, snap.val());
+    if(msgNodeMap.has(m.id)) return; // уже отрисовано
+
+    const last = currentMessages[currentMessages.length-1];
+    const isAtEnd = !last || (m.ts||0) >= (last.ts||0);
+
+    currentMessages.push(m);
+    if(!isAtEnd) currentMessages.sort((a,b) => (a.ts||0)-(b.ts||0));
+
+    // Уведомление только для реально новых сообщений (не для начальной загрузки)
+    if(lastMsgCount > 0 && m.from !== me.uid){
+      handleIncomingMessage(chatId, m);
     }
-    lastMsgCount = list.length;
-    if(list.length){
-      db.ref('flux/chats/'+chatId+'/reads/'+me.uid).set(now()).catch(()=>{});
+
+    if(isAtEnd && $('#messages').querySelector('.msg')){
+      appendMessageDOM(m);
+    } else {
+      fullRenderMessages(currentMessages, lastMsgCount === 0);
+    }
+    lastMsgCount = currentMessages.length;
+  });
+
+  q.on('child_changed', snap => {
+    const m = Object.assign({ id: snap.key }, snap.val());
+    const idx = currentMessages.findIndex(x => x.id === m.id);
+    if(idx >= 0) currentMessages[idx] = m;
+    const oldNode = document.getElementById('m_'+m.id);
+    if(oldNode && idx >= 0){
+      const prev = currentMessages[idx-1];
+      const next = currentMessages[idx+1];
+      const GAP = 5 * 60 * 1000;
+      const isGroupStart = !prev || prev.from !== m.from || (m.ts - prev.ts) > GAP || prev.replyTo || !sameDay(prev.ts, m.ts);
+      const isGroupEnd = !next || next.from !== m.from || (next.ts - m.ts) > GAP || next.replyTo || !sameDay(next.ts, m.ts);
+      const wrap = document.createElement('div');
+      wrap.innerHTML = messageHTML(m, isGroupStart, isGroupEnd);
+      const newNode = wrap.firstElementChild;
+      oldNode.replaceWith(newNode);
+      bindMessageEvents(newNode);
+      msgNodeMap.set(m.id, newNode);
+    } else {
+      fullRenderMessages(currentMessages, false);
     }
   });
+
+  q.on('child_removed', snap => {
+    currentMessages = currentMessages.filter(x => x.id !== snap.key);
+    msgNodeMap.delete(snap.key);
+    fullRenderMessages(currentMessages, false);
+  });
+
+  db.ref('flux/chats/'+chatId+'/reads/'+me.uid).set(now()).catch(()=>{});
 }
 
-function renderMessages(list){
-  currentMessages = list;
+function sameDay(a,b){ const x=new Date(a),y=new Date(b); return x.getFullYear()===y.getFullYear()&&x.getMonth()===y.getMonth()&&x.getDate()===y.getDate(); }
+
+/* Полная перерисовка — только при загрузке/удалении/сортировке */
+function fullRenderMessages(list, scrollToBottom){
   const box = $('#messages');
   const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 200;
+  msgNodeMap.clear();
+
   if(!list.length){
     box.innerHTML = `<div class="empty" style="margin:auto">Нет сообщений. Напишите первым!</div>`;
     updatePinnedBar();
@@ -1131,12 +1198,7 @@ function renderMessages(list){
     const dayKey = d.toDateString();
     if(dayKey !== lastDay){
       lastDay = dayKey;
-      const today = new Date().toDateString();
-      const yd = new Date(Date.now() - 86400000).toDateString();
-      let label = d.toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
-      if(dayKey === today) label = 'Сегодня';
-      else if(dayKey === yd) label = 'Вчера';
-      html += `<div class="date-sep">${label}</div>`;
+      html += `<div class="date-sep">${dateLabel(m.ts)}</div>`;
     }
     const GAP = 5 * 60 * 1000;
     const isGroupStart = !prev || prev.from !== m.from || (m.ts - prev.ts) > GAP || prev.replyTo || !sameDay(prev.ts, m.ts);
@@ -1144,8 +1206,11 @@ function renderMessages(list){
     html += messageHTML(m, isGroupStart, isGroupEnd);
   }
   box.innerHTML = html;
-  box.querySelectorAll('.msg').forEach(bindMessageEvents);
-  if(nearBottom || box.dataset.init !== '1'){
+  box.querySelectorAll('.msg').forEach(el => {
+    msgNodeMap.set(el.dataset.mid, el);
+    bindMessageEvents(el);
+  });
+  if(nearBottom || scrollToBottom || box.dataset.init !== '1'){
     box.dataset.init = '1';
     requestAnimationFrame(() => box.scrollTop = box.scrollHeight);
   }
@@ -1154,7 +1219,42 @@ function renderMessages(list){
   updatePinnedBar();
   if(chatSearchQuery) applyChatSearch();
 }
-function sameDay(a,b){ const x=new Date(a),y=new Date(b); return x.getFullYear()===y.getFullYear()&&x.getMonth()===y.getMonth()&&x.getDate()===y.getDate(); }
+
+/* Инкрементальное добавление нового сообщения в конец */
+function appendMessageDOM(m){
+  const box = $('#messages');
+  const idx = currentMessages.length - 1;
+  const prev = idx > 0 ? currentMessages[idx - 1] : null;
+
+  // Дата-разделитель, если новый день
+  const dayKey = new Date(m.ts).toDateString();
+  const prevDay = prev ? new Date(prev.ts).toDateString() : null;
+  if(dayKey !== prevDay){
+    const sep = document.createElement('div');
+    sep.className = 'date-sep';
+    sep.textContent = dateLabel(m.ts);
+    box.appendChild(sep);
+  }
+
+  const GAP = 5 * 60 * 1000;
+  const isGroupStart = !prev || prev.from !== m.from || (m.ts - prev.ts) > GAP || prev.replyTo || !sameDay(prev.ts, m.ts);
+
+  // Если продолжаем группу — снимаем груп-энд с предыдущего
+  if(prev && !isGroupStart){
+    const prevNode = document.getElementById('m_'+prev.id);
+    if(prevNode) prevNode.classList.remove('group-end');
+  }
+
+  const wrap = document.createElement('div');
+  wrap.innerHTML = messageHTML(m, isGroupStart, true);
+  const node = wrap.firstElementChild;
+  box.appendChild(node);
+  bindMessageEvents(node);
+  msgNodeMap.set(m.id, node);
+
+  const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 250;
+  if(nearBottom) box.scrollTop = box.scrollHeight;
+}
 
 function messageHTML(m, isGroupStart, isGroupEnd){
   const chat = chats[currentChatId];
@@ -1250,6 +1350,18 @@ function bindMessageEvents(el){
     const pb = e.target.closest('[data-play]');
     if(pb){ toggleVoicePlay(pb.dataset.play, pb); return; }
   });
+}
+
+/* Уведомление о новом входящем */
+function handleIncomingMessage(chatId, m){
+  if(currentChatId === chatId && !document.hidden){
+    db.ref('flux/chats/'+chatId+'/reads/'+me.uid).set(now()).catch(()=>{});
+    return;
+  }
+  const ch = chats[chatId];
+  if(ch && ch.muted) return;
+  playPop();
+  showNotification(chatId, m);
 }
 
 /* MESSAGE CONTEXT */
@@ -1398,10 +1510,14 @@ $('#msgInput').addEventListener('keydown', e => {
 $('#msgInput').addEventListener('input', () => {
   autoGrow(); updateSendBtn();
   if(currentChatId && chats[currentChatId] && chats[currentChatId].type !== 'channel'){
-    db.ref('flux/typing/'+currentChatId+'/'+me.uid).set(now()).catch(()=>{});
+    // Debounce через уже установленный таймер — не спамим записью
+    if(!typingTimeout){
+      db.ref('flux/typing/'+currentChatId+'/'+me.uid).set(now()).catch(()=>{});
+    }
     clearTimeout(typingTimeout);
     typingTimeout = setTimeout(() => {
       if(currentChatId) db.ref('flux/typing/'+currentChatId+'/'+me.uid).remove().catch(()=>{});
+      typingTimeout = null;
     }, 3000);
   }
 });
@@ -1448,31 +1564,65 @@ document.addEventListener('click', e => {
   if(am.classList.contains('show') && !am.contains(e.target) && !$('#attachBtn').contains(e.target)) am.classList.remove('show');
   if(ep.classList.contains('show') && !ep.contains(e.target) && !$('#emojiBtn').contains(e.target)) ep.classList.remove('show');
 });
+
+/* ✅ Загрузка в Firebase Storage с fallback на base64 */
+async function uploadToStorage(fileOrBlob, contentType, name){
+  if(!storage) return null;
+  try {
+    const ext = (name && name.split('.').pop() || 'bin').toLowerCase().slice(0, 6);
+    const path = `flux/media/${currentChatId}/${now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+    const ref = storage.ref(path);
+    const snap = await ref.put(fileOrBlob, { contentType });
+    return await snap.ref.getDownloadURL();
+  } catch(e){
+    console.warn('Storage upload failed, fallback to base64:', e);
+    return null;
+  }
+}
+
 $('#fileImg').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value='';
   $('#attachMenu').classList.remove('show');
   if(!f) return;
-  if(f.size > 15*1024*1024){ toast('Файл слишком большой'); return; }
+  if(f.size > 25*1024*1024){ toast('Файл слишком большой'); return; }
   try {
     if(f.type.startsWith('image/')){
-      const data = await compressImage(f, 1280, 1280, 0.75);
-      await sendMedia('photo', { url: data, name: f.name, size: data.length });
+      const blob = await compressImageBlob(f, 1280, 1280, 0.75);
+      const file = new File([blob], f.name.replace(/\.[^.]+$/, '')+'.jpg', { type:'image/jpeg' });
+      const url = await uploadToStorage(file, 'image/jpeg', file.name);
+      if(url){
+        await sendMedia('photo', { url, name: f.name, size: blob.size });
+      } else {
+        const data = await readAsDataURL(blob);
+        await sendMedia('photo', { url: data, name: f.name, size: blob.size });
+      }
     } else if(f.type.startsWith('video/')){
-      if(f.size > 5*1024*1024){ toast('Видео макс 5 МБ'); return; }
-      const data = await readAsDataURL(f);
-      await sendMedia('video', { url: data, name: f.name, size: f.size });
+      const url = await uploadToStorage(f, f.type, f.name);
+      if(url){
+        await sendMedia('video', { url, name: f.name, size: f.size });
+      } else {
+        if(f.size > 5*1024*1024){ toast('Видео макс 5 МБ (без Storage)'); return; }
+        const data = await readAsDataURL(f);
+        await sendMedia('video', { url: data, name: f.name, size: f.size });
+      }
     } else toast('Неверный формат');
-  } catch(err){ toast('Ошибка'); }
+  } catch(err){ console.error(err); toast('Ошибка'); }
 });
 $('#fileAny').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value='';
   $('#attachMenu').classList.remove('show');
   if(!f) return;
-  if(f.size > 1.5*1024*1024){ toast('Файл макс 1.5 МБ'); return; }
+  if(f.size > 50*1024*1024){ toast('Файл слишком большой'); return; }
   try {
-    const data = await readAsDataURL(f);
-    await sendMedia('file', { url: data, name: f.name, size: f.size });
-  } catch(err){ toast('Ошибка'); }
+    const url = await uploadToStorage(f, f.type || 'application/octet-stream', f.name);
+    if(url){
+      await sendMedia('file', { url, name: f.name, size: f.size });
+    } else {
+      if(f.size > 1.5*1024*1024){ toast('Файл макс 1.5 МБ (без Storage)'); return; }
+      const data = await readAsDataURL(f);
+      await sendMedia('file', { url: data, name: f.name, size: f.size });
+    }
+  } catch(err){ console.error(err); toast('Ошибка'); }
 });
 $('#btnVoice').addEventListener('click', () => { $('#attachMenu').classList.remove('show'); startRecording(); });
 
@@ -1484,7 +1634,18 @@ function readAsDataURL(f){
     r.readAsDataURL(f);
   });
 }
+/* Старое — возвращает dataURL (используется для аватарок, где Storage не нужен) */
 function compressImage(file, maxW, maxH, q){
+  return new Promise(async (res, rej) => {
+    try {
+      const blob = await compressImageBlob(file, maxW, maxH, q);
+      const data = await readAsDataURL(blob);
+      res(data);
+    } catch(e){ rej(e); }
+  });
+}
+/* Новое — возвращает Blob (для загрузки в Storage) */
+function compressImageBlob(file, maxW, maxH, q){
   return new Promise((res, rej) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -1499,9 +1660,9 @@ function compressImage(file, maxW, maxH, q){
       c.width = w; c.height = h;
       const ctx = c.getContext('2d');
       ctx.drawImage(img, 0, 0, w, h);
-      res(c.toDataURL('image/jpeg', q||0.75));
+      c.toBlob(blob => blob ? res(blob) : rej(new Error('toBlob failed')), 'image/jpeg', q||0.75);
     };
-    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('bad')); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('bad image')); };
     img.src = url;
   });
 }
@@ -1552,27 +1713,52 @@ function onRecStop(){
   cleanupRec();
   if(!send || !chunks.length) return;
   const blob = new Blob(chunks, { type: chunks[0].type || 'audio/webm' });
-  const reader = new FileReader();
-  reader.onload = () => {
-    sendMedia('voice', { url: reader.result, duration: dur, size: blob.size, waveform: genWave(28) });
-    toast('Голосовое отправлено');
-  };
-  reader.readAsDataURL(blob);
+  (async () => {
+    const file = new File([blob], `voice_${now()}.webm`, { type: blob.type || 'audio/webm' });
+    const url = await uploadToStorage(file, file.type, file.name);
+    if(url){
+      sendMedia('voice', { url, duration: dur, size: blob.size, waveform: genWave(28) });
+      toast('Голосовое отправлено');
+    } else {
+      const reader = new FileReader();
+      reader.onload = () => {
+        sendMedia('voice', { url: reader.result, duration: dur, size: blob.size, waveform: genWave(28) });
+        toast('Голосовое отправлено');
+      };
+      reader.readAsDataURL(blob);
+    }
+  })();
 }
 $('#recCancel').addEventListener('click', cancelRec);
 $('#recSend').addEventListener('click', () => stopRec(true));
+
+/* ✅ Кэш аудио с ограничением размера (LRU, макс 6) */
+function cacheAudio(id, audio){
+  if(audioCache[id]) return;
+  audioCache[id] = audio;
+  audioCacheOrder.push(id);
+  while(audioCacheOrder.length > 6){
+    const k = audioCacheOrder.shift();
+    if(k === id){ audioCacheOrder.push(k); continue; }
+    const a = audioCache[k];
+    if(a){
+      try { a.pause(); a.src = ''; } catch(e){}
+      delete audioCache[k];
+    }
+  }
+}
 
 function toggleVoicePlay(mid, btn){
   const m = currentMessages.find(x => x.id === mid);
   if(!m || !m.media || !m.media.url){ toast('Аудио недоступно'); return; }
   let audio = audioCache[mid];
-  if(!audio){ audio = new Audio(m.media.url); audioCache[mid] = audio; }
+  if(!audio){ audio = new Audio(m.media.url); audio.preload = 'metadata'; cacheAudio(mid, audio); }
   const row = btn.closest('.voice');
   const bars = row ? row.querySelectorAll('.voice-wave i') : [];
   if(audio.paused){
     Object.keys(audioCache).forEach(k => { if(k!==mid) audioCache[k].pause(); });
     $$('.voice-btn').forEach(b => { if(b!==btn) b.innerHTML = ICO.play; });
-    audio.play();
+    audio.play().catch(()=>toast('Ошибка воспроизведения'));
     btn.innerHTML = ICO.pause;
     const upd = () => {
       if(audio.paused) return;
@@ -1614,21 +1800,23 @@ function openForward(m){
 async function doForward(chatId){
   if(!forwardTarget) return;
   const msgs = forwardTarget;
-  for(const m of msgs){
-    const copy = {
-      from: me.uid,
-      text: m.text || '',
-      ts: now(),
-      type: m.type,
-      media: m.media,
-      read: false,
-      forwardFrom: m.from === me.uid ? me.name : ((chats[currentChatId]&&chats[currentChatId].memberNames&&chats[currentChatId].memberNames[m.from]) || 'Кто-то')
-    };
-    await db.ref('flux/messages/'+chatId).push(copy).catch(()=>{});
-  }
-  const preview = msgs[0].text ? msgs[0].text.slice(0,60) : '↪ Пересланное';
-  await db.ref('flux/chats/'+chatId+'/meta').update({ lastMessage: preview, lastTs: now(), lastFrom: me.uid }).catch(()=>{});
-  toast('Переслано');
+  try {
+    for(const m of msgs){
+      const copy = {
+        from: me.uid,
+        text: m.text || '',
+        ts: now(),
+        type: m.type,
+        media: m.media,
+        read: false,
+        forwardFrom: m.from === me.uid ? me.name : ((chats[currentChatId]&&chats[currentChatId].memberNames&&chats[currentChatId].memberNames[m.from]) || 'Кто-то')
+      };
+      await db.ref('flux/messages/'+chatId).push(copy);
+    }
+    const preview = msgs[0].text ? msgs[0].text.slice(0,60) : '↪ Пересланное';
+    await db.ref('flux/chats/'+chatId+'/meta').update({ lastMessage: preview, lastTs: now(), lastFrom: me.uid });
+    toast('Переслано');
+  } catch(e){ toast('Ошибка при пересылке'); }
   forwardTarget = null;
 }
 
@@ -1645,20 +1833,22 @@ $('#closeChatSearch').addEventListener('click', () => {
   chatSearchQuery = '';
   applyChatSearch();
 });
-$('#chatSearchInput').addEventListener('input', e => {
+$('#chatSearchInput').addEventListener('input', debounce(e => {
   chatSearchQuery = e.target.value.trim().toLowerCase();
   applyChatSearch();
-});
+}, 200));
 function applyChatSearch(){
   if(!chatSearchQuery){
     $$('#messages .msg').forEach(el => { el.style.display = ''; });
     return;
   }
+  const index = new Map();
+  currentMessages.forEach(m => {
+    if(m.text) index.set(m.id, m.text.toLowerCase());
+  });
   let firstHit = null;
   $$('#messages .msg').forEach(el => {
-    const mid = el.dataset.mid;
-    const m = currentMessages.find(x => x.id === mid);
-    const has = m && m.text && m.text.toLowerCase().includes(chatSearchQuery);
+    const has = index.has(el.dataset.mid) && index.get(el.dataset.mid).includes(chatSearchQuery);
     el.style.display = has ? '' : 'none';
     if(has && !firstHit) firstHit = el;
   });
@@ -1815,7 +2005,7 @@ $('#fab').addEventListener('click', e => {
   });
 });
 $('#findUserBtn').addEventListener('click', newPrivateChat);
-$('#contactSearch').addEventListener('input', renderContacts);
+$('#contactSearch').addEventListener('input', debounce(renderContacts, 150));
 
 function newPrivateChat(){
   openModal(`
@@ -2013,7 +2203,7 @@ function renderSettings(){
         <div class="lbl" style="color:#ff6b6b">Выйти</div>
       </div>
     </div>
-    <div class="settings-version">Flux 2.0</div>
+    <div class="settings-version">Flux 2.1</div>
   `;
 }
 function toggleThemeSetting(){
@@ -2347,7 +2537,7 @@ function showNotification(chatId, msg){
   } catch(e){}
 }
 
-/* GLOBAL INCOMING */
+/* GLOBAL INCOMING (для чатов, которые не открыты) */
 let globalIncomingRefs = {};
 function setupGlobalIncomingListener(){
   if(!me) return;
