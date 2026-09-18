@@ -56,7 +56,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .chat-item-time{font-size:12px;color:var(--text-2);flex-shrink:0}
 .chat-item-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:3px}
 .chat-item-msg{font-size:14px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.chat-item-msg em{font-style:normal;display:inline-flex;align-items:center;gap:4px;color:var(--text-2)}
 .chat-item-unread{min-width:22px;height:22px;padding:0 7px;border-radius:11px;background:var(--unread-bg);color:var(--unread-text);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center}
 .fab{position:absolute;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.25);z-index:10}
 .fab:active{background:var(--accent-2)}
@@ -345,9 +344,6 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const PLAY_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
 const PAUSE_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
 
-/* ============================================================
-   FIX-WEBVIEW: Определение возможностей окружения (Sketchware Pro)
-   ============================================================ */
 const _UA = navigator.userAgent || '';
 const IS_ANDROID_WEBVIEW = /Android/i.test(_UA) && (/;\s*wv\)/i.test(_UA) || /\bwv\b/i.test(_UA));
 const IS_SECURE_CTX =
@@ -359,7 +355,6 @@ const IS_SECURE_CTX =
   location.protocol === 'file:';
 const HAS_MEDIARECORDER = (typeof MediaRecorder !== 'undefined');
 const HAS_USERMEDIA = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-// FIX-WEBVIEW: запись возможна только если есть и MediaRecorder, и getUserMedia, и secure-context
 const CAN_RECORD = HAS_MEDIARECORDER && HAS_USERMEDIA && IS_SECURE_CTX;
 
 const screenHistory = ['splash-screen'];
@@ -394,16 +389,26 @@ const chatUnsubs = {};
 
 function $(id){ return document.getElementById(id); }
 
-// FIX-WEBVIEW: безопасный триггер нативного <input type="file">
-// - сбрасывает value, чтобы повторный выбор того же файла срабатывал
-// - ловит исключения, если WebView не смог открыть диалог (нет onShowFileChooser)
+/* ============================================================
+   FIX: правильная подписка на .on('value') с возможностью .off()
+   Firebase compat .on() возвращает callback, а не subscription.
+   ============================================================ */
+function subscribeValue(ref, cb){
+  ref.on('value', cb);
+  return {
+    off: function(){
+      try { ref.off('value', cb); } catch(e){}
+    }
+  };
+}
+
 function triggerFileInput(inputEl){
   if(!inputEl){ toast('Внутренняя ошибка: файловый input не найден'); return; }
   try { inputEl.value = ''; } catch(e){}
   try {
     inputEl.click();
   } catch(e){
-    toast('WebView не открыл выбор файла. Проверьте onShowFileChooser в активности.');
+    toast('WebView не открыл выбор файла.');
     console.error('[FIX-WEBVIEW] input.click() failed', e);
   }
 }
@@ -420,10 +425,8 @@ function isSavedChat(chatId){
 
 function leaveChat(){
   stopAudio();
-  if(unsubMessages && unsubMessages.off){ try { unsubMessages.off(); } catch(e){} }
-  if(unsubChatUser && unsubChatUser.off){ try { unsubChatUser.off(); } catch(e){} }
-  unsubMessages = null;
-  unsubChatUser = null;
+  if(unsubMessages){ unsubMessages.off(); unsubMessages = null; }
+  if(unsubChatUser){ unsubChatUser.off(); unsubChatUser = null; }
   if(currentUser && currentUser.uid && currentChatId && !isSavedChat(currentChatId)){
     db.ref('users/' + currentUser.uid).update({ typing: null }).catch(function(){});
   }
@@ -568,7 +571,7 @@ function authError(code){
     'auth/too-many-requests':'Слишком много попыток',
     'auth/operation-not-allowed':'Email/Password не включён в Firebase Console',
     'auth/configuration-not-found':'Включите Email/Password в Firebase Console',
-    'auth/api-key-not-valid':'Неверный API-ключ. Проверьте ограничения в Google Cloud',
+    'auth/api-key-not-valid':'Неверный API-ключ.',
     'auth/internal-error':'Внутренняя ошибка. Проверьте интернет'
   };
   return m[code] || ('Ошибка: ' + code);
@@ -668,13 +671,11 @@ auth.onAuthStateChanged(async function(user){
 });
 
 function cleanupListeners(){
-  try {
-    if(unsubUserChats && unsubUserChats.off) unsubUserChats.off();
-    if(unsubMessages && unsubMessages.off) unsubMessages.off();
-    if(unsubChatUser && unsubChatUser.off) unsubChatUser.off();
-    if(unsubSelfDoc && unsubSelfDoc.off) unsubSelfDoc.off();
-    if(unsubSavedMeta && unsubSavedMeta.off) unsubSavedMeta.off();
-  } catch(e){}
+  try { if(unsubUserChats) unsubUserChats.off(); } catch(e){}
+  try { if(unsubMessages) unsubMessages.off(); } catch(e){}
+  try { if(unsubChatUser) unsubChatUser.off(); } catch(e){}
+  try { if(unsubSelfDoc) unsubSelfDoc.off(); } catch(e){}
+  try { if(unsubSavedMeta) unsubSavedMeta.off(); } catch(e){}
   unsubUserChats = null;
   unsubMessages = null;
   unsubChatUser = null;
@@ -693,9 +694,8 @@ function cleanupListeners(){
 }
 
 function startSavedMetaListener(){
-  if(unsubSavedMeta && unsubSavedMeta.off) unsubSavedMeta.off();
-  var ref = db.ref('saved/' + currentUser.uid);
-  unsubSavedMeta = ref.on('value', function(s){
+  if(unsubSavedMeta){ unsubSavedMeta.off(); unsubSavedMeta = null; }
+  unsubSavedMeta = subscribeValue(db.ref('saved/' + currentUser.uid), function(s){
     var v = s.val() || {};
     savedLastMessage = v.lastMessage || '';
     savedLastTime = v.lastTime || null;
@@ -704,10 +704,10 @@ function startSavedMetaListener(){
 }
 
 function startSelfListener(){
-  if(unsubSelfDoc && unsubSelfDoc.off) unsubSelfDoc.off();
+  if(unsubSelfDoc){ unsubSelfDoc.off(); unsubSelfDoc = null; }
   var ref = db.ref('users/' + currentUser.uid);
   ref.update({ online: true, lastSeen: TS }).catch(function(){});
-  unsubSelfDoc = ref.on('value', function(s){
+  unsubSelfDoc = subscribeValue(ref, function(s){
     var v = s.val();
     if(v){
       currentUserData = Object.assign({uid: currentUser.uid}, v);
@@ -716,6 +716,7 @@ function startSelfListener(){
     }
   });
   document.addEventListener('visibilitychange', function(){
+    if(!currentUser) return;
     if(document.hidden){
       ref.update({ online: false, lastSeen: TS, typing: null }).catch(function(){});
     } else {
@@ -723,11 +724,10 @@ function startSelfListener(){
     }
   });
   window.addEventListener('beforeunload', function(){
-    ref.update({ online: false, lastSeen: TS, typing: null }).catch(function(){});
+    if(currentUser) ref.update({ online: false, lastSeen: TS, typing: null }).catch(function(){});
   });
 }
 
-// FIX-WEBVIEW: используем безопасный триггер вместо прямого .click()
 $('onb-avatar').onclick = function(){ triggerFileInput($('onb-avatar-input')); };
 $('onb-avatar-input').onchange = function(e){
   var f = e.target.files[0];
@@ -787,8 +787,8 @@ $('onb-continue').onclick = async function(){
 };
 
 function startUserChatsListener(){
-  if(unsubUserChats && unsubUserChats.off) unsubUserChats.off();
-  unsubUserChats = db.ref('userChats/' + currentUser.uid).on('value', function(snap){
+  if(unsubUserChats){ unsubUserChats.off(); unsubUserChats = null; }
+  unsubUserChats = subscribeValue(db.ref('userChats/' + currentUser.uid), function(snap){
     userChatsMap = snap.val() || {};
     attachChatListeners();
     renderChats();
@@ -816,11 +816,11 @@ function attachChatListeners(){
       renderChats();
     };
     metaRef.on('value', obj.cb);
-    obj.off = function(){ metaRef.off('value', obj.cb); };
+    obj.off = function(){ try { metaRef.off('value', obj.cb); } catch(e){} };
     var unreadRef = db.ref('chats/' + id + '/unread/' + currentUser.uid);
     obj.unreadCb = function(){ renderChats(); };
     unreadRef.on('value', obj.unreadCb);
-    obj.unreadOff = function(){ unreadRef.off('value', obj.unreadCb); };
+    obj.unreadOff = function(){ try { unreadRef.off('value', obj.unreadCb); } catch(e){} };
     chatUnsubs[id] = obj;
   });
 }
@@ -978,8 +978,8 @@ function updateChatStatus(){
 }
 
 function startChatUserListener(uid){
-  if(unsubChatUser && unsubChatUser.off) unsubChatUser.off();
-  unsubChatUser = db.ref('users/' + uid).on('value', function(s){
+  if(unsubChatUser){ unsubChatUser.off(); unsubChatUser = null; }
+  unsubChatUser = subscribeValue(db.ref('users/' + uid), function(s){
     var v = s.val();
     if(v){
       currentChatUser = Object.assign({uid: uid}, v);
@@ -990,17 +990,18 @@ function startChatUserListener(uid){
 }
 
 function startMessagesListener(){
-  if(unsubMessages && unsubMessages.off) unsubMessages.off();
-  unsubMessages = db.ref('chats/' + currentChatId + '/messages')
-    .orderByChild('timestamp').limitToLast(300)
-    .on('value', function(snap){
+  if(unsubMessages){ unsubMessages.off(); unsubMessages = null; }
+  unsubMessages = subscribeValue(
+    db.ref('chats/' + currentChatId + '/messages').orderByChild('timestamp').limitToLast(300),
+    function(snap){
       var msgs = [];
       snap.forEach(function(child){
         msgs.push(Object.assign({id: child.key}, child.val()));
       });
       renderMessages(msgs);
-      if(!isSavedChat(currentChatId)) markAsRead();
-    });
+      if(!isSavedChat(currentChatId)) markAsReadFrom(msgs);
+    }
+  );
 }
 
 function formatDateLabel(d){
@@ -1185,21 +1186,20 @@ function toggleAudio(btn, url){
   });
 }
 
-async function markAsRead(){
+/* FIX: перешли с индексированного запроса .equalTo(false) на разметку
+   непрочитанных из уже загруженного среза. Так не нужен index по 'read'
+   в правилах и не будет warning от Firebase. */
+async function markAsReadFrom(msgs){
   if(!currentChatId || !currentUser || isSavedChat(currentChatId)) return;
-  try {
-    var snap = await db.ref('chats/' + currentChatId + '/messages')
-      .orderByChild('read').equalTo(false).limitToFirst(200).once('value');
-    if(!snap.exists()) return;
-    var updates = {};
-    snap.forEach(function(child){
-      var v = child.val();
-      if(v.senderId !== currentUser.uid){
-        updates['chats/' + currentChatId + '/messages/' + child.key + '/read'] = true;
-      }
-    });
-    if(Object.keys(updates).length) await db.ref().update(updates);
-  } catch(e){}
+  var updates = {};
+  var chatIdAtCall = currentChatId;
+  msgs.forEach(function(m){
+    if(m.senderId !== currentUser.uid && !m.read){
+      updates['chats/' + chatIdAtCall + '/messages/' + m.id + '/read'] = true;
+    }
+  });
+  if(!Object.keys(updates).length) return;
+  try { await db.ref().update(updates); } catch(e){}
 }
 
 async function sendMessage(){
@@ -1412,7 +1412,6 @@ $('attach-btn').onclick = function(e){
 };
 $('attach-overlay').onclick = closeAttachMenu;
 
-// FIX-WEBVIEW: используем безопасный триггер
 $('attach-photo').onclick = function(){
   closeAttachMenu();
   triggerFileInput($('media-photo-input'));
@@ -1448,10 +1447,9 @@ async function startRecording(mode){
   if(!currentChatId){ toast('Откройте чат'); return; }
   if(!currentUser){ toast('Нет авторизации'); return; }
 
-  // FIX-WEBVIEW: единая проверка всех условий
   if(!CAN_RECORD){
     if(!IS_SECURE_CTX){
-      toast('⚠ Запись недоступна: WebView не в https-контексте. Нужен WebViewAssetLoader.');
+      toast('⚠ Запись недоступна: WebView не в https-контексте.');
     } else if(!HAS_MEDIARECORDER){
       toast('WebView не поддерживает MediaRecorder');
     } else if(!HAS_USERMEDIA){
@@ -1817,14 +1815,11 @@ $('chat-search').addEventListener('input', function(){
 
 setTheme(localStorage.getItem('tg_theme') === 'dark');
 
-/* FIX-WEBVIEW: прячем кнопки записи, если WebView не умеет getUserMedia/MediaRecorder
-   или мы не в secure-context. Так пользователь не тыкает в нерабочие кнопки. */
 if(!CAN_RECORD){
   var _av = $('attach-voice');  if(_av) _av.style.display = 'none';
   var _ac = $('attach-circle'); if(_ac) _ac.style.display = 'none';
 }
 
-/* FIX-WEBVIEW: предупреждение о небезопасном контексте */
 if(!IS_SECURE_CTX && IS_ANDROID_WEBVIEW){
   setTimeout(function(){
     toast('⚠ Для записи голосовых и кружков загрузите страницу через https://appassets.androidplatform.net/');
