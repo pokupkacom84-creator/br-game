@@ -101,7 +101,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .toggle.on{background:var(--accent)}
 .toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .toggle.on::after{transform:translateX(18px)}
-.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(0,0,0,.85);color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:9999;max-width:80%;text-align:center}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(0,0,0,.9);color:#fff;padding:12px 18px;border-radius:20px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:9999;max-width:88%;text-align:center;line-height:1.4;word-break:break-word}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .empty{padding:40px 20px;text-align:center;color:var(--text-2);font-size:14px}
 </style>
@@ -215,49 +215,42 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 
 <script>
 const firebaseConfig = {
-  apiKey: "API_KEY",
+  apiKey: "AIzaSyAfNoV7tt_6eP1gRQxLc4Yk5FJzwVxDMQw",
   authDomain: "game-cd07d.firebaseapp.com",
   databaseURL: "https://game-cd07d-default-rtdb.firebaseio.com",
   projectId: "game-cd07d",
-  storageBucket: "game-cd07d.appspot.com",
-  messagingSenderId: "SENDER_ID",
-  appId: "APP_ID"
+  storageBucket: "game-cd07d.firebasestorage.app",
+  messagingSenderId: "1001558545053",
+  appId: "1:1001558545053:web:b99f86362c1b93aad13a74"
 };
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
-const storage = firebase.storage();
-const TS = firebase.database.ServerValue.TIMESTAMP;
+let auth, db, storage, TS;
+let firebaseReady = false;
 
-let currentUser = null;
-let currentUserData = null;
-let currentChatId = null;
-let currentChatUser = null;
-let unsubUserChats = null;
-let unsubChatMeta = null;
-let unsubMessages = null;
-let unsubChatUser = null;
-let unsubSelfDoc = null;
-let onbAvatarFile = null;
-let typingTimer = null;
-let chatsData = {};
-let userChatsMap = {};
-let searchQuery = '';
-const userCache = {};
-const chatUnsubs = {};
+try {
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db = firebase.database();
+  storage = firebase.storage();
+  TS = firebase.database.ServerValue.TIMESTAMP;
+  firebaseReady = true;
+} catch(e){
+  setTimeout(function(){ toast('Ошибка Firebase: ' + e.message); }, 100);
+}
 
 function $(id){ return document.getElementById(id); }
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
-  $(id).classList.add('active');
+  var el = $(id);
+  if(el) el.classList.add('active');
 }
 function toast(msg){
-  const t = $('toast');
+  var t = $('toast');
+  if(!t) return;
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(t._tm);
-  t._tm = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+  t._tm = setTimeout(function(){ t.classList.remove('show'); }, 3500);
 }
 function esc(s){
   return String(s==null?'':s).replace(/[&<>"']/g,function(c){
@@ -266,35 +259,35 @@ function esc(s){
 }
 function initials(name){
   if(!name) return '?';
-  const p = name.trim().split(/\s+/);
+  var p = name.trim().split(/\s+/);
   return ((p[0]?p[0][0]:'') + (p[1]?p[1][0]:'')).toUpperCase();
 }
 function avatarHtml(user){
   if(!user) return '<div class="avatar">?</div>';
-  const url = user.photoURL || '';
-  const txt = url ? '' : initials(user.name || user.username || '?');
+  var url = user.photoURL || '';
+  var txt = url ? '' : initials(user.name || user.username || '?');
   return '<div class="avatar" style="' + (url?'background-image:url(\''+url+'\')':'') + '">' + esc(txt) + '</div>';
 }
 function pad(n){ return n < 10 ? '0' + n : '' + n; }
 function formatTime(ts){
   if(!ts) return '';
-  const d = new Date(ts);
-  const now = new Date();
+  var d = new Date(ts);
+  var now = new Date();
   if(d.toDateString() === now.toDateString()) return pad(d.getHours()) + ':' + pad(d.getMinutes());
-  const diff = (now - d) / 86400000;
-  if(diff < 7){ const days=['Вс','Пн','Вт','Ср','Чт','Пт','Сб']; return days[d.getDay()]; }
+  var diff = (now - d) / 86400000;
+  if(diff < 7){ var days=['Вс','Пн','Вт','Ср','Чт','Пт','Сб']; return days[d.getDay()]; }
   return pad(d.getDate()) + '.' + pad(d.getMonth()+1) + '.' + String(d.getFullYear()).slice(2);
 }
 function formatFullTime(ts){
   if(!ts) return '';
-  const d = new Date(ts);
+  var d = new Date(ts);
   return pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
 function formatLastSeen(ts){
   if(!ts) return 'был(а) недавно';
-  const d = new Date(ts);
-  const now = new Date();
-  const diff = (now - d) / 1000;
+  var d = new Date(ts);
+  var now = new Date();
+  var diff = (now - d) / 1000;
   if(diff < 60) return 'был(а) только что';
   if(diff < 3600) return 'был(а) ' + Math.floor(diff/60) + ' мин назад';
   if(d.toDateString() === now.toDateString()) return 'был(а) в ' + formatFullTime(ts);
@@ -303,12 +296,12 @@ function formatLastSeen(ts){
 function setTheme(dark){
   if(dark) document.body.classList.add('dark');
   else document.body.classList.remove('dark');
-  localStorage.setItem('tg_theme', dark ? 'dark' : 'light');
-  const tg = $('theme-toggle');
+  try { localStorage.setItem('tg_theme', dark ? 'dark' : 'light'); } catch(e){}
+  var tg = $('theme-toggle');
   if(tg) tg.classList.toggle('on', dark);
 }
 function authError(code){
-  const m = {
+  var m = {
     'auth/invalid-email':'Неверный email',
     'auth/user-not-found':'Пользователь не найден',
     'auth/wrong-password':'Неверный пароль',
@@ -316,10 +309,14 @@ function authError(code){
     'auth/invalid-login-credentials':'Неверные данные',
     'auth/email-already-in-use':'Email уже используется',
     'auth/weak-password':'Слабый пароль',
-    'auth/network-request-failed':'Нет соединения',
-    'auth/too-many-requests':'Слишком много попыток'
+    'auth/network-request-failed':'Нет соединения с интернетом',
+    'auth/too-many-requests':'Слишком много попыток',
+    'auth/operation-not-allowed':'Email/Password не включён в Firebase Console',
+    'auth/configuration-not-found':'Включите Email/Password в Firebase Console',
+    'auth/api-key-not-valid':'Неверный API-ключ',
+    'auth/internal-error':'Внутренняя ошибка. Проверьте интернет'
   };
-  return m[code] || 'Ошибка: ' + code;
+  return m[code] || ('Ошибка: ' + code);
 }
 
 $('go-register').onclick = function(){
@@ -332,27 +329,65 @@ $('go-login').onclick = function(){
   $('login-form').classList.remove('hidden');
   $('auth-subtitle').textContent = 'Войдите, чтобы продолжить';
 };
+
 $('login-btn').onclick = async function(){
-  const email = $('login-email').value.trim();
-  const pass = $('login-password').value;
+  if(!firebaseReady){ toast('Firebase не инициализирован'); return; }
+  var email = $('login-email').value.trim();
+  var pass = $('login-password').value;
   if(!email || !pass){ toast('Заполните все поля'); return; }
   this.disabled = true;
-  try { await auth.signInWithEmailAndPassword(email, pass); }
-  catch(e){ toast(authError(e.code)); }
+  var old = this.textContent;
+  this.textContent = 'Вход...';
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+    toast('Вход выполнен');
+  } catch(e){
+    toast(authError(e.code));
+  }
   this.disabled = false;
+  this.textContent = old;
 };
+
 $('register-btn').onclick = async function(){
-  const email = $('reg-email').value.trim();
-  const p1 = $('reg-password').value;
-  const p2 = $('reg-password2').value;
+  if(!firebaseReady){ toast('Firebase не инициализирован'); return; }
+  var email = $('reg-email').value.trim();
+  var p1 = $('reg-password').value;
+  var p2 = $('reg-password2').value;
   if(!email || !p1){ toast('Заполните все поля'); return; }
   if(p1.length < 6){ toast('Пароль минимум 6 символов'); return; }
   if(p1 !== p2){ toast('Пароли не совпадают'); return; }
   this.disabled = true;
-  try { await auth.createUserWithEmailAndPassword(email, p1); }
-  catch(e){ toast(authError(e.code)); }
+  var old = this.textContent;
+  this.textContent = 'Регистрация...';
+  try {
+    await auth.createUserWithEmailAndPassword(email, p1);
+    toast('Аккаунт создан');
+  } catch(e){
+    toast(authError(e.code));
+  }
   this.disabled = false;
+  this.textContent = old;
 };
+
+if(firebaseReady){
+  auth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(function(){});
+}
+
+let currentUser = null;
+let currentUserData = null;
+let currentChatId = null;
+let currentChatUser = null;
+let unsubUserChats = null;
+let unsubMessages = null;
+let unsubChatUser = null;
+let unsubSelfDoc = null;
+let onbAvatarFile = null;
+let typingTimer = null;
+let chatsData = {};
+let userChatsMap = {};
+let searchQuery = '';
+const userCache = {};
+const chatUnsubs = {};
 
 auth.onAuthStateChanged(async function(user){
   if(!user){
@@ -364,9 +399,13 @@ auth.onAuthStateChanged(async function(user){
   }
   currentUser = user;
   let snap;
-  try { snap = await db.ref('users/' + user.uid).once('value'); }
-  catch(e){ toast('Ошибка соединения'); return; }
-  const data = snap.val();
+  try {
+    snap = await db.ref('users/' + user.uid).once('value');
+  } catch(e){
+    toast('Ошибка соединения с базой');
+    return;
+  }
+  var data = snap.val();
   if(!data || !data.name){
     showScreen('onboarding-screen');
   } else {
@@ -380,25 +419,34 @@ auth.onAuthStateChanged(async function(user){
 });
 
 function cleanupListeners(){
-  if(unsubUserChats){ unsubUserChats.off(); unsubUserChats = null; }
-  if(unsubChatMeta){ unsubChatMeta.off(); unsubChatMeta = null; }
-  if(unsubMessages){ unsubMessages.off(); unsubMessages = null; }
-  if(unsubChatUser){ unsubChatUser.off(); unsubChatUser = null; }
-  if(unsubSelfDoc){ unsubSelfDoc.off(); unsubSelfDoc = null; }
+  try {
+    if(unsubUserChats && unsubUserChats.off) unsubUserChats.off();
+    if(unsubMessages && unsubMessages.off) unsubMessages.off();
+    if(unsubChatUser && unsubChatUser.off) unsubChatUser.off();
+    if(unsubSelfDoc && unsubSelfDoc.off) unsubSelfDoc.off();
+  } catch(e){}
+  unsubUserChats = null;
+  unsubMessages = null;
+  unsubChatUser = null;
+  unsubSelfDoc = null;
   Object.keys(chatUnsubs).forEach(function(k){
-    const c = chatUnsubs[k];
-    if(c && c.off) c.off();
-    if(c && c.unreadOff) c.unreadOff();
+    var c = chatUnsubs[k];
+    try {
+      if(c && c.off) c.off();
+      if(c && c.unreadOff) c.unreadOff();
+    } catch(e){}
     delete chatUnsubs[k];
   });
+  chatsData = {};
+  userChatsMap = {};
 }
 
 function startSelfListener(){
   if(unsubSelfDoc) unsubSelfDoc.off();
-  const ref = db.ref('users/' + currentUser.uid);
+  var ref = db.ref('users/' + currentUser.uid);
   ref.update({ online: true, lastSeen: TS }).catch(function(){});
   unsubSelfDoc = ref.on('value', function(s){
-    const v = s.val();
+    var v = s.val();
     if(v){
       currentUserData = Object.assign({uid: currentUser.uid}, v);
       userCache[currentUser.uid] = currentUserData;
@@ -419,36 +467,40 @@ function startSelfListener(){
 
 $('onb-avatar').onclick = function(){ $('onb-avatar-input').click(); };
 $('onb-avatar-input').onchange = function(e){
-  const f = e.target.files[0];
+  var f = e.target.files[0];
   if(!f) return;
   onbAvatarFile = f;
-  const url = URL.createObjectURL(f);
-  const p = $('onb-avatar-preview');
+  var url = URL.createObjectURL(f);
+  var p = $('onb-avatar-preview');
   p.style.backgroundImage = 'url(\'' + url + '\')';
   p.innerHTML = '';
 };
 
 $('onb-continue').onclick = async function(){
-  const name = $('onb-name').value.trim();
-  const username = $('onb-username').value.trim().replace(/^@/, '').toLowerCase();
+  var name = $('onb-name').value.trim();
+  var username = $('onb-username').value.trim().replace(/^@/, '').toLowerCase();
   if(!name){ toast('Введите имя'); return; }
   if(!username || username.length < 3){ toast('Username минимум 3 символа'); return; }
   if(!/^[a-z0-9_]+$/.test(username)){ toast('Только латиница, цифры и _'); return; }
   this.disabled = true;
   try {
-    const taken = await db.ref('usernames/' + username).once('value');
+    var taken = await db.ref('usernames/' + username).once('value');
     if(taken.exists() && taken.val() !== currentUser.uid){
       toast('Username занят');
       this.disabled = false;
       return;
     }
-    let photoURL = '';
+    var photoURL = '';
     if(onbAvatarFile){
-      const ref = storage.ref('avatars/' + currentUser.uid + '_' + Date.now());
-      await ref.put(onbAvatarFile);
-      photoURL = await ref.getDownloadURL();
+      try {
+        var ref = storage.ref('avatars/' + currentUser.uid + '_' + Date.now());
+        await ref.put(onbAvatarFile);
+        photoURL = await ref.getDownloadURL();
+      } catch(e){
+        toast('Аватар не загружен');
+      }
     }
-    const updates = {};
+    var updates = {};
     updates['users/' + currentUser.uid] = {
       name: name,
       username: username,
@@ -482,24 +534,26 @@ function startUserChatsListener(){
 function attachChatListeners(){
   Object.keys(chatUnsubs).forEach(function(id){
     if(!userChatsMap[id]){
-      const c = chatUnsubs[id];
-      if(c && c.off) c.off();
-      if(c && c.unreadOff) c.unreadOff();
+      var c = chatUnsubs[id];
+      try {
+        if(c && c.off) c.off();
+        if(c && c.unreadOff) c.unreadOff();
+      } catch(e){}
       delete chatUnsubs[id];
       delete chatsData[id];
     }
   });
   Object.keys(userChatsMap).forEach(function(id){
     if(chatUnsubs[id]) return;
-    const obj = {};
-    const metaRef = db.ref('chats/' + id);
-    obj.off = function(){ metaRef.off('value', obj.cb); };
+    var obj = {};
+    var metaRef = db.ref('chats/' + id);
     obj.cb = function(s){
       chatsData[id] = s.val() || {};
       renderChats();
     };
     metaRef.on('value', obj.cb);
-    const unreadRef = db.ref('chats/' + id + '/unread/' + currentUser.uid);
+    obj.off = function(){ metaRef.off('value', obj.cb); };
+    var unreadRef = db.ref('chats/' + id + '/unread/' + currentUser.uid);
     obj.unreadCb = function(){ renderChats(); };
     unreadRef.on('value', obj.unreadCb);
     obj.unreadOff = function(){ unreadRef.off('value', obj.unreadCb); };
@@ -510,7 +564,7 @@ function attachChatListeners(){
 async function fetchUser(uid){
   if(userCache[uid]) return userCache[uid];
   try {
-    const s = await db.ref('users/' + uid).once('value');
+    var s = await db.ref('users/' + uid).once('value');
     if(s.exists()){
       userCache[uid] = Object.assign({uid: uid}, s.val());
       return userCache[uid];
@@ -520,37 +574,37 @@ async function fetchUser(uid){
 }
 
 async function renderChats(){
-  const list = $('chats-list');
+  var list = $('chats-list');
   if(!list) return;
-  const ids = Object.keys(chatsData);
+  var ids = Object.keys(chatsData);
   if(!ids.length){
     list.innerHTML = '<div class="empty">Нет чатов. Начните новую переписку.</div>';
     return;
   }
-  const arr = [];
+  var arr = [];
   ids.forEach(function(id){
-    const c = chatsData[id];
+    var c = chatsData[id];
     if(!c || !c.members) return;
-    const otherId = Object.keys(c.members).find(function(m){ return m !== currentUser.uid; });
+    var otherId = Object.keys(c.members).find(function(m){ return m !== currentUser.uid; });
     if(!otherId) return;
     arr.push({id: id, data: c, otherId: otherId});
   });
   await Promise.all(arr.map(function(x){ return fetchUser(x.otherId); }));
   arr.sort(function(a,b){
-    const ta = a.data.lastMessageTime || 0;
-    const tb = b.data.lastMessageTime || 0;
+    var ta = a.data.lastMessageTime || 0;
+    var tb = b.data.lastMessageTime || 0;
     return tb - ta;
   });
-  const q = searchQuery.toLowerCase();
-  let html = '';
+  var q = searchQuery.toLowerCase();
+  var html = '';
   arr.forEach(function(x){
-    const u = userCache[x.otherId] || {name:'Пользователь'};
-    const unread = (x.data.unread && x.data.unread[currentUser.uid]) || 0;
-    const time = formatTime(x.data.lastMessageTime);
-    const last = x.data.lastMessage || 'Нет сообщений';
-    const prefix = x.data.lastSender === currentUser.uid ? 'Вы: ' : '';
+    var u = userCache[x.otherId] || {name:'Пользователь'};
+    var unread = (x.data.unread && x.data.unread[currentUser.uid]) || 0;
+    var time = formatTime(x.data.lastMessageTime);
+    var last = x.data.lastMessage || 'Нет сообщений';
+    var prefix = x.data.lastSender === currentUser.uid ? 'Вы: ' : '';
     if(q){
-      const hay = ((u.name||'') + ' ' + (u.username||'') + ' ' + last).toLowerCase();
+      var hay = ((u.name||'') + ' ' + (u.username||'') + ' ' + last).toLowerCase();
       if(hay.indexOf(q) === -1) return;
     }
     html += '<div class="chat-item" data-chat="' + x.id + '" data-user="' + x.otherId + '">' +
@@ -576,10 +630,10 @@ async function renderChats(){
 
 async function openChat(chatId, otherUid){
   currentChatId = chatId;
-  const u = await fetchUser(otherUid);
+  var u = await fetchUser(otherUid);
   currentChatUser = Object.assign({uid: otherUid}, u);
   $('chat-name').textContent = currentChatUser.name || 'Пользователь';
-  const av = $('chat-avatar');
+  var av = $('chat-avatar');
   av.style.backgroundImage = currentChatUser.photoURL ? 'url(\'' + currentChatUser.photoURL + '\')' : '';
   av.textContent = currentChatUser.photoURL ? '' : initials(currentChatUser.name);
   updateChatStatus();
@@ -587,11 +641,11 @@ async function openChat(chatId, otherUid){
   showScreen('chat-screen');
   startMessagesListener();
   startChatUserListener(otherUid);
-  setTimeout(function(){ const i = $('msg-input'); if(i) i.focus(); }, 300);
+  setTimeout(function(){ var i = $('msg-input'); if(i) i.focus(); }, 300);
 }
 
 function updateChatStatus(){
-  const el = $('chat-status');
+  var el = $('chat-status');
   if(!el || !currentChatUser){ if(el) el.textContent = ''; return; }
   if(currentChatUser.typing && currentChatUser.typing === currentChatId){
     el.textContent = 'печатает...';
@@ -610,7 +664,7 @@ function updateChatStatus(){
 function startChatUserListener(uid){
   if(unsubChatUser) unsubChatUser.off();
   unsubChatUser = db.ref('users/' + uid).on('value', function(s){
-    const v = s.val();
+    var v = s.val();
     if(v){
       currentChatUser = Object.assign({uid: uid}, v);
       userCache[uid] = currentChatUser;
@@ -624,7 +678,7 @@ function startMessagesListener(){
   unsubMessages = db.ref('chats/' + currentChatId + '/messages')
     .orderByChild('timestamp').limitToLast(300)
     .on('value', function(snap){
-      const msgs = [];
+      var msgs = [];
       snap.forEach(function(child){
         msgs.push(Object.assign({id: child.key}, child.val()));
       });
@@ -634,10 +688,10 @@ function startMessagesListener(){
 }
 
 function formatDateLabel(d){
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const diff = Math.round((today - dd) / 86400000);
+  var now = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  var diff = Math.round((today - dd) / 86400000);
   if(diff === 0) return 'Сегодня';
   if(diff === 1) return 'Вчера';
   return d.getDate() + ' ' + ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'][d.getMonth()];
@@ -650,21 +704,21 @@ function checkDouble(){
 }
 
 function renderMessages(msgs){
-  const box = $('messages');
+  var box = $('messages');
   if(!box) return;
-  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
-  let html = '';
-  let lastDate = '';
+  var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+  var html = '';
+  var lastDate = '';
   msgs.forEach(function(m){
-    const d = new Date(m.timestamp || Date.now());
-    const key = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+    var d = new Date(m.timestamp || Date.now());
+    var key = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
     if(key !== lastDate){
       lastDate = key;
       html += '<div class="msg-date">' + formatDateLabel(d) + '</div>';
     }
-    const isOut = m.senderId === currentUser.uid;
-    const time = formatFullTime(m.timestamp);
-    let check = '';
+    var isOut = m.senderId === currentUser.uid;
+    var time = formatFullTime(m.timestamp);
+    var check = '';
     if(isOut) check = m.read ? checkDouble() : checkSingle();
     html += '<div class="msg ' + (isOut?'out':'in') + '">' +
       '<span class="msg-text">' + esc(m.text) + '</span>' +
@@ -678,12 +732,12 @@ function renderMessages(msgs){
 async function markAsRead(){
   if(!currentChatId || !currentUser) return;
   try {
-    const snap = await db.ref('chats/' + currentChatId + '/messages')
+    var snap = await db.ref('chats/' + currentChatId + '/messages')
       .orderByChild('read').equalTo(false).limitToFirst(200).once('value');
     if(!snap.exists()) return;
-    const updates = {};
+    var updates = {};
     snap.forEach(function(child){
-      const v = child.val();
+      var v = child.val();
       if(v.senderId !== currentUser.uid){
         updates['chats/' + currentChatId + '/messages/' + child.key + '/read'] = true;
       }
@@ -693,26 +747,25 @@ async function markAsRead(){
 }
 
 async function sendMessage(){
-  const inp = $('msg-input');
-  const text = inp.value.trim();
+  var inp = $('msg-input');
+  var text = inp.value.trim();
   if(!text || !currentChatId || !currentChatUser) return;
   inp.value = '';
   try {
-    const msgRef = db.ref('chats/' + currentChatId + '/messages').push();
-    const msg = {
+    var msgRef = db.ref('chats/' + currentChatId + '/messages').push();
+    var msg = {
       senderId: currentUser.uid,
       text: text,
       timestamp: TS,
       read: false
     };
-    const updates = {};
+    var updates = {};
     updates['chats/' + currentChatId + '/messages/' + msgRef.key] = msg;
     updates['chats/' + currentChatId + '/lastMessage'] = text;
     updates['chats/' + currentChatId + '/lastMessageTime'] = TS;
     updates['chats/' + currentChatId + '/lastSender'] = currentUser.uid;
-    const unreadRef = db.ref('chats/' + currentChatId + '/unread');
-    const u = await unreadRef.once('value');
-    const unread = u.val() || {};
+    var u = await db.ref('chats/' + currentChatId + '/unread').once('value');
+    var unread = u.val() || {};
     unread[currentChatUser.uid] = (unread[currentChatUser.uid] || 0) + 1;
     unread[currentUser.uid] = 0;
     updates['chats/' + currentChatId + '/unread'] = unread;
@@ -729,7 +782,7 @@ $('msg-input').addEventListener('keydown', function(e){
 });
 $('msg-input').addEventListener('input', function(){
   if(!currentUser) return;
-  const ref = db.ref('users/' + currentUser.uid);
+  var ref = db.ref('users/' + currentUser.uid);
   ref.update({ typing: currentChatId }).catch(function(){});
   clearTimeout(typingTimer);
   typingTimer = setTimeout(function(){
@@ -755,23 +808,23 @@ $('fab-new').onclick = function(){
 };
 $('newchat-back').onclick = function(){ showScreen('main-screen'); };
 
-let newChatTimer = null;
+var newChatTimer = null;
 $('newchat-search').addEventListener('input', function(){
-  const q = this.value.trim().replace(/^@/,'').toLowerCase();
+  var q = this.value.trim().replace(/^@/,'').toLowerCase();
   clearTimeout(newChatTimer);
-  const list = $('newchat-list');
+  var list = $('newchat-list');
   if(q.length < 1){
     list.innerHTML = '<div class="empty">Введите @username</div>';
     return;
   }
   newChatTimer = setTimeout(async function(){
     try {
-      const snap = await db.ref('usernames').orderByKey()
+      var snap = await db.ref('usernames').orderByKey()
         .startAt(q).endAt(q + '\uf8ff').limitToFirst(30).once('value');
-      const uids = [];
+      var uids = [];
       snap.forEach(function(child){ uids.push(child.val()); });
-      const users = await Promise.all(uids.filter(function(u){ return u !== currentUser.uid; }).map(fetchUser));
-      let html = '';
+      var users = await Promise.all(uids.filter(function(u){ return u !== currentUser.uid; }).map(fetchUser));
+      var html = '';
       users.forEach(function(u){
         if(!u || !u.uid) return;
         html += '<div class="chat-item" data-uid="' + u.uid + '">' +
@@ -795,18 +848,18 @@ $('newchat-search').addEventListener('input', function(){
 
 async function startChatWith(uid){
   if(!uid || uid === currentUser.uid) return;
-  const chatId = [currentUser.uid, uid].sort().join('_');
+  var chatId = [currentUser.uid, uid].sort().join('_');
   try {
-    const ref = db.ref('chats/' + chatId);
-    const s = await ref.once('value');
+    var ref = db.ref('chats/' + chatId);
+    var s = await ref.once('value');
     if(!s.exists()){
-      const members = {};
+      var members = {};
       members[currentUser.uid] = true;
       members[uid] = true;
-      const unread = {};
+      var unread = {};
       unread[currentUser.uid] = 0;
       unread[uid] = 0;
-      const updates = {};
+      var updates = {};
       updates['chats/' + chatId] = {
         members: members,
         lastMessage: '',
@@ -828,7 +881,7 @@ function updateSettingsUI(){
   if(!currentUserData) return;
   $('settings-name').textContent = currentUserData.name || '';
   $('settings-username').textContent = currentUserData.username ? '@' + currentUserData.username : '';
-  const av = $('settings-avatar');
+  var av = $('settings-avatar');
   av.style.backgroundImage = currentUserData.photoURL ? 'url(\'' + currentUserData.photoURL + '\')' : '';
   av.textContent = currentUserData.photoURL ? '' : initials(currentUserData.name);
 }
@@ -843,7 +896,7 @@ $('btn-logout').onclick = async function(){
 
 document.querySelectorAll('.nav-item').forEach(function(el){
   el.onclick = function(){
-    const tab = el.dataset.tab;
+    var tab = el.dataset.tab;
     document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
     el.classList.add('active');
     document.querySelectorAll('.tab-content').forEach(function(t){ t.classList.remove('active'); });
@@ -854,19 +907,19 @@ document.querySelectorAll('.nav-item').forEach(function(el){
 });
 
 async function loadContacts(){
-  const list = $('contacts-list');
+  var list = $('contacts-list');
   list.innerHTML = '<div class="empty">Загрузка...</div>';
   try {
-    const snap = await db.ref('users').limitToFirst(200).once('value');
-    const arr = [];
+    var snap = await db.ref('users').limitToFirst(200).once('value');
+    var arr = [];
     snap.forEach(function(child){
       if(child.key === currentUser.uid) return;
-      const u = Object.assign({uid: child.key}, child.val());
+      var u = Object.assign({uid: child.key}, child.val());
       userCache[child.key] = u;
       arr.push(u);
     });
     arr.sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
-    let html = '';
+    var html = '';
     arr.forEach(function(u){
       html += '<div class="chat-item" data-uid="' + u.uid + '">' +
         avatarHtml(u) +
@@ -887,7 +940,7 @@ async function loadContacts(){
 }
 
 $('search-toggle').onclick = function(){
-  const sb = $('search-bar');
+  var sb = $('search-bar');
   sb.classList.toggle('hidden');
   if(!sb.classList.contains('hidden')) $('chat-search').focus();
   else { searchQuery = ''; $('chat-search').value = ''; renderChats(); }
@@ -898,6 +951,10 @@ $('chat-search').addEventListener('input', function(){
 });
 
 setTheme(localStorage.getItem('tg_theme') === 'dark');
+
+if(!firebaseReady){
+  setTimeout(function(){ toast('Проверьте интернет и настройки WebView'); }, 500);
+}
 </script>
 </body>
 </html>
