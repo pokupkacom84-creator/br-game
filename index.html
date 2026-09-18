@@ -434,7 +434,7 @@ body:not(.dark) .reaction-chip.mine{background:var(--accent-soft);color:var(--ac
 .wallpaper-item span{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:11.5px;font-weight:700;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.6)}
 .theme-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-3);padding:var(--s-2) 0}
 .theme-item{cursor:pointer;text-align:center;}
-.theme-preview{width:100%;aspect-ratio:1;border-radius:var(--r-lg);position:relative;overflow:hidden;border:3px solid transparent;box-shadow:var(--shadow-2);background:var(--bg-2);}
+.theme-preview{width:100%;aspect-ratio:1;border-radius:var(--r-lg);position:relative;overflow:hidden;border:3px solid transparent;box-shadow:var(--shadow-2);background:var(--bg-2);transition:transform .28s var(--ease-spring),border-color .28s var(--ease-out),box-shadow .28s var(--ease-out);}
 .tp-header{position:absolute;top:0;left:0;right:0;height:38%;background:linear-gradient(135deg,var(--preview1),var(--preview2))}
 .tp-dot{position:absolute;top:11%;left:10%;width:14%;height:14%;border-radius:50%;background:rgba(255,255,255,.35);box-shadow:0 0 0 2px rgba(255,255,255,.6)}
 .tp-bubble-in{position:absolute;top:48%;left:12%;width:52%;height:13%;background:rgba(128,128,128,.28);border-radius:8px}
@@ -443,6 +443,7 @@ body:not(.dark) .reaction-chip.mine{background:var(--accent-soft);color:var(--ac
 .theme-item.selected .theme-preview{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft),var(--shadow-3);transform:scale(1.05);}
 .theme-item span{display:block;margin-top:8px;font-size:12px;color:var(--text-2);font-weight:600;}
 .theme-item.selected span{color:var(--accent)}
+.theme-item:active .theme-preview{transform:scale(.94)}
 .pin-lock{position:fixed;inset:0;background:var(--bg);z-index:99999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:var(--s-5);gap:var(--s-5)}
 .pin-lock.show{display:flex}
 .pin-dots{display:flex;gap:16px;margin:var(--s-5) 0}
@@ -460,6 +461,13 @@ body:not(.dark) .reaction-chip.mine{background:var(--accent-soft);color:var(--ac
 .skeleton .sk-line{height:13px;border-radius:7px;background:linear-gradient(90deg,var(--bg-2) 25%,var(--bg-3) 50%,var(--bg-2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
 .skeleton .sk-line.short{width:45%}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ===== THEME SHOCKWAVE ===== */
+.theme-wave-layer{position:fixed;inset:0;z-index:100000;pointer-events:none;overflow:hidden;contain:strict;}
+.theme-wave-glow,.theme-wave-fill{position:absolute;inset:0;will-change:clip-path,opacity;}
+.theme-wave-glow{opacity:.9;}
+.theme-wave-fill{opacity:1;}
+
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}}
 </style>
 </head>
@@ -962,6 +970,104 @@ function applyTheme(themeId){
   var grid=$('theme-grid');
   if(grid&&grid.children.length){grid.querySelectorAll('.theme-item').forEach(function(el){el.classList.toggle('selected',el.dataset.id===t.id);});}
 }
+
+/* ============================================================
+   THEME SHOCKWAVE — взрывная волна из центра экрана
+   ============================================================ */
+function playThemeWave(opts){
+  opts=opts||{};
+  if(!opts.fill){ if(opts.apply)opts.apply(); return; }
+
+  // Уважение к настройке "уменьшить движение"
+  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    if(opts.apply)opts.apply();
+    return;
+  }
+
+  var w=window.innerWidth||document.documentElement.clientWidth;
+  var h=window.innerHeight||document.documentElement.clientHeight;
+  var cx=(opts.origin&&typeof opts.origin.x==='number')?opts.origin.x:w/2;
+  var cy=(opts.origin&&typeof opts.origin.y==='number')?opts.origin.y:h/2;
+  // радиус до самого дальнего угла + запас
+  var R=Math.hypot(Math.max(cx,w-cx),Math.max(cy,h-cy))+60;
+  var at=' at '+cx.toFixed(1)+'px '+cy.toFixed(1)+'px';
+
+  var layer=document.createElement('div');
+  layer.className='theme-wave-layer';
+
+  var glow=document.createElement('div');
+  glow.className='theme-wave-glow';
+  glow.style.background=opts.glow||opts.fill;
+
+  var fill=document.createElement('div');
+  fill.className='theme-wave-fill';
+  fill.style.background=opts.fill;
+
+  layer.appendChild(glow);
+  layer.appendChild(fill);
+  document.body.appendChild(layer);
+
+  var D_FILL=540;   // длительность заливки
+  var D_GLOW=820;   // свечение идёт впереди и дольше
+
+  // стартовое состояние
+  fill.style.transition='none';
+  glow.style.transition='none';
+  fill.style.clipPath='circle(0px'+at+')';
+  glow.style.clipPath='circle(0px'+at+')';
+  glow.style.opacity='0.95';
+
+  // принудительный reflow, чтобы transition сработал
+  void layer.offsetWidth;
+
+  fill.style.transition='clip-path '+D_FILL+'ms cubic-bezier(.20,.72,.26,1)';
+  glow.style.transition='clip-path '+D_GLOW+'ms cubic-bezier(.20,.72,.26,1),opacity '+D_GLOW+'ms cubic-bezier(.4,0,.7,1)';
+
+  requestAnimationFrame(function(){
+    fill.style.clipPath='circle('+R.toFixed(1)+'px'+at+')';
+    glow.style.clipPath='circle('+(R*1.10).toFixed(1)+'px'+at+')';
+    glow.style.opacity='0';
+  });
+
+  // Пока экран полностью закрыт — применяем тему
+  setTimeout(function(){
+    try{ if(opts.apply)opts.apply(); }catch(e){ console.warn('wave apply',e); }
+    // затем красиво растворяем волну
+    setTimeout(function(){
+      fill.style.transition='opacity 320ms cubic-bezier(.4,0,.2,1)';
+      fill.style.opacity='0';
+      setTimeout(function(){
+        if(layer.parentNode)layer.parentNode.removeChild(layer);
+      },360);
+    },50);
+  },D_FILL);
+
+  // страховка от «зависшего» оверлея
+  setTimeout(function(){ if(layer.parentNode)layer.parentNode.removeChild(layer); },2600);
+}
+
+// Собирает цвета для волны при смене цветовой темы
+function buildThemeWaveConfig(theme){
+  return {
+    fill:'radial-gradient(circle at 50% 50%, '+theme.c2+' 0%, '+theme.c1+' 68%, '+theme.c1+' 100%)',
+    glow:theme.c2
+  };
+}
+// Собирает цвета для волны при смене светлая/тёмная
+function buildModeWaveConfig(toDark){
+  var accent=THEMES.find(function(x){return x.id===currentTheme;})||THEMES[0];
+  if(toDark){
+    return {
+      fill:'radial-gradient(circle at 50% 50%, #2a3846 0%, #17212b 65%, #17212b 100%)',
+      glow:hexToRgba(accent.c1,0.85)
+    };
+  }
+  return {
+    fill:'radial-gradient(circle at 50% 50%, #ffffff 0%, #eef1f5 65%, #e9edf2 100%)',
+    glow:hexToRgba(accent.c1,0.7)
+  };
+}
+/* ============================================================ */
 
 function applyWallpaper(){var box=$('messages');if(!box)return;var w=WALLPAPERS.find(function(x){return x.id===wallpaperId;})||WALLPAPERS[0];if(w.css){box.style.background=w.css;box.style.backgroundSize='cover';}else{box.style.background='';box.style.backgroundSize='';}}
 function showModal(html,setup){var bd=$('modal-backdrop'),m=$('modal');m.innerHTML=html;bd.classList.add('show');var close=function(){bd.classList.remove('show');m.innerHTML='';};if(setup)setup(m,close);}
@@ -2061,7 +2167,22 @@ function updateTogglesUI(){
   var wv=$('wallpaper-value');if(wv){var w=WALLPAPERS.find(function(x){return x.id===wallpaperId;});wv.textContent=w?w.name:'Стандарт';}
   var tv=$('theme-color-value');if(tv){var t=THEMES.find(function(x){return x.id===currentTheme;});tv.textContent=t?t.name:'Violet';}
 }
-$('btn-theme').onclick=function(){setTheme(!document.body.classList.contains('dark'));updateTogglesUI();};
+
+/* ---- Переключатель светлая/тёмная — с волной ---- */
+$('btn-theme').onclick=function(){
+  var willBeDark=!document.body.classList.contains('dark');
+  var cfg=buildModeWaveConfig(willBeDark);
+  playThemeWave({
+    fill:cfg.fill,
+    glow:cfg.glow,
+    apply:function(){
+      setTheme(willBeDark);
+      updateTogglesUI();
+    }
+  });
+};
+
+/* ---- Выбор цветовой темы — с волной ---- */
 $('btn-theme-color').onclick=function(){
   var sheet=$('theme-sheet');sheet.classList.add('show');
   var g=$('theme-grid');
@@ -2070,12 +2191,24 @@ $('btn-theme-color').onclick=function(){
   }).join('');
   g.querySelectorAll('.theme-item').forEach(function(el){
     el.onclick=function(){
-      applyTheme(el.dataset.id);
+      var t=THEMES.find(function(x){return x.id===el.dataset.id;});
+      if(!t)return;
+      // визуальный отклик выбора
       g.querySelectorAll('.theme-item').forEach(function(x){x.classList.remove('selected');});
       el.classList.add('selected');
-      updateTogglesUI();
-      if(navigator.vibrate)try{navigator.vibrate(10);}catch(e){}
-      setTimeout(function(){sheet.classList.remove('show');},260);
+      if(navigator.vibrate)try{navigator.vibrate(12);}catch(e){}
+      // сворачиваем меню тем
+      sheet.classList.remove('show');
+      // запускаем взрывную волну из центра экрана
+      var cfg=buildThemeWaveConfig(t);
+      playThemeWave({
+        fill:cfg.fill,
+        glow:cfg.glow,
+        apply:function(){
+          applyTheme(t.id);
+          updateTogglesUI();
+        }
+      });
     };
   });
 };
