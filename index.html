@@ -1406,6 +1406,32 @@ function showGiftAnimation(g){
 
 /* ==== ПЛАТЕЖИ: основная логика ==== */
 
+/* Сжимает изображение до maxSize по большей стороне (чтобы влезло в RTDB) */
+async function compressImage(file, maxSize, quality){
+  maxSize = maxSize || 900;
+  quality = quality || 0.72;
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var w = img.width, h = img.height;
+        if(w > h && w > maxSize){ h = Math.round(h * maxSize / w); w = maxSize; }
+        else if(h > maxSize){ w = Math.round(w * maxSize / h); h = maxSize; }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = function(){ reject(new Error('Не удалось прочитать изображение')); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function(){ reject(new Error('Ошибка файла')); };
+    reader.readAsDataURL(file);
+  });
+}
+
 async function loadPaymentConfig(){
   try{
     const s = await db.ref('settings/payment').once('value');
@@ -1475,6 +1501,9 @@ async function openPaymentSheet(pack){
     return;
   }
 
+  const alreadyPaid = existing.status === 'awaiting';
+  const existingProof = existing.proofImage || '';
+
   body.innerHTML = `
     <div class="profile-sheet-title">Оплата звёзд</div>
     <div style="text-align:center;padding:10px 0">
@@ -1494,11 +1523,11 @@ async function openPaymentSheet(pack){
       ${paymentConfig.phoneSBP ? `
       <div class="info-row" data-copyable="${escAttr(paymentConfig.phoneSBP)}" style="cursor:pointer">
         <div class="info-value">${esc(paymentConfig.phoneSBP)}</div>
-        <div class="info-label">Счет ЮMoney · нажми, чтобы скопировать</div>
+        <div class="info-label">СБП по номеру · нажми, чтобы скопировать</div>
       </div>` : ''}
       <div class="info-row">
         <div class="info-value">${esc(paymentConfig.recipientName)}</div>
-        <div class="info-label"></div>
+        <div class="info-label">Получатель</div>
       </div>
     </div>
 
@@ -1512,61 +1541,118 @@ async function openPaymentSheet(pack){
       ${esc(paymentConfig.instructions)}
     </div>
 
-    ${existing.status === 'awaiting'
-      ? `<div class="payment-awaiting">⏳ Заявка на проверке</div>`
-      : `<button class="sheet-btn ripple" id="pay-i-paid">✅ Я оплатил</button>`
-    }
+    ${alreadyPaid ? `
+      <div class="payment-awaiting">⏳ Заявка на проверке</div>
+      ${existingProof ? `
+        <div class="profile-sheet-subtitle" style="margin-top:8px">Ваш скриншот</div>
+        <img src="${existingProof}" style="width:100%;border-radius:14px;margin-bottom:12px" alt="proof">
+      ` : ''}
+    ` : `
+      <div class="profile-sheet-subtitle">📸 Подтверждение оплаты</div>
+      <div id="proof-drop-zone" style="border:2px dashed var(--border-2);border-radius:16px;padding:20px 14px;text-align:center;cursor:pointer;background:var(--bg-2);margin-bottom:12px;transition:border-color .2s,background .2s">
+        <div id="proof-placeholder">
+          <div style="font-size:36px;line-height:1;margin-bottom:6px">📷</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text)">Прикрепите скриншот перевода</div>
+          <div style="font-size:12px;color:var(--text-2);margin-top:4px">JPG или PNG · нажмите, чтобы выбрать</div>
+        </div>
+        <img id="proof-preview" style="display:none;width:100%;border-radius:12px;max-height:280px;object-fit:contain" alt="preview">
+        <button type="button" id="proof-remove" style="display:none;margin-top:10px;padding:6px 14px;border-radius:20px;background:var(--danger-soft);color:var(--danger);font-size:13px;font-weight:700">Удалить фото</button>
+      </div>
+      <input type="file" id="proof-file" accept="image/*" style="display:none">
+      <button class="sheet-btn ripple" id="pay-i-paid" disabled style="opacity:.5">✅ Я оплатил</button>
+      <div style="font-size:11.5px;color:var(--text-2);text-align:center;margin-top:6px">
+        Кнопка активируется после загрузки скриншота
+      </div>
+    `}
 
-    <button class="sheet-btn secondary ripple" id="pay-cancel">Закрыть</button>
+    <button class="sheet-btn secondary ripple" id="pay-cancel" style="margin-top:8px">Закрыть</button>
   `;
 
+  // Копирование
   body.querySelectorAll('[data-copyable]').forEach(el=>{
     el.onclick = ()=>copyText(el.dataset.copyable);
   });
 
-  const paidBtn = document.getElementById('pay-i-paid');
-  if(paidBtn){
-    paidBtn.onclick = async ()=>{
-      paidBtn.disabled = true;
-      try{
-        await markPaymentAsPaid(existing.requestId);
-        toast('Заявка отправлена на проверку');
-        sheet.classList.remove('show');
-      }catch(e){
+  if(!alreadyPaid){
+    let proofDataUrl = '';
+    const fileInput = document.getElementById('proof-file');
+    const dropZone  = document.getElementById('proof-drop-zone');
+    const preview   = document.getElementById('proof-preview');
+    const placeholder = document.getElementById('proof-placeholder');
+    const removeBtn = document.getElementById('proof-remove');
+    const paidBtn   = document.getElementById('pay-i-paid');
+
+    const updatePaidBtn = ()=>{
+      if(proofDataUrl){
         paidBtn.disabled = false;
-        toast('Ошибка');
+        paidBtn.style.opacity = '1';
+      } else {
+        paidBtn.disabled = true;
+        paidBtn.style.opacity = '.5';
+      }
+    };
+
+    dropZone.onclick = (e)=>{
+      if(e.target === removeBtn) return;
+      if(proofDataUrl) return;
+      fileInput.click();
+    };
+
+    fileInput.onchange = async (e)=>{
+      const f = e.target.files && e.target.files[0];
+      if(!f) return;
+      if(!/^image\//.test(f.type)){ toast('Выберите изображение'); return; }
+      if(f.size > 8*1024*1024){ toast('Файл больше 8 МБ'); return; }
+      try{
+        dropZone.style.borderColor = 'var(--accent)';
+        toast('Сжимаем…');
+        proofDataUrl = await compressImage(f, 900, 0.72);
+        preview.src = proofDataUrl;
+        preview.style.display = 'block';
+        placeholder.style.display = 'none';
+        removeBtn.style.display = 'inline-block';
+        dropZone.style.borderColor = 'var(--success)';
+        updatePaidBtn();
+      }catch(err){
+        toast('Ошибка: ' + err.message);
+        dropZone.style.borderColor = 'var(--border-2)';
+      }
+    };
+
+    removeBtn.onclick = (e)=>{
+      e.stopPropagation();
+      proofDataUrl = '';
+      fileInput.value = '';
+      preview.style.display = 'none';
+      preview.src = '';
+      placeholder.style.display = 'block';
+      removeBtn.style.display = 'none';
+      dropZone.style.borderColor = 'var(--border-2)';
+      updatePaidBtn();
+    };
+
+    paidBtn.onclick = async ()=>{
+      if(!proofDataUrl){ toast('Прикрепите скриншот'); return; }
+      paidBtn.disabled = true;
+      paidBtn.textContent = 'Отправка…';
+      try{
+        await db.ref('payments/' + currentUser.uid + '/' + existing.requestId).update({
+          status: 'awaiting',
+          proofImage: proofDataUrl,
+          paidAt: TS
+        });
+        toast('✅ Заявка отправлена на проверку');
+        vibrate('send');
+        sheet.classList.remove('show');
+      }catch(err){
+        paidBtn.disabled = false;
+        paidBtn.textContent = '✅ Я оплатил';
+        toast('Ошибка: ' + (err.message || ''));
       }
     };
   }
-  document.getElementById('pay-cancel').onclick = ()=>sheet.classList.remove('show');
-}
-document.getElementById('payment-sheet').onclick = function(e){
-  if(e.target === this) this.classList.remove('show');
-};
 
-function startPaymentListener(){
-  if(!currentUser) return;
-  db.ref('payments/' + currentUser.uid).on('value', async function(snap){
-    const all = snap.val() || {};
-    for(const rid of Object.keys(all)){
-      const r = all[rid];
-      if(r.status === 'confirmed' && !r.credited){
-        try{
-          const res = await db.ref('payments/' + currentUser.uid + '/' + rid + '/credited')
-                                .transaction(cur => cur === true ? undefined : true);
-          if(res.committed){
-            await db.ref('users/' + currentUser.uid + '/stars').transaction(cur => (cur||0) + r.stars);
-            playSound('coin'); vibrate('send');
-            toast('✅ Зачислено ' + r.stars + ' ⭐');
-          }
-        }catch(e){}
-      }
-      if(r.status === 'rejected' && !r.rejectedSeen){
-        db.ref('payments/' + currentUser.uid + '/' + rid + '/rejectedSeen').set(true).catch(()=>{});
-        toast('❌ Заявка отклонена. ' + (r.reason||''));
-      }
-    }
-  });
+  document.getElementById('pay-cancel').onclick = ()=>sheet.classList.remove('show');
 }
 
 async function loadAllPendingPayments(){
@@ -1624,6 +1710,7 @@ async function refreshAdminList(){
   list.forEach(r=>{
     byId[r.requestId] = r;
     const isAwaiting = r.status === 'awaiting';
+    const hasProof   = !!r.proofImage;
     html += `
       <div class="session-item" style="flex-direction:column;align-items:stretch">
         <div style="display:flex;align-items:flex-start;gap:10px">
@@ -1632,12 +1719,27 @@ async function refreshAdminList(){
               ${esc(r.userName||'Без имени')}
               ${r.username ? '<span style="color:var(--accent);font-size:12px">@'+esc(r.username)+'</span>' : ''}
               ${isAwaiting ? ' 🟡' : ' ⚪'}
+              ${hasProof ? ' 📸' : ' ⚠️ без фото'}
             </div>
             <div class="session-meta">${r.stars} ⭐ за ${r.rub} ₽</div>
             <div class="session-meta">Код: <b>${esc(r.code)}</b></div>
             <div class="session-meta">${new Date(r.createdAt).toLocaleString('ru')}</div>
           </div>
         </div>
+
+        ${hasProof ? `
+          <div style="margin-top:10px">
+            <img src="${r.proofImage}" data-zoom="${escAttr(r.requestId)}"
+                 style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;cursor:zoom-in;border:1px solid var(--border)"
+                 alt="proof">
+            <div style="font-size:11.5px;color:var(--text-2);text-align:center;margin-top:4px">Нажмите на фото, чтобы увеличить</div>
+          </div>
+        ` : `
+          <div style="margin-top:10px;padding:12px;border-radius:12px;background:var(--danger-soft);color:var(--danger);font-size:13px;text-align:center;font-weight:600">
+            ⚠️ Пользователь не прикрепил скриншот — проверяйте вручную в банке
+          </div>
+        `}
+
         <div style="display:flex;gap:8px;margin-top:10px">
           <button class="sheet-btn ripple" data-confirm="${escAttr(r.requestId)}"
                   style="flex:1;background:var(--success);margin:0">✓ Подтвердить</button>
@@ -1648,6 +1750,20 @@ async function refreshAdminList(){
     `;
   });
   cont.innerHTML = html;
+
+  // Лайтбокс — увеличение фото по тапу
+  cont.querySelectorAll('[data-zoom]').forEach(img=>{
+    img.onclick = ()=>{
+      const rid = img.dataset.zoom;
+      const r = byId[rid];
+      if(!r || !r.proofImage) return;
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;cursor:zoom-out';
+      overlay.innerHTML = '<img src="' + r.proofImage + '" style="max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.6)">';
+      overlay.onclick = ()=>overlay.remove();
+      document.body.appendChild(overlay);
+    };
+  });
 
   cont.querySelectorAll('[data-confirm]').forEach(b=>{
     b.onclick = async ()=>{
