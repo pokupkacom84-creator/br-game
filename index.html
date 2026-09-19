@@ -860,6 +860,15 @@ body.dark .vpn-key-item{background:linear-gradient(135deg,rgba(35,46,60,.65),rgb
 <input class="sheet-input" id="edit-birthday" type="date">
 <button class="sheet-btn ripple" id="edit-save">Сохранить</button>
 <button class="sheet-btn secondary ripple" id="edit-cancel">Отмена</button>
+<!-- Панель оплаты -->
+<div id="payment-sheet" class="profile-sheet">
+  <div class="profile-sheet-body" id="payment-sheet-body"></div>
+</div>
+
+<!-- Админ-панель (видна только тебе) -->
+<div id="admin-sheet" class="profile-sheet">
+  <div class="profile-sheet-body" id="admin-sheet-body"></div>
+</div>
 </div>
 </div>
 
@@ -1141,11 +1150,31 @@ const GIFTS=[
   {id:'ring',emoji:'💍',name:'Кольцо',price:5000,rarity:'legendary'}
 ];
 const STAR_PACKS=[
-  {id:'p1',stars:100,price:'$1.99'},{id:'p2',stars:250,price:'$4.99'},
-  {id:'p3',stars:500,price:'$9.99'},{id:'p4',stars:1000,price:'$19.99'},
-  {id:'p5',stars:2500,price:'$49.99'},{id:'p6',stars:5000,price:'$99.99'},
-  {id:'p7',stars:10000,price:'$199.99'}
+  {id:'p1', stars:100,   rub:99,   price:'99 ₽'},
+  {id:'p2', stars:250,   rub:249,  price:'249 ₽'},
+  {id:'p3', stars:500,   rub:449,  price:'449 ₽'},
+  {id:'p4', stars:1000,  rub:849,  price:'849 ₽'},
+  {id:'p5', stars:2500,  rub:1990, price:'1 990 ₽'},
+  {id:'p6', stars:5000,  rub:3790, price:'3 790 ₽'},
+  {id:'p7', stars:10000, rub:6990, price:'6 990 ₽'}
 ];
+/* ==== НАСТРОЙКИ ПРИЁМА ПЛАТЕЖЕЙ ==== */
+const PAYMENT_CONFIG_KEY = 'settings/payment';
+let paymentConfig = {
+  cardNumber: '2204120144723133',      // ← ВСТАВЬ СВОЮ КАРТУ
+  phoneSBP:   '4100118891507332',          // ← НОМЕР ДЛЯ СБП
+  bankName:   'ЮMoney',
+  instructions: 'Переведите точную сумму и укажите код в комментарии к переводу. После оплаты нажмите «Я оплатил». Подтверждение — до 24 часов.',
+  enabled: true
+};
+
+/* ==== АДМИНЫ (твой Firebase UID) ==== */
+const ADMIN_UIDS = [
+  '7rxpLXFm32c2IhJc5vop8sDEo0T2'  // узнать: консоль → Authentication → Users → UID
+];
+function isAdmin(){
+  return currentUser && ADMIN_UIDS.indexOf(currentUser.uid) !== -1;
+}
 /* === NFT (без эмодзи и животных — Telegram-style арт) === */
 const NFTS=[
   {id:'cosmic', name:'Cosmic Orb',     rarity:'legendary', supply:100,  price:2500},
@@ -1522,7 +1551,7 @@ auth.onAuthStateChanged(async function(user){
     if(!data.stars&&data.stars!==0){myStars=100;db.ref('users/'+user.uid+'/stars').set(100).catch(function(){});toast('🎁 Бонус: 100 звёзд!');}
     if(pinLockEnabled&&pinLockCode){showPinLock();}
     goScreen('main-screen',true);
-    startSelfListener();startUserChatsListener();startSavedMetaListener();
+    startSelfListener();startUserChatsListener();startPaymentListener();loadPaymentConfig();startSavedMetaListener();
     startSessionTracking();updateSettingsUI();updateTogglesUI();applyWallpaper();startCallListener();refreshPushStatus();
     if(CRYPTO_OK&&!e2eKeyPriv){e2eInitUser().catch(function(e){});}
     updateStarsUI(true);renderProfileGifts();renderAvatarGiftBadge();
@@ -2696,6 +2725,315 @@ function openProfileGiftsSheet(){
   })();
 }
 document.getElementById('my-gifts-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
+
+/* ============================================================
+   PAYMENT SYSTEM (P2P + ручное подтверждение)
+   ============================================================ */
+
+async function loadPaymentConfig(){
+  try{
+    const s = await db.ref(PAYMENT_CONFIG_KEY).once('value');
+    if(s.exists()) paymentConfig = Object.assign(paymentConfig, s.val());
+  }catch(e){}
+}
+
+function generatePaymentCode(){
+  const d = new Date();
+  const base = d.getFullYear().toString().slice(-2) +
+               String(d.getMonth()+1).padStart(2,'0') +
+               String(d.getDate()).padStart(2,'0');
+  return 'F' + base + '-' + Math.floor(1000 + Math.random()*9000);
+}
+
+/* Создаёт заявку и возвращает {requestId, code} */
+async function createPaymentRequest(pack){
+  if(!currentUser) return null;
+  const code = generatePaymentCode();
+  const ref = db.ref('payments/' + currentUser.uid).push();
+  await ref.set({
+    requestId: ref.key,
+    userId: currentUser.uid,
+    userName: currentUserData.name || '',
+    username: currentUserData.username || '',
+    packId: pack.id,
+    stars: pack.stars,
+    rub: pack.rub,
+    status: 'pending',     // pending → awaiting → confirmed / rejected
+    code: code,
+    credited: false,
+    createdAt: TS
+  });
+  return { requestId: ref.key, code: code };
+}
+
+async function markPaymentAsPaid(requestId){
+  if(!currentUser) return;
+  await db.ref('payments/' + currentUser.uid + '/' + requestId).update({
+    status: 'awaiting',
+    paidAt: TS
+  });
+}
+
+/* Ищем активную заявку по этому пакету (младше 24ч) */
+async function findActiveRequest(pack){
+  const snap = await db.ref('payments/' + currentUser.uid)
+                       .orderByChild('packId').equalTo(pack.id).once('value');
+  const dayAgo = Date.now() - 24*3600*1000;
+  let found = null;
+  snap.forEach(function(c){
+    const v = c.val();
+    if(v && v.createdAt > dayAgo && (v.status==='pending' || v.status==='awaiting')){
+      found = v;
+    }
+  });
+  return found;
+}
+
+/* ===== UI: панель оплаты ===== */
+async function openPaymentSheet(pack){
+  await loadPaymentConfig();
+  const sheet = document.getElementById('payment-sheet');
+  const body  = document.getElementById('payment-sheet-body');
+  sheet.classList.add('show');
+
+  // Ищем существующую заявку или создаём новую
+  let existing = await findActiveRequest(pack);
+  if(!existing){
+    existing = await createPaymentRequest(pack);
+    existing.status = 'pending';
+  }
+
+  body.innerHTML = `
+    <div class="profile-sheet-title">Оплата звёзд</div>
+    <div style="text-align:center;padding:10px 0">
+      <div style="font-size:56px;line-height:1">⭐</div>
+      <div style="font-size:22px;font-weight:800;margin-top:6px">${pack.stars.toLocaleString('ru')} звёзд</div>
+      <div style="font-size:16px;color:var(--text-2);margin-top:4px">
+        К оплате: <b style="color:var(--text)">${pack.rub} ₽</b>
+      </div>
+    </div>
+
+    <div class="profile-sheet-subtitle">Реквизиты для перевода</div>
+    <div class="profile-info-card" style="margin:0 0 12px">
+      <div class="info-row" data-copyable="${escAttr(paymentConfig.cardNumber)}">
+        <div class="info-value">${esc(paymentConfig.cardNumber)}</div>
+        <div class="info-label">Карта · ${esc(paymentConfig.bankName)} · нажми, чтобы скопировать</div>
+      </div>
+      ${paymentConfig.phoneSBP ? `
+      <div class="info-row" data-copyable="${escAttr(paymentConfig.phoneSBP)}">
+        <div class="info-value">${esc(paymentConfig.phoneSBP)}</div>
+        <div class="info-label">СБП по номеру · нажми, чтобы скопировать</div>
+      </div>` : ''}
+      <div class="info-row">
+        <div class="info-value">${esc(paymentConfig.recipientName)}</div>
+        <div class="info-label">Получатель</div>
+      </div>
+    </div>
+
+    <div class="profile-sheet-subtitle">Код платежа</div>
+    <div style="background:var(--accent-soft);border-radius:14px;padding:14px;text-align:center;margin-bottom:12px"
+         data-copyable="${escAttr(existing.code)}">
+      <div style="font-size:22px;font-weight:900;letter-spacing:3px;color:var(--accent)">${esc(existing.code)}</div>
+      <div style="font-size:12px;color:var(--text-2);margin-top:4px">
+        Укажи код в комментарии к переводу
+      </div>
+    </div>
+
+    <div class="modal-text" style="font-size:13px;text-align:center;margin-bottom:14px">
+      ${esc(paymentConfig.instructions)}
+    </div>
+
+    ${existing.status === 'awaiting'
+      ? `<div style="background:var(--accent-soft);color:var(--accent);padding:14px;border-radius:14px;text-align:center;font-weight:700;margin-bottom:10px">
+           ⏳ Заявка на проверке
+         </div>`
+      : `<button class="sheet-btn ripple" id="pay-i-paid">✅ Я оплатил</button>`
+    }
+
+    <button class="sheet-btn secondary ripple" id="pay-cancel">Закрыть</button>
+  `;
+
+  // Копирование по тапу
+  body.querySelectorAll('[data-copyable]').forEach(el=>{
+    el.style.cursor = 'pointer';
+    el.onclick = ()=>copyText(el.dataset.copyable);
+  });
+
+  const paidBtn = document.getElementById('pay-i-paid');
+  if(paidBtn){
+    paidBtn.onclick = async ()=>{
+      paidBtn.disabled = true;
+      try{
+        await markPaymentAsPaid(existing.requestId);
+        toast('Заявка отправлена на проверку');
+        sheet.classList.remove('show');
+      }catch(e){
+        paidBtn.disabled = false;
+        toast('Ошибка');
+      }
+    };
+  }
+  document.getElementById('pay-cancel').onclick = ()=>sheet.classList.remove('show');
+}
+document.getElementById('payment-sheet').onclick = function(e){
+  if(e.target === this) this.classList.remove('show');
+};
+
+/* ===== Клиентский слушатель подтверждений =====
+   Как только админ подтвердил — зачисляем звёзды атомарно */
+function startPaymentListener(){
+  if(!currentUser) return;
+  db.ref('payments/' + currentUser.uid).on('value', async function(snap){
+    const all = snap.val() || {};
+    for(const rid of Object.keys(all)){
+      const r = all[rid];
+      if(r.status === 'confirmed' && !r.credited){
+        // Защита от двойного зачисления через transaction на флаг credited
+        try{
+          const res = await db.ref('payments/' + currentUser.uid + '/' + rid + '/credited')
+                                .transaction(cur => cur === true ? undefined : true);
+          if(res.committed){
+            await db.ref('users/' + currentUser.uid + '/stars').transaction(cur => (cur||0) + r.stars);
+            playSound('coin'); vibrate('send');
+            toast('✅ Зачислено ' + r.stars + ' ⭐');
+          }
+        }catch(e){}
+      }
+      if(r.status === 'rejected' && !r.rejectedSeen){
+        db.ref('payments/' + currentUser.uid + '/' + rid + '/rejectedSeen').set(true).catch(()=>{});
+        toast('❌ Заявка отклонена. ' + (r.reason||''));
+      }
+    }
+  });
+}
+
+/* Замени старую функцию buyStarPack */
+function buyStarPack(p){
+  openPaymentSheet(p);
+}
+
+/* ===== АДМИН-ПАНЕЛЬ ===== */
+
+async function loadAllPendingPayments(){
+  const snap = await db.ref('payments').once('value');
+  const all = snap.val() || {};
+  const list = [];
+  Object.keys(all).forEach(uid=>{
+    const reqs = all[uid] || {};
+    Object.keys(reqs).forEach(rid=>{
+      const r = reqs[rid];
+      if(r && (r.status === 'awaiting' || r.status === 'pending')){
+        list.push(Object.assign({ _uid: uid }, r));
+      }
+    });
+  });
+  list.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  return list;
+}
+
+async function confirmPayment(req){
+  // 1) Ставим confirmed
+  await db.ref('payments/' + req.userId + '/' + req.requestId).update({
+    status: 'confirmed',
+    confirmedAt: TS,
+    confirmedBy: currentUser.uid
+  });
+  // 2) Клиент сам зачислит звёзды через startPaymentListener
+}
+
+async function rejectPayment(req, reason){
+  await db.ref('payments/' + req.userId + '/' + req.requestId).update({
+    status: 'rejected',
+    rejectedAt: TS,
+    reason: reason || ''
+  });
+}
+
+async function openAdminPanel(){
+  if(!isAdmin()) return;
+  const sheet = document.getElementById('admin-sheet');
+  const body  = document.getElementById('admin-sheet-body');
+  sheet.classList.add('show');
+  body.innerHTML = `
+    <div class="profile-sheet-title">💳 Заявки на оплату</div>
+    <div id="admin-list" style="margin-top:8px"><div class="spinner" style="margin:20px auto"></div></div>
+    <button class="sheet-btn secondary ripple" id="admin-close" style="margin-top:12px">Закрыть</button>
+  `;
+  document.getElementById('admin-close').onclick = ()=>sheet.classList.remove('show');
+  await refreshAdminList();
+}
+
+async function refreshAdminList(){
+  const cont = document.getElementById('admin-list');
+  const list = await loadAllPendingPayments();
+  if(!list.length){
+    cont.innerHTML = '<div class="empty"><div class="empty-title">Нет заявок</div><div>Все оплаты обработаны</div></div>';
+    return;
+  }
+  const byId = {};
+  let html = '';
+  list.forEach(r=>{
+    byId[r.requestId] = r;
+    const isAwaiting = r.status === 'awaiting';
+    html += `
+      <div class="session-item" style="flex-direction:column;align-items:stretch">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div class="session-info" style="flex:1">
+            <div class="session-device">
+              ${esc(r.userName||'Без имени')}
+              ${r.username ? '<span style="color:var(--accent);font-size:12px">@'+esc(r.username)+'</span>' : ''}
+              ${isAwaiting ? ' 🟡' : ' ⚪'}
+            </div>
+            <div class="session-meta">${r.stars} ⭐ за ${r.rub} ₽</div>
+            <div class="session-meta">Код: <b>${esc(r.code)}</b></div>
+            <div class="session-meta">${new Date(r.createdAt).toLocaleString('ru')}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="sheet-btn ripple" data-confirm="${escAttr(r.requestId)}"
+                  style="flex:1;background:var(--success);margin:0">✓ Подтвердить</button>
+          <button class="sheet-btn ripple" data-reject="${escAttr(r.requestId)}"
+                  style="flex:1;background:var(--danger);margin:0">✕ Отклонить</button>
+        </div>
+      </div>
+    `;
+  });
+  cont.innerHTML = html;
+
+  cont.querySelectorAll('[data-confirm]').forEach(b=>{
+    b.onclick = async ()=>{
+      const r = byId[b.dataset.confirm];
+      if(!confirm(`Подтвердить ${r.stars} ⭐ для ${r.userName||'пользователя'}?`)) return;
+      b.disabled = true;
+      await confirmPayment(r);
+      toast('Зачислено');
+      await refreshAdminList();
+    };
+  });
+  cont.querySelectorAll('[data-reject]').forEach(b=>{
+    b.onclick = async ()=>{
+      const r = byId[b.dataset.reject];
+      const reason = prompt('Причина отказа?') || '';
+      b.disabled = true;
+      await rejectPayment(r, reason);
+      await refreshAdminList();
+    };
+  });
+}
+
+/* Триггер админки: долгий тап по балансу звёзд (только для админа) */
+(function bindAdminTrigger(){
+  const el = document.getElementById('stars-balance');
+  if(!el) return;
+  let tmr = null;
+  const start = ()=>{ if(isAdmin()) tmr = setTimeout(openAdminPanel, 800); };
+  const stop  = ()=>{ clearTimeout(tmr); };
+  el.addEventListener('touchstart', start, {passive:true});
+  el.addEventListener('touchend',   stop);
+  el.addEventListener('mousedown',  start);
+  el.addEventListener('mouseup',    stop);
+  el.addEventListener('mouseleave', stop);
+})();
 
 /* ============ SHOP ============ */
 async function loadMyAssets(){
