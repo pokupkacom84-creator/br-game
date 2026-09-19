@@ -385,15 +385,7 @@ body.dark .vpn-key-item{background:linear-gradient(135deg,rgba(35,46,60,.65),rgb
 .vpn-key-title{font-size:14.5px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.015em;flex:1;min-width:0}
 .vpn-key-proto{font-size:10.5px;font-weight:800;text-transform:uppercase;color:var(--accent);letter-spacing:.7px;display:flex;align-items:center;gap:6px;margin-bottom:4px}
 .vpn-key-proto::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent-grad);box-shadow:0 0 8px var(--accent-soft)}
-.vpn-key-ping{font-size:11px;color:var(--text-2);font-weight:600;text-transform:none;padding:2px 8px;border-radius:10px;background:rgba(0,0,0,.05);display:inline-flex;align-items:center;gap:4px;margin-left:auto;transition:background .3s,color .3s}
-body.dark .vpn-key-ping{background:rgba(255,255,255,.06)}
-.vpn-key-ping::before{content:'●';font-size:9px;line-height:1;color:var(--text-3);transition:color .3s}
-.vpn-key-ping.good{color:#16a34a;background:rgba(34,197,94,.14)}
-.vpn-key-ping.good::before{color:#22c55e}
-.vpn-key-ping.mid{color:#d97706;background:rgba(245,158,11,.14)}
-.vpn-key-ping.mid::before{color:#f59e0b}
-.vpn-key-ping.bad{color:#dc2626;background:rgba(239,68,68,.14)}
-.vpn-key-ping.bad::before{color:#ef4444}
+
 .vpn-key-text{font-size:11.5px;color:var(--text-3);word-break:break-all;line-height:1.4;max-height:36px;overflow:hidden;font-family:ui-monospace,Menlo,monospace;opacity:.7;position:relative;z-index:1}
 .vpn-key-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
 .vpn-icon-btn{width:40px;height:40px;border-radius:50%;background:var(--accent-grad);color:#fff;display:flex;align-items:center;justify-content:center}
@@ -3260,7 +3252,7 @@ function vpnKeyItemHtml(k){
         '<span class="vpn-key-flag">'+meta.flag+'</span>'+
         '<span class="vpn-key-title">'+esc(truncate(title,48))+'</span>'+
       '</div>'+
-      '<div class="vpn-key-proto">'+esc(k.proto)+'<span class="vpn-key-ping" data-ping="'+escAttr(host)+'"></span></div>'+
+      '<div class="vpn-key-proto">'+esc(k.proto)+'</div>'+
       '<div class="vpn-key-text">'+esc(truncate(k.raw,140))+'</div>'+
     '</div>'+
     '<div class="vpn-key-actions">'+
@@ -3270,35 +3262,11 @@ function vpnKeyItemHtml(k){
   '</div>';
 }
 function bindVpnActions(root){root.querySelectorAll('.vpn-icon-btn[data-copy]').forEach(function(btn){if(btn._bound)return;btn._bound=true;btn.onclick=function(){var k=vpnKeys[+btn.dataset.copy];if(!k)return;copyText(k.raw);};});root.querySelectorAll('.vpn-icon-btn[data-star]').forEach(function(btn){if(btn._bound)return;btn._bound=true;btn.onclick=function(){var k=vpnKeys[+btn.dataset.star];if(!k)return;if(vpnFavorites[k.raw]){delete vpnFavorites[k.raw];btn.classList.remove('active');}else{vpnFavorites[k.raw]=1;btn.classList.add('active');}saveVpnFavorites();};});}
-function appendVpnBatch(){var list=$('vpn-key-list');if(!list)return;if(vpnRenderedUpTo>=vpnFiltered.length)return;var start=vpnRenderedUpTo,end=Math.min(vpnFiltered.length,start+VPN_BATCH_SIZE);var html='';for(var i=start;i<end;i++)html+=vpnKeyItemHtml(vpnFiltered[i]);var tmp=document.createElement('div');tmp.innerHTML=html;while(tmp.firstChild)list.appendChild(tmp.firstChild);vpnRenderedUpTo=end;bindVpnActions(list);pingVisibleHosts();}
+function appendVpnBatch(){var list=$('vpn-key-list');if(!list)return;if(vpnRenderedUpTo>=vpnFiltered.length)return;var start=vpnRenderedUpTo,end=Math.min(vpnFiltered.length,start+VPN_BATCH_SIZE);var html='';for(var i=start;i<end;i++)html+=vpnKeyItemHtml(vpnFiltered[i]);var tmp=document.createElement('div');tmp.innerHTML=html;while(tmp.firstChild)list.appendChild(tmp.firstChild);vpnRenderedUpTo=end;bindVpnActions(list);}
 function scheduleVpnAppend(){if(vpnRafId)return;vpnRafId=requestAnimationFrame(function(){vpnRafId=0;appendVpnBatch();});}
 function isVpnItemVisible(){var c=$('vpn-container'),list=$('vpn-key-list');if(!c||!list)return false;var last=list.lastElementChild;if(!last)return true;var cR=c.getBoundingClientRect(),lR=last.getBoundingClientRect();return lR.top<cR.bottom+400;}
 function onVpnScroll(){if(vpnRenderedUpTo<vpnFiltered.length&&isVpnItemVisible())scheduleVpnAppend();}
-async function pingVisibleHosts(){
-  document.querySelectorAll('.vpn-key-ping').forEach(async function(el){
-    if(el._pinged||!el.dataset.ping)return;
-    el._pinged=true;
-    var host=el.dataset.ping;
-    if(!host)return;
-    var t0=performance.now();
-    try{
-      await Promise.race([
-        fetch('https://'+host,{mode:'no-cors',cache:'no-store'}),
-        new Promise(function(_,rej){setTimeout(function(){rej(new Error('t'));},3000);})
-      ]);
-      var ms=Math.round(performance.now()-t0);
-      el.textContent=ms+' ms';
-      el.classList.remove('good','mid','bad');
-      if(ms<150)el.classList.add('good');
-      else if(ms<400)el.classList.add('mid');
-      else el.classList.add('bad');
-    }catch(e){
-      el.textContent='timeout';
-      el.classList.remove('good','mid');
-      el.classList.add('bad');
-    }
-  });
-}
+
 function renderVpnKeys(){var list=$('vpn-key-list'),count=$('vpn-count'),refreshBtn=$('vpn-refresh-btn'),loadBtn=$('vpn-load-btn');if(!list)return;list.innerHTML='';vpnRenderedUpTo=0;if(!vpnFiltered.length){list.innerHTML='<div class="vpn-empty">Нет ключей</div>';if(count)count.textContent='';if(refreshBtn)refreshBtn.style.display='none';if(loadBtn)loadBtn.style.display='flex';return;}if(loadBtn)loadBtn.style.display='none';if(refreshBtn)refreshBtn.style.display='flex';if(count)count.textContent='Показано: '+vpnFiltered.length+' из '+vpnKeys.length;appendVpnBatch();var c=$('vpn-container');if(c&&!c._vpnScrollBound){c._vpnScrollBound=true;c.addEventListener('scroll',onVpnScroll,{passive:true});}setTimeout(function(){if(vpnRenderedUpTo<vpnFiltered.length&&isVpnItemVisible())scheduleVpnAppend();},60);}
 function copyText(text){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){toast('Скопировано');}).catch(function(){fallbackCopy(text);});}else fallbackCopy(text);}
 function fallbackCopy(text){var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Скопировано');}catch(e){toast('Не удалось');}document.body.removeChild(ta);}
