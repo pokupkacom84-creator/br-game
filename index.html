@@ -674,7 +674,7 @@ body.dark .vpn-key-item{background:linear-gradient(135deg,rgba(35,46,60,.65),rgb
     <div class="settings-item" id="btn-notify"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><span>Уведомления</span><div class="toggle" id="notify-toggle"></div></div>
     <div class="settings-item" id="btn-sound"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7"/></svg><span>Звук сообщений</span><div class="toggle" id="sound-toggle"></div></div>
     <div class="settings-item" id="btn-vibration"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="8" y="3" width="8" height="18" rx="2"/><path d="M4 9v6M20 9v6"/></svg><span>Вибрация</span><div class="toggle" id="vibration-toggle"></div></div>
-    <div class="settings-item" id="btn-push"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg><span>Push-уведомления</span><div class="settings-value" id="push-value">Выкл</div></div>
+    
     <div class="settings-item" id="btn-unread-display"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span>Непрочитанные</span><div class="settings-value" id="unread-value">Цифра</div></div>
   </div>
   <div class="settings-section-title">Опасная зона</div>
@@ -1396,7 +1396,7 @@ auth.onAuthStateChanged(async function(user){
     startSelfListener();startUserChatsListener();startSavedMetaListener();
     startSessionTracking();updateSettingsUI();updateTogglesUI();applyWallpaper();startCallListener();refreshPushStatus();
     if(CRYPTO_OK&&!e2eKeyPriv){e2eInitUser().catch(function(e){console.warn('e2e init',e);});}
-    if(notifyEnabled && Notification.permission==='granted'){initFCM().catch(function(e){console.warn('initFCM',e);});}
+    
     var pendingAnchor=sessionStorage.getItem('flux_pending_anchor');
     if(pendingAnchor){try{var pa=JSON.parse(pendingAnchor);setTimeout(function(){if(pa.chatId&&chatsData[pa.chatId]){openChat(pa.chatId,chatsData[pa.chatId].otherUid||null);if(pa.msgId)setTimeout(function(){jumpToMessage(pa.msgId);},1200);}},1500);}catch(e){}sessionStorage.removeItem('flux_pending_anchor');}
   }
@@ -2770,7 +2770,7 @@ $('btn-unread-display').onclick=function(){unreadDisplay=unreadDisplay==='dot'?'
 $('btn-notify').onclick=function(){if(notifyEnabled){disablePushNotifications();}else{enablePushNotifications();}};
 $('btn-sound').onclick=function(){SOUND_PREFS.enabled=!SOUND_PREFS.enabled;try{localStorage.setItem('flux_sound',SOUND_PREFS.enabled?'1':'0');}catch(e){}updateTogglesUI();if(SOUND_PREFS.enabled)playSound('receive');};
 $('btn-vibration').onclick=function(){VIB_PREFS.enabled=!VIB_PREFS.enabled;try{localStorage.setItem('flux_vibration',VIB_PREFS.enabled?'1':'0');}catch(e){}updateTogglesUI();if(VIB_PREFS.enabled)vibrate('receive');};
-$('btn-push').onclick=function(){if(notifyEnabled){disablePushNotifications();}else{enablePushNotifications();}};
+
 
 $('btn-pin-lock').onclick=function(){if(pinLockEnabled){pinLockEnabled=false;pinLockCode='';try{localStorage.removeItem('flux_pin_code');localStorage.setItem('flux_pin_lock','0');}catch(e){}updateTogglesUI();toast('PIN-код отключён');}else{showPinSetup(function(code){pinLockEnabled=true;pinLockCode=code;try{localStorage.setItem('flux_pin_code',code);localStorage.setItem('flux_pin_lock','1');}catch(e){}updateTogglesUI();toast('PIN-код установлен');});}};
 
