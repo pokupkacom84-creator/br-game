@@ -67,6 +67,9 @@ input,textarea,select{user-select:text;-webkit-user-select:text;font-family:inhe
 button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;background:none;color:inherit;outline:none}
 .ripple{position:relative;overflow:hidden;isolation:isolate}
 .ripple:active::before{content:'';position:absolute;inset:0;background:currentColor;opacity:.12;pointer-events:none}
+/* ===== FIX: ripple-ink больше не влияет на layout кнопки ===== */
+.ripple-ink{position:absolute;display:block;border-radius:50%;background:currentColor;opacity:.25;transform:scale(0);animation:rippleExpand .6s var(--ease-out) forwards;pointer-events:none;will-change:transform,opacity;z-index:-1}
+@keyframes rippleExpand{0%{transform:scale(0);opacity:.3}100%{transform:scale(1);opacity:0}}
 .screen{position:fixed;inset:0;display:none;flex-direction:column;background:var(--bg);z-index:1}
 .screen.active{display:flex;z-index:2}
 .hidden{display:none!important}
@@ -2904,7 +2907,23 @@ renderStickerPicker();
   },{passive:true});
 })();
 
-(function initRipple(){function attach(el){if(el._ripple)return;el._ripple=true;el.addEventListener('click',function(e){var rect=el.getBoundingClientRect();var size=Math.max(rect.width,rect.height)*1.6;var ink=document.createElement('span');ink.className='ripple-ink';ink.style.width=ink.style.height=size+'px';ink.style.left=(e.clientX-rect.left-size/2)+'px';ink.style.top=(e.clientY-rect.top-size/2)+'px';el.appendChild(ink);setTimeout(function(){try{ink.remove();}catch(e){}},600);});}document.querySelectorAll('.ripple').forEach(attach);})();
+(function initRipple(){
+  function attach(el){
+    if(el._ripple)return;el._ripple=true;
+    el.addEventListener('click',function(e){
+      var rect=el.getBoundingClientRect();
+      var size=Math.max(rect.width,rect.height)*1.6;
+      var ink=document.createElement('span');
+      ink.className='ripple-ink';
+      ink.style.width=ink.style.height=size+'px';
+      ink.style.left=(e.clientX-rect.left-size/2)+'px';
+      ink.style.top=(e.clientY-rect.top-size/2)+'px';
+      el.appendChild(ink);
+      setTimeout(function(){try{ink.remove();}catch(e){}},600);
+    });
+  }
+  document.querySelectorAll('.ripple').forEach(attach);
+})();
 
 function renderChatsSkeleton(){var list=$('chats-list');if(!list)return;var html='';for(var i=0;i<7;i++)html+='<div class="skeleton"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line"></div><div class="sk-line short"></div></div></div>';list.innerHTML=html;}
 (function showSkeletonOnce(){var firstDone=false;var _check=setInterval(function(){var list=$('chats-list');if(!list)return;if(list.children.length===0&&currentUser&&!firstDone){renderChatsSkeleton();}if(list.querySelector('.chat-item')||list.querySelector('.empty')){firstDone=true;clearInterval(_check);}},150);})();
