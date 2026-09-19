@@ -355,7 +355,7 @@ body.dark .chat-input-bar input[type=text]{background:rgba(0,0,0,.24)}
 .typing-dots span:nth-child(2){animation-delay:.15s}
 .typing-dots span:nth-child(3){animation-delay:.3s}
 @keyframes typingBounce{0%,60%,100%{transform:translateY(0);opacity:.55}30%{transform:translateY(-4px);opacity:1}}
-.heart-burst{position:absolute;pointer-events:none;font-size:80px;top:50%;left:50%;transform:translate(-50%,-50%) scale(.3);opacity:0;z-index:100;animation:heartBurst 1s var(--ease-spring) forwards}
+.heart-burst{position:fixed;pointer-events:none;font-size:80px;transform:translate(-50%,-50%) scale(.3);opacity:0;z-index:99999;animation:heartBurst 1s var(--ease-spring) forwards;will-change:transform,opacity}
 @keyframes heartBurst{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}25%{opacity:1}55%{transform:translate(-50%,-50%) scale(1.15);opacity:1}100%{transform:translate(-50%,-50%) scale(1.6);opacity:0}}
 .particle-burst{position:absolute;pointer-events:none;width:0;height:0;z-index:1000}
 .particle{position:absolute;width:8px;height:8px;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);will-change:transform,opacity}
@@ -2739,9 +2739,10 @@ $('forward-sheet').onclick=function(e){if(e.target===this){this.classList.remove
 $('forward-search').addEventListener('input',function(){renderForwardList(this.value.trim());});
 
 function spawnParticles(x,y,count){
+  if(x==null||y==null||isNaN(x)||isNaN(y))return;
   var container=document.createElement('div');
   container.className='particle-burst';
-  container.style.left=x+'px';container.style.top=y+'px';container.style.position='fixed';
+  container.style.cssText='position:fixed;left:'+x+'px;top:'+y+'px;width:0;height:0;pointer-events:none;z-index:99999';
   document.body.appendChild(container);
   count=count||14;
   for(var i=0;i<count;i++){
@@ -2755,22 +2756,36 @@ function spawnParticles(x,y,count){
     var dx=Math.cos(angle)*dist,dy=Math.sin(angle)*dist;
     var scale=0.4+Math.random()*0.8;
     var dur=520+Math.random()*400;
-    p.animate([{transform:'translate(-50%,-50%) scale(1)',opacity:1},{transform:'translate(calc(-50% + '+dx+'px), calc(-50% + '+dy+'px)) scale('+scale+')',opacity:0}],{duration:dur,easing:'cubic-bezier(.2,.6,.35,1)',fill:'forwards'});
+    try{
+      p.animate([{transform:'translate(-50%,-50%) scale(1)',opacity:1},{transform:'translate(calc(-50% + '+dx+'px), calc(-50% + '+dy+'px)) scale('+scale+')',opacity:0}],{duration:dur,easing:'cubic-bezier(.2,.6,.35,1)',fill:'forwards'});
+    }catch(e){}
   }
   setTimeout(function(){try{container.remove();}catch(e){}},1000);
 }
 async function toggleReaction(msgId,emoji,sourceEl){
   if(!currentChatId||!currentUser)return;
+  // ВАЖНО: координаты берём СИНХРОННО, до любого await/hideMsgMenu.
+  // Иначе getBoundingClientRect вернёт нули → анимация улетит в левый верхний угол.
+  var burstX=null,burstY=null;
+  try{
+    var r=null;
+    if(sourceEl&&sourceEl.getBoundingClientRect){
+      var rr=sourceEl.getBoundingClientRect();
+      if(rr.width||rr.height)r=rr;
+    }
+    if(!r){
+      var el=document.querySelector('.msg[data-msgid="'+msgId+'"]');
+      if(el){var er=el.getBoundingClientRect();if(er.width||er.height)r=er;}
+    }
+    if(r&&(r.left||r.top)){burstX=r.left+r.width/2;burstY=r.top+r.height/2;}
+  }catch(e){}
   var ref=db.ref('chats/'+currentChatId+'/messages/'+msgId+'/reactions/'+currentUser.uid);
   try{
     var cur=await ref.once('value');
     if(cur.val()===emoji){await ref.remove();}
     else{
       await ref.set(emoji);
-      var rect=null;
-      if(sourceEl&&sourceEl.getBoundingClientRect){rect=sourceEl.getBoundingClientRect();}
-      else{var el=document.querySelector('.msg[data-msgid="'+msgId+'"]');if(el)rect=el.getBoundingClientRect();}
-      if(rect)spawnParticles(rect.left+rect.width/2,rect.top+rect.height/2,16);
+      if(burstX!==null&&burstY!==null)spawnParticles(burstX,burstY,16);
       playSound('react');vibrate('tap');
     }
   }catch(e){toast('Не удалось поставить реакцию');}
@@ -3736,28 +3751,88 @@ $('profile-menu-btn').onclick=function(e){
   menu.querySelectorAll('.chat-menu-item').forEach(function(it){it.onclick=function(){var a=it.dataset.pm;hideChatMenu();if(a==='edit')$('btn-edit-profile').click();else if(a==='status')$('btn-status').click();else if(a==='reload')location.reload();};});
 };
 
-function showProfileSheet(u){
+async function showProfileSheet(u){
   var sheet=$('profile-sheet');sheet.classList.add('show');
   var body=$('profile-sheet-body');
   var preset=u.avatarId?getPresetAvatar(u.avatarId):null;
   var avHtml;
-  if(preset)avHtml='<div class="avatar" style="width:100px;height:100px;font-size:44px;background:'+preset.bg+'">'+preset.emoji+'</div>';
-  else avHtml='<div class="avatar '+getAvatarColorClass(u.name||'')+'" style="width:100px;height:100px;font-size:36px">'+esc(initials(u.name))+'</div>';
+  if(preset)avHtml='<div class="profile-avatar-big" style="width:110px;height:110px;font-size:48px;background:'+preset.bg+'">'+preset.emoji+'</div>';
+  else if(u.photoURL)avHtml='<div class="profile-avatar-big" style="width:110px;height:110px;background-image:url(\''+escAttr(u.photoURL)+'\');background-size:cover"></div>';
+  else avHtml='<div class="profile-avatar-big '+getAvatarColorClass(u.name||'')+'" style="width:110px;height:110px;font-size:40px">'+esc(initials(u.name))+'</div>';
   var status=(u.online&&!u.hideOnline)?'в сети':formatLastSeen(u.lastSeen);
   var isBlockedUser=blockedUsers.has(u.uid);
+  var canInteract=(u.uid!==currentUser.uid);
   var bdBadge='';
-  if(u.birthday&&isBirthdayToday(u.birthday))bdBadge='<div class="birthday-badge">🎂 Сегодня День Рождения!'+(ageFromBirthday(u.birthday)?' Исполняется '+ageFromBirthday(u.birthday)+'!':'')+'</div>';
-  body.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:var(--s-4);padding-top:var(--s-3)">'+avHtml+'<div style="font-size:22px;font-weight:700">'+esc(u.name||'')+'</div>'+bdBadge+(u.status?'<div style="color:var(--accent);font-size:14px">'+esc(u.status)+'</div>':'')+'<div style="color:var(--text-2);font-size:14px">'+(u.username?'@'+esc(u.username):'')+'</div><div style="color:var(--text-2);font-size:var(--fs-sm)">'+esc(status)+'</div>'+(u.bio?'<div style="font-size:14px;text-align:center;padding:var(--s-2) 0">'+esc(u.bio)+'</div>':'')+'</div>'+
-    '<button class="sheet-btn ripple" id="profile-msg">Написать сообщение</button>'+
-    (u.uid!==currentUser.uid?'<button class="sheet-btn ripple" id="profile-call" style="background:var(--bg-2);color:var(--accent)">📞 Позвонить</button>':'')+
-    (u.uid!==currentUser.uid?'<button class="sheet-btn ripple" id="profile-gift" style="background:linear-gradient(135deg,#f472b6,#ec4899)">🎁 Подарить</button>':'')+
-    (u.uid!==currentUser.uid?'<button class="sheet-btn '+(isBlockedUser?'secondary':'danger')+' ripple" id="profile-block">'+(isBlockedUser?'Разблокировать':'Заблокировать')+'</button>':'')+
-    '<button class="sheet-btn secondary ripple" id="profile-close">Закрыть</button>';
-  $('profile-msg').onclick=function(){sheet.classList.remove('show');if(u.uid!==currentUser.uid)startChatWith(u.uid);};
+  if(u.birthday&&isBirthdayToday(u.birthday))bdBadge='<div class="birthday-badge" style="margin-top:6px">🎂 Сегодня День Рождения!'+(ageFromBirthday(u.birthday)?' Исполняется '+ageFromBirthday(u.birthday)+'!':'')+'</div>';
+  body.innerHTML=''+
+    '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:16px;padding-top:8px">'+
+      avHtml+
+      '<div style="font-size:22px;font-weight:700;letter-spacing:-.02em;text-align:center;padding:0 12px">'+esc(u.name||'')+'</div>'+
+      (u.username?'<div style="color:var(--accent);font-size:14.5px;font-weight:500">@'+esc(u.username)+'</div>':'')+
+      '<div style="color:var(--text-2);font-size:13.5px">'+esc(u.status||status)+'</div>'+
+      bdBadge+
+    '</div>'+
+    '<div class="profile-actions" style="grid-template-columns:repeat('+(canInteract?'4':'2')+',1fr);padding:0 0 14px">'+
+      (canInteract?'<button class="profile-action ripple" id="profile-msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span>Написать</span></button>':'')+
+      (canInteract?'<button class="profile-action ripple" id="profile-call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg><span>Звонок</span></button>':'')+
+      (canInteract?'<button class="profile-action ripple" id="profile-gift"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5" rx="1"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg><span>Подарок</span></button>':'')+
+      (canInteract?'<button class="profile-action ripple" id="profile-block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg><span>'+(isBlockedUser?'Разблок.':'Блок')+'</span></button>':'')+
+      (!canInteract?'<button class="profile-action ripple" id="profile-edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Изменить</span></button>':'')+
+      (!canInteract?'<button class="profile-action ripple" id="profile-share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg><span>Поделиться</span></button>':'')+
+    '</div>'+
+    '<div class="profile-info-card" style="margin:0 0 12px">'+
+      '<div class="info-row"><div class="info-value">'+(u.username?'@'+esc(u.username):'—')+'</div><div class="info-label">Имя пользователя</div></div>'+
+      (u.bio?'<div class="info-row"><div class="info-value">'+esc(u.bio)+'</div><div class="info-label">О себе</div></div>':'')+
+      (u.birthday?'<div class="info-row"><div class="info-value">'+esc(u.birthday)+'</div><div class="info-label">День рождения</div></div>':'')+
+      '<div class="info-row"><div class="info-value">'+esc(status)+'</div><div class="info-label">Статус</div></div>'+
+    '</div>'+
+    '<div id="profile-gifts-loading" style="text-align:center;padding:10px;color:var(--text-2);font-size:13px">Загрузка подарков…</div>'+
+    '<div id="profile-gifts-container"></div>'+
+    '<button class="sheet-btn secondary ripple" id="profile-close" style="margin-top:14px">Закрыть</button>';
+
+  // === БИНДЫ ===
+  var msgBtn=$('profile-msg');if(msgBtn)msgBtn.onclick=function(){sheet.classList.remove('show');if(u.uid!==currentUser.uid)startChatWith(u.uid);};
   var cbtn=$('profile-call');if(cbtn)cbtn.onclick=function(){sheet.classList.remove('show');startCall(u.uid);};
   var gbtn=$('profile-gift');if(gbtn)gbtn.onclick=function(){sheet.classList.remove('show');openGiftPicker(u.uid);};
   var bb=$('profile-block');if(bb)bb.onclick=async function(){sheet.classList.remove('show');await toggleBlockUser(u.uid);};
+  var eb=$('profile-edit');if(eb)eb.onclick=function(){sheet.classList.remove('show');$('btn-edit-profile').click();};
+  var sb=$('profile-share');if(sb)sb.onclick=function(){
+    var link=location.origin+location.pathname+'?u='+encodeURIComponent(u.uid);
+    if(navigator.share){navigator.share({title:u.name||'Профиль',text:(u.username?'@'+u.username:'')||'',url:link}).catch(function(){});}
+    else copyText(link);
+  };
   $('profile-close').onclick=function(){sheet.classList.remove('show');};
+
+  // === ПОДАРКИ ВИДНЫ ВСЕМ ===
+  loadGiftsForUser(u.uid);
+}
+
+// Показывает полученные подарки любого пользователя (не только себя)
+async function loadGiftsForUser(uid){
+  var wrap=document.getElementById('profile-gifts-container');
+  var loading=document.getElementById('profile-gifts-loading');
+  if(!wrap)return;
+  try{
+    var snap=await db.ref('users/'+uid+'/giftsReceived').once('value');
+    var gifts=snap.val()||{};
+    var arr=Object.keys(gifts).map(function(k){return gifts[k];}).filter(Boolean);
+    arr.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+    if(loading)loading.remove();
+    if(!arr.length){
+      wrap.innerHTML='<div style="text-align:center;padding:16px 12px;color:var(--text-2);font-size:13px">'+
+        '<div style="font-size:42px;opacity:.35;margin-bottom:6px">🎁</div>Подарков пока нет</div>';
+      return;
+    }
+    var html='<div class="profile-gifts-label">🎁 Подарки · '+arr.length+'</div><div class="profile-gifts-wrap">';
+    arr.slice(0,12).forEach(function(g){
+      html+='<div class="profile-gift-item" title="'+escAttr((g.name||'')+' — от '+(g.fromName||'?'))+'">'+g.emoji+'</div>';
+    });
+    if(arr.length>12)html+='<div class="profile-gift-item more">+'+(arr.length-12)+'</div>';
+    html+='</div>';
+    wrap.innerHTML=html;
+  }catch(e){
+    if(loading)loading.textContent='Не удалось загрузить подарки';
+  }
 }
 $('profile-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
 $('edit-profile-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
@@ -3805,9 +3880,15 @@ if(starsBalanceEl)starsBalanceEl.onclick=function(){
 async function doDoubleTap(el){
   var msgId=el.dataset.msgid;if(!msgId||!currentChatId)return;
   var rect=el.getBoundingClientRect();
-  spawnParticles(rect.left+rect.width/2,rect.top+rect.height/2,18);
-  var burst=document.createElement('div');burst.className='heart-burst';burst.textContent='❤️';
-  el.appendChild(burst);
+  var cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+  spawnParticles(cx,cy,18);
+  var burst=document.createElement('div');
+  burst.className='heart-burst';
+  burst.textContent='❤️';
+  burst.style.position='fixed';
+  burst.style.left=cx+'px';
+  burst.style.top=cy+'px';
+  document.body.appendChild(burst);
   setTimeout(function(){try{burst.remove();}catch(e){}},900);
   vibrate('tap');
   try{await toggleReaction(msgId,'❤️',null);}catch(e){}
