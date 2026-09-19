@@ -970,13 +970,43 @@ const SAVED_CHAT_PREFIX='saved_';
 const TYPING_TTL_MS=5000;
 const CLOCK_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 const WARN_ICON='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z"/></svg>';
-const VPN_SOURCES=[
+// Запасной список — используется, только если GitHub API недоступен.
+// Главный источник — автообнаружение (см. discoverVpnSources ниже).
+let VPN_SOURCES=[
   {id:'v1',name:'VPN 1',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/26.txt'},
-  {id:'v2',name:'VPN 2',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/27.txt'},
-  {id:'v3',name:'VPN 3',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/28.txt'}
+  {id:'v2',name:'VPN 2',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/25.txt'},
+  {id:'v3',name:'VPN 3',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/24.txt'}
 ];
 let vpnActiveSourceId=(function(){try{return localStorage.getItem('flux_vpn_source')||VPN_SOURCES[0].id;}catch(e){return VPN_SOURCES[0].id;}})();
 function getActiveVpnSource(){return VPN_SOURCES.find(function(s){return s.id===vpnActiveSourceId;})||VPN_SOURCES[0];}
+
+// Автообнаружение файлов в папке githubmirror через GitHub Contents API.
+// Берём 3 последних .txt (по натуральной сортировке номеров).
+async function discoverVpnSources(){
+  try{
+    var apiUrl='https://api.github.com/repos/AvenCores/goida-vpn-configs/contents/githubmirror?ref=main&t='+Date.now();
+    var resp=await fetch(apiUrl,{cache:'no-store',headers:{'Accept':'application/vnd.github+json'}});
+    if(!resp.ok)throw new Error('GitHub API HTTP '+resp.status);
+    var files=await resp.json();
+    if(!Array.isArray(files))throw new Error('bad response');
+    var txt=files.filter(function(f){return f.type==='file' && /\.txt$/i.test(f.name);});
+    if(txt.length<1)throw new Error('в папке нет .txt файлов');
+    txt.sort(function(a,b){return a.name.localeCompare(b.name,undefined,{numeric:true});});
+    var pick=txt.slice(-3); // три самых «свежих» по номеру
+    VPN_SOURCES=pick.map(function(f,i){
+      return {id:'v'+(i+1),name:'VPN '+(i+1),url:f.download_url};
+    });
+    if(!VPN_SOURCES.find(function(s){return s.id===vpnActiveSourceId;})){
+      vpnActiveSourceId='v1';
+      try{localStorage.setItem('flux_vpn_source','v1');}catch(e){}
+    }
+    console.log('VPN: источники → ', VPN_SOURCES.map(function(s){return s.name+': '+s.url;}).join(' | '));
+    return true;
+  }catch(e){
+    console.warn('VPN: автообнаружение не удалось →', e.message);
+    return false;
+  }
+}
 const NOTIF_ICON='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjQwIiBmaWxsPSIjODc3NGUxIi8+PHBhdGggZD0iTTQ4IDk2YzAtMjYgMjItNDggNDgtNDhzNDggMjIgNDggNDgtMjIgNDgtNDggNDgtNDgtMjItNDgtNDh6IiBmaWxsPSIjZmZmIi8+PC9zdmc+';
 
 const DEFAULT_REACTIONS=['👍','❤️','🔥','😂','😮','😢'];
@@ -3415,6 +3445,9 @@ if('serviceWorker' in navigator){
 updateTogglesUI();
 refreshPushStatus();
 renderVpnSources();
+discoverVpnSources().then(function(ok){
+  if(ok){ renderVpnSources(); }
+});
 if(!firebaseReady){setTimeout(function(){toast('Проверьте интернет');},500);}
 </script>
 </body>
