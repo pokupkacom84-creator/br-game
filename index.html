@@ -14,6 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -398,18 +399,15 @@ body.dark .reaction-chip{background:rgba(255,255,255,.1)}
 .skeleton .sk-line{height:13px;border-radius:7px;background:linear-gradient(90deg,var(--bg-2) 25%,var(--bg-3) 50%,var(--bg-2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
 .skeleton .sk-line.short{width:45%}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-
 .selection-topbar{position:absolute;top:0;left:0;right:0;height:60px;padding-top:calc(10px + env(safe-area-inset-top));background:var(--header-bg);backdrop-filter:var(--blur-glass);display:flex;align-items:center;gap:6px;padding-left:6px;padding-right:6px;z-index:20;transform:translateY(-120%);transition:transform var(--dur-slow) var(--ease-spring);border-bottom:1px solid var(--divider)}
 .selection-topbar.show{transform:translateY(0)}
 .selection-count{flex:1;font-size:16px;font-weight:700;padding-left:6px;color:var(--text)}
 .selection-topbar .header-btn{width:42px;height:42px}
-
 .chat-search-bar{position:absolute;top:0;left:0;right:0;height:60px;padding-top:calc(10px + env(safe-area-inset-top));background:var(--header-bg);backdrop-filter:var(--blur-glass);display:flex;align-items:center;gap:6px;padding-left:6px;padding-right:6px;z-index:21;transform:translateY(-120%);transition:transform var(--dur-slow) var(--ease-spring);border-bottom:1px solid var(--divider)}
 .chat-search-bar.show{transform:translateY(0)}
 .chat-search-bar input{flex:1;padding:10px 14px;border-radius:20px;border:none;background:var(--bg-2);color:var(--text);font-size:15px;outline:none;min-width:0}
 .chat-search-nav{display:flex;align-items:center;gap:2px;flex-shrink:0}
 .chat-search-count{font-size:12.5px;color:var(--text-2);font-weight:600;padding:0 6px;white-space:nowrap;min-width:44px;text-align:center}
-
 .call-screen{position:fixed;inset:0;background:linear-gradient(160deg,#0e1621,#1a2733 50%,#0e1621);color:#fff;display:none;flex-direction:column;align-items:center;justify-content:space-between;padding:calc(40px + env(safe-area-inset-top)) 20px calc(40px + env(safe-area-inset-bottom));z-index:99998;animation:fadeIn .36s ease}
 .call-screen.show{display:flex}
 .call-avatar{width:130px;height:130px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:600;background:var(--accent-grad);margin-bottom:20px;box-shadow:0 20px 60px rgba(135,116,225,.5);animation:callPulse 2.4s ease-in-out infinite}
@@ -426,7 +424,6 @@ body.dark .reaction-chip{background:rgba(255,255,255,.1)}
 .call-btn.end:active{background:#e53935}
 .call-btn.accept{background:#4caf50;animation:callBtnPulse 1.4s ease-in-out infinite}
 @keyframes callBtnPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-
 .session-item{background:var(--bg-2);border-radius:14px;padding:14px;display:flex;gap:12px;align-items:flex-start;margin-bottom:8px}
 .session-item.current{border:1.5px solid var(--accent)}
 .session-icon{width:44px;height:44px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -436,7 +433,6 @@ body.dark .reaction-chip{background:rgba(255,255,255,.1)}
 .session-current-badge{display:inline-block;background:var(--success);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;margin-left:6px;text-transform:uppercase;letter-spacing:.4px}
 .session-kill{background:none;color:var(--danger);font-size:13px;font-weight:600;padding:6px 10px;border-radius:8px}
 .session-kill:active{background:var(--danger-soft)}
-
 .reaction-picker{display:flex;flex-wrap:wrap;gap:8px;padding:8px 0}
 .reaction-slot{width:48px;height:48px;border-radius:50%;background:var(--bg-2);display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;border:2px solid transparent}
 .reaction-slot.active{border-color:var(--accent);background:var(--accent-soft)}
@@ -809,11 +805,23 @@ body.dark .reaction-chip{background:rgba(255,255,255,.1)}
 
 <script>
 // ============================================================================
-// FLUX CLIENT — Telegram style 2025 + Firebase + WebRTC + Sound + Vibration
+// FLUX CLIENT — Telegram style 2025 + Firebase + WebRTC + FCM push
 // ============================================================================
 const firebaseConfig={apiKey:"AIzaSyAfNoV7tt_6eP1gRQxLc4Yk5FJzwVxDMQw",authDomain:"game-cd07d.firebaseapp.com",databaseURL:"https://game-cd07d-default-rtdb.firebaseio.com",projectId:"game-cd07d",storageBucket:"game-cd07d.firebasestorage.app",messagingSenderId:"1001558545053",appId:"1:1001558545053:web:b99f86362c1b93aad13a74"};
-let auth=null,db=null,TS=null,INCR=null,firebaseReady=false;
-try{firebase.initializeApp(firebaseConfig);auth=firebase.auth();db=firebase.database();TS=firebase.database.ServerValue.TIMESTAMP;INCR=firebase.database.ServerValue&&firebase.database.ServerValue.increment?firebase.database.ServerValue.increment:null;firebaseReady=true;}catch(e){setTimeout(function(){toast('Ошибка Firebase: '+e.message);},100);}
+
+// >>> ВСТАВЬТЕ СВОЙ VAPID-КЛЮЧ ИЗ FIREBASE CONSOLE → CLOUD MESSAGING → WEB PUSH CERTIFICATES
+const FCM_VAPID_KEY='BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
+
+let auth=null,db=null,TS=null,INCR=null,firebaseReady=false,messaging=null;
+try{
+  firebase.initializeApp(firebaseConfig);
+  auth=firebase.auth();
+  db=firebase.database();
+  TS=firebase.database.ServerValue.TIMESTAMP;
+  INCR=firebase.database.ServerValue&&firebase.database.ServerValue.increment?firebase.database.ServerValue.increment:null;
+  firebaseReady=true;
+  try{ if('Notification' in window && 'serviceWorker' in navigator){ messaging=firebase.messaging(); } }catch(e){ console.warn('messaging init', e); }
+}catch(e){setTimeout(function(){toast('Ошибка Firebase: '+e.message);},100);}
 
 const SAVED_CHAT_PREFIX='saved_';
 const TYPING_TTL_MS=5000;
@@ -902,11 +910,12 @@ const VIB={tap:8,longPress:30,send:15,receive:[40,30,40],call:[200,100,200,100,2
 function vibrate(type){if(!VIB_PREFS.enabled)return;if(!navigator.vibrate)return;try{navigator.vibrate(typeof type==='number'?type:(VIB[type]||10));}catch(e){}}
 
 // ============================================================================
-// ===== PUSH NOTIFICATIONS — РАБОЧАЯ РЕАЛИЗАЦИЯ =============================
+// ===== PUSH NOTIFICATIONS + FCM =============================================
 // ============================================================================
 var pushSupported=false;
 var pushPermission='default';
 var pushReason='';
+let fcmToken=null;
 
 function detectPushEnvironment(){
   pushSupported=false;pushReason='';pushPermission='default';
@@ -924,7 +933,7 @@ function detectPushEnvironment(){
   pushPermission=Notification.permission||'default';
 }
 
-// Единая точка отправки уведомления (SW → fallback на Notification API)
+// Показывает локальное уведомление (используется, когда приложение открыто)
 async function presentNotification(title,body,opts){
   opts=opts||{};
   title=String(title||'Flux');
@@ -939,7 +948,6 @@ async function presentNotification(title,body,opts){
     silent:false,
     data:opts.data||{}
   };
-  // 1) Пробуем через Service Worker (работает и когда вкладка свёрнута)
   if('serviceWorker' in navigator){
     try{
       var reg=await navigator.serviceWorker.getRegistration();
@@ -948,70 +956,101 @@ async function presentNotification(title,body,opts){
         await reg.showNotification(title,payload);
         return true;
       }
-    }catch(e){/* fallthrough */}
+    }catch(e){}
   }
-  // 2) Fallback: обычное уведомление
   try{
     var n=new Notification(title,payload);
     if(opts.onClick){n.onclick=function(){try{window.focus();}catch(e){}opts.onClick();n.close();};}
     setTimeout(function(){try{n.close();}catch(e){}},15000);
     return true;
-  }catch(e){
-    console.warn('Notification failed',e);
-    return false;
-  }
+  }catch(e){ console.warn('Notification failed',e); return false; }
 }
 
-// Загружаем SW (для офлайн-кэша и показа уведомлений из фона)
+// Регистрируем реальный firebase-messaging-sw.js (он должен лежать рядом)
 async function ensureServiceWorker(){
-  if(!('serviceWorker' in navigator))return null;
+  if(!('serviceWorker' in navigator)) return null;
   try{
-    var swCode=[
-      "self.addEventListener('install',function(e){self.skipWaiting();});",
-      "self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim());});",
-      "self.addEventListener('notificationclick',function(e){",
-      "  e.notification.close();",
-      "  var target=(e.notification.data&&e.notification.data.url)||'/';",
-      "  e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(function(cs){",
-      "    for(var i=0;i<cs.length;i++){var c=cs[i];if('focus' in c){try{c.navigate(target);}catch(err){}return c.focus();}}",
-      "    if(self.clients.openWindow)return self.clients.openWindow(target);",
-      "  }));",
-      "});",
-      "self.addEventListener('push',function(e){",
-      "  var d={title:'Flux',body:'Новое сообщение'};",
-      "  try{if(e.data){d=e.data.json();}}catch(err){}",
-      "  e.waitUntil(self.registration.showNotification(d.title||'Flux',{",
-      "    body:d.body||'',icon:d.icon||null,badge:d.badge||null,",
-      "    vibrate:[200,100,200],tag:d.tag||('flux-'+Date.now()),data:d.data||{}",
-      "  }));",
-      "});"
-    ].join('\n');
-    var blob=new Blob([swCode],{type:'application/javascript'});
-    var url=URL.createObjectURL(blob);
-    try{
-      var reg=await navigator.serviceWorker.register(url);
-      return reg;
-    }catch(e){
-      // На некоторых браузерах Blob-SW запрещён, просто игнорируем
-      try{URL.revokeObjectURL(url);}catch(_){}
-      return null;
-    }
-  }catch(e){
-    return null;
-  }
+    var reg=await navigator.serviceWorker.register('./firebase-messaging-sw.js',{scope:'./'});
+    await navigator.serviceWorker.ready.catch(function(){});
+    return reg;
+  }catch(e){ console.warn('SW register failed',e); return null; }
 }
-// Пытаемся зарегистрировать SW один раз при загрузке
-ensureServiceWorker();
 
-// Просьба разрешения с человеческим объяснением
+// Основная функция — получает FCM-токен и сохраняет его в БД
+async function initFCM(){
+  if(!messaging || !currentUser) return;
+  detectPushEnvironment();
+  if(!pushSupported){ console.log('Push unsupported:', pushReason); return; }
+  if(Notification.permission!=='granted'){
+    try{ await Notification.requestPermission(); }catch(e){ return; }
+  }
+  if(Notification.permission!=='granted') return;
+
+  try{
+    // Регистрируем SW (он должен существовать как файл firebase-messaging-sw.js)
+    var reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js',{scope:'./'});
+    await navigator.serviceWorker.ready.catch(function(){});
+
+    // Получаем токен
+    var token = await messaging.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: reg });
+    if(!token){ console.warn('FCM: no token returned'); return; }
+
+    // Если токен поменялся — удаляем старый
+    var oldTok = localStorage.getItem('flux_fcm_token');
+    if(oldTok && oldTok!==token && currentUser){
+      db.ref('users/'+currentUser.uid+'/fcmTokens/'+oldTok).remove().catch(function(){});
+    }
+    fcmToken = token;
+    try{ localStorage.setItem('flux_fcm_token', token); }catch(e){}
+
+    // Сохраняем токен в БД
+    await db.ref('users/'+currentUser.uid+'/fcmTokens/'+token).set({
+      token: token,
+      platform: (navigator.userAgent||'').slice(0,150),
+      createdAt: TS
+    });
+    console.log('FCM token saved');
+  }catch(e){ console.warn('FCM init failed',e); }
+}
+
+// Удаляем токен при выходе
+async function cleanupFCM(){
+  try{
+    if(messaging){
+      try{ await messaging.deleteToken(); }catch(e){}
+    }
+    var tok = localStorage.getItem('flux_fcm_token');
+    if(tok && currentUser){
+      try{ await db.ref('users/'+currentUser.uid+'/fcmTokens/'+tok).remove(); }catch(e){}
+    }
+    try{ localStorage.removeItem('flux_fcm_token'); }catch(e){}
+    fcmToken=null;
+  }catch(e){}
+}
+
+// Foreground-сообщения от FCM (когда приложение открыто)
+if(messaging){
+  try{
+    messaging.onMessage(function(payload){
+      var n=payload.notification||{};
+      var d=payload.data||{};
+      if(document.visibilityState==='visible' && d.chatId===currentChatId) return;
+      presentNotification(n.title||'Flux', n.body||'Новое сообщение', {
+        tag: d.chatId?('flux-'+d.chatId):undefined,
+        renotify: true,
+        data: d,
+        onClick: function(){ if(d.chatId && chatsData[d.chatId]) openChat(d.chatId, chatsData[d.chatId].otherUid); }
+      });
+    });
+  }catch(e){ console.warn('onMessage', e); }
+}
+
+// Кнопка "Push-уведомления" — включить/выключить
 async function enablePushNotifications(){
   detectPushEnvironment();
-  var ua=navigator.userAgent||'';
-
-  // --- Диагностика: почему не работает ---
   if(pushReason==='ios_not_installed'){
     showPushHelp('iPhone: добавьте на экран «Домой»',
-      'На iPhone push-уведомления работают только у приложений, установленных на экран «Домой».\n\n1. Откройте это приложение в Safari\n2. Нажмите «Поделиться» (квадрат со стрелкой)\n3. Выберите «На экран Домой»\n4. Откройте приложение из появившейся иконки\n5. Зайдите в Профиль → Push-уведомления → включить');
+      'На iPhone push-уведомления работают только у приложений, установленных на экран «Домой».\n\n1. Откройте это приложение в Safari\n2. Нажмите «Поделиться»\n3. Выберите «На экран Домой»\n4. Откройте приложение с иконки\n5. Войдите в Профиль → Push-уведомления → включить');
     return;
   }
   if(pushReason==='in_app_browser'){
@@ -1020,66 +1059,46 @@ async function enablePushNotifications(){
     return;
   }
   if(pushReason==='insecure_context'){
-    showPushHelp('Нужен HTTPS',
-      'Уведомления работают только на сайтах с защищённым протоколом (https://). Откройте приложение по ссылке, начинающейся с https://');
+    showPushHelp('Нужен HTTPS','Уведомления работают только на сайтах с защищённым протоколом (https://).');
     return;
   }
   if(pushReason==='no_api'){
-    showPushHelp('Не поддерживается браузером',
-      'Ваш браузер не поддерживает Web Notifications. Обновите браузер или используйте Chrome / Safari / Firefox последних версий.');
+    showPushHelp('Не поддерживается браузером','Обновите браузер или используйте Chrome / Safari / Firefox последних версий.');
     return;
   }
-
-  // --- Запрашиваем разрешение ---
   if(Notification.permission==='denied'){
     showPushHelp('Уведомления запрещены',
-      'Разрешение на уведомления было отклонено ранее.\n\nОткройте настройки сайта (значок замка/информации в адресной строке) → «Уведомления» → «Разрешить». После этого перезагрузите страницу.');
+      'Разрешение было отклонено. Откройте настройки сайта (значок замка в адресной строке) → «Уведомления» → «Разрешить». После этого перезагрузите страницу.');
     return;
   }
 
   var perm=Notification.permission;
   if(perm!=='granted'){
-    try{
-      perm=await Notification.requestPermission();
-    }catch(e){
-      perm=Notification.permission;
-    }
+    try{ perm=await Notification.requestPermission(); }catch(e){ perm=Notification.permission; }
   }
+  if(perm!=='granted'){ toast('Разрешение не выдано'); return; }
 
-  if(perm!=='granted'){
-    toast('Разрешение не выдано');
-    return;
-  }
+  notifyEnabled=true;
+  try{ localStorage.setItem('flux_notify','1'); }catch(e){}
 
-  // --- Включаем и показываем тестовое уведомление ---
+  // Регистрируем FCM
+  await initFCM();
+
+  // Тестовое уведомление
   try{
-    var reg=await ensureServiceWorker();
-    if(reg&&reg.active===null){
-      // Дадим SW чуть-чуть времени активироваться
-      await new Promise(function(r){setTimeout(r,150);});
-    }
-    await presentNotification('Flux Client','Уведомления включены! 🎉',{
-      tag:'flux-test-'+Date.now(),
-      vibrate:[200,100,200]
-    });
-    notifyEnabled=true;
-    try{localStorage.setItem('flux_notify','1');}catch(e){}
-    updateTogglesUI();
+    await presentNotification('Flux Client','Уведомления включены! 🎉',{tag:'flux-test-'+Date.now()});
     toast('Уведомления включены ✓');
-  }catch(e){
-    console.warn('push enable error',e);
-    toast('Не удалось показать уведомление: '+(e.message||'ошибка'));
-  }
+  }catch(e){ console.warn(e); }
+  updateTogglesUI();
 }
 
 function disablePushNotifications(){
   notifyEnabled=false;
-  try{localStorage.setItem('flux_notify','0');}catch(e){}
+  try{ localStorage.setItem('flux_notify','0'); }catch(e){}
   updateTogglesUI();
   toast('Уведомления выключены');
 }
 
-// Модальное окно с подсказкой
 function showPushHelp(title,text){
   var safeLines=String(text||'').split('\n').map(function(l){return esc(l);}).join('<br>');
   showModal(
@@ -1090,42 +1109,30 @@ function showPushHelp(title,text){
   );
 }
 
-// Реальное отображение входящего сообщения
+// Локальное уведомление о новом входящем (когда приложение открыто)
 async function showIncomingNotification(uid,text){
   if(!notifyEnabled)return;
   detectPushEnvironment();
   if(!pushSupported)return;
   if(Notification.permission!=='granted')return;
-  // Не показываем, если приложение активно и на переднем плане
-  if(document.visibilityState==='visible'&&currentChatId){
-    return;
-  }
+  if(document.visibilityState==='visible'&&currentChatId)return;
   var u=await fetchUser(uid);
   var name=(u&&u.name)||'Новое сообщение';
   try{
     await presentNotification(name,text||'Новое сообщение',{
-      tag:'flux-'+uid,
-      renotify:true,
-      vibrate:[200,100,200],
-      data:{uid:uid}
+      tag:'flux-'+uid, renotify:true, data:{uid:uid}
     });
   }catch(e){console.warn('notif',e);}
 }
 
-// Обновление статуса в настройках
 function refreshPushStatus(){
   detectPushEnvironment();
   var el=$('push-value');
   if(!el)return;
-  if(!pushSupported){
-    el.textContent='Недоступно';
-  } else if(Notification.permission==='granted'&&notifyEnabled){
-    el.textContent='Вкл';
-  } else if(Notification.permission==='denied'){
-    el.textContent='Запрещено';
-  } else {
-    el.textContent='Выкл';
-  }
+  if(!pushSupported){ el.textContent='Недоступно'; return; }
+  if(Notification.permission==='denied'){ el.textContent='Запрещено'; return; }
+  if(Notification.permission==='granted' && notifyEnabled){ el.textContent='Вкл'; return; }
+  el.textContent='Выкл';
 }
 
 // ============================================================================
@@ -1386,6 +1393,10 @@ auth.onAuthStateChanged(async function(user){
     startCallListener();
     refreshPushStatus();
     if(CRYPTO_OK&&!e2eKeyPriv){e2eInitUser().catch(function(e){console.warn('e2e init',e);});}
+    // >>> Запускаем FCM (регистрация токена) если уведомления включены
+    if(notifyEnabled && Notification.permission==='granted'){
+      initFCM().catch(function(e){console.warn('initFCM',e);});
+    }
   }
   authProcessing=false;
 });
@@ -1766,6 +1777,7 @@ function startUserChatsListener(){
         var otherUid=chatsData[cid].otherUid;
         if(blockedUsers.has(otherUid))return;
         playSound('receive');vibrate('receive');
+        // Локальный баннер/уведомление — FCM уже придёт отдельно от Cloud Function
         showIncomingNotification(otherUid,chatsData[cid].lastMessage||'');
         showInAppBanner(otherUid,chatsData[cid].lastMessage||'',cid);
       }
@@ -1921,6 +1933,7 @@ $('onb-continue').onclick=async function(){
     goScreen('main-screen',true);
     startSelfListener();startUserChatsListener();startSavedMetaListener();startSessionTracking();startCallListener();
     updateSettingsUI();updateTogglesUI();
+    if(notifyEnabled && Notification.permission==='granted') initFCM().catch(function(){});
   }catch(e){toast('Ошибка: '+(e.message||e.code));}
   this.disabled=false;
 };
@@ -2743,7 +2756,6 @@ $('btn-notify').onclick=function(){if(notifyEnabled){disablePushNotifications();
 $('btn-sound').onclick=function(){SOUND_PREFS.enabled=!SOUND_PREFS.enabled;try{localStorage.setItem('flux_sound',SOUND_PREFS.enabled?'1':'0');}catch(e){}updateTogglesUI();if(SOUND_PREFS.enabled)playSound('receive');};
 $('btn-vibration').onclick=function(){VIB_PREFS.enabled=!VIB_PREFS.enabled;try{localStorage.setItem('flux_vibration',VIB_PREFS.enabled?'1':'0');}catch(e){}updateTogglesUI();if(VIB_PREFS.enabled)vibrate('receive');};
 
-// Кнопка "Push-уведомления" — теперь вызывает реальную настройку
 $('btn-push').onclick=function(){if(notifyEnabled){disablePushNotifications();}else{enablePushNotifications();}};
 
 $('btn-pin-lock').onclick=function(){if(pinLockEnabled){pinLockEnabled=false;pinLockCode='';try{localStorage.removeItem('flux_pin_code');localStorage.setItem('flux_pin_lock','0');}catch(e){}updateTogglesUI();toast('PIN-код отключён');}else{showPinSetup(function(code){pinLockEnabled=true;pinLockCode=code;try{localStorage.setItem('flux_pin_code',code);localStorage.setItem('flux_pin_lock','1');}catch(e){}updateTogglesUI();toast('PIN-код установлен');});}};
@@ -2935,7 +2947,7 @@ $('btn-fontsize').onclick=function(){
   $('fs-save').onclick=function(){setFontSize(+rng.value);$('profile-sheet').classList.remove('show');toast('Сохранено');};
   $('fs-close').onclick=function(){$('profile-sheet').classList.remove('show');};
 };
-$('btn-logout').onclick=function(){showModal('<div class="modal-title">Выйти?</div><div class="modal-text">Вы всегда сможете войти снова.</div><div class="modal-actions"><button class="modal-btn" id="m-cancel">Отмена</button><button class="modal-btn danger primary-danger" id="m-ok">Выйти</button></div>',function(m,close){m.querySelector('#m-cancel').onclick=close;m.querySelector('#m-ok').onclick=async function(){close();try{await db.ref('users/'+currentUser.uid).update({online:false,lastSeen:TS});}catch(e){}try{await auth.signOut();}catch(e){}};});};
+$('btn-logout').onclick=function(){showModal('<div class="modal-title">Выйти?</div><div class="modal-text">Вы всегда сможете войти снова.</div><div class="modal-actions"><button class="modal-btn" id="m-cancel">Отмена</button><button class="modal-btn danger primary-danger" id="m-ok">Выйти</button></div>',function(m,close){m.querySelector('#m-cancel').onclick=close;m.querySelector('#m-ok').onclick=async function(){close();try{await db.ref('users/'+currentUser.uid).update({online:false,lastSeen:TS});}catch(e){}try{await cleanupFCM();}catch(e){}try{await auth.signOut();}catch(e){}};});};
 
 $('profile-btn-settings').onclick=function(){var wrap=$('profile-settings-wrap');if(wrap)wrap.scrollIntoView({behavior:'smooth'});};
 $('profile-avatar-big').onclick=function(){$('btn-edit-profile').click();};
@@ -3168,6 +3180,18 @@ async function idbPut(store,val){try{var db=await idbOpen();return new Promise(f
 async function idbGet(store,key){try{var db=await idbOpen();return new Promise(function(res,rej){var tx=db.transaction(store,'readonly');var rq=tx.objectStore(store).get(key);rq.onsuccess=function(){res(rq.result);};rq.onerror=function(){rej(rq.error);};});}catch(e){return null;}}
 async function idbCacheMessages(chatId,msgs){try{var slice=msgs.slice(-100).map(function(m){return Object.assign({},m,{key:chatId+'::'+m.id});});await idbPut('messages',{key:chatId,list:slice,ts:Date.now()});}catch(e){}}
 async function idbLoadMessages(chatId){try{var r=await idbGet('messages',chatId);return r&&r.list?r.list.map(function(m){var c=Object.assign({},m);delete c.key;return c;}):null;}catch(e){return null;}}
+
+// Регистрируем SW сразу — нужно для приёма push при полностью закрытой вкладке
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./firebase-messaging-sw.js',{scope:'./'}).catch(function(e){console.warn('SW reg',e);});
+}
+
+// Deep link: если открыли по /?chat=... — откроем нужный чат
+(function initDeepLink(){
+  var params=new URLSearchParams(location.search);
+  var cid=params.get('chat');
+  if(cid){ setInterval(function(){ if(chatsData[cid]&&currentChatId!==cid){ try{openChat(cid,chatsData[cid].otherUid||null);}catch(e){} } },1000); }
+})();
 
 updateTogglesUI();
 refreshPushStatus();
