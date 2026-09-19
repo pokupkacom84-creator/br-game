@@ -261,46 +261,15 @@ body.dark .chat-input-bar{border-top:1px solid rgba(255,255,255,.08)}
 .pinned-bar .pin-close{width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--text-2);border-radius:50%}
 .messages{flex:1;overflow-y:auto;padding:14px 10px 10px;background-color:var(--chat-bg);background-image:var(--tg-pattern);background-size:260px 260px;background-attachment:local;display:flex;flex-direction:column;gap:2px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;position:relative;min-height:0}
 .messages::-webkit-scrollbar{display:none}
-transition:transform .3s var(--ease-spring),
-           box-shadow .24s var(--ease-out),
-           background .5s var(--ease-out),
-           color .5s var(--ease-out),
-           filter .18s var(--ease-out);
+.msg{max-width:78%;padding:7px 11px 6px;border-radius:16px;font-size:var(--fs);line-height:1.38;position:relative;word-wrap:break-word;overflow-wrap:break-word;cursor:pointer;box-shadow:0 1px 1px rgba(0,0,0,.08);transition:transform .3s var(--ease-spring),box-shadow .24s var(--ease-out),background .5s var(--ease-out),color .5s var(--ease-out)}
 .msg.in{align-self:flex-start;color:var(--bubble-in-text);border-bottom-left-radius:5px;background:rgba(255,255,255,.72);backdrop-filter:blur(16px) saturate(180%);-webkit-backdrop-filter:blur(16px) saturate(180%);border:1px solid rgba(255,255,255,.4)}
 body.dark .msg.in{background:rgba(33,33,33,.68);border:1px solid rgba(255,255,255,.06)}
 .msg.out{align-self:flex-end;color:var(--bubble-out-text);border-bottom-right-radius:5px;background:rgba(225,216,251,.78);backdrop-filter:blur(16px) saturate(180%);-webkit-backdrop-filter:blur(16px) saturate(180%);border:1px solid rgba(255,255,255,.4)}
 body.dark .msg.out{background:rgba(135,116,225,.78);border:1px solid rgba(255,255,255,.1)}
-.msg.pressing{
-  transform:scale(.94);
-  filter:brightness(.92);
-  transition:transform .12s var(--ease-out),
-             filter .12s var(--ease-out);
-}
-.msg.selected{
-  transform:scale(.97);
-  box-shadow:0 0 0 2px var(--accent),
-             0 8px 24px var(--accent-glow) !important;
-  transition:transform .35s var(--ease-spring),
-             box-shadow .3s var(--ease-out);
-}
+.msg.pressing{transform:scale(.96)}
+.msg.selected{box-shadow:0 0 0 2px var(--accent),0 6px 18px rgba(0,0,0,.1)!important}
 .msg.swiping{transition:none}
-.msg.swipe-ready::after{
-  content:'';
-  position:absolute;
-  left:6px;top:50%;
-  transform:translateY(-50%) scale(1);
-  width:26px;height:26px;
-  border-radius:50%;
-  background:var(--accent);
-  box-shadow:0 4px 12px var(--accent-glow);
-  opacity:.85;
-  animation:swipeReadyPop .3s var(--ease-spring);
-}
-@keyframes swipeReadyPop{
-  0%{transform:translateY(-50%) scale(.4);opacity:0}
-  60%{transform:translateY(-50%) scale(1.2);opacity:1}
-  100%{transform:translateY(-50%) scale(1);opacity:.85}
-}
+.msg.swipe-ready::after{content:'';position:absolute;left:6px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;background:var(--accent);box-shadow:0 4px 12px var(--accent-glow);opacity:.85}
 .msg.out.swipe-ready::after{left:auto;right:6px}
 .swipe-icon{position:absolute;left:8px;top:50%;transform:translateY(-50%);opacity:0;color:var(--accent);transition:opacity .2s}
 .msg.out .swipe-icon{left:auto;right:8px;transform:translateY(-50%) rotate(180deg)}
@@ -2445,7 +2414,6 @@ function openMsgMenu(el){
   if(!isSavedChat(currentChatId))html+='<div class="msg-menu-item" data-action="pin"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>'+(isPinned?'Открепить':'Закрепить')+'</div>';
   if(msg.text&&msg.type!=='sticker')html+='<div class="msg-menu-item" data-action="copy"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>Копировать</div>';
   html+='<div class="msg-menu-item" data-action="forward"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z"/></svg>Переслать</div>';
-  html+='<div class="msg-menu-item" data-action="link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1"/><path d="M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1"/></svg>Скопировать ссылку</div>';
   html+='<div class="msg-menu-item" data-action="select"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Выбрать</div>';
   if(isMine&&!isHidden&&!msg._pending&&msg.type!=='sticker')html+='<div class="msg-menu-item" data-action="edit"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/></svg>Изменить</div>';
   if(isMine&&!isHidden&&!msg._pending)html+='<div class="msg-menu-item danger" data-action="delete"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>Удалить</div>';
@@ -2467,18 +2435,11 @@ function openMsgMenu(el){
       else if(a==='delete')deleteMessage(msg);
       else if(a==='copy')copyMessage(msg);
       else if(a==='forward'){selectedMsgIds.clear();selectedMsgIds.add(msg.id);openForwardSheet(msg);}
-      else if(a==='link'){copyMsgLink(msg);}
       else if(a==='select')enterSelectionMode(msg.id);
       else if(a==='hide')hideMessageForMe(msg);
       hideMsgMenu();
     };
   });
-}
-function copyMsgLink(msg){
-  if(!currentChatId)return;
-  var base=location.origin+location.pathname;
-  var link=base+'?chat='+encodeURIComponent(currentChatId)+'&msg='+encodeURIComponent(msg.id);
-  fallbackCopyText(link);
 }
 function hideMsgMenu(){var m=$('msg-menu');if(m)m.classList.remove('show');}
 document.addEventListener('click',function(e){if(!e.target.closest||(!e.target.closest('#msg-menu')&&!e.target.closest('.msg')))hideMsgMenu();});
