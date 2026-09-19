@@ -677,13 +677,14 @@ body.dark .vpn-key-item{background:linear-gradient(135deg,rgba(35,46,60,.65),rgb
 <div class="vpn-container" id="vpn-container">
 <div class="vpn-card">
 <div class="vpn-card-title">Источник ключей</div>
-<div class="vpn-card-desc">Автоматически обновляемая коллекция VLESS / VMess / Trojan / Shadowsocks / Hysteria2.</div>
+<div class="vpn-card-desc">Выберите один из трёх файлов коллекции VLESS / VMess / Trojan / Shadowsocks / Hysteria2.</div>
+<div class="vpn-filters" id="vpn-sources"></div>
 <button class="vpn-btn ripple" id="vpn-load-btn">Загрузить ключи</button>
 <button class="vpn-btn outline ripple" id="vpn-refresh-btn" style="display:none">Обновить</button>
 <div class="vpn-count" id="vpn-count"></div>
 </div>
 <div class="vpn-filters" id="vpn-filters"></div>
-<div class="vpn-key-list" id="vpn-key-list"><div class="vpn-empty">Нажмите «Загрузить ключи»</div></div>
+<div class="vpn-key-list" id="vpn-key-list"><div class="vpn-empty">Выберите источник и нажмите «Загрузить ключи»</div></div>
 </div>
 </div>
 
@@ -977,7 +978,13 @@ const SAVED_CHAT_PREFIX='saved_';
 const TYPING_TTL_MS=5000;
 const CLOCK_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 const WARN_ICON='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z"/></svg>';
-const VPN_SOURCE_URL='https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/26.txt';
+const VPN_SOURCES=[
+  {id:'v1',name:'VPN 1',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/26.txt'},
+  {id:'v2',name:'VPN 2',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/27.txt'},
+  {id:'v3',name:'VPN 3',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/28.txt'}
+];
+let vpnActiveSourceId=(function(){try{return localStorage.getItem('flux_vpn_source')||VPN_SOURCES[0].id;}catch(e){return VPN_SOURCES[0].id;}})();
+function getActiveVpnSource(){return VPN_SOURCES.find(function(s){return s.id===vpnActiveSourceId;})||VPN_SOURCES[0];}
 const NOTIF_ICON='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjQwIiBmaWxsPSIjODc3NGUxIi8+PHBhdGggZD0iTTQ4IDk2YzAtMjYgMjItNDggNDgtNDhzNDggMjIgNDggNDgtMjIgNDgtNDggNDgtNDgtMjItNDgtNDh6IiBmaWxsPSIjZmZmIi8+PC9zdmc+';
 
 const DEFAULT_REACTIONS=['👍','❤️','🔥','😂','😮','😢'];
@@ -3322,42 +3329,74 @@ async function loadVpnKeys(){
   if(refreshBtn)refreshBtn.disabled=true;
   if(list)list.innerHTML='<div class="skeleton"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line"></div><div class="sk-line short"></div></div></div><div class="skeleton"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line"></div><div class="sk-line short"></div></div></div>';
 
-  var urls=[
-    VPN_SOURCE_URL+'?t='+Date.now(),
-    'https://corsproxy.io/?'+encodeURIComponent(VPN_SOURCE_URL),
-    'https://api.allorigins.win/raw?url='+encodeURIComponent(VPN_SOURCE_URL)
-  ];
-
-  var text=null, lastErr=null;
-  for(var u=0;u<urls.length;u++){
-    try{
-      var resp=await fetch(urls[u],{cache:'no-store'});
-      if(!resp.ok)throw new Error('HTTP '+resp.status);
-      var t=await resp.text();
-      if(!t||t.length<20)throw new Error('Пустой ответ');
-      text=t;
-      console.log('VPN: успешно загружено с', urls[u]);
-      break;
-    }catch(err){
-      lastErr=err;
-      console.warn('VPN: не сработал URL', urls[u], err.message);
-    }
+  // Три варианта доступа к одному и тому же URL (напрямую и через CORS-прокси)
+  function buildUrlsFor(sourceUrl){
+    return [
+      sourceUrl+((sourceUrl.indexOf('?')===-1)?'?':'&')+'t='+Date.now(),
+      'https://corsproxy.io/?'+encodeURIComponent(sourceUrl),
+      'https://api.allorigins.win/raw?url='+encodeURIComponent(sourceUrl)
+    ];
   }
 
-  if(!text){
-    console.error('VPN: все источники недоступны', lastErr);
-    if(list)list.innerHTML='<div class="vpn-empty">Не удалось загрузить: '+esc(lastErr&&lastErr.message||'ошибка сети')+'<br><span style="font-size:11px;opacity:.6">Открой консоль (F12) для деталей</span></div>';
+  // Загружает один источник, перебирая прокси при ошибке
+  async function fetchOne(sourceUrl){
+    var urls=buildUrlsFor(sourceUrl);
+    var lastErr=null;
+    for(var u=0;u<urls.length;u++){
+      try{
+        var resp=await fetch(urls[u],{cache:'no-store'});
+        if(!resp.ok)throw new Error('HTTP '+resp.status);
+        var t=await resp.text();
+        if(!t||t.length<20)throw new Error('Пустой ответ');
+        console.log('VPN: успешно загружено с', urls[u]);
+        return t;
+      }catch(err){
+        lastErr=err;
+        console.warn('VPN: не сработал URL', urls[u], err.message);
+      }
+    }
+    throw lastErr||new Error('Не удалось загрузить');
+  }
+
+  // Дёргаем все 3 файла параллельно
+  var results=await Promise.allSettled(VPN_SOURCE_URLS.map(function(u){return fetchOne(u);}));
+
+  var chunks=[];
+  var okCount=0, failCount=0;
+  results.forEach(function(r,i){
+    if(r.status==='fulfilled'){
+      chunks.push(r.value);
+      okCount++;
+    } else {
+      failCount++;
+      console.warn('VPN: источник #'+(i+1)+' ('+VPN_SOURCE_URLS[i]+') не загружен:', r.reason&&r.reason.message||r.reason);
+    }
+  });
+
+  if(!chunks.length){
+    if(list)list.innerHTML='<div class="vpn-empty">Не удалось загрузить ни один источник<br><span style="font-size:11px;opacity:.6">Открой консоль (F12) для деталей</span></div>';
     if(loadBtn)loadBtn.style.display='flex';
     if(refreshBtn)refreshBtn.style.display='none';
     if($('vpn-count'))$('vpn-count').textContent='';
-    toast('Ошибка сети: '+(lastErr&&lastErr.message||'нет соединения'));
+    toast('Ошибка сети: все источники недоступны');
     if(loadBtn)loadBtn.disabled=false;
     if(refreshBtn)refreshBtn.disabled=false;
     return;
   }
 
+  var text=chunks.join('\n');
+
   try{
     vpnKeys=parseVpnKeys(text);
+
+    // Дедупликация: одинаковые ключи между файлами убираем
+    var seen=Object.create(null);
+    vpnKeys=vpnKeys.filter(function(k){
+      if(seen[k.raw])return false;
+      seen[k.raw]=1;
+      return true;
+    });
+
     vpnProtoFilter='all';
     vpnFiltered=vpnKeys.slice();
     renderVpnFilters();
@@ -3367,7 +3406,9 @@ async function loadVpnKeys(){
       if(loadBtn)loadBtn.style.display='flex';
       if(refreshBtn)refreshBtn.style.display='none';
     } else {
-      toast('Загружено: '+vpnKeys.length);
+      var msg='Загружено: '+vpnKeys.length+' ключей';
+      if(failCount>0)msg+=' · источников: '+okCount+'/'+VPN_SOURCE_URLS.length;
+      toast(msg);
     }
   }catch(renderErr){
     console.error('VPN: ошибка парсинга/рендера', renderErr);
@@ -3423,6 +3464,7 @@ if('serviceWorker' in navigator){
 
 updateTogglesUI();
 refreshPushStatus();
+renderVpnSources();
 if(!firebaseReady){setTimeout(function(){toast('Проверьте интернет');},500);}
 </script>
 </body>
