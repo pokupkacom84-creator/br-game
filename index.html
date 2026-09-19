@@ -622,6 +622,73 @@ body.dark .vpn-key-item{background:linear-gradient(135deg,rgba(35,46,60,.65),rgb
 .avatar-gift-badge{position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);background:rgba(30,42,54,.9);backdrop-filter:blur(14px);padding:4px 10px;border-radius:99px;font-size:16px;display:flex;gap:2px;box-shadow:0 6px 18px rgba(0,0,0,.35),0 0 0 2px var(--bg);z-index:3;line-height:1;border:1px solid rgba(255,255,255,.14)}
 .avatar-gift-badge span{line-height:1}
 </style>
+/* ============ NFT ART (Telegram-like) ============ */
+.nft-art-wrap{
+  width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  position:relative;border-radius:20px;overflow:hidden;padding:10px;
+}
+.nft-art-wrap.small{padding:2px;border-radius:14px}
+.nft-art-svg{
+  width:100%;height:100%;display:block;
+  filter:drop-shadow(0 10px 24px rgba(0,0,0,.4));
+  animation:nftFloat 4.5s ease-in-out infinite;
+  will-change:transform;
+}
+.nft-art-wrap.small .nft-art-svg{animation:none;filter:drop-shadow(0 3px 8px rgba(0,0,0,.35))}
+@keyframes nftFloat{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-7px) rotate(1.5deg)}}
+.nft-art-wrap.rarity-common{background:radial-gradient(circle at 50% 55%,rgba(148,163,184,.22),transparent 70%)}
+.nft-art-wrap.rarity-rare{background:radial-gradient(circle at 50% 55%,rgba(59,130,246,.30),transparent 70%)}
+.nft-art-wrap.rarity-epic{background:radial-gradient(circle at 50% 55%,rgba(168,85,247,.35),transparent 70%)}
+.nft-art-wrap.rarity-legendary{background:radial-gradient(circle at 50% 55%,rgba(251,191,36,.42),transparent 70%)}
+.nft-art-wrap.rarity-legendary::after{
+  content:'';position:absolute;inset:-20%;pointer-events:none;
+  background:conic-gradient(from 0deg,transparent 0%,rgba(251,191,36,.30) 12%,transparent 28%);
+  animation:nftSpin 7s linear infinite;
+}
+.nft-art-wrap.rarity-epic::after{
+  content:'';position:absolute;inset:-15%;pointer-events:none;
+  background:conic-gradient(from 90deg,transparent 0%,rgba(168,85,247,.22) 15%,transparent 30%);
+  animation:nftSpin 9s linear infinite reverse;
+}
+@keyframes nftSpin{to{transform:rotate(360deg)}}
+
+/* NFT в магазине */
+.nft-card .nft-art-wrap{width:100%;aspect-ratio:1;padding:6px;border-radius:16px;margin-bottom:2px}
+.nft-card .nft-art-svg{filter:drop-shadow(0 8px 18px rgba(0,0,0,.35))}
+
+/* ============ PROFILE ASSETS (NFT + GIFTS) ============ */
+.profile-assets-label{
+  display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;
+  color:var(--text-2);text-transform:uppercase;letter-spacing:.9px;
+  padding:14px 24px 8px;
+}
+.profile-assets-label::after{content:'';flex:1;height:1px;background:var(--divider)}
+.nft-label-icon{color:#a855f7;font-size:14px;filter:drop-shadow(0 0 6px rgba(168,85,247,.7))}
+.gift-label-icon{font-size:14px}
+
+.profile-nfts-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));
+  gap:10px;padding:2px 20px 8px;
+}
+.profile-nft-item{
+  position:relative;aspect-ratio:1;border-radius:16px;
+  background:var(--bg-2);padding:4px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;border:1px solid var(--border);
+  transition:transform .25s var(--ease-spring),box-shadow .25s var(--ease-out),border-color .25s;
+}
+.profile-nft-item:active{transform:scale(.92)}
+.profile-nft-item:hover{box-shadow:0 6px 18px rgba(168,85,247,.28);border-color:rgba(168,85,247,.4)}
+.profile-nft-item.more{font-size:13px;font-weight:800;color:var(--text-2);background:var(--bg-3)}
+.profile-nft-serial{
+  position:absolute;bottom:3px;left:50%;transform:translateX(-50%);
+  font-size:9.5px;font-weight:800;color:#fff;
+  background:rgba(0,0,0,.55);padding:1px 6px;border-radius:8px;
+  letter-spacing:.3px;backdrop-filter:blur(6px);font-variant-numeric:tabular-nums;
+}
+.profile-assets-empty{
+  text-align:center;padding:22px 12px;color:var(--text-2);font-size:13px;
+}
+.profile-assets-empty-icon{font-size:44px;opacity:.35;filter:grayscale(.3)}
 </head>
 <body>
 
@@ -1207,16 +1274,50 @@ const STAR_PACKS=[
   {id:'p7',stars:10000,price:'$199.99'}
 ];
 const NFTS=[
-  {id:'dragon',emoji:'🐉',name:'Neon Dragon',rarity:'legendary',supply:100,price:2500},
-  {id:'fox',emoji:'🦊',name:'Cyber Fox',rarity:'epic',supply:500,price:800},
-  {id:'whale',emoji:'🐋',name:'Cosmic Whale',rarity:'legendary',supply:50,price:5000},
-  {id:'cat',emoji:'🐱',name:'Pixel Cat',rarity:'common',supply:10000,price:200},
-  {id:'robot',emoji:'🤖',name:'Mecha Bot',rarity:'rare',supply:1000,price:400},
-  {id:'alien',emoji:'👽',name:'Space Visitor',rarity:'epic',supply:300,price:1200},
-  {id:'unicorn',emoji:'🦄',name:'Mythic Unicorn',rarity:'legendary',supply:20,price:10000},
-  {id:'phoenix',emoji:'🔥',name:'Phoenix',rarity:'epic',supply:200,price:3000},
-  {id:'wolf',emoji:'🐺',name:'Alpha Wolf',rarity:'rare',supply:750,price:600}
+  {id:'cosmic', name:'Cosmic Orb',      rarity:'legendary', supply:100,   price:2500},
+  {id:'crystal',name:'Ice Crystal',     rarity:'epic',      supply:500,   price:800},
+  {id:'diamond',name:'Blue Diamond',    rarity:'legendary', supply:50,    price:5000},
+  {id:'crown',  name:'Golden Crown',    rarity:'epic',      supply:300,   price:1200},
+  {id:'rocket', name:'Retro Rocket',    rarity:'rare',      supply:1000,  price:400},
+  {id:'nebula', name:'Nebula Core',     rarity:'legendary', supply:20,    price:10000},
+  {id:'prism',  name:'Light Prism',     rarity:'epic',      supply:200,   price:3000},
+  {id:'aurora', name:'Aurora Wave',     rarity:'rare',      supply:750,   price:600},
+  {id:'fusion', name:'Fusion Reactor',  rarity:'rare',      supply:800,   price:500}
 ];
+/* ============ NFT ART RENDERER (Telegram-style) ============ */
+const NFT_SVGS = {
+  cosmic: '<svg viewBox="0 0 120 120" class="nft-art-svg"><defs><radialGradient id="g_cos" cx="35%" cy="30%" r="72%"><stop offset="0%" stop-color="#e0e7ff"/><stop offset="22%" stop-color="#a78bfa"/><stop offset="60%" stop-color="#6d28d9"/><stop offset="100%" stop-color="#1e1b4b"/></radialGradient><radialGradient id="h_cos" cx="35%" cy="25%" r="35%"><stop offset="0%" stop-color="#fff" stop-opacity=".95"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><circle cx="60" cy="60" r="48" fill="url(#g_cos)"/><ellipse cx="44" cy="40" rx="22" ry="13" fill="url(#h_cos)"/><ellipse cx="78" cy="84" rx="12" ry="6" fill="#fff" opacity=".16"/><circle cx="72" cy="42" r="3" fill="#fff" opacity=".7"/><circle cx="86" cy="60" r="1.8" fill="#fff" opacity=".5"/><circle cx="50" cy="86" r="2.2" fill="#fff" opacity=".5"/><circle cx="38" cy="66" r="1.4" fill="#fff" opacity=".4"/></svg>',
+  crystal:'<svg viewBox="0 0 120 120" class="nft-art-svg"><defs><linearGradient id="g_cry" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e0f2fe"/><stop offset="35%" stop-color="#38bdf8"/><stop offset="75%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#075985"/></linearGradient><linearGradient id="g_cry2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff" stop-opacity=".9"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><polygon points="60,8 100,45 88,105 32,105 20,45" fill="url(#g_cry)"/><polygon points="60,8 100,45 60,55" fill="#fff" opacity=".35"/><polygon points="60,8 20,45 60,55" fill="#fff" opacity=".15"/><polygon points="60,55 88,105 60,100" fill="#000" opacity=".15"/><polygon points="60,55 32,105 60,100" fill="#fff" opacity=".1"/><polygon points="60,15 92,45 60,52" fill="url(#g_cry2)"/></svg>',
+  rocket:'<svg viewBox="0 0 120 120" class="nft-art-svg"><defs><linearGradient id="g_rkt" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f8fafc"/><stop offset="50%" stop-color="#cbd5e1"/><stop offset="100%" stop-color="#64748b"/></linearGradient><linearGradient id="g_rkta" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f43f5e"/><stop offset="100%" stop-color="#be123c"/></linearGradient><radialGradient id="g_flame" cx="50%" cy="0%"><stop offset="0%" stop-color="#fef3c7"/><stop offset="40%" stop-color="#f97316"/><stop offset="100%" stop-color="#dc2626" stop-opacity="0"/></radialGradient></defs><ellipse cx="60" cy="98" rx="10" ry="18" fill="url(#g_flame)"/><polygon points="60,10 78,60 42,60" fill="url(#g_rkt)"/><polygon points="42,60 42,90 30,105 42,98" fill="url(#g_rkta)"/><polygon points="78,60 78,90 90,105 78,98" fill="url(#g_rkta)"/><rect x="42" y="60" width="36" height="38" rx="2" fill="url(#g_rkt)"/><circle cx="60" cy="42" r="7" fill="#0ea5e9"/><circle cx="60" cy="42" r="5" fill="#38bdf8"/><circle cx="58" cy="40" r="1.6" fill="#fff"/><rect x="46" y="70" width="4" height="20" rx="1" fill="#f43f5e" opacity=".8"/><rect x="70" y="70" width="4" height="20" rx="1" fill="#f43f5e" opacity=".8"/></svg>',
+  diamond:'<svg viewBox="0 0 120 120" class="nft-art-svg"><defs><linearGradient id="g_dia" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#bae6fd"/><stop offset="40%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#0369a1"/></linearGradient><linearGradient id="g_diaTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff" stop-opacity=".85"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><polygon points="60,20 100,45 60,108 20,45" fill="url(#g_dia)"/><polygon points="60,20 80,45 60,60 40,45" fill="#fff" opacity=".4"/><polygon points="40,45 60,60 60,100 20,45" fill="#000" opacity=".12"/><polygon points="80,45 60,60 60,100 100,45" fill="#fff" opacity=".16"/><line x1="20" y1="45" x2="100" y2="45" stroke="#fff" stroke-opacity=".5" stroke-width="1.5"/><line x1="60" y1="20" x2="60" y2="60" stroke="#fff" stroke-opacity=".35" stroke-width="1"/><polygon points="60,22 78,44 60,58 42,44" fill="url(#g_diaTop)"/></svg>',
+  crown:'<svg viewBox="0 0 120 120" class="nft-art-svg"><defs><linearGradient id="g_crn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fef3c7"/><stop offset="35%" stop-color="#fbbf24"/><stop offset="75%" stop-color="#d97706"/><stop offset="100%" stop-color="#92400e"/></linearGradient></defs><path d="M15 45 L30 75 L45 30 L60 70 L75 30 L90 75 L105 45 L100 100 L20 100 Z" fill="url(#g_crn)" stroke="#78350f" stroke-width="1.5"/><circle cx="45" cy="30" r="4" fill="#ef4444"/><circle cx="60" cy="70" r="4" fill="#3b82f6"/><circle cx="75" cy="30" r="4" fill="#10b981"/><circle cx="15" cy="45" r="3" fill="#fff" opacity=".8"/><circle cx="105" cy="45" r="3" fill="#fff" opacity=".8"/><rect x="20" y="88" width="80" height="12" fill="#fbbf24" opacity=".6"/><path d="M15 45 L30 75 L45 30" fill="#fff" opacity=".15"/></svg>',
+  nebula:'<svg viewBox="0 0 120 120" class="nft-art-svg"><defs><radialGradient id="g_nb" cx="50%" cy="50%" r="55%"><stop offset="0%" stop-color="#fff"/><stop offset="15%" stop-color="#f0abfc"/><stop offset="40%" stop-color="#a855f7"/><stop offset="75%" stop-color="#6b21a8"/><stop offset="100%" stop-color="#1e1b4b"/></radialGradient></defs><circle cx="60" cy="60" r="48" fill="url(#g_nb)"/><path d="M60 60 Q80 40 90 60 T70 90 Q40 100 40 70 T65 35 Q90 25 100 50" stroke="#fff" stroke-opacity=".5" stroke-width="1.5" fill="none"/><circle cx="60" cy="60" r="7" fill="#fff" opacity=".95"/><circle cx="60" cy="60" r="12" fill="#fff" opacity=".25"/><circle cx="60" cy="60" r="18" fill="#fff" opacity=".1"/><circle cx="30" cy="35" r="1.5" fill="#fff" opacity=".8"/><circle cx="92" cy="80" r="1.8" fill="#fff" opacity=".7"/><circle cx="85" cy="28" r="1.2" fill="#fff" opacity=".6"/></svg>',
+  prism:'<svg viewBox="0 0 120 120" class="nft-art-svg"><defs><linearGradient id="g_prz" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#e0f2fe" stop-opacity=".9"/><stop offset="100%" stop-color="#0c4a6e" stop-opacity=".9"/></linearGradient><linearGradient id="g_rb" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#ef4444"/><stop offset="20%" stop-color="#f59e0b"/><stop offset="40%" stop-color="#facc15"/><stop offset="60%" stop-color="#22c55e"/><stop offset="80%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#a855f7"/></linearGradient></defs><polygon points="60,15 105,100 15,100" fill="url(#g_prz)" stroke="#94a3b8" stroke-width="1.5"/><polygon points="60,20 100,96 20,96" fill="#fff" opacity=".1"/><path d="M20 60 L100 60" stroke="#fff" stroke-width="3" opacity=".8"/><path d="M60 60 L110 40" stroke="url(#g_rb)" stroke-width="5" opacity=".95"/><path d="M60 60 L112 55" stroke="url(#g_rb)" stroke-width="5" opacity=".85"/><path d="M60 60 L112 70" stroke="url(#g_rb)" stroke-width="5" opacity=".85"/><path d="M60 60 L110 88" stroke="url(#g_rb)" stroke-width="5" opacity=".95"/><circle cx="60" cy="60" r="3" fill="#fff"/></svg>',
+  aurora:'<svg viewBox="0 0 120 120" class="nft-art-svg"><defs><linearGradient id="g_aur1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#34d399"/><stop offset="50%" stop-color="#22d3ee"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient><linearGradient id="g_aur2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f0abfc"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><path d="M10 75 Q30 40 60 55 T110 45" stroke="url(#g_aur1)" stroke-width="14" fill="none" stroke-linecap="round" opacity=".85"/><path d="M10 90 Q35 60 65 72 T110 62" stroke="url(#g_aur2)" stroke-width="10" fill="none" stroke-linecap="round" opacity=".75"/><path d="M15 60 Q35 30 65 45 T105 38" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".4"/><circle cx="30" cy="30" r="3" fill="#fff" opacity=".8"/><circle cx="90" cy="25" r="2" fill="#fff" opacity=".6"/><circle cx="60" cy="20" r="1.5" fill="#fff" opacity=".5"/></svg>',
+  fusion:'<svg viewBox="0 0 120 120" class="nft-art-svg"><defs><radialGradient id="g_fs" cx="50%" cy="50%" r="55%"><stop offset="0%" stop-color="#fff"/><stop offset="20%" stop-color="#fde68a"/><stop offset="50%" stop-color="#f97316"/><stop offset="80%" stop-color="#dc2626"/><stop offset="100%" stop-color="#7f1d1d"/></radialGradient></defs><circle cx="60" cy="60" r="30" fill="url(#g_fs)"/><circle cx="60" cy="60" r="40" fill="none" stroke="#f97316" stroke-width="2" stroke-opacity=".5" stroke-dasharray="4 6"/><circle cx="60" cy="60" r="48" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-opacity=".35" stroke-dasharray="2 8"/><circle cx="60" cy="60" r="20" fill="#fff" opacity=".3"/><circle cx="60" cy="60" r="10" fill="#fff" opacity=".9"/><line x1="60" y1="10" x2="60" y2="20" stroke="#fbbf24" stroke-width="2" opacity=".7"/><line x1="60" y1="100" x2="60" y2="110" stroke="#fbbf24" stroke-width="2" opacity=".7"/><line x1="10" y1="60" x2="20" y2="60" stroke="#fbbf24" stroke-width="2" opacity=".7"/><line x1="100" y1="60" x2="110" y2="60" stroke="#fbbf24" stroke-width="2" opacity=".7"/></svg>'
+};
+function nftArtSvg(id){ return NFT_SVGS[id] || NFT_SVGS.cosmic; }
+function nftArtHtml(n, size){
+  return '<div class="nft-art-wrap '+(size==='small'?'small ':'')+'rarity-'+(n.rarity||'common')+'">'+nftArtSvg(n.id||n.nftId)+'</div>';
+}
+function showNftAnimation(n){
+  var wrap=document.createElement('div');
+  wrap.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:99999';
+  var el=document.createElement('div');
+  el.style.cssText='width:190px;height:190px;';
+  el.innerHTML=nftArtSvg(n.id||n.nftId);
+  wrap.appendChild(el);
+  document.body.appendChild(wrap);
+  try{
+    el.animate([
+      {transform:'scale(.3) rotate(-18deg)',opacity:0},
+      {transform:'scale(1.1) rotate(0deg)',opacity:1,offset:.3},
+      {transform:'scale(1.1) rotate(0deg)',opacity:1,offset:.65},
+      {transform:'scale(1.6) rotate(0deg)',opacity:0}
+    ],{duration:1400,easing:'cubic-bezier(.34,1.56,.64,1)',fill:'forwards'});
+  }catch(e){}
+  setTimeout(function(){try{wrap.remove();}catch(e){}},1500);
+}
 let currentShopTab='gifts';
 let myStars=0,myNfts={},myGifts={};
 let animWallpapersEnabled=localStorage.getItem('flux_anim_wall')!=='0';
@@ -3134,83 +3235,59 @@ function updateTogglesUI(){
 }
 
 // ============ PROFILE GIFTS RENDERING ============
-function renderProfileGifts(){
+async function renderProfileGifts(){
   var sec=document.getElementById('profile-gifts-section');
   if(!sec)return;
-  if(giftsDisplay!=='profile'){sec.innerHTML='';sec.style.display='none';return;}
-  var gifts=Object.keys(myGifts||{}).map(function(k){return Object.assign({_k:k},myGifts[k]);});
-  gifts.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
-  if(!gifts.length){sec.innerHTML='';sec.style.display='none';return;}
-  var shown=gifts.slice(0,8);
-  var html='<div class="profile-gifts-label">🎁 Подарки · '+gifts.length+'</div><div class="profile-gifts-wrap">';
-  shown.forEach(function(g){
-    html+='<div class="profile-gift-item" title="'+escAttr((g.name||'')+' — от '+(g.fromName||'?'))+'">'+g.emoji+'</div>';
-  });
-  if(gifts.length>shown.length){
-    html+='<div class="profile-gift-item more">+'+(gifts.length-shown.length)+'</div>';
-  }
-  html+='</div>';
-  sec.style.display='block';
-  sec.innerHTML=html;
-  sec.onclick=function(){openProfileGiftsSheet();};
-}
-function renderAvatarGiftBadge(){
-  var wrap=document.getElementById('profile-avatar-wrap');
-  if(!wrap)return;
-  var badge=document.getElementById('avatar-gift-badge');
-  if(giftsDisplay!=='avatar'){
-    if(badge)badge.remove();
-    return;
-  }
-  var arr=Object.keys(myGifts||{}).map(function(k){return myGifts[k];}).sort(function(a,b){return (b.ts||0)-(a.ts||0);});
-  if(!arr.length){if(badge)badge.remove();return;}
-  if(!badge){
-    badge=document.createElement('div');
-    badge.id='avatar-gift-badge';
-    badge.className='avatar-gift-badge';
-    wrap.appendChild(badge);
-  }
-  badge.innerHTML=arr.slice(0,3).map(function(g){return '<span>'+g.emoji+'</span>';}).join('');
-}
-function openProfileGiftsSheet(){
-  var sheet=document.getElementById('my-gifts-sheet');
-  sheet.classList.add('show');
-  var body=document.getElementById('my-gifts-body');
-  var gifts=Object.keys(myGifts||{}).map(function(k){return Object.assign({_k:k},myGifts[k]);});
-  gifts.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
-  var html='<div class="profile-sheet-title">🎁 Мои подарки · '+gifts.length+'</div>';
-  if(!gifts.length){
-    html+='<div class="empty"><div class="empty-title">Пока нет подарков</div><div>Получите или отправьте первый подарок</div></div>';
-  }else{
-    html+='<div class="shop-grid" style="padding:0">';
-    gifts.forEach(function(g){
-      html+='<div class="my-asset">'+
-        '<div class="my-asset-emoji">'+g.emoji+'</div>'+
-        '<div class="my-asset-name">'+esc(g.name||'')+'</div>'+
-        '<div class="my-asset-meta">от '+esc(truncate(g.fromName||'?',12))+'</div>'+
-      '</div>';
-    });
-    html+='</div>';
-  }
-  html+='<button class="sheet-btn secondary ripple" id="my-gifts-close" style="margin-top:12px">Закрыть</button>';
-  body.innerHTML=html;
-  var cb=document.getElementById('my-gifts-close');
-  if(cb)cb.onclick=function(){sheet.classList.remove('show');};
-}
-document.getElementById('my-gifts-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
-
-// ============ SHOP FUNCTIONS ============
-async function loadMyAssets(){
-  if(!currentUser)return;
+  if(!currentUser){sec.innerHTML='';sec.style.display='none';return;}
   try{
-    var s=await db.ref('users/'+currentUser.uid).once('value');
-    var v=s.val()||{};
-    myStars=v.stars||0;
-    myNfts=v.nfts||{};
-    myGifts=v.giftsReceived||{};
-    updateStarsUI();
-    renderProfileGifts();
-    renderAvatarGiftBadge();
+    var snap=await db.ref('users/'+currentUser.uid).once('value');
+    var v=snap.val()||{};
+    var nftsRaw=v.nfts||{};
+    var giftsRaw=v.giftsReceived||{};
+
+    var nftList=[];
+    Object.keys(nftsRaw).forEach(function(nid){
+      var bySerial=nftsRaw[nid]||{};
+      Object.keys(bySerial).forEach(function(s){ if(bySerial[s]) nftList.push(bySerial[s]); });
+    });
+    nftList.sort(function(a,b){return (b.mintedAt||0)-(a.mintedAt||0);});
+
+    var giftList=Object.keys(giftsRaw).map(function(k){return giftsRaw[k];}).filter(Boolean);
+    giftList.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+
+    if(giftsDisplay!=='profile'&&!nftList.length){sec.innerHTML='';sec.style.display='none';return;}
+    if(!nftList.length&&!giftList.length){sec.innerHTML='';sec.style.display='none';return;}
+
+    var html='';
+
+    // === NFT СНАЧАЛА ===
+    if(nftList.length){
+      html+='<div class="profile-assets-label"><span class="nft-label-icon">◆</span> Коллекция NFT · '+nftList.length+'</div>';
+      html+='<div class="profile-nfts-grid">';
+      nftList.slice(0,9).forEach(function(nft){
+        html+='<div class="profile-nft-item" title="'+escAttr((nft.name||'')+' #'+(nft.serial||'')+' / '+(nft.ofSupply||''))+'">'+
+          nftArtHtml({id:nft.nftId||nft.id,rarity:nft.rarity},'small')+
+          '<div class="profile-nft-serial">#'+(nft.serial||'')+'</div>'+
+        '</div>';
+      });
+      if(nftList.length>9)html+='<div class="profile-nft-item more">+'+(nftList.length-9)+'</div>';
+      html+='</div>';
+    }
+
+    // === ПОДАРКИ ПОТОМ ===
+    if(giftList.length && giftsDisplay==='profile'){
+      html+='<div class="profile-assets-label"><span class="gift-label-icon">🎁</span> Подарки · '+giftList.length+'</div>';
+      html+='<div class="profile-gifts-wrap">';
+      giftList.slice(0,12).forEach(function(g){
+        html+='<div class="profile-gift-item" title="'+escAttr((g.name||'')+' — от '+(g.fromName||'?'))+'">'+g.emoji+'</div>';
+      });
+      if(giftList.length>12)html+='<div class="profile-gift-item more">+'+(giftList.length-12)+'</div>';
+      html+='</div>';
+    }
+
+    sec.style.display='block';
+    sec.innerHTML=html;
+    sec.onclick=function(){openProfileGiftsSheet();};
   }catch(e){}
 }
 function updateStarsUI(noAnim){
@@ -3303,7 +3380,7 @@ async function renderNftTab(list){
     html+='<div class="nft-card" data-nft="'+n.id+'">'+
       '<div class="shop-card-rarity rarity-'+n.rarity+'">'+n.rarity+'</div>'+
       (ownedNum?'<div class="shop-card-owned">×'+ownedNum+'</div>':'')+
-      '<div class="shop-card-emoji">'+n.emoji+'</div>'+
+      nftArtHtml(n)+
       '<div class="shop-card-name">'+esc(n.name)+'</div>'+
       '<div class="nft-number">#'+(sold||0)+' / '+n.supply+'</div>'+
       '<div class="nft-supply-bar"><div class="nft-supply-fill" style="width:'+pct+'%"></div></div>'+
@@ -3508,7 +3585,7 @@ async function buyNft(n){
   var pct=n.supply>0?Math.round((sold/n.supply)*100):0;
   showModal(
     '<div class="gift-preview">'+
-      '<div class="gift-preview-emoji" style="font-size:88px">'+n.emoji+'</div>'+
+      '<div style="width:120px;height:120px;margin:0 auto">'+nftArtSvg(n.id)+'</div>'+
       '<span class="shop-card-rarity rarity-'+n.rarity+'" style="position:static;display:inline-block;font-size:10px;padding:3px 9px;border-radius:8px">'+n.rarity+'</span>'+
       '<div style="font-size:20px;font-weight:800;margin-top:2px">'+esc(n.name)+'</div>'+
       '<div style="font-size:12px;color:var(--text-2)">Осталось '+left+' из '+n.supply+'</div>'+
@@ -3538,7 +3615,7 @@ async function buyNft(n){
         await db.ref('nfts/'+n.id+'/'+serial).set(nftData);
         await db.ref('nfts/'+n.id+'/owners/'+serial).set(currentUser.uid);
         toast('NFT #'+serial+' получен!');
-        showGiftAnimation({emoji:n.emoji});
+        showNftAnimation(n);
         myNfts=myNfts||{};myNfts[n.id]=myNfts[n.id]||{};myNfts[n.id][serial]=nftData;
         renderShop();
       };
@@ -3804,78 +3881,73 @@ async function showProfileSheet(u){
   $('profile-close').onclick=function(){sheet.classList.remove('show');};
 
   // === ПОДАРКИ ВИДНЫ ВСЕМ ===
-  loadGiftsForUser(u.uid);
+  loadProfileAssets(u.uid);
 }
 
 // Показывает полученные подарки любого пользователя (не только себя)
-async function loadGiftsForUser(uid){
-  var wrap=document.getElementById('profile-gifts-container');
-  var loading=document.getElementById('profile-gifts-loading');
+async function loadProfileAssets(uid){
+  var wrap=document.getElementById('profile-assets-container');
+  var loading=document.getElementById('profile-assets-loading');
   if(!wrap)return;
   try{
-    var snap=await db.ref('users/'+uid+'/giftsReceived').once('value');
-    var gifts=snap.val()||{};
-    var arr=Object.keys(gifts).map(function(k){return gifts[k];}).filter(Boolean);
-    arr.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
-    if(loading)loading.remove();
-    if(!arr.length){
-      wrap.innerHTML='<div style="text-align:center;padding:16px 12px;color:var(--text-2);font-size:13px">'+
-        '<div style="font-size:42px;opacity:.35;margin-bottom:6px">🎁</div>Подарков пока нет</div>';
-      return;
-    }
-    var html='<div class="profile-gifts-label">🎁 Подарки · '+arr.length+'</div><div class="profile-gifts-wrap">';
-    arr.slice(0,12).forEach(function(g){
-      html+='<div class="profile-gift-item" title="'+escAttr((g.name||'')+' — от '+(g.fromName||'?'))+'">'+g.emoji+'</div>';
+    var results=await Promise.all([
+      db.ref('users/'+uid+'/nfts').once('value'),
+      db.ref('users/'+uid+'/giftsReceived').once('value')
+    ]);
+    var nftsRaw=results[0].val()||{};
+    var giftsRaw=results[1].val()||{};
+
+    var nftList=[];
+    Object.keys(nftsRaw).forEach(function(nid){
+      var bySerial=nftsRaw[nid]||{};
+      Object.keys(bySerial).forEach(function(s){ if(bySerial[s]) nftList.push(bySerial[s]); });
     });
-    if(arr.length>12)html+='<div class="profile-gift-item more">+'+(arr.length-12)+'</div>';
-    html+='</div>';
+    nftList.sort(function(a,b){return (b.mintedAt||0)-(a.mintedAt||0);});
+
+    var giftList=Object.keys(giftsRaw).map(function(k){return giftsRaw[k];}).filter(Boolean);
+    giftList.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+
+    if(loading)loading.remove();
+
+    var html='';
+
+    // === NFT СНАЧАЛА ===
+    if(nftList.length){
+      html+='<div class="profile-assets-label"><span class="nft-label-icon">◆</span> Коллекция NFT · '+nftList.length+'</div>';
+      html+='<div class="profile-nfts-grid">';
+      nftList.slice(0,9).forEach(function(nft){
+        html+='<div class="profile-nft-item" title="'+escAttr((nft.name||'')+' #'+(nft.serial||''))+'">'+
+          nftArtHtml({id:nft.nftId||nft.id,rarity:nft.rarity},'small')+
+          '<div class="profile-nft-serial">#'+(nft.serial||'')+'</div>'+
+        '</div>';
+      });
+      if(nftList.length>9)html+='<div class="profile-nft-item more">+'+(nftList.length-9)+'</div>';
+      html+='</div>';
+    }
+
+    // === ПОДАРКИ ПОТОМ ===
+    if(giftList.length){
+      html+='<div class="profile-assets-label"><span class="gift-label-icon">🎁</span> Подарки · '+giftList.length+'</div>';
+      html+='<div class="profile-gifts-wrap">';
+      giftList.slice(0,12).forEach(function(g){
+        html+='<div class="profile-gift-item" title="'+escAttr((g.name||'')+' — от '+(g.fromName||'?'))+'">'+g.emoji+'</div>';
+      });
+      if(giftList.length>12)html+='<div class="profile-gift-item more">+'+(giftList.length-12)+'</div>';
+      html+='</div>';
+    }
+
+    if(!nftList.length&&!giftList.length){
+      html='<div class="profile-assets-empty">'+
+        '<div class="profile-assets-empty-icon">◆</div>'+
+        '<div style="margin-top:6px">Пока нет NFT и подарков</div>'+
+      '</div>';
+    }
+
     wrap.innerHTML=html;
   }catch(e){
-    if(loading)loading.textContent='Не удалось загрузить подарки';
+    if(loading)loading.textContent='Не удалось загрузить';
   }
 }
-$('profile-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
-$('edit-profile-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
-$('status-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
-
-function switchTab(tab){
-  if(!tab)return;
-  try{
-    document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
-    var activeNav=document.querySelector('.nav-item[data-tab="'+tab+'"]');if(activeNav)activeNav.classList.add('active');
-    document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active');});
-    var tc=document.getElementById('tab-'+tab);if(tc)tc.classList.add('active');
-    if(tab==='contacts')loadContacts();
-    if(tab==='settings'){updateSettingsUI();updateTogglesUI();}
-    if(tab==='chats')applyWallpaper();
-    if(tab==='shop'){renderShop();loadMyAssets();}
-    vibrate('tap');
-  }catch(e){}
-}
-document.querySelectorAll('.nav-item').forEach(function(item){item.addEventListener('click',function(e){e.preventDefault();switchTab(item.dataset.tab);});});
-document.getElementById('contacts-back').onclick=function(){switchTab('shop');};
-document.getElementById('shop-contacts-btn').onclick=function(){switchTab('contacts');};
-$('search-toggle').onclick=function(){var sb=$('search-bar');sb.classList.toggle('hidden');if(!sb.classList.contains('hidden'))$('chat-search').focus();else{searchQuery='';$('chat-search').value='';scheduleRenderChats();}};
-var searchDebounce=null;
-$('chat-search').addEventListener('input',function(){var v=this.value.trim();clearTimeout(searchDebounce);searchDebounce=setTimeout(function(){searchQuery=v;scheduleRenderChats();},150);});
-document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=function(){document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(x){x.classList.remove('active');});t.classList.add('active');currentShopTab=t.dataset.shop;renderShop();};});
-var starsBalanceEl=document.getElementById('stars-balance');
-if(starsBalanceEl)starsBalanceEl.onclick=function(){
-  document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(x){x.classList.remove('active');});
-  var st=document.querySelector('#shop-tabs .shop-tab[data-shop="stars"]');
-  if(st)st.classList.add('active');
-  currentShopTab='stars';
-  renderShop();
-  vibrate('tap');
-};
-
-(function ptrInit(){
-  var list=$('chats-list'),ptr=$('ptr');if(!list||!ptr)return;
-  var startY=0,pulling=false,dist=0;
-  list.addEventListener('touchstart',function(e){if(list.scrollTop===0){startY=e.touches[0].clientY;pulling=true;dist=0;}},{passive:true});
-  list.addEventListener('touchmove',function(e){if(!pulling)return;var y=e.touches[0].clientY-startY;if(y>0){dist=y;ptr.classList.add('show');ptr.style.transform='translateY(0) translateY('+Math.min(60,y)+'px)';}},{passive:true});
-  list.addEventListener('touchend',function(){if(!pulling)return;pulling=false;if(dist>70){toast('Обновление...');setTimeout(function(){location.reload();},300);}ptr.classList.remove('show');ptr.style.transform='';dist=0;});
-})();
 
 async function doDoubleTap(el){
   var msgId=el.dataset.msgid;if(!msgId||!currentChatId)return;
