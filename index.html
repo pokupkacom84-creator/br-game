@@ -3171,9 +3171,57 @@ let vpnFavorites={};
 try{vpnFavorites=JSON.parse(localStorage.getItem('flux_vpn_fav')||'{}');}catch(e){vpnFavorites={};}
 function saveVpnFavorites(){try{localStorage.setItem('flux_vpn_fav',JSON.stringify(vpnFavorites));}catch(e){}}
 function parseVpnKeys(text){var lines=text.split(/\r?\n/);var keys=[];var protoRegex=/^(vless|vmess|trojan|ss|hysteria2|hy2|socks):\/\//i;for(var i=0;i<lines.length;i++){var line=lines[i].trim();if(!line||line.charAt(0)==='#')continue;var m=line.match(protoRegex);if(m)keys.push({proto:m[1].toLowerCase(),raw:line});}return keys;}
+function getVpnHost(raw){
+  try{
+    var after=raw.split('://')[1]||'';
+    after=after.split('@').pop();
+    var host=after.split(/[:/?#]/)[0];
+    return host||'';
+  }catch(e){return '';}
+}
+
 const COUNTRY_FLAGS={'nl':'🇳🇱','netherlands':'🇳🇱','amsterdam':'🇳🇱','holland':'🇳🇱','de':'🇩🇪','germany':'🇩🇪','frankfurt':'🇩🇪','berlin':'🇩🇪','us':'🇺🇸','usa':'🇺🇸','united states':'🇺🇸','america':'🇺🇸','uk':'🇬🇧','gb':'🇬🇧','united kingdom':'🇬🇧','london':'🇬🇧','england':'🇬🇧','fr':'🇫🇷','france':'🇫🇷','paris':'🇫🇷','ru':'🇷🇺','russia':'🇷🇺','moscow':'🇷🇺','fi':'🇫🇮','finland':'🇫🇮','helsinki':'🇫🇮','se':'🇸🇪','sweden':'🇸🇪','stockholm':'🇸🇪','pl':'🇵🇱','poland':'🇵🇱','warsaw':'🇵🇱','tr':'🇹🇷','turkey':'🇹🇷','istanbul':'🇹🇷','jp':'🇯🇵','japan':'🇯🇵','tokyo':'🇯🇵','sg':'🇸🇬','singapore':'🇸🇬','hk':'🇭🇰','hong kong':'🇭🇰','kr':'🇰🇷','korea':'🇰🇷','seoul':'🇰🇷','in':'🇮🇳','india':'🇮🇳','mumbai':'🇮🇳','ca':'🇨🇦','canada':'🇨🇦','toronto':'🇨🇦','au':'🇦🇺','australia':'🇦🇺','sydney':'🇦🇺','br':'🇧🇷','brazil':'🇧🇷','it':'🇮🇹','italy':'🇮🇹','milan':'🇮🇹','es':'🇪🇸','spain':'🇪🇸','madrid':'🇪🇸','ch':'🇨🇭','switzerland':'🇨🇭','zurich':'🇨🇭','at':'🇦🇹','austria':'🇦🇹','vienna':'🇦🇹','cz':'🇨🇿','czech':'🇨🇿','prague':'🇨🇿','ro':'🇷🇴','romania':'🇷🇴','bucharest':'🇷🇴','ua':'🇺🇦','ukraine':'🇺🇦','kyiv':'🇺🇦','kz':'🇰🇿','kazakhstan':'🇰🇿','ae':'🇦🇪','uae':'🇦🇪','dubai':'🇦🇪','il':'🇮🇱','israel':'🇮🇱','ir':'🇮🇷','iran':'🇮🇷','tehran':'🇮🇷','cn':'🇨🇳','china':'🇨🇳','beijing':'🇨🇳','th':'🇹🇭','thailand':'🇹🇭','bangkok':'🇹🇭','vn':'🇻🇳','vietnam':'🇻🇳','id':'🇮🇩','indonesia':'🇮🇩','ph':'🇵🇭','philippines':'🇵🇭','mx':'🇲🇽','mexico':'🇲🇽','ar':'🇦🇷','argentina':'🇦🇷','za':'🇿🇦','south africa':'🇿🇦','no':'🇳🇴','norway':'🇳🇴','oslo':'🇳🇴','dk':'🇩🇰','denmark':'🇩🇰','copenhagen':'🇩🇰','be':'🇧🇪','belgium':'🇧🇪','brussels':'🇧🇪','ie':'🇮🇪','ireland':'🇮🇪','dublin':'🇮🇪','pt':'🇵🇹','portugal':'🇵🇹','lisbon':'🇵🇹','gr':'🇬🇷','greece':'🇬🇷','athens':'🇬🇷','hu':'🇭🇺','hungary':'🇭🇺','budapest':'🇭🇺','bg':'🇧🇬','bulgaria':'🇧🇬','sofia':'🇧🇬','lt':'🇱🇹','lithuania':'🇱🇹','lv':'🇱🇻','latvia':'🇱🇻','riga':'🇱🇻','ee':'🇪🇪','estonia':'🇪🇪','tallinn':'🇪🇪','md':'🇲🇩','moldova':'🇲🇩','by':'🇧🇾','belarus':'🇧🇾','minsk':'🇧🇾','rs':'🇷🇸','serbia':'🇷🇸','belgrade':'🇷🇸','hr':'🇭🇷','croatia':'🇭🇷','sk':'🇸🇰','slovakia':'🇸🇰','si':'🇸🇮','slovenia':'🇸🇮'};
 const COUNTRY_KEYS_LONG=Object.keys(COUNTRY_FLAGS).filter(function(k){return k.length>3;});
 const COUNTRY_KEYS_SHORT=Object.keys(COUNTRY_FLAGS).filter(function(k){return k.length<=3;});
+
+function extractVpnMeta(raw){
+  var name='',flag='';
+  try{
+    var hashIdx=raw.indexOf('#');
+    if(hashIdx!==-1){
+      try{name=decodeURIComponent(raw.slice(hashIdx+1));}
+      catch(e){name=raw.slice(hashIdx+1);}
+    }
+    if(!name&&/^vmess:\/\//i.test(raw)){
+      try{
+        var vm=raw.match(/vmess:\/\/([A-Za-z0-9+/=]+)/);
+        if(vm){
+          var b64=vm[1].replace(/-/g,'+').replace(/_/g,'/');
+          while(b64.length%4)b64+='=';
+          var cfg=JSON.parse(atob(b64));
+          if(cfg.ps)name=cfg.ps;
+        }
+      }catch(e){}
+    }
+    if(name){
+      var lower=name.toLowerCase();
+      for(var i=0;i<COUNTRY_KEYS_LONG.length;i++){
+        if(lower.indexOf(COUNTRY_KEYS_LONG[i])!==-1){
+          flag=COUNTRY_FLAGS[COUNTRY_KEYS_LONG[i]];
+          break;
+        }
+      }
+      if(!flag){
+        for(var j=0;j<COUNTRY_KEYS_SHORT.length;j++){
+          var k=COUNTRY_KEYS_SHORT[j];
+          var re=new RegExp('(^|[^a-z])'+k+'([^a-z]|$)','i');
+          if(re.test(lower)){flag=COUNTRY_FLAGS[k];break;}
+        }
+      }
+    }
+  }catch(e){console.warn('extractVpnMeta',e);}
+  return {name:name,flag:flag||'🌐'};
+}
 
 function extractVpnMeta(raw){
   var name='',flag='';
