@@ -231,14 +231,6 @@ body.dark .chat-input-bar{border-top:1px solid rgba(255,255,255,.08)}
   transform:translateY(0) scale(.96);
   transition:transform .1s var(--ease-out);
 }
-.nav-item::before{content:'';position:absolute;top:5px;left:50%;width:52px;height:28px;transform:translateX(-50%) scale(.5);opacity:0;background:var(--accent-grad);border-radius:14px;transition:transform var(--dur-slow) var(--ease-spring),opacity var(--dur);pointer-events:none;z-index:0;box-shadow:0 4px 14px var(--accent-glow)}
-.nav-item.active::before{transform:translateX(-50%) scale(1);opacity:1}
-.nav-item svg{position:relative;z-index:1;display:block;width:24px;height:24px;transition:transform .5s var(--ease-bounce),color var(--dur)}
-.nav-item.active svg{transform:translateY(-2px) scale(1.1);color:#fff}
-.nav-item:not(.active):hover svg{animation:navIconPop .5s var(--ease-bounce)}
-@keyframes navIconPop{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-4px) scale(1.15)}}
-.nav-item span{position:relative;z-index:1;color:var(--text-3);white-space:nowrap;line-height:1.1}
-.nav-item.active span{color:var(--accent);font-weight:700}
 .nav-item svg,.nav-item span{pointer-events:none}
 .search-bar{padding:var(--s-2) var(--s-4) var(--s-3);background:var(--bg)}
 .search-bar input{width:100%;padding:11px 16px;border-radius:var(--r-lg);border:none;background:var(--bg-2);color:var(--text);font-size:15px;outline:none}
@@ -3231,45 +3223,6 @@ const COUNTRY_KEYS_SHORT=Object.keys(COUNTRY_FLAGS).filter(function(k){return k.
 
 function extractVpnMeta(raw){
   var name='',flag='';
-  try{
-    var hashIdx=raw.indexOf('#');
-    if(hashIdx!==-1){
-      try{name=decodeURIComponent(raw.slice(hashIdx+1));}
-      catch(e){name=raw.slice(hashIdx+1);}
-    }
-    if(!name&&/^vmess:\/\//i.test(raw)){
-      try{
-        var vm=raw.match(/vmess:\/\/([A-Za-z0-9+/=]+)/);
-        if(vm){
-          var b64=vm[1].replace(/-/g,'+').replace(/_/g,'/');
-          while(b64.length%4)b64+='=';
-          var cfg=JSON.parse(atob(b64));
-          if(cfg.ps)name=cfg.ps;
-        }
-      }catch(e){}
-    }
-    if(name){
-      var lower=name.toLowerCase();
-      for(var i=0;i<COUNTRY_KEYS_LONG.length;i++){
-        if(lower.indexOf(COUNTRY_KEYS_LONG[i])!==-1){
-          flag=COUNTRY_FLAGS[COUNTRY_KEYS_LONG[i]];
-          break;
-        }
-      }
-      if(!flag){
-        for(var j=0;j<COUNTRY_KEYS_SHORT.length;j++){
-          var k=COUNTRY_KEYS_SHORT[j];
-          var re=new RegExp('(^|[^a-z])'+k+'([^a-z]|$)','i');
-          if(re.test(lower)){flag=COUNTRY_FLAGS[k];break;}
-        }
-      }
-    }
-  }catch(e){console.warn('extractVpnMeta',e);}
-  return {name:name,flag:flag||'🌐'};
-}
-
-function extractVpnMeta(raw){
-  var name='',flag='';
   var hashIdx=raw.indexOf('#');
   if(hashIdx!==-1){try{name=decodeURIComponent(raw.slice(hashIdx+1));}catch(e){name=raw.slice(hashIdx+1);}}
   if(!name&&/^vmess:\/\//i.test(raw)){
@@ -3288,7 +3241,7 @@ function extractVpnMeta(raw){
   }
   return {name:name,flag:flag||'🌐'};
 }
-function renderVpnFilters(){var wrap=$('vpn-filters');if(!wrap)return;var protos={all:'Все'};vpnKeys.forEach(function(k){protos[k.proto]=k.proto.toUpperCase();});var html='';Object.keys(protos).forEach(function(p){html+='<button class="vpn-chip'+(vpnProtoFilter===p?' active':'')+'" data-proto="'+escAttr(p)+'">'+esc(protos[p])+' · '+(p==='all'?vpnKeys.length:vpnKeys.filter(function(k){return k.proto===p;}).length)+'</button>';});wrap.innerHTML=html;wrap.querySelectorAll('.vpn-chip').forEach(function(ch){ch.onclick=function(){vpnProtoFilter=ch.dataset.proto;applyVpnFilter();};});}
+function renderVpnFilters(){var wrap=$('vpn-filters');if(!wrap)return;if(!vpnKeys.length){wrap.innerHTML='';return;}var protos={all:'Все'};vpnKeys.forEach(function(k){protos[k.proto]=k.proto.toUpperCase();});var html='';Object.keys(protos).forEach(function(p){html+='<button class="vpn-chip'+(vpnProtoFilter===p?' active':'')+'" data-proto="'+escAttr(p)+'">'+esc(protos[p])+' · '+(p==='all'?vpnKeys.length:vpnKeys.filter(function(k){return k.proto===p;}).length)+'</button>';});wrap.innerHTML=html;wrap.querySelectorAll('.vpn-chip').forEach(function(ch){ch.onclick=function(){vpnProtoFilter=ch.dataset.proto;applyVpnFilter();};});}
 function applyVpnFilter(){vpnFiltered=vpnProtoFilter==='all'?vpnKeys.slice():vpnKeys.filter(function(k){return k.proto===vpnProtoFilter;});renderVpnFilters();renderVpnKeys();}
 function vpnKeyItemHtml(k){
   var idx=vpnKeys.indexOf(k);
@@ -3323,73 +3276,72 @@ function onVpnScroll(){if(vpnRenderedUpTo<vpnFiltered.length&&isVpnItemVisible()
 function renderVpnKeys(){var list=$('vpn-key-list'),count=$('vpn-count'),refreshBtn=$('vpn-refresh-btn'),loadBtn=$('vpn-load-btn');if(!list)return;list.innerHTML='';vpnRenderedUpTo=0;if(!vpnFiltered.length){list.innerHTML='<div class="vpn-empty">Нет ключей</div>';if(count)count.textContent='';if(refreshBtn)refreshBtn.style.display='none';if(loadBtn)loadBtn.style.display='flex';return;}if(loadBtn)loadBtn.style.display='none';if(refreshBtn)refreshBtn.style.display='flex';if(count)count.textContent='Показано: '+vpnFiltered.length+' из '+vpnKeys.length;appendVpnBatch();var c=$('vpn-container');if(c&&!c._vpnScrollBound){c._vpnScrollBound=true;c.addEventListener('scroll',onVpnScroll,{passive:true});}setTimeout(function(){if(vpnRenderedUpTo<vpnFiltered.length&&isVpnItemVisible())scheduleVpnAppend();},60);}
 function copyText(text){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){toast('Скопировано');}).catch(function(){fallbackCopy(text);});}else fallbackCopy(text);}
 function fallbackCopy(text){var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Скопировано');}catch(e){toast('Не удалось');}document.body.removeChild(ta);}
+
+function renderVpnSources(){
+  var wrap=$('vpn-sources');if(!wrap)return;
+  wrap.innerHTML=VPN_SOURCES.map(function(s){
+    return '<button class="vpn-chip'+(s.id===vpnActiveSourceId?' active':'')+'" data-src="'+escAttr(s.id)+'">'+esc(s.name)+'</button>';
+  }).join('');
+  wrap.querySelectorAll('.vpn-chip').forEach(function(ch){
+    ch.onclick=function(){
+      if(vpnActiveSourceId===ch.dataset.src)return;
+      vpnActiveSourceId=ch.dataset.src;
+      try{localStorage.setItem('flux_vpn_source',vpnActiveSourceId);}catch(e){}
+      vpnKeys=[];vpnFiltered=[];vpnRenderedUpTo=0;vpnProtoFilter='all';
+      renderVpnSources();renderVpnFilters();
+      var list=$('vpn-key-list');if(list)list.innerHTML='<div class="vpn-empty">Загрузка…</div>';
+      var cnt=$('vpn-count');if(cnt)cnt.textContent='';
+      var lb=$('vpn-load-btn');if(lb)lb.style.display='flex';
+      var rb=$('vpn-refresh-btn');if(rb)rb.style.display='none';
+      loadVpnKeys();
+    };
+  });
+}
+
 async function loadVpnKeys(){
   var loadBtn=$('vpn-load-btn'),refreshBtn=$('vpn-refresh-btn'),list=$('vpn-key-list');
   if(loadBtn)loadBtn.disabled=true;
   if(refreshBtn)refreshBtn.disabled=true;
   if(list)list.innerHTML='<div class="skeleton"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line"></div><div class="sk-line short"></div></div></div><div class="skeleton"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line"></div><div class="sk-line short"></div></div></div>';
 
-  // Три варианта доступа к одному и тому же URL (напрямую и через CORS-прокси)
-  function buildUrlsFor(sourceUrl){
-    return [
-      sourceUrl+((sourceUrl.indexOf('?')===-1)?'?':'&')+'t='+Date.now(),
-      'https://corsproxy.io/?'+encodeURIComponent(sourceUrl),
-      'https://api.allorigins.win/raw?url='+encodeURIComponent(sourceUrl)
-    ];
+  var source=getActiveVpnSource();
+  var urls=[
+    source.url+(source.url.indexOf('?')===-1?'?':'&')+'t='+Date.now(),
+    'https://corsproxy.io/?'+encodeURIComponent(source.url),
+    'https://api.allorigins.win/raw?url='+encodeURIComponent(source.url)
+  ];
+
+  var text=null,lastErr=null;
+  for(var u=0;u<urls.length;u++){
+    try{
+      var resp=await fetch(urls[u],{cache:'no-store'});
+      if(!resp.ok)throw new Error('HTTP '+resp.status);
+      var t=await resp.text();
+      if(!t||t.length<20)throw new Error('Пустой ответ');
+      text=t;
+      console.log('VPN: ['+source.name+'] успешно загружено с', urls[u]);
+      break;
+    }catch(err){
+      lastErr=err;
+      console.warn('VPN: не сработал URL', urls[u], err.message);
+    }
   }
 
-  // Загружает один источник, перебирая прокси при ошибке
-  async function fetchOne(sourceUrl){
-    var urls=buildUrlsFor(sourceUrl);
-    var lastErr=null;
-    for(var u=0;u<urls.length;u++){
-      try{
-        var resp=await fetch(urls[u],{cache:'no-store'});
-        if(!resp.ok)throw new Error('HTTP '+resp.status);
-        var t=await resp.text();
-        if(!t||t.length<20)throw new Error('Пустой ответ');
-        console.log('VPN: успешно загружено с', urls[u]);
-        return t;
-      }catch(err){
-        lastErr=err;
-        console.warn('VPN: не сработал URL', urls[u], err.message);
-      }
-    }
-    throw lastErr||new Error('Не удалось загрузить');
-  }
-
-  // Дёргаем все 3 файла параллельно
-  var results=await Promise.allSettled(VPN_SOURCE_URLS.map(function(u){return fetchOne(u);}));
-
-  var chunks=[];
-  var okCount=0, failCount=0;
-  results.forEach(function(r,i){
-    if(r.status==='fulfilled'){
-      chunks.push(r.value);
-      okCount++;
-    } else {
-      failCount++;
-      console.warn('VPN: источник #'+(i+1)+' ('+VPN_SOURCE_URLS[i]+') не загружен:', r.reason&&r.reason.message||r.reason);
-    }
-  });
-
-  if(!chunks.length){
-    if(list)list.innerHTML='<div class="vpn-empty">Не удалось загрузить ни один источник<br><span style="font-size:11px;opacity:.6">Открой консоль (F12) для деталей</span></div>';
+  if(!text){
+    console.error('VPN: источник недоступен', lastErr);
+    if(list)list.innerHTML='<div class="vpn-empty">Не удалось загрузить «'+esc(source.name)+'»<br>'+esc(lastErr&&lastErr.message||'ошибка сети')+'<br><span style="font-size:11px;opacity:.6">Открой консоль (F12) для деталей</span></div>';
     if(loadBtn)loadBtn.style.display='flex';
     if(refreshBtn)refreshBtn.style.display='none';
     if($('vpn-count'))$('vpn-count').textContent='';
-    toast('Ошибка сети: все источники недоступны');
+    toast('Ошибка сети: '+(lastErr&&lastErr.message||'нет соединения'));
     if(loadBtn)loadBtn.disabled=false;
     if(refreshBtn)refreshBtn.disabled=false;
     return;
   }
 
-  var text=chunks.join('\n');
-
   try{
     vpnKeys=parseVpnKeys(text);
 
-    // Дедупликация: одинаковые ключи между файлами убираем
     var seen=Object.create(null);
     vpnKeys=vpnKeys.filter(function(k){
       if(seen[k.raw])return false;
@@ -3406,9 +3358,7 @@ async function loadVpnKeys(){
       if(loadBtn)loadBtn.style.display='flex';
       if(refreshBtn)refreshBtn.style.display='none';
     } else {
-      var msg='Загружено: '+vpnKeys.length+' ключей';
-      if(failCount>0)msg+=' · источников: '+okCount+'/'+VPN_SOURCE_URLS.length;
-      toast(msg);
+      toast(source.name+': загружено '+vpnKeys.length+' ключей');
     }
   }catch(renderErr){
     console.error('VPN: ошибка парсинга/рендера', renderErr);
