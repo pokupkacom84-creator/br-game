@@ -3200,7 +3200,10 @@ function applyVpnFilter(){vpnFiltered=vpnProtoFilter==='all'?vpnKeys.slice():vpn
 function vpnKeyItemHtml(k){
   var idx=vpnKeys.indexOf(k);
   var isFav=!!vpnFavorites[k.raw];
-  var meta=extractVpnMeta(k.raw);
+  var meta={name:'',flag:'🌐'};
+  try{
+    if(typeof extractVpnMeta==='function') meta=extractVpnMeta(k.raw);
+  }catch(e){ console.warn('extractVpnMeta:', e); }
   var host=getVpnHost(k.raw);
   var title=meta.name?meta.name:(k.proto.toUpperCase()+' · '+(host||'server'));
   return '<div class="vpn-key-item">'+
@@ -3251,7 +3254,68 @@ async function pingVisibleHosts(){
 function renderVpnKeys(){var list=$('vpn-key-list'),count=$('vpn-count'),refreshBtn=$('vpn-refresh-btn'),loadBtn=$('vpn-load-btn');if(!list)return;list.innerHTML='';vpnRenderedUpTo=0;if(!vpnFiltered.length){list.innerHTML='<div class="vpn-empty">Нет ключей</div>';if(count)count.textContent='';if(refreshBtn)refreshBtn.style.display='none';if(loadBtn)loadBtn.style.display='flex';return;}if(loadBtn)loadBtn.style.display='none';if(refreshBtn)refreshBtn.style.display='flex';if(count)count.textContent='Показано: '+vpnFiltered.length+' из '+vpnKeys.length;appendVpnBatch();var c=$('vpn-container');if(c&&!c._vpnScrollBound){c._vpnScrollBound=true;c.addEventListener('scroll',onVpnScroll,{passive:true});}setTimeout(function(){if(vpnRenderedUpTo<vpnFiltered.length&&isVpnItemVisible())scheduleVpnAppend();},60);}
 function copyText(text){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){toast('Скопировано');}).catch(function(){fallbackCopy(text);});}else fallbackCopy(text);}
 function fallbackCopy(text){var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Скопировано');}catch(e){toast('Не удалось');}document.body.removeChild(ta);}
-async function loadVpnKeys(){var loadBtn=$('vpn-load-btn'),refreshBtn=$('vpn-refresh-btn'),list=$('vpn-key-list');if(loadBtn)loadBtn.disabled=true;if(refreshBtn)refreshBtn.disabled=true;if(list)list.innerHTML='<div class="skeleton"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line"></div><div class="sk-line short"></div></div></div><div class="skeleton"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line"></div><div class="sk-line short"></div></div></div>';try{var resp=await fetch(VPN_SOURCE_URL+'?t='+Date.now(),{cache:'no-store'});if(!resp.ok)throw new Error('HTTP '+resp.status);var text=await resp.text();vpnKeys=parseVpnKeys(text);vpnProtoFilter='all';applyVpnFilter();if(vpnKeys.length===0){if(list)list.innerHTML='<div class="vpn-empty">Ключи не найдены</div>';if(loadBtn)loadBtn.style.display='flex';if(refreshBtn)refreshBtn.style.display='none';}else toast('Загружено: '+vpnKeys.length);}catch(e){if(list)list.innerHTML='<div class="vpn-empty">Ошибка: '+esc(e.message||'')+'</div>';if(loadBtn)loadBtn.style.display='flex';if(refreshBtn)refreshBtn.style.display='none';if($('vpn-count'))$('vpn-count').textContent='';toast('Не удалось загрузить');}finally{if(loadBtn)loadBtn.disabled=false;if(refreshBtn)refreshBtn.disabled=false;}}
+async function loadVpnKeys(){
+  var loadBtn=$('vpn-load-btn'),refreshBtn=$('vpn-refresh-btn'),list=$('vpn-key-list');
+  if(loadBtn)loadBtn.disabled=true;
+  if(refreshBtn)refreshBtn.disabled=true;
+  if(list)list.innerHTML='<div class="skeleton"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line"></div><div class="sk-line short"></div></div></div><div class="skeleton"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line"></div><div class="sk-line short"></div></div></div>';
+
+  var urls=[
+    VPN_SOURCE_URL+'?t='+Date.now(),
+    'https://corsproxy.io/?'+encodeURIComponent(VPN_SOURCE_URL),
+    'https://api.allorigins.win/raw?url='+encodeURIComponent(VPN_SOURCE_URL)
+  ];
+
+  var text=null, lastErr=null;
+  for(var u=0;u<urls.length;u++){
+    try{
+      var resp=await fetch(urls[u],{cache:'no-store'});
+      if(!resp.ok)throw new Error('HTTP '+resp.status);
+      var t=await resp.text();
+      if(!t||t.length<20)throw new Error('Пустой ответ');
+      text=t;
+      console.log('VPN: успешно загружено с', urls[u]);
+      break;
+    }catch(err){
+      lastErr=err;
+      console.warn('VPN: не сработал URL', urls[u], err.message);
+    }
+  }
+
+  if(!text){
+    console.error('VPN: все источники недоступны', lastErr);
+    if(list)list.innerHTML='<div class="vpn-empty">Не удалось загрузить: '+esc(lastErr&&lastErr.message||'ошибка сети')+'<br><span style="font-size:11px;opacity:.6">Открой консоль (F12) для деталей</span></div>';
+    if(loadBtn)loadBtn.style.display='flex';
+    if(refreshBtn)refreshBtn.style.display='none';
+    if($('vpn-count'))$('vpn-count').textContent='';
+    toast('Ошибка сети: '+(lastErr&&lastErr.message||'нет соединения'));
+    if(loadBtn)loadBtn.disabled=false;
+    if(refreshBtn)refreshBtn.disabled=false;
+    return;
+  }
+
+  try{
+    vpnKeys=parseVpnKeys(text);
+    vpnProtoFilter='all';
+    vpnFiltered=vpnKeys.slice();
+    renderVpnFilters();
+    renderVpnKeys();
+    if(vpnKeys.length===0){
+      if(list)list.innerHTML='<div class="vpn-empty">Ключи не найдены в ответе</div>';
+      if(loadBtn)loadBtn.style.display='flex';
+      if(refreshBtn)refreshBtn.style.display='none';
+    } else {
+      toast('Загружено: '+vpnKeys.length);
+    }
+  }catch(renderErr){
+    console.error('VPN: ошибка парсинга/рендера', renderErr);
+    if(list)list.innerHTML='<div class="vpn-empty">Ошибка парсинга: '+esc(renderErr.message||renderErr)+'</div>';
+    toast('Ошибка парсинга: '+(renderErr.message||''));
+  }
+
+  if(loadBtn)loadBtn.disabled=false;
+  if(refreshBtn)refreshBtn.disabled=false;
+}
 $('vpn-load-btn').onclick=loadVpnKeys;
 $('vpn-refresh-btn').onclick=loadVpnKeys;
 
