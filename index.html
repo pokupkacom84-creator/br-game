@@ -1073,7 +1073,6 @@ $('login-btn').onclick=async function(){
   this.disabled=true;var old=this.textContent;this.textContent='Вход...';
   try{
     var cred=await auth.signInWithEmailAndPassword(email,pass);
-    // 2FA check
     var snap=await db.ref('users/'+cred.user.uid+'/twofa').once('value');
     if(snap.exists()&&snap.val().enabled){
       var deviceKey='flux_2fa_device_'+cred.user.uid;
@@ -1208,22 +1207,316 @@ function startSessionTracking(){
   setInterval(function(){if(currentUser)ref.child('lastActive').set(TS).catch(function(){});},60000);
 }
 
-// ===== CALL LISTENER =====
-let unsubCall=null;
+// ===== WEBRTC CALLS (FIXED) =====
+let callUnsubSelf=null;
+let callUnsubPeer=null;
+
+function clearCallListeners(){
+  if(callUnsubSelf){try{callUnsubSelf.off();}catch(e){}callUnsubSelf=null;}
+  if(callUnsubPeer){try{callUnsubPeer.off();}catch(e){}callUnsubPeer=null;}
+}
+
 function startCallListener(){
-  if(unsubCall&&unsubCall.off)unsubCall.off();
-  unsubCall=db.ref('calls/'+currentUser.uid).on('value',function(s){
+  clearCallListeners();
+  if(!currentUser)return;
+  // Слушаем СВОЮ комнату — сюда caller пишет offer и callerIce
+  callUnsubSelf=db.ref('calls/'+currentUser.uid).on('value',function(s){
     var v=s.val();
-    if(!v){if(callState&&!callState.isCaller){endCall('cancelled');}return;}
-    if(v.state==='offering'&&!callState){
-      handleIncomingCall(v);
-    } else if(callState&&callState.callId===v.id){
-      if(v.state==='accepted'&&callState.isCaller&&!callState.startedAt)handleCallAccepted(v);
-      if(v.state==='declined'&&callState.isCaller)handleCallDeclined(v);
-      if(v.state==='ended')endCall('ended');
-      if(v.answer&&!callState.remoteSet){applyRemoteAnswer(v);}
+    if(!callState){
+      if(v&&v.state==='offering'&&v.callerUid!==currentUser.uid)handleIncomingCall(v);
+      return;
+    }
+    if(callState.isCaller)return;
+    if(!v){endCall('peer_hangup');return;}
+    if(v.id!==callState.callId)return;
+    if(v.offer&&callState.peerConn&&!callState._offerSet)handleOffer(v);
+    if(v.ice&&v.ice.callerIce&&callState.peerConn){
+      if(!callState._callerIceSeen)callState._callerIceSeen={};
+      Object.keys(v.ice.callerIce).forEach(function(k){
+        if(callState._callerIceSeen[k])return;
+        callState._callerIceSeen[k]=true;
+        callState.peerConn.addIceCandidate(new RTCIceCandidate(v.ice.callerIce[k])).catch(function(){});
+      });
     }
   });
+}
+
+async function handleOffer(v){
+  if(!callState||!callState.peerConn||callState.isCaller||callState._offerSet)return;
+  try{
+    await callState.peerConn.setRemoteDescription(new RTCSessionDescription(v.offer));
+    callState._offerSet=true;
+    var answer=await callState.peerConn.createAnswer();
+    await callState.peerConn.setLocalDescription(answer);
+    await db.ref('calls/'+currentUser.uid+'/answer').set({sdp:answer.sdp,type:answer.type});
+  }catch(e){console.warn('handleOffer',e);}
+}
+
+async function startCall(peerUid){
+  if(!peerUid||peerUid===currentUser.uid)return;
+  if(callState){toast('Уже в звонке');return;}
+  if(blockedUsers.has(peerUid)){toast('Пользователь заблокирован');return;}
+  var u=userCache[peerUid]||await fetchUser(peerUid);
+  var stream;
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});}
+  catch(e){toast('Нет доступа к микрофону');return;}
+
+  var callId='c_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+  callState={callId:callId,peerUid:peerUid,peerConn:null,localStream:stream,remoteStream:null,isCaller:true,startedAt:null,audioEl:null,remoteSet:false};
+  showCallScreen('outgoing',u);
+  playSound('call');vibrate('call');
+
+  // Caller слушает комнату собеседника — сюда callee пишет answer и calleeIce
+  if(callUnsubPeer){try{callUnsubPeer.off();}catch(e){}}
+  callUnsubPeer=db.ref('calls/'+peerUid).on('value',function(s){
+    var v=s.val();
+    if(!callState||!callState.isCaller||callState.peerUid!==peerUid)return;
+    if(!v){endCall('peer_hangup');return;}
+    if(v.id!==callState.callId)return;
+    if(v.state==='accepted'&&!callState.startedAt)handleCallAccepted();
+    else if(v.state==='declined')handleCallDeclined();
+    else if(v.state==='ended')endCall('ended');
+    if(v.answer&&callState.peerConn&&!callState.remoteSet)applyRemoteAnswer(v);
+    if(v.ice&&v.ice.calleeIce&&callState.peerConn){
+      if(!callState._calleeIceSeen)callState._calleeIceSeen={};
+      Object.keys(v.ice.calleeIce).forEach(function(k){
+        if(callState._calleeIceSeen[k])return;
+        callState._calleeIceSeen[k]=true;
+        callState.peerConn.addIceCandidate(new RTCIceCandidate(v.ice.calleeIce[k])).catch(function(){});
+      });
+    }
+  });
+
+  await db.ref('calls/'+peerUid).set({
+    id:callId,
+    callerUid:currentUser.uid,
+    callerName:currentUserData.name||'',
+    callerAvatar:currentUserData.avatarId||'a1',
+    state:'offering',
+    createdAt:TS
+  });
+  db.ref('calls/'+peerUid).onDisconnect().remove();
+
+  setTimeout(function(){
+    if(callState&&callState.isCaller&&!callState.startedAt)endCall('no_answer');
+  },60000);
+}
+
+async function handleCallAccepted(){
+  if(!callState||!callState.isCaller)return;
+  callState.startedAt=Date.now();
+  $('call-status').textContent='Соединение…';
+  startCallTimer();
+  await setupPeerConnection(true);
+}
+
+async function setupPeerConnection(isCaller){
+  if(!callState)return;
+  var pc=new RTCPeerConnection({iceServers:[
+    {urls:'stun:stun.l.google.com:19302'},
+    {urls:'stun:stun1.l.google.com:19302'}
+  ]});
+  callState.peerConn=pc;
+  callState.remoteStream=new MediaStream();
+
+  var audioEl=new Audio();
+  audioEl.srcObject=callState.remoteStream;
+  audioEl.autoplay=true;
+  audioEl.setAttribute('playsinline','');
+  callState.audioEl=audioEl;
+
+  callState.localStream.getTracks().forEach(function(t){pc.addTrack(t,callState.localStream);});
+
+  pc.ontrack=function(e){
+    e.streams[0].getTracks().forEach(function(t){callState.remoteStream.addTrack(t);});
+    audioEl.play().catch(function(){});
+  };
+  pc.onicecandidate=function(e){
+    if(!e.candidate||!callState)return;
+    var roomUid=callState.isCaller?callState.peerUid:currentUser.uid;
+    var side=callState.isCaller?'callerIce':'calleeIce';
+    db.ref('calls/'+roomUid+'/ice/'+side).push(e.candidate.toJSON()).catch(function(){});
+  };
+  pc.onconnectionstatechange=function(){
+    if(!callState)return;
+    if(pc.connectionState==='connected'){
+      $('call-status').textContent='Соединено';
+      $('call-timer').classList.add('show');
+    }else if(pc.connectionState==='failed'){
+      endCall('failed');
+    }
+  };
+
+  if(isCaller){
+    try{
+      var offer=await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await db.ref('calls/'+callState.peerUid+'/offer').set({sdp:offer.sdp,type:offer.type});
+    }catch(e){console.warn('createOffer',e);}
+  }
+}
+
+async function applyRemoteAnswer(data){
+  if(!callState||!callState.peerConn||callState.remoteSet)return;
+  try{
+    await callState.peerConn.setRemoteDescription(new RTCSessionDescription(data.answer));
+    callState.remoteSet=true;
+  }catch(e){console.warn('applyRemoteAnswer',e);}
+}
+
+async function handleIncomingCall(data){
+  if(callState)return;
+  var u=userCache[data.callerUid]||{uid:data.callerUid,name:data.callerName||'Входящий',avatarId:data.callerAvatar};
+  userCache[data.callerUid]=u;
+  playSound('incoming');vibrate('call');
+
+  var scr=$('incoming-call');scr.classList.add('show');
+  var av=$('incoming-avatar');
+  var preset=u.avatarId?getPresetAvatar(u.avatarId):null;
+  if(preset){av.style.background=preset.bg;av.textContent=preset.emoji;}
+  else{av.style.background='';av.textContent=initials(u.name||'?');}
+  $('incoming-name').textContent=u.name||'';
+
+  callState={callId:data.id,peerUid:data.callerUid,peerConn:null,localStream:null,remoteStream:null,isCaller:false,startedAt:null,audioEl:null,remoteSet:false};
+}
+
+$('incoming-accept').onclick=async function(){
+  var scr=$('incoming-call');scr.classList.remove('show');
+  if(!callState||callState.isCaller)return;
+  try{
+    var stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+    callState.localStream=stream;
+    callState.startedAt=Date.now();
+    var u=userCache[callState.peerUid];
+    showCallScreen('active',u);
+    startCallTimer();
+    await db.ref('calls/'+currentUser.uid).update({state:'accepted',acceptedAt:TS});
+    await setupPeerConnection(false);
+  }catch(e){
+    toast('Нет доступа к микрофону');
+    endCall('error');
+  }
+};
+
+$('incoming-decline').onclick=async function(){
+  $('incoming-call').classList.remove('show');
+  if(!callState)return;
+  try{await db.ref('calls/'+currentUser.uid).update({state:'declined'});}catch(e){}
+  setTimeout(function(){try{db.ref('calls/'+currentUser.uid).remove();}catch(e){}},3000);
+  callState=null;
+  clearCallListeners();
+  startCallListener();
+};
+
+function handleCallDeclined(){if(!callState)return;toast('Звонок отклонён');endCall('declined');}
+
+function endCall(reason){
+  var peerUid=callState?callState.peerUid:null;
+  var isCaller=callState?callState.isCaller:false;
+  if(callState){
+    if(callState.peerConn){try{callState.peerConn.close();}catch(e){}}
+    if(callState.localStream){callState.localStream.getTracks().forEach(function(t){t.stop();});}
+    if(callState.audioEl){try{callState.audioEl.pause();callState.audioEl.srcObject=null;}catch(e){}}
+  }
+  callState=null;
+  clearInterval(callTimerInterval);callTimerInterval=null;callStartTime=null;
+  $('call-screen').classList.remove('show');
+  $('incoming-call').classList.remove('show');
+  $('call-timer').classList.remove('show');
+  try{
+    if(isCaller&&peerUid)db.ref('calls/'+peerUid).remove();
+    else if(!isCaller)db.ref('calls/'+currentUser.uid).remove();
+  }catch(e){}
+  clearCallListeners();
+  startCallListener();
+  if(reason==='no_answer')toast('Нет ответа');
+  else if(reason==='failed')toast('Соединение разорвано');
+}
+
+function showCallScreen(type,u){
+  var scr=$('call-screen');scr.classList.add('show');
+  var av=$('call-avatar');
+  if(u){
+    var preset=u.avatarId?getPresetAvatar(u.avatarId):null;
+    if(preset){av.style.background=preset.bg;av.textContent=preset.emoji;}
+    else{av.style.background='';av.textContent=initials(u.name||'?');}
+  }
+  $('call-name').textContent=u?(u.name||''):'—';
+  $('call-status').textContent=type==='outgoing'?'Звонок…':'Соединение…';
+  $('call-timer').classList.remove('show');
+  callMuted=false;callSpeakerOn=false;
+  $('call-mute').classList.remove('active');
+  $('call-speaker').classList.remove('active');
+}
+
+function startCallTimer(){
+  callStartTime=Date.now();
+  $('call-timer').classList.add('show');
+  updateCallTimer();
+  clearInterval(callTimerInterval);
+  callTimerInterval=setInterval(updateCallTimer,1000);
+}
+function updateCallTimer(){
+  if(!callStartTime)return;
+  var s=Math.floor((Date.now()-callStartTime)/1000);
+  $('call-timer').textContent=pad(Math.floor(s/60))+':'+pad(s%60);
+}
+
+$('call-end').onclick=function(){endCall('manual');};
+$('call-mute').onclick=function(){
+  if(!callState||!callState.localStream)return;
+  callMuted=!callMuted;
+  callState.localStream.getAudioTracks().forEach(function(t){t.enabled=!callMuted;});
+  this.classList.toggle('active',callMuted);
+  vibrate('tap');
+};
+$('call-speaker').onclick=function(){
+  callSpeakerOn=!callSpeakerOn;
+  this.classList.toggle('active',callSpeakerOn);
+  if(callState&&callState.audioEl)callState.audioEl.volume=callSpeakerOn?1:0.5;
+  vibrate('tap');
+};
+$('chat-call-btn').onclick=function(){if(currentChatUser)startCall(currentChatUser.uid);};
+
+// ===== E2EE (kept as-is) =====
+var CRYPTO_OK=!!(window.crypto&&window.crypto.subtle);
+var e2eKeyPriv=null;
+var e2ePubOthers={};
+var msgKeyCache={};
+function b64enc(buf){var b=new Uint8Array(buf);var s='';for(var i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s);}
+function b64dec(s){var bin=atob(s);var b=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);return b;}
+async function e2eGenKeypair(){var pair=await crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'},true,['deriveBits','deriveKey']);var pub=await crypto.subtle.exportKey('jwk',pair.publicKey);var priv=await crypto.subtle.exportKey('jwk',pair.privateKey);return{pub:pub,priv:priv};}
+async function e2eImportPub(jwk){return crypto.subtle.importKey('jwk',jwk,{name:'ECDH',namedCurve:'P-256'},true,[]);}
+async function e2eImportPriv(jwk){return crypto.subtle.importKey('jwk',jwk,{name:'ECDH',namedCurve:'P-256'},true,['deriveBits','deriveKey']);}
+async function e2eDeriveKEK(myPrivJwk,theirPubJwk,usage){var myPriv=await e2eImportPriv(myPrivJwk);var theirPub=await e2eImportPub(theirPubJwk);var bits=await crypto.subtle.deriveBits({name:'ECDH',public:theirPub},myPriv,256);return crypto.subtle.importKey('raw',bits,{name:'AES-GCM'},false,usage);}
+async function e2eWrapAES(aesKey,myPrivJwk,theirPubJwk){var kek=await e2eDeriveKEK(myPrivJwk,theirPubJwk,['encrypt']);var raw=await crypto.subtle.exportKey('raw',aesKey);var iv=crypto.getRandomValues(new Uint8Array(12));var wrapped=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},kek,raw);return{wrapped:b64enc(wrapped),iv:b64enc(iv.buffer)};}
+async function e2eUnwrapAES(wrappedObj,myPrivJwk,theirPubJwk){var kek=await e2eDeriveKEK(myPrivJwk,theirPubJwk,['decrypt']);var raw=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64dec(wrappedObj.iv)},kek,b64dec(wrappedObj.wrapped));return crypto.subtle.importKey('raw',raw,{name:'AES-GCM',length:256},true,['encrypt','decrypt']);}
+async function e2eEncrypt(text,aesKey){var iv=crypto.getRandomValues(new Uint8Array(12));var data=new TextEncoder().encode(text);var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},aesKey,data);return{ciphertext:b64enc(ct),iv:b64enc(iv.buffer)};}
+async function e2eDecrypt(cipherB64,ivB64,aesKey){var ct=b64dec(cipherB64);var iv=b64dec(ivB64);var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:iv},aesKey,ct);return new TextDecoder().decode(pt);}
+async function e2eInitUser(){
+  if(!CRYPTO_OK)return;
+  var stored=localStorage.getItem('flux_e2e_priv');
+  if(stored){try{var priv=JSON.parse(stored);e2eKeyPriv=priv;var snap=await db.ref('users/'+currentUser.uid+'/pubkey').once('value');if(!snap.exists()){var newPair=await e2eGenKeypair();e2eKeyPriv=newPair.priv;localStorage.setItem('flux_e2e_priv',JSON.stringify(newPair.priv));await db.ref('users/'+currentUser.uid+'/pubkey').set(newPair.pub);}return;}catch(e){}}
+  var pair=await e2eGenKeypair();
+  e2eKeyPriv=pair.priv;localStorage.setItem('flux_e2e_priv',JSON.stringify(pair.priv));
+  try{await db.ref('users/'+currentUser.uid+'/pubkey').set(pair.pub);}catch(e){}
+}
+async function e2eGetPub(uid){if(e2ePubOthers[uid])return e2ePubOthers[uid];try{var s=await db.ref('users/'+uid+'/pubkey').once('value');if(s.exists()){e2ePubOthers[uid]=s.val();return e2ePubOthers[uid];}}catch(e){}return null;}
+async function e2eEnsureChatKey(chatId,otherUid){
+  if(msgKeyCache[chatId])return msgKeyCache[chatId];
+  if(!CRYPTO_OK||!e2eKeyPriv)return null;
+  try{
+    var meta=await db.ref('chats/'+chatId+'/meta/enc').once('value');
+    if(meta.exists()){var myWrapped=meta.val()[currentUser.uid];var theirPub=await e2eGetPub(otherUid);if(myWrapped&&theirPub){var aesKey=await e2eUnwrapAES(myWrapped,e2eKeyPriv,theirPub);msgKeyCache[chatId]=aesKey;return aesKey;}return null;}
+    var theirPub2=await e2eGetPub(otherUid);
+    if(!theirPub2)return null;
+    var aesNew=await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']);
+    var wrappedForMe=await e2eWrapAES(aesNew,e2eKeyPriv,theirPub2);
+    var wrappedForThem=await e2eWrapAES(aesNew,e2eKeyPriv,theirPub2);
+    var update={};update[currentUser.uid]=wrappedForMe;update[otherUid]=wrappedForThem;
+    await db.ref('chats/'+chatId+'/meta/enc').set(update);
+    msgKeyCache[chatId]=aesNew;return aesNew;
+  }catch(e){return null;}
 }
 
 function startSelfListener(){
@@ -1608,7 +1901,6 @@ function renderMessageInner(m,msgs){
   var base='';
   var type=m.type||'text';
   var textHtml=formatMsgText(m.text||'');
-  // chat search highlight
   if(chatSearchQuery&&textHtml){
     try{var re=new RegExp('('+chatSearchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');textHtml=textHtml.replace(re,'<span class="msg-search-hit">$1</span>');}catch(e){}
   }
@@ -2656,227 +2948,6 @@ async function idbPut(store,val){try{var db=await idbOpen();return new Promise(f
 async function idbGet(store,key){try{var db=await idbOpen();return new Promise(function(res,rej){var tx=db.transaction(store,'readonly');var rq=tx.objectStore(store).get(key);rq.onsuccess=function(){res(rq.result);};rq.onerror=function(){rej(rq.error);};});}catch(e){return null;}}
 async function idbCacheMessages(chatId,msgs){try{var slice=msgs.slice(-100).map(function(m){return Object.assign({},m,{key:chatId+'::'+m.id});});await idbPut('messages',{key:chatId,list:slice,ts:Date.now()});}catch(e){}}
 async function idbLoadMessages(chatId){try{var r=await idbGet('messages',chatId);return r&&r.list?r.list.map(function(m){var c=Object.assign({},m);delete c.key;return c;}):null;}catch(e){return null;}}
-
-// ===== WEBRTC CALLS =====
-async function startCall(peerUid){
-  if(!peerUid||peerUid===currentUser.uid)return;
-  if(callState){toast('Уже в звонке');return;}
-  if(blockedUsers.has(peerUid)){toast('Пользователь заблокирован');return;}
-  var u=userCache[peerUid]||await fetchUser(peerUid);
-  try{
-    var stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-    var callId='c_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
-    callState={callId:callId,peerUid:peerUid,peerConn:null,localStream:stream,remoteStream:null,isCaller:true,startedAt:null,audioEl:null,remoteSet:false};
-    showCallScreen('outgoing',u);
-    playSound('call');vibrate('call');
-    await db.ref('calls/'+peerUid).set({
-      id:callId,callerUid:currentUser.uid,callerName:currentUserData.name||'',callerAvatar:currentUserData.avatarId||'a1',
-      state:'offering',createdAt:TS
-    });
-    db.ref('calls/'+peerUid).onDisconnect().remove();
-    setTimeout(function(){if(callState&&!callState.startedAt&&callState.isCaller)endCall('no_answer');},60000);
-  }catch(e){
-    toast('Не удалось получить доступ к микрофону');
-  }
-}
-function showCallScreen(type,u){
-  var scr=$('call-screen');scr.classList.add('show');
-  var av=$('call-avatar');
-  if(u){
-    var preset=u.avatarId?getPresetAvatar(u.avatarId):null;
-    if(preset){av.style.background=preset.bg;av.textContent=preset.emoji;}
-    else{av.style.background='';av.textContent=initials(u.name||'?');}
-  }
-  $('call-name').textContent=u?(u.name||''):'—';
-  $('call-status').textContent=type==='outgoing'?'Звонок…':'Соединение…';
-  $('call-timer').classList.remove('show');
-  callMuted=false;callSpeakerOn=false;
-  $('call-mute').classList.remove('active');
-  $('call-speaker').classList.remove('active');
-}
-async function handleIncomingCall(data){
-  if(callState){
-    await db.ref('calls/'+currentUser.uid).update({state:'declined'});
-    return;
-  }
-  var u=userCache[data.callerUid]||{uid:data.callerUid,name:data.callerName||'Входящий',avatarId:data.callerAvatar};
-  userCache[data.callerUid]=u;
-  playSound('incoming');vibrate('call');
-  var scr=$('incoming-call');scr.classList.add('show');
-  var av=$('incoming-avatar');
-  var preset=u.avatarId?getPresetAvatar(u.avatarId):null;
-  if(preset){av.style.background=preset.bg;av.textContent=preset.emoji;}
-  else{av.style.background='';av.textContent=initials(u.name||'?');}
-  $('incoming-name').textContent=u.name||'';
-  callState={callId:data.id,peerUid:data.callerUid,peerConn:null,localStream:null,remoteStream:null,isCaller:false,startedAt:null,audioEl:null,remoteSet:false};
-}
-$('incoming-accept').onclick=async function(){
-  var scr=$('incoming-call');scr.classList.remove('show');
-  if(!callState||callState.isCaller)return;
-  try{
-    var stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-    callState.localStream=stream;
-    callState.startedAt=Date.now();
-    var u=userCache[callState.peerUid];
-    showCallScreen('active',u);
-    startCallTimer();
-    await db.ref('calls/'+currentUser.uid).update({state:'accepted',acceptedAt:TS});
-    await setupPeerConnection(false);
-  }catch(e){
-    toast('Нет доступа к микрофону');
-    endCall('error');
-  }
-};
-$('incoming-decline').onclick=async function(){
-  var scr=$('incoming-call');scr.classList.remove('show');
-  if(callState){
-    try{await db.ref('calls/'+currentUser.uid).update({state:'declined'});}catch(e){}
-    setTimeout(function(){try{db.ref('calls/'+currentUser.uid).remove();}catch(e){}},3000);
-    callState=null;
-  }
-};
-async function handleCallAccepted(data){
-  if(!callState||!callState.isCaller)return;
-  callState.startedAt=Date.now();
-  $('call-status').textContent='Соединение…';
-  startCallTimer();
-  await setupPeerConnection(true);
-}
-async function setupPeerConnection(isCaller){
-  if(!callState)return;
-  var pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]});
-  callState.peerConn=pc;
-  callState.remoteStream=new MediaStream();
-  var audioEl=new Audio();audioEl.srcObject=callState.remoteStream;audioEl.autoplay=true;audioEl.setAttribute('playsinline','');
-  callState.audioEl=audioEl;
-  callState.localStream.getTracks().forEach(function(t){pc.addTrack(t,callState.localStream);});
-  pc.ontrack=function(e){e.streams[0].getTracks().forEach(function(t){callState.remoteStream.addTrack(t);});audioEl.play().catch(function(){});};
-  pc.onicecandidate=function(e){
-    if(e.candidate&&callState){
-      var side=callState.isCaller?'callerIce':'calleeIce';
-      var arr=(callState[side]||[]);arr.push(e.candidate);
-      callState[side]=arr;
-      db.ref('calls/'+(callState.isCaller?callState.peerUid:currentUser.uid)+'/ice/'+side+'/'+arr.length).set(e.candidate.toJSON()).catch(function(){});
-    }
-  };
-  pc.onconnectionstatechange=function(){
-    if(!callState)return;
-    if(pc.connectionState==='connected'){$('call-status').textContent='Соединено';$('call-timer').classList.add('show');}
-    else if(pc.connectionState==='failed'||pc.connectionState==='disconnected'){$('call-status').textContent='Разрыв…';}
-  };
-  if(isCaller){
-    var offer=await pc.createOffer();await pc.setLocalDescription(offer);
-    await db.ref('calls/'+callState.peerUid+'/offer').set({sdp:offer.sdp,type:offer.type});
-  }
-}
-async function applyRemoteAnswer(data){
-  if(!callState||!callState.peerConn)return;
-  try{
-    if(data.answer&&!callState.remoteSet){
-      await callState.peerConn.setRemoteDescription(new RTCSessionDescription(data.answer));
-      callState.remoteSet=true;
-      // Apply callee ICE
-      if(data.ice&&data.ice.calleeIce){
-        var keys=Object.keys(data.ice.calleeIce);
-        for(var i=0;i<keys.length;i++){
-          try{await callState.peerConn.addIceCandidate(new RTCIceCandidate(data.ice.calleeIce[keys[i]]));}catch(e){}
-        }
-      }
-    }
-  }catch(e){console.warn('applyRemoteAnswer',e);}
-}
-// Listen for caller's offer + ICE on callee side
-function listenForOfferAndIce(){
-  if(!currentUser)return;
-  db.ref('calls/'+currentUser.uid).on('value',async function(s){
-    var v=s.val();
-    if(!v)return;
-    if(v.offer&&callState&&!callState.isCaller&&callState.peerConn&&!callState._offerSet){
-      try{
-        await callState.peerConn.setRemoteDescription(new RTCSessionDescription(v.offer));
-        callState._offerSet=true;
-        var answer=await callState.peerConn.createAnswer();
-        await callState.peerConn.setLocalDescription(answer);
-        await db.ref('calls/'+currentUser.uid+'/answer').set({sdp:answer.sdp,type:answer.type});
-      }catch(e){console.warn('offer accept',e);}
-    }
-    // caller receives callee ice via remote answer already
-  });
-}
-function handleCallDeclined(data){
-  if(!callState)return;
-  toast('Звонок отклонён');
-  endCall('declined');
-}
-function endCall(reason){
-  var peerUid=callState?callState.peerUid:null;
-  var isCaller=callState?callState.isCaller:false;
-  if(callState){
-    if(callState.peerConn){try{callState.peerConn.close();}catch(e){}}
-    if(callState.localStream){callState.localStream.getTracks().forEach(function(t){t.stop();});}
-    if(callState.audioEl){try{callState.audioEl.pause();callState.audioEl.srcObject=null;}catch(e){}}
-  }
-  callState=null;
-  clearInterval(callTimerInterval);callTimerInterval=null;callStartTime=null;
-  $('call-screen').classList.remove('show');
-  $('incoming-call').classList.remove('show');
-  $('call-timer').classList.remove('show');
-  try{
-    if(peerUid){
-      if(isCaller)db.ref('calls/'+peerUid).remove();
-      else db.ref('calls/'+currentUser.uid).remove();
-    }
-  }catch(e){}
-  if(reason==='no_answer')toast('Нет ответа');
-}
-function startCallTimer(){callStartTime=Date.now();$('call-timer').classList.add('show');updateCallTimer();clearInterval(callTimerInterval);callTimerInterval=setInterval(updateCallTimer,1000);}
-function updateCallTimer(){if(!callStartTime)return;var s=Math.floor((Date.now()-callStartTime)/1000);var mm=pad(Math.floor(s/60)),ss=pad(s%60);$('call-timer').textContent=mm+':'+ss;}
-$('call-end').onclick=function(){endCall('manual');};
-$('call-mute').onclick=function(){if(!callState||!callState.localStream)return;callMuted=!callMuted;callState.localStream.getAudioTracks().forEach(function(t){t.enabled=!callMuted;});this.classList.toggle('active',callMuted);vibrate('tap');};
-$('call-speaker').onclick=function(){callSpeakerOn=!callSpeakerOn;this.classList.toggle('active',callSpeakerOn);if(callState&&callState.audioEl){callState.audioEl.volume=callSpeakerOn?1:0.5;}vibrate('tap');};
-$('chat-call-btn').onclick=function(){if(!currentChatUser)return;startCall(currentChatUser.uid);};
-listenForOfferAndIce();
-
-// ===== E2EE =====
-var CRYPTO_OK=!!(window.crypto&&window.crypto.subtle);
-var e2eKeyPriv=null;
-var e2ePubOthers={};
-var msgKeyCache={};
-function b64enc(buf){var b=new Uint8Array(buf);var s='';for(var i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s);}
-function b64dec(s){var bin=atob(s);var b=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);return b;}
-async function e2eGenKeypair(){var pair=await crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'},true,['deriveBits','deriveKey']);var pub=await crypto.subtle.exportKey('jwk',pair.publicKey);var priv=await crypto.subtle.exportKey('jwk',pair.privateKey);return{pub:pub,priv:priv};}
-async function e2eImportPub(jwk){return crypto.subtle.importKey('jwk',jwk,{name:'ECDH',namedCurve:'P-256'},true,[]);}
-async function e2eImportPriv(jwk){return crypto.subtle.importKey('jwk',jwk,{name:'ECDH',namedCurve:'P-256'},true,['deriveBits','deriveKey']);}
-async function e2eDeriveKEK(myPrivJwk,theirPubJwk,usage){var myPriv=await e2eImportPriv(myPrivJwk);var theirPub=await e2eImportPub(theirPubJwk);var bits=await crypto.subtle.deriveBits({name:'ECDH',public:theirPub},myPriv,256);return crypto.subtle.importKey('raw',bits,{name:'AES-GCM'},false,usage);}
-async function e2eWrapAES(aesKey,myPrivJwk,theirPubJwk){var kek=await e2eDeriveKEK(myPrivJwk,theirPubJwk,['encrypt']);var raw=await crypto.subtle.exportKey('raw',aesKey);var iv=crypto.getRandomValues(new Uint8Array(12));var wrapped=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},kek,raw);return{wrapped:b64enc(wrapped),iv:b64enc(iv.buffer)};}
-async function e2eUnwrapAES(wrappedObj,myPrivJwk,theirPubJwk){var kek=await e2eDeriveKEK(myPrivJwk,theirPubJwk,['decrypt']);var raw=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64dec(wrappedObj.iv)},kek,b64dec(wrappedObj.wrapped));return crypto.subtle.importKey('raw',raw,{name:'AES-GCM',length:256},true,['encrypt','decrypt']);}
-async function e2eEncrypt(text,aesKey){var iv=crypto.getRandomValues(new Uint8Array(12));var data=new TextEncoder().encode(text);var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},aesKey,data);return{ciphertext:b64enc(ct),iv:b64enc(iv.buffer)};}
-async function e2eDecrypt(cipherB64,ivB64,aesKey){var ct=b64dec(cipherB64);var iv=b64dec(ivB64);var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:iv},aesKey,ct);return new TextDecoder().decode(pt);}
-async function e2eInitUser(){
-  if(!CRYPTO_OK)return;
-  var stored=localStorage.getItem('flux_e2e_priv');
-  if(stored){try{var priv=JSON.parse(stored);e2eKeyPriv=priv;var snap=await db.ref('users/'+currentUser.uid+'/pubkey').once('value');if(!snap.exists()){var newPair=await e2eGenKeypair();e2eKeyPriv=newPair.priv;localStorage.setItem('flux_e2e_priv',JSON.stringify(newPair.priv));await db.ref('users/'+currentUser.uid+'/pubkey').set(newPair.pub);}return;}catch(e){}}
-  var pair=await e2eGenKeypair();
-  e2eKeyPriv=pair.priv;localStorage.setItem('flux_e2e_priv',JSON.stringify(pair.priv));
-  try{await db.ref('users/'+currentUser.uid+'/pubkey').set(pair.pub);}catch(e){}
-}
-async function e2eGetPub(uid){if(e2ePubOthers[uid])return e2ePubOthers[uid];try{var s=await db.ref('users/'+uid+'/pubkey').once('value');if(s.exists()){e2ePubOthers[uid]=s.val();return e2ePubOthers[uid];}}catch(e){}return null;}
-async function e2eEnsureChatKey(chatId,otherUid){
-  if(msgKeyCache[chatId])return msgKeyCache[chatId];
-  if(!CRYPTO_OK||!e2eKeyPriv)return null;
-  try{
-    var meta=await db.ref('chats/'+chatId+'/meta/enc').once('value');
-    if(meta.exists()){var myWrapped=meta.val()[currentUser.uid];var theirPub=await e2eGetPub(otherUid);if(myWrapped&&theirPub){var aesKey=await e2eUnwrapAES(myWrapped,e2eKeyPriv,theirPub);msgKeyCache[chatId]=aesKey;return aesKey;}return null;}
-    var theirPub2=await e2eGetPub(otherUid);
-    if(!theirPub2)return null;
-    var aesNew=await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']);
-    var wrappedForMe=await e2eWrapAES(aesNew,e2eKeyPriv,theirPub2);
-    var wrappedForThem=await e2eWrapAES(aesNew,e2eKeyPriv,theirPub2);
-    var update={};update[currentUser.uid]=wrappedForMe;update[otherUid]=wrappedForThem;
-    await db.ref('chats/'+chatId+'/meta/enc').set(update);
-    msgKeyCache[chatId]=aesNew;return aesNew;
-  }catch(e){return null;}
-}
 
 // ===== INIT =====
 updateTogglesUI();
