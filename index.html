@@ -321,7 +321,6 @@ body.dark .chat-input-bar input[type=text]{background:rgba(0,0,0,.24)}
 .typing-dots span:nth-child(2){animation-delay:.15s}
 .typing-dots span:nth-child(3){animation-delay:.3s}
 @keyframes typingBounce{0%,60%,100%{transform:translateY(0);opacity:.55}30%{transform:translateY(-4px);opacity:1}}
-/* FIX: heart burst — position:fixed (не улетает в левый верхний угол) */
 .heart-burst{position:fixed;pointer-events:none;font-size:80px;transform:translate(-50%,-50%) scale(.3);opacity:0;z-index:99999;animation:heartBurst 1s var(--ease-spring) forwards;will-change:transform,opacity}
 @keyframes heartBurst{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}25%{opacity:1}55%{transform:translate(-50%,-50%) scale(1.15);opacity:1}100%{transform:translate(-50%,-50%) scale(1.6);opacity:0}}
 .particle-burst{position:fixed;width:0;height:0;pointer-events:none;z-index:99999}
@@ -491,7 +490,6 @@ body.dark .vpn-key-item{background:linear-gradient(135deg,rgba(35,46,60,.65),rgb
 .msg.failed{opacity:.85;box-shadow:0 0 0 1.5px var(--danger)!important}
 .msg-retry{display:inline-block;margin-top:4px;font-size:11.5px;color:var(--danger);font-weight:700;cursor:pointer;padding:2px 8px;border-radius:8px;background:var(--danger-soft)}
 @keyframes emptyFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-/* ============ SHOP ============ */
 .shop-tabs{display:flex;gap:6px;padding:10px var(--s-4) 6px;overflow-x:auto;scrollbar-width:none}
 .shop-tabs::-webkit-scrollbar{display:none}
 .shop-tab{flex:1;min-width:0;padding:11px 10px;border-radius:14px;background:var(--bg-2);font-size:13px;font-weight:700;color:var(--text-2);white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:5px;transition:background .3s var(--ease-out),color .3s var(--ease-out),box-shadow .3s var(--ease-out),transform .25s var(--ease-spring)}
@@ -569,8 +567,6 @@ body.dark .vpn-key-item{background:linear-gradient(135deg,rgba(35,46,60,.65),rgb
 .profile-gifts-label::after{content:'';flex:1;height:1px;background:var(--divider)}
 .avatar-gift-badge{position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);background:rgba(30,42,54,.9);backdrop-filter:blur(14px);padding:4px 10px;border-radius:99px;font-size:16px;display:flex;gap:2px;box-shadow:0 6px 18px rgba(0,0,0,.35),0 0 0 2px var(--bg);z-index:3;line-height:1;border:1px solid rgba(255,255,255,.14)}
 .avatar-gift-badge span{line-height:1}
-
-/* ============ NFT ART (Telegram-like SVG) ============ */
 .nft-art-wrap{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative;border-radius:20px;overflow:hidden;padding:8px}
 .nft-art-wrap.small{padding:2px;border-radius:14px}
 .nft-art-svg{width:100%;height:100%;display:block;filter:drop-shadow(0 10px 24px rgba(0,0,0,.4));animation:nftFloat 4.5s ease-in-out infinite;will-change:transform}
@@ -581,8 +577,6 @@ body.dark .vpn-key-item{background:linear-gradient(135deg,rgba(35,46,60,.65),rgb
 .nft-art-wrap.rarity-epic{background:radial-gradient(circle at 50% 55%,rgba(168,85,247,.35),transparent 70%)}
 .nft-art-wrap.rarity-legendary{background:radial-gradient(circle at 50% 55%,rgba(251,191,36,.42),transparent 70%)}
 .nft-card .nft-art-wrap{width:100%;aspect-ratio:1;padding:4px;border-radius:14px;margin-bottom:2px}
-
-/* ============ PROFILE ASSETS ============ */
 .profile-assets-label{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;color:var(--text-2);text-transform:uppercase;letter-spacing:.9px;padding:14px 24px 8px}
 .profile-assets-label::after{content:'';flex:1;height:1px;background:var(--divider)}
 .nft-label-icon{color:#a855f7;font-size:14px;filter:drop-shadow(0 0 6px rgba(168,85,247,.7))}
@@ -595,6 +589,11 @@ body.dark .vpn-key-item{background:linear-gradient(135deg,rgba(35,46,60,.65),rgb
 .profile-nft-serial{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);font-size:9.5px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);padding:1px 6px;border-radius:8px;letter-spacing:.3px;backdrop-filter:blur(6px);font-variant-numeric:tabular-nums}
 .profile-assets-empty{text-align:center;padding:22px 12px;color:var(--text-2);font-size:13px}
 .profile-assets-empty-icon{font-size:44px;opacity:.35}
+/* ==== ПЛАТЕЖИ: стили ==== */
+.payment-code{background:var(--accent-soft);border-radius:14px;padding:14px;text-align:center;margin-bottom:12px;cursor:pointer}
+.payment-code-value{font-size:22px;font-weight:900;letter-spacing:3px;color:var(--accent)}
+.payment-code-hint{font-size:12px;color:var(--text-2);margin-top:4px}
+.payment-awaiting{background:var(--accent-soft);color:var(--accent);padding:14px;border-radius:14px;text-align:center;font-weight:700;margin-bottom:10px}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -860,15 +859,6 @@ body.dark .vpn-key-item{background:linear-gradient(135deg,rgba(35,46,60,.65),rgb
 <input class="sheet-input" id="edit-birthday" type="date">
 <button class="sheet-btn ripple" id="edit-save">Сохранить</button>
 <button class="sheet-btn secondary ripple" id="edit-cancel">Отмена</button>
-<!-- Панель оплаты -->
-<div id="payment-sheet" class="profile-sheet">
-  <div class="profile-sheet-body" id="payment-sheet-body"></div>
-</div>
-
-<!-- Админ-панель (видна только тебе) -->
-<div id="admin-sheet" class="profile-sheet">
-  <div class="profile-sheet-body" id="admin-sheet-body"></div>
-</div>
 </div>
 </div>
 
@@ -924,6 +914,10 @@ body.dark .vpn-key-item{background:linear-gradient(135deg,rgba(35,46,60,.65),rgb
 <div id="birthday-sheet" class="profile-sheet"><div class="profile-sheet-body" id="birthday-sheet-body"></div></div>
 <div id="my-gifts-sheet" class="profile-sheet"><div class="profile-sheet-body" id="my-gifts-body"></div></div>
 
+<!-- ==== ПЛАТЕЖИ: панели ==== -->
+<div id="payment-sheet" class="profile-sheet"><div class="profile-sheet-body" id="payment-sheet-body"></div></div>
+<div id="admin-sheet" class="profile-sheet"><div class="profile-sheet-body" id="admin-sheet-body"></div></div>
+
 <div id="call-screen" class="call-screen">
 <div class="call-bg-pulse"><i></i></div>
 <div style="display:flex;flex-direction:column;align-items:center;position:relative;z-index:2">
@@ -973,6 +967,22 @@ try{
   firebaseReady=true;
   try{ if('Notification' in window && 'serviceWorker' in navigator){ messaging=firebase.messaging(); } }catch(e){ console.warn('messaging init', e); }
 }catch(e){setTimeout(function(){toast('Ошибка Firebase: '+e.message);},100);}
+
+/* ==== ПЛАТЕЖИ: настройки (ЗАПОЛНИ СВОИМИ ДАННЫМИ) ==== */
+const ADMIN_UIDS = [
+  'ВСТАВЬ_СЮДА_СВОЙ_FIREBASE_UID'   // Firebase Console → Authentication → Users → UID
+];
+function isAdmin(){
+  return currentUser && ADMIN_UIDS.indexOf(currentUser.uid) !== -1;
+}
+let paymentConfig = {
+  cardNumber:    '0000 0000 0000 0000',       // ← твоя карта
+  phoneSBP:      '+7 900 000-00-00',           // ← твой номер для СБП
+  bankName:      'Сбербанк',
+  recipientName: 'И. И.',                      // ← имя получателя
+  instructions:  'Переведите точную сумму и укажите код в комментарии к переводу. После оплаты нажмите «Я оплатил». Подтверждение — до 24 часов.',
+  enabled:       true
+};
 
 const SAVED_CHAT_PREFIX='saved_';
 const TYPING_TTL_MS=5000;
@@ -1090,7 +1100,6 @@ const VIB_PREFS={enabled:localStorage.getItem('flux_vibration')!=='0'};
 const VIB={tap:8,longPress:30,send:15,receive:[40,30,40],call:[200,100,200,100,200,100,200],error:[50,30,50],select:10};
 function vibrate(type){if(!VIB_PREFS.enabled)return;if(!navigator.vibrate)return;try{navigator.vibrate(typeof type==='number'?type:(VIB[type]||10));}catch(e){}}
 
-/* ============ LIBSODIUM ============ */
 let sodium=null;
 async function initSodium(){if(sodium)return sodium;try{if(window.sodium){await window.sodium.ready;sodium=window.sodium;}}catch(e){}return sodium;}
 initSodium();
@@ -1098,7 +1107,6 @@ function getIdbKey(){try{var k=localStorage.getItem('flux_idb_key');if(!k&&sodiu
 function idbEncrypt(obj){if(!sodium)return obj;try{var keyb=sodium.from_base64(getIdbKey());var nonce=sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);var cipher=sodium.crypto_secretbox_easy(JSON.stringify(obj),nonce,keyb);return {_enc:true,n:sodium.to_base64(nonce),d:sodium.to_base64(cipher)};}catch(e){return obj;}}
 function idbDecrypt(blob){if(!blob||!blob._enc)return blob;if(!sodium)return null;try{var keyb=sodium.from_base64(getIdbKey());var nonce=sodium.from_base64(blob.n);var cipher=sodium.from_base64(blob.d);var plain=sodium.crypto_secretbox_open_easy(cipher,nonce,keyb);return JSON.parse(sodium.to_string(plain));}catch(e){return null;}}
 
-/* ============ MESSAGE QUEUE ============ */
 const QUEUE_KEY='flux_msg_queue';
 function queueGet(){try{return JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]');}catch(e){return [];}}
 function queueSet(q){try{localStorage.setItem(QUEUE_KEY,JSON.stringify(q));}catch(e){}}
@@ -1128,9 +1136,7 @@ window.addEventListener('online',function(){queueFlush();});
 setTimeout(function(){if(navigator.onLine)queueFlush();},3000);
 setInterval(function(){if(navigator.onLine)queueFlush();},30000);
 
-/* ============================================================
-   SHOP DATA
-   ============================================================ */
+/* ==== Магазин: подарки, NFT, звёзды (в рублях) ==== */
 const GIFTS=[
   {id:'rose',emoji:'🌹',name:'Роза',price:15,rarity:'common'},
   {id:'beer',emoji:'🍺',name:'Пиво',price:20,rarity:'common'},
@@ -1149,6 +1155,7 @@ const GIFTS=[
   {id:'crown',emoji:'👑',name:'Корона',price:2000,rarity:'legendary'},
   {id:'ring',emoji:'💍',name:'Кольцо',price:5000,rarity:'legendary'}
 ];
+/* Звёзды — в рублях */
 const STAR_PACKS=[
   {id:'p1', stars:100,   rub:99,   price:'99 ₽'},
   {id:'p2', stars:250,   rub:249,  price:'249 ₽'},
@@ -1158,24 +1165,6 @@ const STAR_PACKS=[
   {id:'p6', stars:5000,  rub:3790, price:'3 790 ₽'},
   {id:'p7', stars:10000, rub:6990, price:'6 990 ₽'}
 ];
-/* ==== НАСТРОЙКИ ПРИЁМА ПЛАТЕЖЕЙ ==== */
-const PAYMENT_CONFIG_KEY = 'settings/payment';
-let paymentConfig = {
-  cardNumber: '2204120144723133',      // ← ВСТАВЬ СВОЮ КАРТУ
-  phoneSBP:   '4100118891507332',          // ← НОМЕР ДЛЯ СБП
-  bankName:   'ЮMoney',
-  instructions: 'Переведите точную сумму и укажите код в комментарии к переводу. После оплаты нажмите «Я оплатил». Подтверждение — до 24 часов.',
-  enabled: true
-};
-
-/* ==== АДМИНЫ (твой Firebase UID) ==== */
-const ADMIN_UIDS = [
-  '7rxpLXFm32c2IhJc5vop8sDEo0T2'  // узнать: консоль → Authentication → Users → UID
-];
-function isAdmin(){
-  return currentUser && ADMIN_UIDS.indexOf(currentUser.uid) !== -1;
-}
-/* === NFT (без эмодзи и животных — Telegram-style арт) === */
 const NFTS=[
   {id:'cosmic', name:'Cosmic Orb',     rarity:'legendary', supply:100,  price:2500},
   {id:'crystal',name:'Ice Crystal',    rarity:'epic',      supply:500,  price:800},
@@ -1187,7 +1176,6 @@ const NFTS=[
   {id:'aurora', name:'Aurora Wave',    rarity:'rare',      supply:750,  price:600},
   {id:'fusion', name:'Fusion Reactor', rarity:'rare',      supply:800,  price:500}
 ];
-/* === NFT SVG ART (Telegram-like) === */
 const NFT_SVGS = {
   cosmic: '<svg viewBox="0 0 120 120" class="nft-art-svg"><defs><radialGradient id="g_cos" cx="35%" cy="30%" r="72%"><stop offset="0%" stop-color="#e0e7ff"/><stop offset="22%" stop-color="#a78bfa"/><stop offset="60%" stop-color="#6d28d9"/><stop offset="100%" stop-color="#1e1b4b"/></radialGradient><radialGradient id="h_cos" cx="35%" cy="25%" r="35%"><stop offset="0%" stop-color="#fff" stop-opacity=".95"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><circle cx="60" cy="60" r="48" fill="url(#g_cos)"/><ellipse cx="44" cy="40" rx="22" ry="13" fill="url(#h_cos)"/><ellipse cx="78" cy="84" rx="12" ry="6" fill="#fff" opacity=".16"/><circle cx="72" cy="42" r="3" fill="#fff" opacity=".7"/><circle cx="86" cy="60" r="1.8" fill="#fff" opacity=".5"/><circle cx="50" cy="86" r="2.2" fill="#fff" opacity=".5"/><circle cx="38" cy="66" r="1.4" fill="#fff" opacity=".4"/></svg>',
   crystal:'<svg viewBox="0 0 120 120" class="nft-art-svg"><defs><linearGradient id="g_cry" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e0f2fe"/><stop offset="35%" stop-color="#38bdf8"/><stop offset="75%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#075985"/></linearGradient><linearGradient id="g_cry2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff" stop-opacity=".9"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><polygon points="60,8 100,45 88,105 32,105 20,45" fill="url(#g_cry)"/><polygon points="60,8 100,45 60,55" fill="#fff" opacity=".35"/><polygon points="60,8 20,45 60,55" fill="#fff" opacity=".15"/><polygon points="60,55 88,105 60,100" fill="#000" opacity=".15"/><polygon points="60,55 32,105 60,100" fill="#fff" opacity=".1"/><polygon points="60,15 92,45 60,52" fill="url(#g_cry2)"/></svg>',
@@ -1405,8 +1393,6 @@ function launchFireworks(container,duration){
   }
   launch();
 }
-
-/* FIX: анимация подарка — не улетает в угол */
 function showGiftAnimation(g){
   var wrap=document.createElement('div');
   wrap.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:99999';
@@ -1417,6 +1403,289 @@ function showGiftAnimation(g){
   try{el.animate([{transform:'scale(.3) rotate(-15deg)',opacity:0},{transform:'scale(1.15) rotate(0deg)',opacity:1,offset:.25},{transform:'scale(1.15) rotate(0deg)',opacity:1,offset:.6},{transform:'scale(1.6) rotate(0deg)',opacity:0}],{duration:1300,easing:'cubic-bezier(.34,1.56,.64,1)',fill:'forwards'});}catch(e){}
   setTimeout(function(){try{wrap.remove();}catch(e){}},1400);
 }
+
+/* ==== ПЛАТЕЖИ: основная логика ==== */
+
+async function loadPaymentConfig(){
+  try{
+    const s = await db.ref('settings/payment').once('value');
+    if(s.exists()) paymentConfig = Object.assign(paymentConfig, s.val());
+  }catch(e){}
+}
+function generatePaymentCode(){
+  const d = new Date();
+  const base = d.getFullYear().toString().slice(-2) +
+               String(d.getMonth()+1).padStart(2,'0') +
+               String(d.getDate()).padStart(2,'0');
+  return 'F' + base + '-' + Math.floor(1000 + Math.random()*9000);
+}
+async function createPaymentRequest(pack){
+  if(!currentUser) return null;
+  const code = generatePaymentCode();
+  const ref = db.ref('payments/' + currentUser.uid).push();
+  await ref.set({
+    requestId: ref.key,
+    userId: currentUser.uid,
+    userName: currentUserData.name || '',
+    username: currentUserData.username || '',
+    packId: pack.id,
+    stars: pack.stars,
+    rub: pack.rub,
+    status: 'pending',
+    code: code,
+    credited: false,
+    createdAt: TS
+  });
+  return { requestId: ref.key, code: code, userId: currentUser.uid, stars: pack.stars, rub: pack.rub, packId: pack.id, status:'pending', createdAt: Date.now() };
+}
+async function markPaymentAsPaid(requestId){
+  if(!currentUser) return;
+  await db.ref('payments/' + currentUser.uid + '/' + requestId).update({
+    status: 'awaiting',
+    paidAt: TS
+  });
+}
+async function findActiveRequest(pack){
+  try{
+    const snap = await db.ref('payments/' + currentUser.uid)
+                         .orderByChild('packId').equalTo(pack.id).once('value');
+    const dayAgo = Date.now() - 24*3600*1000;
+    let found = null;
+    snap.forEach(function(c){
+      const v = c.val();
+      if(v && v.createdAt > dayAgo && (v.status==='pending' || v.status==='awaiting')){
+        found = v;
+      }
+    });
+    return found;
+  }catch(e){ return null; }
+}
+async function openPaymentSheet(pack){
+  await loadPaymentConfig();
+  const sheet = document.getElementById('payment-sheet');
+  const body  = document.getElementById('payment-sheet-body');
+  sheet.classList.add('show');
+
+  let existing = await findActiveRequest(pack);
+  if(!existing){
+    existing = await createPaymentRequest(pack);
+  }
+  if(!existing){
+    body.innerHTML = '<div class="empty">Не удалось создать заявку</div>';
+    return;
+  }
+
+  body.innerHTML = `
+    <div class="profile-sheet-title">Оплата звёзд</div>
+    <div style="text-align:center;padding:10px 0">
+      <div style="font-size:56px;line-height:1">⭐</div>
+      <div style="font-size:22px;font-weight:800;margin-top:6px">${existing.stars.toLocaleString('ru')} звёзд</div>
+      <div style="font-size:16px;color:var(--text-2);margin-top:4px">
+        К оплате: <b style="color:var(--text)">${existing.rub} ₽</b>
+      </div>
+    </div>
+
+    <div class="profile-sheet-subtitle">Реквизиты для перевода</div>
+    <div class="profile-info-card" style="margin:0 0 12px">
+      <div class="info-row" data-copyable="${escAttr(paymentConfig.cardNumber)}" style="cursor:pointer">
+        <div class="info-value">${esc(paymentConfig.cardNumber)}</div>
+        <div class="info-label">Карта · ${esc(paymentConfig.bankName)} · нажми, чтобы скопировать</div>
+      </div>
+      ${paymentConfig.phoneSBP ? `
+      <div class="info-row" data-copyable="${escAttr(paymentConfig.phoneSBP)}" style="cursor:pointer">
+        <div class="info-value">${esc(paymentConfig.phoneSBP)}</div>
+        <div class="info-label">СБП по номеру · нажми, чтобы скопировать</div>
+      </div>` : ''}
+      <div class="info-row">
+        <div class="info-value">${esc(paymentConfig.recipientName)}</div>
+        <div class="info-label">Получатель</div>
+      </div>
+    </div>
+
+    <div class="profile-sheet-subtitle">Код платежа</div>
+    <div class="payment-code" data-copyable="${escAttr(existing.code)}">
+      <div class="payment-code-value">${esc(existing.code)}</div>
+      <div class="payment-code-hint">Укажи код в комментарии к переводу</div>
+    </div>
+
+    <div class="modal-text" style="font-size:13px;text-align:center;margin-bottom:14px">
+      ${esc(paymentConfig.instructions)}
+    </div>
+
+    ${existing.status === 'awaiting'
+      ? `<div class="payment-awaiting">⏳ Заявка на проверке</div>`
+      : `<button class="sheet-btn ripple" id="pay-i-paid">✅ Я оплатил</button>`
+    }
+
+    <button class="sheet-btn secondary ripple" id="pay-cancel">Закрыть</button>
+  `;
+
+  body.querySelectorAll('[data-copyable]').forEach(el=>{
+    el.onclick = ()=>copyText(el.dataset.copyable);
+  });
+
+  const paidBtn = document.getElementById('pay-i-paid');
+  if(paidBtn){
+    paidBtn.onclick = async ()=>{
+      paidBtn.disabled = true;
+      try{
+        await markPaymentAsPaid(existing.requestId);
+        toast('Заявка отправлена на проверку');
+        sheet.classList.remove('show');
+      }catch(e){
+        paidBtn.disabled = false;
+        toast('Ошибка');
+      }
+    };
+  }
+  document.getElementById('pay-cancel').onclick = ()=>sheet.classList.remove('show');
+}
+document.getElementById('payment-sheet').onclick = function(e){
+  if(e.target === this) this.classList.remove('show');
+};
+
+function startPaymentListener(){
+  if(!currentUser) return;
+  db.ref('payments/' + currentUser.uid).on('value', async function(snap){
+    const all = snap.val() || {};
+    for(const rid of Object.keys(all)){
+      const r = all[rid];
+      if(r.status === 'confirmed' && !r.credited){
+        try{
+          const res = await db.ref('payments/' + currentUser.uid + '/' + rid + '/credited')
+                                .transaction(cur => cur === true ? undefined : true);
+          if(res.committed){
+            await db.ref('users/' + currentUser.uid + '/stars').transaction(cur => (cur||0) + r.stars);
+            playSound('coin'); vibrate('send');
+            toast('✅ Зачислено ' + r.stars + ' ⭐');
+          }
+        }catch(e){}
+      }
+      if(r.status === 'rejected' && !r.rejectedSeen){
+        db.ref('payments/' + currentUser.uid + '/' + rid + '/rejectedSeen').set(true).catch(()=>{});
+        toast('❌ Заявка отклонена. ' + (r.reason||''));
+      }
+    }
+  });
+}
+
+async function loadAllPendingPayments(){
+  const snap = await db.ref('payments').once('value');
+  const all = snap.val() || {};
+  const list = [];
+  Object.keys(all).forEach(uid=>{
+    const reqs = all[uid] || {};
+    Object.keys(reqs).forEach(rid=>{
+      const r = reqs[rid];
+      if(r && (r.status === 'awaiting' || r.status === 'pending')){
+        list.push(Object.assign({ _uid: uid }, r));
+      }
+    });
+  });
+  list.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  return list;
+}
+async function confirmPayment(req){
+  await db.ref('payments/' + req.userId + '/' + req.requestId).update({
+    status: 'confirmed',
+    confirmedAt: TS,
+    confirmedBy: currentUser.uid
+  });
+}
+async function rejectPayment(req, reason){
+  await db.ref('payments/' + req.userId + '/' + req.requestId).update({
+    status: 'rejected',
+    rejectedAt: TS,
+    reason: reason || ''
+  });
+}
+async function openAdminPanel(){
+  if(!isAdmin()) return;
+  const sheet = document.getElementById('admin-sheet');
+  const body  = document.getElementById('admin-sheet-body');
+  sheet.classList.add('show');
+  body.innerHTML = `
+    <div class="profile-sheet-title">💳 Заявки на оплату</div>
+    <div id="admin-list" style="margin-top:8px"><div class="spinner" style="margin:20px auto"></div></div>
+    <button class="sheet-btn secondary ripple" id="admin-close" style="margin-top:12px">Закрыть</button>
+  `;
+  document.getElementById('admin-close').onclick = ()=>sheet.classList.remove('show');
+  await refreshAdminList();
+}
+async function refreshAdminList(){
+  const cont = document.getElementById('admin-list');
+  const list = await loadAllPendingPayments();
+  if(!list.length){
+    cont.innerHTML = '<div class="empty"><div class="empty-title">Нет заявок</div><div>Все оплаты обработаны</div></div>';
+    return;
+  }
+  const byId = {};
+  let html = '';
+  list.forEach(r=>{
+    byId[r.requestId] = r;
+    const isAwaiting = r.status === 'awaiting';
+    html += `
+      <div class="session-item" style="flex-direction:column;align-items:stretch">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div class="session-info" style="flex:1">
+            <div class="session-device">
+              ${esc(r.userName||'Без имени')}
+              ${r.username ? '<span style="color:var(--accent);font-size:12px">@'+esc(r.username)+'</span>' : ''}
+              ${isAwaiting ? ' 🟡' : ' ⚪'}
+            </div>
+            <div class="session-meta">${r.stars} ⭐ за ${r.rub} ₽</div>
+            <div class="session-meta">Код: <b>${esc(r.code)}</b></div>
+            <div class="session-meta">${new Date(r.createdAt).toLocaleString('ru')}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="sheet-btn ripple" data-confirm="${escAttr(r.requestId)}"
+                  style="flex:1;background:var(--success);margin:0">✓ Подтвердить</button>
+          <button class="sheet-btn ripple" data-reject="${escAttr(r.requestId)}"
+                  style="flex:1;background:var(--danger);margin:0">✕ Отклонить</button>
+        </div>
+      </div>
+    `;
+  });
+  cont.innerHTML = html;
+
+  cont.querySelectorAll('[data-confirm]').forEach(b=>{
+    b.onclick = async ()=>{
+      const r = byId[b.dataset.confirm];
+      if(!confirm(`Подтвердить ${r.stars} ⭐ для ${r.userName||'пользователя'}?`)) return;
+      b.disabled = true;
+      await confirmPayment(r);
+      toast('Зачислено');
+      await refreshAdminList();
+    };
+  });
+  cont.querySelectorAll('[data-reject]').forEach(b=>{
+    b.onclick = async ()=>{
+      const r = byId[b.dataset.reject];
+      const reason = prompt('Причина отказа?') || '';
+      b.disabled = true;
+      await rejectPayment(r, reason);
+      await refreshAdminList();
+    };
+  });
+}
+document.getElementById('admin-sheet').onclick = function(e){
+  if(e.target === this) this.classList.remove('show');
+};
+
+/* Триггер админки: долгий тап по балансу звёзд */
+(function bindAdminTrigger(){
+  const el = document.getElementById('stars-balance');
+  if(!el) return;
+  let tmr = null;
+  const start = ()=>{ if(isAdmin()) tmr = setTimeout(openAdminPanel, 800); };
+  const stop  = ()=>{ clearTimeout(tmr); };
+  el.addEventListener('touchstart', start, {passive:true});
+  el.addEventListener('touchend',   stop);
+  el.addEventListener('mousedown',  start);
+  el.addEventListener('mouseup',    stop);
+  el.addEventListener('mouseleave', stop);
+})();
 
 function applyTheme(themeId){
   var t=THEMES.find(function(x){return x.id===themeId;})||THEMES[0];
@@ -1551,8 +1820,9 @@ auth.onAuthStateChanged(async function(user){
     if(!data.stars&&data.stars!==0){myStars=100;db.ref('users/'+user.uid+'/stars').set(100).catch(function(){});toast('🎁 Бонус: 100 звёзд!');}
     if(pinLockEnabled&&pinLockCode){showPinLock();}
     goScreen('main-screen',true);
-    startSelfListener();startUserChatsListener();startPaymentListener();loadPaymentConfig();startSavedMetaListener();
+    startSelfListener();startUserChatsListener();startSavedMetaListener();
     startSessionTracking();updateSettingsUI();updateTogglesUI();applyWallpaper();startCallListener();refreshPushStatus();
+    startPaymentListener();loadPaymentConfig();
     if(CRYPTO_OK&&!e2eKeyPriv){e2eInitUser().catch(function(e){});}
     updateStarsUI(true);renderProfileGifts();renderAvatarGiftBadge();
     var pendingAnchor=sessionStorage.getItem('flux_pending_anchor');
@@ -1858,6 +2128,7 @@ $('onb-continue').onclick=async function(){
     userCache[currentUser.uid]=currentUserData;myStars=100;
     goScreen('main-screen',true);
     startSelfListener();startUserChatsListener();startSavedMetaListener();startSessionTracking();startCallListener();
+    startPaymentListener();loadPaymentConfig();
     updateSettingsUI();updateTogglesUI();renderProfileGifts();renderAvatarGiftBadge();
     if(notifyEnabled && Notification.permission==='granted') initFCM().catch(function(){});
   }catch(e){toast('Ошибка: '+(e.message||e.code));}
@@ -2342,7 +2613,6 @@ function spawnParticles(x,y,count){
   }
   setTimeout(function(){try{container.remove();}catch(e){}},1000);
 }
-/* FIX: координаты берём ДО await — иначе getBoundingClientRect возвращает 0,0 */
 async function toggleReaction(msgId,emoji,sourceEl){
   if(!currentChatId||!currentUser)return;
   var burstX=null,burstY=null;
@@ -2627,9 +2897,6 @@ function updateTogglesUI(){
   var at=$('anim-toggle');if(at)at.classList.toggle('on',animWallpapersEnabled);
 }
 
-/* ============================================================
-   PROFILE ASSETS (NFT first, then GIFTS)
-   ============================================================ */
 function normalizeNftList(nftsRaw){
   var list=[];
   Object.keys(nftsRaw||{}).forEach(function(nid){
@@ -2676,8 +2943,6 @@ function renderProfileAssetsHtml(nftList, giftList, opts){
   }
   return html;
 }
-
-/* Своя вкладка профиля — NFT СНАЧАЛА, подарки ниже */
 async function renderProfileGifts(){
   var sec=document.getElementById('profile-gifts-section');
   if(!sec)return;
@@ -2726,316 +2991,6 @@ function openProfileGiftsSheet(){
 }
 document.getElementById('my-gifts-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
 
-/* ============================================================
-   PAYMENT SYSTEM (P2P + ручное подтверждение)
-   ============================================================ */
-
-async function loadPaymentConfig(){
-  try{
-    const s = await db.ref(PAYMENT_CONFIG_KEY).once('value');
-    if(s.exists()) paymentConfig = Object.assign(paymentConfig, s.val());
-  }catch(e){}
-}
-
-function generatePaymentCode(){
-  const d = new Date();
-  const base = d.getFullYear().toString().slice(-2) +
-               String(d.getMonth()+1).padStart(2,'0') +
-               String(d.getDate()).padStart(2,'0');
-  return 'F' + base + '-' + Math.floor(1000 + Math.random()*9000);
-}
-
-/* Создаёт заявку и возвращает {requestId, code} */
-async function createPaymentRequest(pack){
-  if(!currentUser) return null;
-  const code = generatePaymentCode();
-  const ref = db.ref('payments/' + currentUser.uid).push();
-  await ref.set({
-    requestId: ref.key,
-    userId: currentUser.uid,
-    userName: currentUserData.name || '',
-    username: currentUserData.username || '',
-    packId: pack.id,
-    stars: pack.stars,
-    rub: pack.rub,
-    status: 'pending',     // pending → awaiting → confirmed / rejected
-    code: code,
-    credited: false,
-    createdAt: TS
-  });
-  return { requestId: ref.key, code: code };
-}
-
-async function markPaymentAsPaid(requestId){
-  if(!currentUser) return;
-  await db.ref('payments/' + currentUser.uid + '/' + requestId).update({
-    status: 'awaiting',
-    paidAt: TS
-  });
-}
-
-/* Ищем активную заявку по этому пакету (младше 24ч) */
-async function findActiveRequest(pack){
-  const snap = await db.ref('payments/' + currentUser.uid)
-                       .orderByChild('packId').equalTo(pack.id).once('value');
-  const dayAgo = Date.now() - 24*3600*1000;
-  let found = null;
-  snap.forEach(function(c){
-    const v = c.val();
-    if(v && v.createdAt > dayAgo && (v.status==='pending' || v.status==='awaiting')){
-      found = v;
-    }
-  });
-  return found;
-}
-
-/* ===== UI: панель оплаты ===== */
-async function openPaymentSheet(pack){
-  await loadPaymentConfig();
-  const sheet = document.getElementById('payment-sheet');
-  const body  = document.getElementById('payment-sheet-body');
-  sheet.classList.add('show');
-
-  // Ищем существующую заявку или создаём новую
-  let existing = await findActiveRequest(pack);
-  if(!existing){
-    existing = await createPaymentRequest(pack);
-    existing.status = 'pending';
-  }
-
-  body.innerHTML = `
-    <div class="profile-sheet-title">Оплата звёзд</div>
-    <div style="text-align:center;padding:10px 0">
-      <div style="font-size:56px;line-height:1">⭐</div>
-      <div style="font-size:22px;font-weight:800;margin-top:6px">${pack.stars.toLocaleString('ru')} звёзд</div>
-      <div style="font-size:16px;color:var(--text-2);margin-top:4px">
-        К оплате: <b style="color:var(--text)">${pack.rub} ₽</b>
-      </div>
-    </div>
-
-    <div class="profile-sheet-subtitle">Реквизиты для перевода</div>
-    <div class="profile-info-card" style="margin:0 0 12px">
-      <div class="info-row" data-copyable="${escAttr(paymentConfig.cardNumber)}">
-        <div class="info-value">${esc(paymentConfig.cardNumber)}</div>
-        <div class="info-label">Карта · ${esc(paymentConfig.bankName)} · нажми, чтобы скопировать</div>
-      </div>
-      ${paymentConfig.phoneSBP ? `
-      <div class="info-row" data-copyable="${escAttr(paymentConfig.phoneSBP)}">
-        <div class="info-value">${esc(paymentConfig.phoneSBP)}</div>
-        <div class="info-label">СБП по номеру · нажми, чтобы скопировать</div>
-      </div>` : ''}
-      <div class="info-row">
-        <div class="info-value">${esc(paymentConfig.recipientName)}</div>
-        <div class="info-label">Получатель</div>
-      </div>
-    </div>
-
-    <div class="profile-sheet-subtitle">Код платежа</div>
-    <div style="background:var(--accent-soft);border-radius:14px;padding:14px;text-align:center;margin-bottom:12px"
-         data-copyable="${escAttr(existing.code)}">
-      <div style="font-size:22px;font-weight:900;letter-spacing:3px;color:var(--accent)">${esc(existing.code)}</div>
-      <div style="font-size:12px;color:var(--text-2);margin-top:4px">
-        Укажи код в комментарии к переводу
-      </div>
-    </div>
-
-    <div class="modal-text" style="font-size:13px;text-align:center;margin-bottom:14px">
-      ${esc(paymentConfig.instructions)}
-    </div>
-
-    ${existing.status === 'awaiting'
-      ? `<div style="background:var(--accent-soft);color:var(--accent);padding:14px;border-radius:14px;text-align:center;font-weight:700;margin-bottom:10px">
-           ⏳ Заявка на проверке
-         </div>`
-      : `<button class="sheet-btn ripple" id="pay-i-paid">✅ Я оплатил</button>`
-    }
-
-    <button class="sheet-btn secondary ripple" id="pay-cancel">Закрыть</button>
-  `;
-
-  // Копирование по тапу
-  body.querySelectorAll('[data-copyable]').forEach(el=>{
-    el.style.cursor = 'pointer';
-    el.onclick = ()=>copyText(el.dataset.copyable);
-  });
-
-  const paidBtn = document.getElementById('pay-i-paid');
-  if(paidBtn){
-    paidBtn.onclick = async ()=>{
-      paidBtn.disabled = true;
-      try{
-        await markPaymentAsPaid(existing.requestId);
-        toast('Заявка отправлена на проверку');
-        sheet.classList.remove('show');
-      }catch(e){
-        paidBtn.disabled = false;
-        toast('Ошибка');
-      }
-    };
-  }
-  document.getElementById('pay-cancel').onclick = ()=>sheet.classList.remove('show');
-}
-document.getElementById('payment-sheet').onclick = function(e){
-  if(e.target === this) this.classList.remove('show');
-};
-
-/* ===== Клиентский слушатель подтверждений =====
-   Как только админ подтвердил — зачисляем звёзды атомарно */
-function startPaymentListener(){
-  if(!currentUser) return;
-  db.ref('payments/' + currentUser.uid).on('value', async function(snap){
-    const all = snap.val() || {};
-    for(const rid of Object.keys(all)){
-      const r = all[rid];
-      if(r.status === 'confirmed' && !r.credited){
-        // Защита от двойного зачисления через transaction на флаг credited
-        try{
-          const res = await db.ref('payments/' + currentUser.uid + '/' + rid + '/credited')
-                                .transaction(cur => cur === true ? undefined : true);
-          if(res.committed){
-            await db.ref('users/' + currentUser.uid + '/stars').transaction(cur => (cur||0) + r.stars);
-            playSound('coin'); vibrate('send');
-            toast('✅ Зачислено ' + r.stars + ' ⭐');
-          }
-        }catch(e){}
-      }
-      if(r.status === 'rejected' && !r.rejectedSeen){
-        db.ref('payments/' + currentUser.uid + '/' + rid + '/rejectedSeen').set(true).catch(()=>{});
-        toast('❌ Заявка отклонена. ' + (r.reason||''));
-      }
-    }
-  });
-}
-
-/* Замени старую функцию buyStarPack */
-function buyStarPack(p){
-  openPaymentSheet(p);
-}
-
-/* ===== АДМИН-ПАНЕЛЬ ===== */
-
-async function loadAllPendingPayments(){
-  const snap = await db.ref('payments').once('value');
-  const all = snap.val() || {};
-  const list = [];
-  Object.keys(all).forEach(uid=>{
-    const reqs = all[uid] || {};
-    Object.keys(reqs).forEach(rid=>{
-      const r = reqs[rid];
-      if(r && (r.status === 'awaiting' || r.status === 'pending')){
-        list.push(Object.assign({ _uid: uid }, r));
-      }
-    });
-  });
-  list.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-  return list;
-}
-
-async function confirmPayment(req){
-  // 1) Ставим confirmed
-  await db.ref('payments/' + req.userId + '/' + req.requestId).update({
-    status: 'confirmed',
-    confirmedAt: TS,
-    confirmedBy: currentUser.uid
-  });
-  // 2) Клиент сам зачислит звёзды через startPaymentListener
-}
-
-async function rejectPayment(req, reason){
-  await db.ref('payments/' + req.userId + '/' + req.requestId).update({
-    status: 'rejected',
-    rejectedAt: TS,
-    reason: reason || ''
-  });
-}
-
-async function openAdminPanel(){
-  if(!isAdmin()) return;
-  const sheet = document.getElementById('admin-sheet');
-  const body  = document.getElementById('admin-sheet-body');
-  sheet.classList.add('show');
-  body.innerHTML = `
-    <div class="profile-sheet-title">💳 Заявки на оплату</div>
-    <div id="admin-list" style="margin-top:8px"><div class="spinner" style="margin:20px auto"></div></div>
-    <button class="sheet-btn secondary ripple" id="admin-close" style="margin-top:12px">Закрыть</button>
-  `;
-  document.getElementById('admin-close').onclick = ()=>sheet.classList.remove('show');
-  await refreshAdminList();
-}
-
-async function refreshAdminList(){
-  const cont = document.getElementById('admin-list');
-  const list = await loadAllPendingPayments();
-  if(!list.length){
-    cont.innerHTML = '<div class="empty"><div class="empty-title">Нет заявок</div><div>Все оплаты обработаны</div></div>';
-    return;
-  }
-  const byId = {};
-  let html = '';
-  list.forEach(r=>{
-    byId[r.requestId] = r;
-    const isAwaiting = r.status === 'awaiting';
-    html += `
-      <div class="session-item" style="flex-direction:column;align-items:stretch">
-        <div style="display:flex;align-items:flex-start;gap:10px">
-          <div class="session-info" style="flex:1">
-            <div class="session-device">
-              ${esc(r.userName||'Без имени')}
-              ${r.username ? '<span style="color:var(--accent);font-size:12px">@'+esc(r.username)+'</span>' : ''}
-              ${isAwaiting ? ' 🟡' : ' ⚪'}
-            </div>
-            <div class="session-meta">${r.stars} ⭐ за ${r.rub} ₽</div>
-            <div class="session-meta">Код: <b>${esc(r.code)}</b></div>
-            <div class="session-meta">${new Date(r.createdAt).toLocaleString('ru')}</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="sheet-btn ripple" data-confirm="${escAttr(r.requestId)}"
-                  style="flex:1;background:var(--success);margin:0">✓ Подтвердить</button>
-          <button class="sheet-btn ripple" data-reject="${escAttr(r.requestId)}"
-                  style="flex:1;background:var(--danger);margin:0">✕ Отклонить</button>
-        </div>
-      </div>
-    `;
-  });
-  cont.innerHTML = html;
-
-  cont.querySelectorAll('[data-confirm]').forEach(b=>{
-    b.onclick = async ()=>{
-      const r = byId[b.dataset.confirm];
-      if(!confirm(`Подтвердить ${r.stars} ⭐ для ${r.userName||'пользователя'}?`)) return;
-      b.disabled = true;
-      await confirmPayment(r);
-      toast('Зачислено');
-      await refreshAdminList();
-    };
-  });
-  cont.querySelectorAll('[data-reject]').forEach(b=>{
-    b.onclick = async ()=>{
-      const r = byId[b.dataset.reject];
-      const reason = prompt('Причина отказа?') || '';
-      b.disabled = true;
-      await rejectPayment(r, reason);
-      await refreshAdminList();
-    };
-  });
-}
-
-/* Триггер админки: долгий тап по балансу звёзд (только для админа) */
-(function bindAdminTrigger(){
-  const el = document.getElementById('stars-balance');
-  if(!el) return;
-  let tmr = null;
-  const start = ()=>{ if(isAdmin()) tmr = setTimeout(openAdminPanel, 800); };
-  const stop  = ()=>{ clearTimeout(tmr); };
-  el.addEventListener('touchstart', start, {passive:true});
-  el.addEventListener('touchend',   stop);
-  el.addEventListener('mousedown',  start);
-  el.addEventListener('mouseup',    stop);
-  el.addEventListener('mouseleave', stop);
-})();
-
-/* ============ SHOP ============ */
 async function loadMyAssets(){
   if(!currentUser)return;
   try{
@@ -3100,7 +3055,7 @@ async function renderNftTab(list){
 }
 function renderStarsTab(list){
   var html='';
-  html+='<div style="padding:20px 16px 4px;text-align:center;position:relative"><div style="font-size:72px;line-height:1;margin-bottom:8px;filter:drop-shadow(0 10px 20px rgba(251,191,36,.4))">⭐</div><div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">Звёзды Flux</div><div style="font-size:13px;color:var(--text-2);line-height:1.45;max-width:300px;margin:0 auto 8px">Универсальная валюта для подарков, NFT и подписок</div><div style="display:inline-flex;align-items:center;gap:7px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;font-size:14px;font-weight:800;padding:9px 16px;border-radius:99px;box-shadow:0 6px 18px rgba(251,191,36,.4)"><svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>Ваш баланс: '+myStars.toLocaleString('ru')+'</div></div>';
+  html+='<div style="padding:20px 16px 4px;text-align:center;position:relative"><div style="font-size:72px;line-height:1;margin-bottom:8px;filter:drop-shadow(0 10px 20px rgba(251,191,36,.4))">⭐</div><div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">Звёзды Flux</div><div style="font-size:13px;color:var(--text-2);line-height:1.45;max-width:300px;margin:0 auto 8px">Универсальная валюта для подарков, NFT и подписок. Оплата переводом на карту или СБП.</div><div style="display:inline-flex;align-items:center;gap:7px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;font-size:14px;font-weight:800;padding:9px 16px;border-radius:99px;box-shadow:0 6px 18px rgba(251,191,36,.4)"><svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>Ваш баланс: '+myStars.toLocaleString('ru')+'</div></div>';
   html+='<div style="padding:14px 16px 24px;display:flex;flex-direction:column;gap:10px">';
   STAR_PACKS.forEach(function(p){
     var bonus=p.stars>=1000?Math.round(p.stars*0.1):0;var popular=(p.id==='p3'||p.id==='p4');
@@ -3115,15 +3070,14 @@ function renderStarsTab(list){
   list.innerHTML=html;
   list.querySelectorAll('[data-pack]').forEach(function(el){el.onclick=function(){var p=STAR_PACKS.find(function(x){return x.id===el.dataset.pack;});buyStarPack(p);};});
 }
+/* ==== buyStarPack — теперь открывает панель оплаты ==== */
 function buyStarPack(p){
   openPaymentSheet(p);
-}<div style="font-size:22px;font-weight:800">'+p.stars.toLocaleString('ru')+' звёзд</div><div style="font-size:14px;color:var(--text-2)">Цена: <b style="color:var(--text)">'+p.price+'</b></div></div><div class="modal-actions stack"><button class="modal-btn primary" id="sp-buy">💳 Купить (демо)</button><button class="modal-btn" id="sp-cancel">Отмена</button></div>',
-    function(m,close){m.querySelector('#sp-cancel').onclick=close;m.querySelector('#sp-buy').onclick=async function(){close();await addStars(p.stars);toast('+'+p.stars.toLocaleString('ru')+' ⭐');vibrate('send');showGiftAnimation({emoji:'⭐'});};});
 }
 async function buyGift(g,targetUid){
   if(myStars<g.price){toast('Недостаточно звёзд: нужно '+g.price+' ⭐');vibrate('error');return;}
   if(targetUid){await sendGiftTo(g,targetUid);return;}
-  openPaymentSheet(p);<div class="gift-preview-emoji">'+g.emoji+'</div><span class="shop-card-rarity rarity-'+g.rarity+'" style="position:static;display:inline-block;font-size:10px;padding:3px 9px;border-radius:8px">'+g.rarity+'</span><div style="font-size:20px;font-weight:800;margin-top:2px">'+esc(g.name)+'</div><div style="display:flex;align-items:center;gap:6px;color:#f59e0b;font-weight:800;font-size:16px"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>'+g.price.toLocaleString('ru')+'</div><div style="font-size:12px;color:var(--text-2);margin-top:2px">Ваш баланс: '+myStars.toLocaleString('ru')+' ⭐</div></div><div class="modal-actions stack"><button class="modal-btn primary" id="gift-pick">🎁 Подарить другу</button><button class="modal-btn" id="gift-self">📥 Оставить себе</button><button class="modal-btn" id="gift-cancel">Отмена</button></div>',
+  showModal('<div class="gift-preview"><div class="gift-preview-emoji">'+g.emoji+'</div><span class="shop-card-rarity rarity-'+g.rarity+'" style="position:static;display:inline-block;font-size:10px;padding:3px 9px;border-radius:8px">'+g.rarity+'</span><div style="font-size:20px;font-weight:800;margin-top:2px">'+esc(g.name)+'</div><div style="display:flex;align-items:center;gap:6px;color:#f59e0b;font-weight:800;font-size:16px"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>'+g.price.toLocaleString('ru')+'</div><div style="font-size:12px;color:var(--text-2);margin-top:2px">Ваш баланс: '+myStars.toLocaleString('ru')+' ⭐</div></div><div class="modal-actions stack"><button class="modal-btn primary" id="gift-pick">🎁 Подарить другу</button><button class="modal-btn" id="gift-self">📥 Оставить себе</button><button class="modal-btn" id="gift-cancel">Отмена</button></div>',
     function(m,close){m.querySelector('#gift-cancel').onclick=close;m.querySelector('#gift-pick').onclick=function(){close();openGiftRecipientPicker(g);};m.querySelector('#gift-self').onclick=async function(){close();await sendGiftTo(g,currentUser.uid);};});
 }
 function openGiftRecipientPicker(g){
@@ -3345,7 +3299,6 @@ $('profile-menu-btn').onclick=function(e){
   menu.querySelectorAll('.chat-menu-item').forEach(function(it){it.onclick=function(){var a=it.dataset.pm;hideChatMenu();if(a==='edit')$('btn-edit-profile').click();else if(a==='status')$('btn-status').click();else if(a==='reload')location.reload();};});
 };
 
-/* === Профиль в стиле Telegram + NFT сначала + подарки ниже === */
 async function showProfileSheet(u){
   var sheet=$('profile-sheet');sheet.classList.add('show');
   var body=$('profile-sheet-body');
