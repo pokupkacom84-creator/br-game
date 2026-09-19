@@ -29,12 +29,66 @@ exports.pushOnMessage = functions.database
     const senderName = sender.name || 'Новое сообщение';
 
     // Собираем все токены получателей
-    const tokenOwners = {}; // token -> [uid]
+    const tokenOwners = {};
     const tokens = [];
     for (const uid of recipients) {
       const tSnap = await admin.database().ref(`users/${uid}/fcmTokens`).once('value');
       const tObj = tSnap.val() || {};
       Object.keys(tObj).forEach(tok => {
+        tokens.push(tok);
+        (tokenOwners[tok] = tokenOwners[tok] || []).push(uid);
+      });
+    }
+    if (!tokens.length) return null;
+
+    const body = msg.type === 'sticker'
+      ? 'Стикер ' + (msg.text || '')
+      : (msg.text || 'Новое сообщение');
+
+    const payload = {
+      tokens,
+      notification: {
+        title: senderName,
+        body: String(body).slice(0, 200)
+      },
+      data: {
+        chatId: String(chatId),
+        senderUid: String(senderUid),
+        msgId: String(ctx.params.msgId || '')
+      },
+      android: {
+        priority: 'high',
+        notification: { channelId: 'default', sound: 'default', defaultVibrateTimings: true }
+      },
+      apns: {
+        payload: { aps: { sound: 'default', badge: 1, 'content-available': 1 } }
+      },
+      webpush: {
+        headers: { Urgency: 'high' },
+        notification: { icon: 'https://game-cd07d.web.app/icon.png' }
+      }
+    };
+
+    const resp = await admin.messaging().sendEachForMulticast(payload);
+
+    // Чистим невалидные токены
+    const invalid = [];
+    resp.responses.forEach((r, i) => {
+      if (!r.success) {
+        const code = (r.error && r.error.code) || '';
+        if (code.includes('registration-token-not-registered') || code.includes('invalid-argument')) {
+          invalid.push(tokens[i]);
+        }
+      }
+    });
+    for (const tok of invalid) {
+      const owners = tokenOwners[tok] || [];
+      for (const uid of owners) {
+        await admin.database().ref(`users/${uid}/fcmTokens/${tok}`).remove();
+      }
+    }
+    return null;
+  });      Object.keys(tObj).forEach(tok => {
         tokens.push(tok);
         (tokenOwners[tok] = tokenOwners[tok] || []).push(uid);
       });
