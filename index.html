@@ -2837,11 +2837,16 @@ var unsubMyNfts=null;
 function startMyNftListener(){
   if(!currentUser)return;
   try{if(unsubMyNfts&&unsubMyNfts.off)unsubMyNfts.off();}catch(e){}
+  // Слушаем личную коллекцию. Даже если старый/глобальный реестр отличается,
+  // профиль всегда перечитывает обе ветки через loadNftCollection().
   var ref=db.ref('users/'+currentUser.uid+'/nfts');
-  unsubMyNfts=ref.on('value',function(){ renderProfileGifts(); },function(e){
-    console.error('[profile] NFT listener error',e);
-    renderProfileGifts();
-  });
+  var globalRef=db.ref('nfts');
+  var redraw=function(){ renderProfileGifts(); };
+  var err=function(e){ console.error('[profile] NFT listener error',e); redraw(); };
+  ref.on('value',redraw,err);
+  globalRef.on('value',redraw,err);
+  unsubMyNfts={off:function(){try{ref.off('value',redraw);globalRef.off('value',redraw);}catch(e){}}};
+  redraw();
 }
 function renderAvatarGiftBadge(){
   var wrap=document.getElementById('profile-avatar-wrap');if(!wrap)return;
@@ -3075,31 +3080,80 @@ async function sendGiftTo(g,targetUid){
   }catch(e){toast('Ошибка: '+(e.message||''));}
 }
 async function buyNft(n){
-  if(myStars<n.price){toast('Нужно '+n.price+' ⭐, у вас '+myStars);vibrate('error');return;}
-  var soldSnap=await db.ref('nftSupply/'+n.id).once('value');var sold=soldSnap.val()||0;
+  if(!currentUser){toast('Войдите в Flux');return;}
+  var price=Number(n.price||0);
+  if(!price){toast('Цена NFT не указана');return;}
+  if(myStars<price){toast('Нужно '+price+' ⭐, у вас '+myStars);vibrate('error');return;}
+  var soldSnap=await db.ref('nftSupply/'+n.id).once('value');
+  var sold=Number(soldSnap.val()||0);
   var left=Math.max(0,n.supply-sold);
   if(left<=0){toast('Все NFT распроданы');return;}
   var pct=n.supply>0?Math.round((sold/n.supply)*100):0;
-  showModal('<div class="gift-preview"><div style="width:130px;height:130px;margin:0 auto">'+nftArtSvg(n.id)+'</div><span class="shop-card-rarity rarity-'+n.rarity+'" style="position:static;display:inline-block;font-size:10px;padding:3px 9px;border-radius:8px">'+n.rarity+'</span><div style="font-size:20px;font-weight:800;margin-top:2px">'+esc(n.name)+'</div><div style="font-size:12px;color:var(--text-2)">Осталось '+left+' из '+n.supply+'</div><div style="width:100%;max-width:220px;height:6px;background:var(--bg-3);border-radius:3px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#a855f7,#fbbf24)"></div></div><div style="display:flex;align-items:center;gap:6px;color:#f59e0b;font-weight:800;font-size:16px;margin-top:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>'+n.price.toLocaleString('ru')+'</div><div style="font-size:12px;color:var(--text-2);margin-top:2px">Ваш баланс: '+myStars.toLocaleString('ru')+' ⭐</div></div><div class="modal-actions stack"><button class="modal-btn primary" id="nft-buy">💎 Купить NFT</button><button class="modal-btn" id="nft-cancel">Отмена</button></div>',
+  showModal('<div class="gift-preview"><div style="width:130px;height:130px;margin:0 auto">'+nftArtSvg(n.id)+'</div><span class="shop-card-rarity rarity-'+n.rarity+'" style="position:static;display:inline-block;font-size:10px;padding:3px 9px;border-radius:8px">'+n.rarity+'</span><div style="font-size:20px;font-weight:800;margin-top:2px">'+esc(n.name)+'</div><div style="font-size:12px;color:var(--text-2)">Осталось '+left+' из '+n.supply+'</div><div style="width:100%;max-width:220px;height:6px;background:var(--bg-3);border-radius:3px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#a855f7,#fbbf24)"></div></div><div style="display:flex;align-items:center;gap:6px;color:#f59e0b;font-weight:800;font-size:16px;margin-top:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>'+price.toLocaleString('ru')+'</div><div style="font-size:12px;color:var(--text-2);margin-top:2px">Ваш баланс: '+myStars.toLocaleString('ru')+' ⭐</div></div><div class="modal-actions stack"><button class="modal-btn primary" id="nft-buy">💎 Купить NFT</button><button class="modal-btn" id="nft-cancel">Отмена</button></div>',
     function(m,close){
       m.querySelector('#nft-cancel').onclick=close;
       m.querySelector('#nft-buy').onclick=async function(){
         close();
-        var ref=db.ref('nftSupply/'+n.id);
-        var result=await ref.transaction(function(cur){cur=cur||0;if(cur>=n.supply)return;return cur+1;});
-        if(!result.committed){toast('Распродано');return;}
-        var serial=result.snapshot.val();
-        if(!await spendStars(n.price)){ref.transaction(function(cur){return cur-1;});return;}
-        var nftData={nftId:n.id,emoji:n.emoji,name:n.name,rarity:n.rarity,serial:serial,ofSupply:n.supply,ownerUid:currentUser.uid,ownerName:currentUserData.name||'',mintedAt:Date.now()};
-        await db.ref('users/'+currentUser.uid+'/nfts/'+n.id+'/'+serial).set(nftData);
-        await db.ref('nfts/'+n.id+'/'+serial).set(nftData);
-        // Перечитываем коллекцию из Firebase: профиль теперь гарантированно видит NFT.
-        myNfts[n.id]=myNfts[n.id]||{};myNfts[n.id][serial]=nftData;
-        await renderProfileGifts();
-        toast('NFT #'+serial+' получен!');
-        showNftAnimation(n);
-        myNfts=myNfts||{};myNfts[n.id]=myNfts[n.id]||{};myNfts[n.id][serial]=nftData;
-        renderShop();renderProfileGifts();
+        try{
+          // 1. Резервируем уникальный номер NFT.
+          var supplyRef=db.ref('nftSupply/'+n.id);
+          var result=await supplyRef.transaction(function(cur){
+            cur=Number(cur||0);
+            if(cur>=Number(n.supply)) return;
+            return cur+1;
+          });
+          if(!result.committed){toast('Все NFT распроданы');return;}
+          var serial=Number(result.snapshot.val());
+
+          // 2. Списываем именно актуальный баланс Firebase, а не старое значение myStars.
+          var starsRef=db.ref('users/'+currentUser.uid+'/stars');
+          var spent=await starsRef.transaction(function(cur){
+            var balance=Number(cur||0);
+            if(balance<price) return;
+            return balance-price;
+          });
+          if(!spent.committed){
+            await supplyRef.transaction(function(cur){
+              cur=Number(cur||0);
+              return cur===serial ? cur-1 : cur;
+            });
+            toast('Недостаточно звёзд');vibrate('error');return;
+          }
+
+          // 3. Одна атомарная запись сразу в личную коллекцию и общий реестр.
+          var nftData={nftId:n.id,emoji:n.emoji||'',name:n.name,rarity:n.rarity,serial:serial,ofSupply:n.supply,ownerUid:currentUser.uid,ownerName:currentUserData.name||'',mintedAt:Date.now()};
+          var updates={};
+          updates['users/'+currentUser.uid+'/nfts/'+n.id+'/'+serial]=nftData;
+          updates['nfts/'+n.id+'/'+serial]=nftData;
+          try{
+            await db.ref().update(updates);
+          }catch(writeErr){
+            // Возвращаем звёзды, если запись NFT не прошла.
+            await starsRef.transaction(function(cur){return Number(cur||0)+price;});
+            await supplyRef.transaction(function(cur){
+              cur=Number(cur||0);
+              return cur===serial ? cur-1 : cur;
+            });
+            throw writeErr;
+          }
+
+          // 4. Проверяем, что NFT реально появился в личной коллекции.
+          var verify=await db.ref('users/'+currentUser.uid+'/nfts/'+n.id+'/'+serial).once('value');
+          if(!verify.exists()) throw new Error('NFT не записался в личную коллекцию');
+
+          myStars=Number(spent.snapshot.val()||0);
+          myNfts=myNfts||{};
+          myNfts[n.id]=myNfts[n.id]||{};
+          myNfts[n.id][serial]=nftData;
+          updateStarsUI(true);
+          await renderProfileGifts();
+          renderShop();
+          toast('NFT #'+serial+' получен и добавлен в профиль!');
+          showNftAnimation(n);
+        }catch(e){
+          console.error('[NFT] purchase error',e);
+          toast('Не удалось выдать NFT: '+(e.message||'ошибка'));
+        }
       };
     });
 }
