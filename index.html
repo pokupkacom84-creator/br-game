@@ -581,6 +581,16 @@ body.dark .vpn-key-item{background:linear-gradient(135deg,rgba(35,46,60,.65),rgb
 .premium-note{padding:0 18px 22px;text-align:center;color:var(--text-3);font-size:10.5px;line-height:1.45}
 .premium-modal-icon{font-size:58px;text-align:center;line-height:1;margin-bottom:8px}.premium-modal-price{text-align:center;color:#a855f7;font-size:18px;font-weight:900;margin:5px 0 12px}.premium-feature-list{display:flex;flex-direction:column;gap:8px;margin:12px 0 16px}.premium-feature-row{display:flex;gap:9px;align-items:flex-start;font-size:13px}.premium-feature-row b{color:#a855f7}
 .premium-badge{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:3px 7px;border-radius:99px;background:linear-gradient(135deg,#8b5cf6,#f59e0b);color:#fff;font-size:10px;font-weight:900;vertical-align:middle;box-shadow:0 3px 9px rgba(124,58,237,.22)}
+.premium-status-card{margin:10px 12px 16px;padding:14px 15px;border-radius:20px;background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(245,158,11,.10));border:1px solid rgba(168,85,247,.24);cursor:pointer;box-shadow:0 8px 28px rgba(124,58,237,.10)}
+.premium-status-row{display:flex;align-items:center;gap:11px}.premium-status-orb{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#8b5cf6,#f59e0b);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;box-shadow:0 7px 18px rgba(124,58,237,.28)}
+.premium-status-title{font-size:14px;font-weight:900}.premium-status-sub{font-size:11px;color:var(--text-2);margin-top:2px}.premium-status-action{margin-left:auto;font-size:11px;font-weight:800;color:#a855f7}
+body.flux-premium .premium-status-orb,body.flux-premium .premium-badge{animation:premiumPulse 2.8s ease-in-out infinite}
+body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.18),0 0 34px rgba(168,85,247,.28)}
+body.flux-premium .chat-header-name{ text-shadow:0 0 18px rgba(168,85,247,.18)}
+.premium-shimmer{position:relative;overflow:hidden}.premium-shimmer:after{content:'';position:absolute;inset:0;transform:translateX(-120%);background:linear-gradient(100deg,transparent 25%,rgba(255,255,255,.28) 48%,transparent 70%);animation:premiumShimmer 3.8s ease-in-out infinite;pointer-events:none}
+@keyframes premiumPulse{0%,100%{transform:scale(1);box-shadow:0 3px 9px rgba(124,58,237,.22)}50%{transform:scale(1.045);box-shadow:0 6px 20px rgba(168,85,247,.38)}}
+@keyframes premiumShimmer{0%,55%{transform:translateX(-120%)}75%,100%{transform:translateX(120%)}}
+@media (prefers-reduced-motion:reduce){body.flux-premium .premium-status-orb,body.flux-premium .premium-badge,.premium-shimmer:after{animation:none}}
 
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
@@ -715,6 +725,7 @@ body.dark .vpn-key-item{background:linear-gradient(135deg,rgba(35,46,60,.65),rgb
   <div class="profile-avatar-wrap" id="profile-avatar-wrap"><div class="profile-avatar-big" id="profile-avatar-big"></div></div>
   <div class="profile-display-name" id="profile-display-name">—</div>
   <div class="profile-display-status" id="profile-display-status"></div>
+  <div id="profile-premium-status"></div>
   <div id="profile-gifts-section"></div>
   <div class="profile-actions">
     <button class="profile-action ripple" id="btn-edit-profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Изменить</span></button>
@@ -1648,6 +1659,7 @@ function startSelfListener(){
     var v=s.val();
     if(v){
       currentUserData=Object.assign({uid:currentUser.uid},v);
+      window.__fluxPremiumState=v.premium||window.__fluxPremiumState||{};
       userCache[currentUser.uid]=currentUserData;
       myGifts=v.giftsReceived||{};
       updateSettingsUI();renderProfileGifts();renderAvatarGiftBadge();
@@ -1713,7 +1725,7 @@ async function renderChats(){
     html+='<div class="chat-item'+(x.data.pinned?' pinned':'')+(unread>0?' unread':'')+'" data-chat="'+escAttr(x.id)+'" data-user="'+escAttr(x.data.otherUid)+'">'+
       (x.data.pinned?'<div class="chat-pin-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg></div>':'')+
       avatarHtml(u)+
-      '<div class="chat-item-info"><div class="chat-item-top"><div class="chat-item-name">'+esc(u.name)+bdBadge+'</div><div class="chat-item-time">'+esc(time)+'</div></div>'+
+      '<div class="chat-item-info"><div class="chat-item-top"><div class="chat-item-name">'+esc(u.name)+premiumBadgeHtml(u)+bdBadge+'</div><div class="chat-item-time">'+esc(time)+'</div></div>'+
       '<div class="chat-item-bottom"><div class="chat-item-msg">'+esc(prefix+last)+'</div>'+unreadHtml+'</div></div></div>';
   });
   if(!html)html='<div class="empty"><div class="empty-title">Нет чатов</div><div>Начните новую переписку</div></div>';
@@ -1728,13 +1740,28 @@ async function renderChats(){
   });
 }
 
+function isPremiumActive(v){
+  v=v||{};
+  return !!v.active && Number(v.expiresAt||0)>Date.now();
+}
+function isUserPremium(u){ return !!(u&&isPremiumActive(u.premium)); }
+function countPinnedChats(){
+  return Object.keys(chatsData||{}).reduce(function(n,k){return n+(chatsData[k]&&chatsData[k].pinned?1:0);},0);
+}
+function premiumBadgeHtml(u){ return isUserPremium(u)?'<span class="premium-badge">Premium</span>':''; }
+
 function showChatPinMenu(chatId,uid){
   if(isSavedChat(chatId))return;
   var isPinned=!!(chatsData[chatId]&&chatsData[chatId].pinned);
   var isBlocked=blockedUsers.has(uid);
   showModal('<div class="modal-title">'+(userCache[uid]?userCache[uid].name:'Чат')+'</div><div class="modal-actions stack"><button class="modal-btn" id="cp-pin">'+(isPinned?'Открепить':'Закрепить')+'</button><button class="modal-btn '+(isBlocked?'':'danger')+'" id="cp-block">'+(isBlocked?'Разблокировать':'Заблокировать')+'</button><button class="modal-btn danger primary-danger" id="cp-del">Удалить чат</button><button class="modal-btn" id="cp-cancel">Отмена</button></div>',
     function(m,close){
-      m.querySelector('#cp-pin').onclick=async function(){close();await db.ref('userChats/'+currentUser.uid+'/'+chatId+'/pinned').set(isPinned?null:true);toast(isPinned?'Откреплено':'Закреплено');};
+      m.querySelector('#cp-pin').onclick=async function(){
+        if(!isPinned && !isPremiumActive(window.__fluxPremiumState) && countPinnedChats()>=3){
+          close();showModal('<div class="modal-title">Лимит закреплений</div><div class="modal-text">У обычного аккаунта можно закрепить максимум 3 чата. Flux Premium снимает это ограничение.</div><div class="modal-actions"><button class="modal-btn primary" id="pin-premium">Открыть Premium</button><button class="modal-btn" id="pin-premium-close">Закрыть</button></div>',function(pm,pc){pm.querySelector('#pin-premium').onclick=function(){pc();goScreen('main-screen');setTimeout(function(){var tab=document.querySelector('.nav-item[data-tab="shop"]');if(tab)tab.click();setTimeout(function(){var st=document.querySelector('.shop-tab[data-shop="premium"]');if(st)st.click();},120);},80);};pm.querySelector('#pin-premium-close').onclick=pc;});return;
+        }
+        close();await db.ref('userChats/'+currentUser.uid+'/'+chatId+'/pinned').set(isPinned?null:true);toast(isPinned?'Откреплено':'Закреплено');
+      };
       m.querySelector('#cp-block').onclick=async function(){close();await toggleBlockUser(uid);};
       m.querySelector('#cp-del').onclick=function(){close();confirmDeleteChat(chatId);};
       m.querySelector('#cp-cancel').onclick=close;
@@ -1894,7 +1921,7 @@ async function openChat(chatId,otherUid){
     var callBtn2=$('chat-call-btn');if(callBtn2)callBtn2.style.display='none';
   } else {
     var u=await fetchUser(otherUid);
-    currentChatUser=Object.assign({uid:otherUid},u);$('chat-name').textContent=currentChatUser.name||'Пользователь';
+    currentChatUser=Object.assign({uid:otherUid},u);$('chat-name').innerHTML=esc(currentChatUser.name||'Пользователь')+premiumBadgeHtml(currentChatUser);
     var av2=$('chat-avatar');var preset2=currentChatUser.avatarId?getPresetAvatar(currentChatUser.avatarId):null;
     if(preset2){av2.style.background=preset2.bg;av2.className='avatar';av2.innerHTML=preset2.emoji;av2.style.backgroundImage='';}
     else if(currentChatUser.photoURL){av2.style.background='';av2.style.backgroundImage='url("'+currentChatUser.photoURL+'")';av2.innerHTML='';}
@@ -2538,7 +2565,15 @@ async function startChatWith(uid){
 
 function updateSettingsUI(){
   if(!currentUserData)return;
-  var pn=$('profile-display-name');if(pn)pn.innerHTML=esc(currentUserData.name||'')+(document.body.classList.contains('flux-premium')?'<span class="premium-badge">👑 Premium</span>':'');
+  var pn=$('profile-display-name');if(pn)pn.innerHTML=esc(currentUserData.name||'')+(document.body.classList.contains('flux-premium')?'<span class="premium-badge">Premium</span>':'');
+  var pcs=$('profile-premium-status');
+  if(pcs){
+    var pv=window.__fluxPremiumState||currentUserData.premium||{};
+    var pa=isPremiumActive(pv);
+    var exp=Number(pv.expiresAt||0);
+    pcs.innerHTML=pa?'<div class="premium-status-card premium-shimmer" id="profile-premium-card"><div class="premium-status-row"><div class="premium-status-orb">P</div><div><div class="premium-status-title">Flux Premium</div><div class="premium-status-sub">Активен · до '+esc(formatDateLong(exp))+'</div></div><div class="premium-status-action">Управлять</div></div></div>':'<div class="premium-status-card" id="profile-premium-card"><div class="premium-status-row"><div class="premium-status-orb">P</div><div><div class="premium-status-title">Flux Premium</div><div class="premium-status-sub">Откройте Premium и получите расширенные возможности</div></div><div class="premium-status-action">Открыть</div></div></div>' ;
+    pcs.querySelector('#profile-premium-card').onclick=openPremiumManager;
+  }
   var ps=$('profile-display-status');
   if(ps){
     var statusText=(currentUserData.status||'').trim();
@@ -2561,6 +2596,28 @@ function updateSettingsUI(){
   var bv=$('blocked-value');if(bv)bv.textContent=String(blockedUsers.size);
   var av=$('auto-delete-value');if(av)av.textContent=autoDeleteLabel(autoDeleteMonths);
   renderProfileGifts();renderAvatarGiftBadge();
+}
+function formatDateLong(ms){
+  if(!ms)return '—';
+  var d=new Date(Number(ms));
+  return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function premiumPlanTitle(plan){return ({month:'1 месяц',quarter:'3 месяца',year:'1 год'})[plan]||'Premium';}
+async function openPremiumManager(){
+  if(!currentUser||!db)return;
+  var pv=window.__fluxPremiumState||currentUserData.premium||{};
+  var active=isPremiumActive(pv), exp=Number(pv.expiresAt||0);
+  var history=[];
+  try{
+    var snap=await db.ref('payments/'+currentUser.uid).once('value');
+    var all=snap.val()||{};
+    Object.keys(all).forEach(function(k){var x=all[k];if(x&&x.type==='premium'&&x.status==='confirmed')history.push(x);});
+    history.sort(function(a,b){return Number(b.confirmedAt||b.createdAt||0)-Number(a.confirmedAt||a.createdAt||0);});
+  }catch(e){}
+  var hist=history.length?history.slice(0,8).map(function(x){return '<div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--divider)"><div><b>'+esc(x.itemLabel||premiumPlanTitle(x.plan))+'</b><div style="font-size:11px;color:var(--text-2);margin-top:2px">'+esc(formatDateLong(Number(x.confirmedAt||x.createdAt||0)))+'</div></div><b style="color:#a855f7">'+Number(x.rub||0).toLocaleString('ru-RU')+' ₽</b></div>';}).join(''):'<div style="color:var(--text-2);font-size:13px;padding:8px 0">Покупок Premium пока нет</div>';
+  showModal('<div class="premium-modal-icon">P</div><div class="modal-title" style="text-align:center">Flux Premium</div><div class="premium-modal-price">'+(active?'Активен':'Не активен')+'</div><div class="premium-feature-list">'+
+    (active?'<div class="premium-feature-row"><b>Срок</b><span>до '+esc(formatDateLong(exp))+'</span></div><div class="premium-feature-row"><b>Тариф</b><span>'+esc(premiumPlanTitle(pv.plan))+'</span></div>':'<div class="premium-feature-row"><b>Статус</b><span>Premium ещё не активирован</span></div>')+
+    '<div class="premium-feature-row"><b>Возможности</b><span>безлимитные закреплённые чаты, Premium-бейдж, оформление и анимации</span></div></div><div style="font-size:14px;font-weight:850;margin:8px 0">История покупок</div><div style="max-height:190px;overflow:auto">'+hist+'</div><div class="modal-actions" style="margin-top:16px"><button class="modal-btn primary" id="pm-renew">'+(active?'Продлить Premium':'Купить Premium')+'</button><button class="modal-btn" id="pm-close">Закрыть</button></div>',function(m,close){m.querySelector('#pm-close').onclick=close;m.querySelector('#pm-renew').onclick=function(){close();goScreen('main-screen');setTimeout(function(){var tab=document.querySelector('.nav-item[data-tab="shop"]');if(tab)tab.click();setTimeout(function(){var st=document.querySelector('.shop-tab[data-shop="premium"]');if(st)st.click();},120);},80);};});
 }
 function autoDeleteLabel(m){if(!m)return 'Никогда';if(m===12)return '1 год';if(m===1)return '1 месяц';return m+' мес.';}
 function updateTogglesUI(){
@@ -2712,9 +2769,9 @@ function renderPremiumTab(list){
   html+='</div>';
   html+='<div class="premium-benefits">'+
     '<div class="premium-benefit"><div class="premium-benefit-icon">👑</div><div class="premium-benefit-title">Premium-бейдж</div><div class="premium-benefit-desc">Показывается рядом с профилем.</div></div>'+
-    '<div class="premium-benefit"><div class="premium-benefit-icon">⚡</div><div class="premium-benefit-title">Приоритет Flux</div><div class="premium-benefit-desc">Премиум-статус для будущих функций.</div></div>'+
-    '<div class="premium-benefit"><div class="premium-benefit-icon">🎨</div><div class="premium-benefit-title">Эксклюзивный стиль</div><div class="premium-benefit-desc">Специальное оформление Premium.</div></div>'+
-    '<div class="premium-benefit"><div class="premium-benefit-icon">🚀</div><div class="premium-benefit-title">Новые функции</div><div class="premium-benefit-desc">Доступ к Premium-возможностям по мере их появления.</div></div>'+
+    '<div class="premium-benefit"><div class="premium-benefit-icon">3+</div><div class="premium-benefit-title">Безлимит закреплений</div><div class="premium-benefit-desc">У обычных пользователей максимум 3 закреплённых чата.</div></div>'+
+    '<div class="premium-benefit"><div class="premium-benefit-icon">FX</div><div class="premium-benefit-title">Premium-оформление</div><div class="premium-benefit-desc">Особый профиль, бейдж и визуальные эффекты.</div></div>'+
+    '<div class="premium-benefit"><div class="premium-benefit-icon">∞</div><div class="premium-benefit-title">Premium-анимации</div><div class="premium-benefit-desc">Мягкие эффекты профиля и интерфейса.</div></div>'+
   '</div>';
   html+='<div style="padding:8px 16px 6px;font-size:17px;font-weight:850">Выберите период</div><div class="premium-plans">';
   FLUX_PREMIUM_PLANS.forEach(function(p){
@@ -2742,7 +2799,7 @@ async function loadPremiumState(){
   try{
     var snap=await db.ref('users/'+currentUser.uid+'/premium').once('value');
     var v=snap.val()||{};window.__fluxPremiumState=v;
-    var active=!!v.active&&Number(v.expiresAt||0)>Date.now();
+    var active=isPremiumActive(v);
     if(v.active&&!active){try{await db.ref('users/'+currentUser.uid+'/premium/active').set(false);}catch(e){}}
     var body=document.body;body.classList.toggle('flux-premium',active);
     var list=document.getElementById('shop-list');
@@ -2758,7 +2815,7 @@ function startPremiumListener(){
     window.__premiumListenerRef=ref;
     ref.on('value',function(snap){
       var v=snap.val()||{};window.__fluxPremiumState=v;
-      var active=!!v.active&&Number(v.expiresAt||0)>Date.now();
+      var active=isPremiumActive(v);
       document.body.classList.toggle('flux-premium',active);
       if(currentShopTab==='premium'){
         var list=document.getElementById('shop-list');if(list)renderPremiumTab(list);
@@ -2963,7 +3020,7 @@ async function showProfileSheet(u){
   body.innerHTML=''+
     '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:16px;padding-top:8px">'+
       avHtml+
-      '<div style="font-size:22px;font-weight:700;text-align:center;padding:0 12px">'+esc(u.name||'')+'</div>'+
+      '<div style="font-size:22px;font-weight:700;text-align:center;padding:0 12px">'+esc(u.name||'')+premiumBadgeHtml(u)+'</div>'+
       (u.username?'<div style="color:var(--accent);font-size:14.5px;font-weight:500">@'+esc(u.username)+'</div>':'')+
       '<div style="color:var(--text-2);font-size:13.5px">'+esc(u.status||status)+'</div>'+
       bdBadge+
