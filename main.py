@@ -8,8 +8,8 @@ import os
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
 from aiogram.types import (
-    Message, CallbackQuery,
-    InlineKeyboardMarkup, InlineKeyboardButton,
+    Message, CallbackQuery, PreCheckoutQuery,
+    InlineKeyboardMarkup, InlineKeyboardButton, LabeledPrice,
 )
 from aiogram.client.default import DefaultBotProperties
 
@@ -42,6 +42,28 @@ PREMIUM_PLANS = {
     "pm_month":   {"plan": "month",   "rub": 199,  "days": 30,  "title": "Премиум · 1 месяц"},
     "pm_quarter": {"plan": "quarter", "rub": 499,  "days": 90,  "title": "Премиум · 3 месяца"},
     "pm_year":    {"plan": "year",    "rub": 1490, "days": 365, "title": "Премиум · 1 год"},
+}
+
+# Telegram Stars (XTR) — цифровая подписка Flux Premium
+# Цены задаются в Stars и не требуют provider_token.
+
+# NFT-покупки за RUB через ручную проверку платежа
+NFT_PLANS = {
+    "cosmic":  {"name": "Cosmic Orb",     "rarity": "legendary", "supply": 100,  "rub": 2500},
+    "crystal": {"name": "Ice Crystal",    "rarity": "epic",      "supply": 500,  "rub": 800},
+    "diamond": {"name": "Blue Diamond",   "rarity": "legendary", "supply": 50,   "rub": 5000},
+    "crown":   {"name": "Golden Crown",   "rarity": "epic",      "supply": 300,  "rub": 1200},
+    "rocket":  {"name": "Retro Rocket",   "rarity": "rare",      "supply": 1000, "rub": 400},
+    "nebula":  {"name": "Nebula Core",    "rarity": "legendary", "supply": 20,   "rub": 10000},
+    "prism":   {"name": "Light Prism",    "rarity": "epic",      "supply": 200,  "rub": 3000},
+    "aurora":  {"name": "Aurora Wave",    "rarity": "rare",      "supply": 750,  "rub": 600},
+    "fusion":  {"name": "Fusion Reactor", "rarity": "rare",      "supply": 800,  "rub": 500},
+}
+
+PREMIUM_STARS = {
+    "pm_month":   150,
+    "pm_quarter": 400,
+    "pm_year":    1200,
 }
 
 RATE_LIMIT_MS  = 5 * 60 * 1000      # анти-спам 5 минут
@@ -111,7 +133,152 @@ def fmt_date(ms):
     return time.strftime("%d.%m.%Y %H:%M", time.localtime(ms / 1000))
 
 
-# ================= Premium / RUB payment =================
+# ================= Telegram Stars / Premium =================
+def premium_invoice_text(item_id):
+    item = PREMIUM_PLANS[item_id]
+    stars = PREMIUM_STARS[item_id]
+    return (
+        f"👑 <b>Flux Premium · {item['title'].replace('Премиум · ', '')}</b>\n\n"
+        f"Доступ на <b>{item['days']} дней</b>.\n"
+        f"Стоимость: <b>{stars} ⭐ Telegram Stars</b>.\n\n"
+        "После успешной оплаты Premium активируется автоматически."
+    )
+
+async def send_premium_invoice(message: Message, uid: str, item_id: str):
+    if item_id not in PREMIUM_PLANS or item_id not in PREMIUM_STARS:
+        await message.answer("⚠️ Неизвестный тариф Premium.")
+        return
+
+    user_data = await fb_get_async(f"users/{uid}")
+    if not user_data or not user_data.get("name"):
+        await message.answer(
+            f"⚠️ Пользователь Flux не найден.\nUID: <code>{uid}</code>\n"
+            "Откройте Flux и попробуйте оплату снова."
+        )
+        return
+
+    # Привязываем заявку к реальному Telegram user id, чтобы successful_payment
+    # нельзя было случайно зачислить другому аккаунту.
+    payload = f"fluxpremium:{uid}:{item_id}"
+    stars = PREMIUM_STARS[item_id]
+    item = PREMIUM_PLANS[item_id]
+
+    await message.answer_invoice(
+        title=f"Flux Premium · {item['title'].replace('Премиум · ', '')}",
+        description=f"Premium-доступ Flux на {item['days']} дней.",
+        payload=payload,
+        provider_token="",
+        currency="XTR",
+        prices=[LabeledPrice(label="Flux Premium", amount=stars)],
+        start_parameter=f"premium_{item_id}",
+    )
+    logging.info("Premium invoice sent · tg=%s uid=%s plan=%s stars=%s", message.from_user.id, uid, item_id, stars)
+
+@dp.pre_checkout_query()
+async def pre_checkout_handler(query: PreCheckoutQuery):
+    payload = query.invoice_payload or ""
+    parts = payload.split(":")
+    if len(parts) != 3 or parts[0] != "fluxpremium":
+        await query.answer(ok=False, error_message="Заказ не найден. Откройте оплату из Flux ещё раз.")
+        return
+
+    _, uid, item_id = parts
+    item = PREMIUM_PLANS.get(item_id)
+    stars = PREMIUM_STARS.get(item_id)
+    if not item or not stars or query.currency != "XTR" or query.total_amount != stars:
+        await query.answer(ok=False, error_message="Цена заказа изменилась. Откройте оплату заново.")
+        return
+
+    user_data = await fb_get_async(f"users/{uid}")
+    if not user_data:
+        await query.answer(ok=False, error_message="Пользователь Flux не найден.")
+        return
+
+    await query.answer(ok=True)
+
+@dp.message(F.successful_payment)
+async def successful_payment_handler(message: Message):
+    payment = message.successful_payment
+    payload = payment.invoice_payload or ""
+    parts = payload.split(":")
+    if len(parts) != 3 or parts[0] != "fluxpremium":
+        return
+
+    _, uid, item_id = parts
+    item = PREMIUM_PLANS.get(item_id)
+    stars = PREMIUM_STARS.get(item_id)
+    if not item or not stars:
+        return
+
+    if payment.currency != "XTR" or payment.total_amount != stars:
+        logging.error("Invalid Premium payment amount/currency: %s", payment)
+        return
+
+    # Идемпотентность по telegram_payment_charge_id.
+    charge_id = payment.telegram_payment_charge_id
+    existing = await fb_get_async(f"telegramPayments/{charge_id}")
+    if existing:
+        await message.answer("ℹ️ Эта оплата уже обработана.")
+        return
+
+    now = now_ms()
+    prem_path = f"users/{uid}/premium"
+    user_prem = await fb_get_async(prem_path) or {}
+    cur_exp = int(user_prem.get("expiresAt", 0) or 0)
+    current_active = bool(user_prem.get("active")) and cur_exp > now
+    base = cur_exp if current_active else now
+    new_exp = base + item["days"] * 86400000
+
+    await fb_update_async(prem_path, {
+        "active": True,
+        "plan": item["plan"],
+        "expiresAt": new_exp,
+        "since": user_prem.get("since", now) if current_active else now,
+        "days": item["days"],
+        "stars": stars,
+        "lastPaymentId": charge_id,
+        "lastPaymentCurrency": "XTR",
+    })
+
+    await fb_set_async(f"telegramPayments/{charge_id}", {
+        "type": "premium",
+        "userId": uid,
+        "tgUserId": message.from_user.id,
+        "packId": item_id,
+        "stars": stars,
+        "currency": "XTR",
+        "telegramPaymentChargeId": charge_id,
+        "providerPaymentChargeId": payment.provider_payment_charge_id,
+        "createdAt": now,
+    })
+
+    # Сохраняем отдельную запись для истории/админки.
+    ref = fbdb.reference(f"payments/{uid}").push({
+        "userId": uid,
+        "tgUserId": message.from_user.id,
+        "packId": item_id,
+        "type": "premium",
+        "plan": item["plan"],
+        "days": item["days"],
+        "stars": stars,
+        "currency": "XTR",
+        "status": "confirmed",
+        "credited": True,
+        "source": "telegram_stars",
+        "telegramPaymentChargeId": charge_id,
+        "createdAt": now,
+        "confirmedAt": now,
+    })
+
+    await message.answer(
+        "🎉 <b>Flux Premium активирован!</b>\n\n"
+        f"👑 Тариф: <b>{item['title']}</b>\n"
+        f"⭐ Оплачено: <b>{stars} Stars</b>\n"
+        f"📅 Действует до: <b>{fmt_date(new_exp)}</b>\n\n"
+        "Вернитесь в Flux — Premium уже активен."
+    )
+    logging.info("Premium paid · payment=%s uid=%s plan=%s stars=%s", ref.key, uid, item_id, stars)
+
 @dp.message(F.text == "/paysupport")
 async def cmd_paysupport(message: Message):
     await message.answer(
@@ -123,7 +290,8 @@ async def cmd_paysupport(message: Message):
 async def cmd_terms(message: Message):
     await message.answer(
         "📄 <b>Условия покупки Flux Premium</b>\n\n"
-        "Premium оплачивается в рублях банковским переводом по реквизитам, которые показывает бот. После перевода отправьте скриншот в чат. Администратор проверит платеж и активирует Premium на оплаченный срок.\n\n"
+        "Premium — цифровая услуга. Оплата внутри Telegram для цифровых товаров производится в Telegram Stars. "
+        "После подтверждения успешного платежа Premium активируется автоматически на оплаченный срок.\n\n"
         "Если возникла проблема с покупкой, используйте /paysupport."
     )
 
@@ -145,8 +313,12 @@ async def start_handler(message: Message):
 
     # Определяем тип покупки
     is_premium = item_id.startswith("pm_")
+    is_nft = item_id.startswith("nft_")
+    nft_id = item_id[4:] if is_nft else ""
     if is_premium:
         item = PREMIUM_PLANS.get(item_id)
+    elif is_nft:
+        item = NFT_PLANS.get(nft_id)
     else:
         item = PACKS.get(item_id)
 
@@ -154,7 +326,11 @@ async def start_handler(message: Message):
         await message.answer("⚠️ Неизвестный товар. Открой оплату заново из приложения.")
         return
 
-    # Premium оплачивается вручную в рублях через реквизиты ниже.
+    # Premium — цифровая услуга, поэтому внутри Telegram продаём её за Stars (XTR).
+    if is_premium:
+        await send_premium_invoice(message, uid, item_id)
+        return
+
     user_data = await fb_get_async(f"users/{uid}")
     if not user_data or not user_data.get("name"):
         await message.answer(
@@ -202,7 +378,7 @@ async def start_handler(message: Message):
         "userName": user_data.get("name", ""),
         "username": user_data.get("username", ""),
         "packId": item_id,
-        "type": "premium" if is_premium else "stars",
+        "type": "premium" if is_premium else ("nft" if is_nft else "stars"),
         "rub": item["rub"],
         "code": code,
         "status": "pending",
@@ -214,6 +390,12 @@ async def start_handler(message: Message):
         req_data["plan"] = item["plan"]
         req_data["days"] = item["days"]
         req_data["itemLabel"] = f"👑 {item['title']}"
+    elif is_nft:
+        req_data["nftId"] = nft_id
+        req_data["nftName"] = item["name"]
+        req_data["rarity"] = item["rarity"]
+        req_data["supply"] = item["supply"]
+        req_data["itemLabel"] = f"💎 NFT · {item['name']}"
     else:
         req_data["stars"] = item["stars"]
         req_data["itemLabel"] = f"{item['stars']} ⭐"
@@ -223,6 +405,8 @@ async def start_handler(message: Message):
 
     if is_premium:
         title_line = f"👑 <b>{item['title']}</b>"
+    elif is_nft:
+        title_line = f"💎 <b>NFT · {item['name']}</b>"
     else:
         title_line = f"💳 <b>Оплата {item['stars']} ⭐</b>"
 
@@ -237,7 +421,7 @@ async def start_handler(message: Message):
         f"📸 После оплаты отправь <b>скриншот</b> в этот чат.\n\n"
         f"⏱ <i>Следующая заявка — через 5 минут.</i>"
     )
-    logging.info(f"Заявка {req_id} · uid={uid} · {'premium' if is_premium else 'stars'}")
+    logging.info(f"Заявка {req_id} · uid={uid} · {'premium' if is_premium else ('nft' if is_nft else 'stars')}")
 
 
 # ================= Приём скриншота =================
@@ -282,7 +466,7 @@ async def handle_screenshot(message: Message):
     })
 
     pay = found["pay"]
-    type_icon = "👑" if pay.get("type") == "premium" else "⭐"
+    type_icon = "👑" if pay.get("type") == "premium" else ("💎" if pay.get("type") == "nft" else "⭐")
     item_label = pay.get("itemLabel", "")
 
     try:
@@ -315,139 +499,159 @@ async def handle_screenshot(message: Message):
 
 
 # ================= Подтверждение =================
-@dp.callback_query(F.data.startswith("confirm:") | F.data.startswith("confirm_"))
+@dp.callback_query(F.data.startswith("confirm:"))
+@dp.callback_query(F.data.startswith("confirm_"))
 async def cb_confirm(callback: CallbackQuery):
-    """Надёжное подтверждение заявки админом.
-    Поддерживает старые callback_data confirm_UID_RID и новые confirm:UID:RID.
-    Все ошибки показываются админу, а не теряются в фоне.
-    """
+    # Отвечаем Telegram сразу, чтобы кнопка не зависала, даже если Firebase
+    # или редактирование сообщения займёт время.
     if not is_admin(callback.from_user.id):
         await callback.answer("Нет доступа", show_alert=True)
         return
 
     data = callback.data or ""
-    parts = data.split(":", 2) if data.startswith("confirm:") else data.split("_", 2)
-    if len(parts) != 3 or not parts[1] or not parts[2]:
-        await callback.answer("Некорректная заявка", show_alert=True)
+    if data.startswith("confirm:"):
+        parts = data.split(":", 2)
+    else:
+        parts = data.split("_", 2)
+    if len(parts) != 3:
+        await callback.answer("Ошибка данных", show_alert=True)
         return
     _, uid, rid = parts
 
     try:
         pay = await fb_get_async(f"payments/{uid}/{rid}")
         if not pay:
-            await callback.answer("Заявка не найдена в Firebase", show_alert=True)
+            await callback.answer("Заявка не найдена", show_alert=True)
             return
         if pay.get("status") == "confirmed":
             await callback.answer("Уже подтверждена", show_alert=True)
             return
-        if pay.get("status") == "rejected":
-            await callback.answer("Эта заявка уже отклонена", show_alert=True)
-            return
 
-        # Сначала сообщаем Telegram, что callback принят.
-        await callback.answer("⏳ Подтверждаю оплату…")
+        await callback.answer("⏳ Обрабатываю…")
+    except Exception:
+        logging.exception("Ошибка чтения заявки %s/%s", uid, rid)
+        await callback.answer("Ошибка Firebase", show_alert=True)
+        return
 
-        kind = pay.get("type", "stars")
-        now = now_ms()
-        updates = {
-            f"payments/{uid}/{rid}/status": "confirmed",
-            f"payments/{uid}/{rid}/credited": True,
-            f"payments/{uid}/{rid}/confirmedAt": now,
-            f"payments/{uid}/{rid}/confirmedBy": callback.from_user.id,
-        }
+    kind = pay.get("type", "stars")
+    now = now_ms()
+    result_text = ""
 
-        if kind == "premium":
-            plan_id = pay.get("packId")
-            plan = PREMIUM_PLANS.get(plan_id)
-            if not plan:
-                raise RuntimeError(f"Неизвестный Premium-план: {plan_id}")
+    if kind == "premium":
+        plan_id = pay.get("packId")
+        plan = PREMIUM_PLANS.get(plan_id) or {}
+        days = plan.get("days", 30)
 
-            user_prem = await fb_get_async(f"users/{uid}/premium") or {}
-            cur_exp = int(user_prem.get("expiresAt") or 0)
-            cur_active = bool(user_prem.get("active")) and cur_exp > now
+        user_prem = await fb_get_async(f"users/{uid}/premium") or {}
+        cur_exp = user_prem.get("expiresAt", 0)
+        since   = user_prem.get("since", now)
 
-            base = cur_exp if cur_active else now
-            new_exp = base + int(plan["days"]) * 86400000
-            since = int(user_prem.get("since") or now) if cur_active else now
-            action = "продлён" if cur_active else "активирован"
-
-            # Один multi-location update: Premium и заявка подтверждаются атомарно.
-            updates.update({
-                f"users/{uid}/premium/active": True,
-                f"users/{uid}/premium/plan": plan["plan"],
-                f"users/{uid}/premium/expiresAt": new_exp,
-                f"users/{uid}/premium/since": since,
-                f"users/{uid}/premium/rub": int(plan["rub"]),
-                f"users/{uid}/premium/lastPaymentId": rid,
-                f"users/{uid}/premium/lastPaymentAt": now,
-                f"users/{uid}/premium/lastPaymentRub": int(plan["rub"]),
-            })
-
-            await asyncio.get_event_loop().run_in_executor(
-                None, lambda: fbdb.reference("/").update(updates)
-            )
-
-            result_text = (
-                f"\n\n✅ <b>ПОДТВЕРЖДЕНО</b>\n"
-                f"👑 Premium {action}\n"
-                f"💰 {plan['rub']} ₽\n"
-                f"📅 До: <b>{fmt_date(new_exp)}</b>"
-            )
-            user_msg = (
-                f"🎉 <b>Оплата подтверждена!</b>\n\n"
-                f"👑 Premium {action}\n"
-                f"💰 Оплачено: <b>{plan['rub']} ₽</b>\n"
-                f"📅 Действует до: <b>{fmt_date(new_exp)}</b>\n\n"
-                f"✨ Premium-функции уже активны. Открой Flux."
-            )
+        if cur_exp and cur_exp > now and user_prem.get("active"):
+            # Продление
+            new_exp = cur_exp + days * 86400000
+            action = "продлён"
         else:
-            stars = int(pay.get("stars") or 0)
-            if stars <= 0:
-                raise RuntimeError("В заявке отсутствует количество Stars")
-            new_balance = await fb_increment_async(f"users/{uid}/stars", stars)
-            await asyncio.get_event_loop().run_in_executor(
-                None, lambda: fbdb.reference("/").update(updates)
-            )
-            result_text = (
-                f"\n\n✅ <b>ПОДТВЕРЖДЕНО</b>\n"
-                f"⭐ +{stars} · баланс: <b>{new_balance}</b> ⭐"
-            )
-            user_msg = (
-                f"🎉 <b>Оплата подтверждена!</b>\n\n"
-                f"⭐ Зачислено: <b>{stars}</b>\n"
-                f"💰 Баланс: <b>{new_balance}</b> ⭐"
-            )
+            # Новая активация
+            new_exp = now + days * 86400000
+            since = now
+            action = "активирован"
 
-        # Убираем кнопки и добавляем результат в карточку администратора.
-        if callback.message:
+        await fb_update_async(f"users/{uid}/premium", {
+            "active": True,
+            "plan": plan.get("plan", "month"),
+            "expiresAt": new_exp,
+            "since": since,
+            "rub": plan.get("rub", 0),
+            "lastPaymentId": rid,
+        })
+
+        result_text = (
+            f"\n\n✅ <b>Подтверждено</b>\n"
+            f"👑 Премиум {action}\n"
+            f"📅 До: <b>{fmt_date(new_exp)}</b>"
+        )
+        user_msg = (
+            f"🎉 <b>Оплата подтверждена!</b>\n\n"
+            f"👑 Премиум {action}\n"
+            f"📅 Действует до: <b>{fmt_date(new_exp)}</b>\n\n"
+            f"Открой приложение — бейдж уже появился."
+        )
+    elif kind == "nft":
+        nft_id = str(pay.get("nftId", ""))
+        nft = NFT_PLANS.get(nft_id)
+        if not nft:
+            await callback.answer("NFT не найден", show_alert=True)
+            return
+        supply_ref = fbdb.reference(f"nftSupply/{nft_id}")
+        result = await asyncio.get_event_loop().run_in_executor(None, lambda: supply_ref.transaction(lambda cur: None if (cur or 0) >= nft["supply"] else (cur or 0) + 1))
+        if not result.committed:
+            await fb_update_async(f"payments/{uid}/{rid}", {"status": "sold_out", "credited": False, "checkedAt": now})
+            await callback.answer("NFT уже распродан", show_alert=True)
             try:
-                if callback.message.photo:
-                    await callback.message.edit_caption(
-                        caption=(callback.message.caption or "") + result_text,
-                        reply_markup=None,
-                    )
-                else:
-                    await callback.message.edit_text(
-                        text=(callback.message.text or "") + result_text,
-                        reply_markup=None,
-                    )
+                await callback.message.edit_reply_markup(reply_markup=None)
             except Exception:
-                try:
-                    await callback.message.edit_reply_markup(reply_markup=None)
-                except Exception:
-                    pass
+                pass
+            tg_uid = pay.get("tgUserId")
+            if tg_uid:
+                try: await bot.send_message(tg_uid, f"⚠️ NFT <b>{nft['name']}</b> уже распродан. Заявка передана в статус «распродано».")
+                except Exception: pass
+            return
+        serial = int(result.snapshot.val())
+        user_data = await fb_get_async(f"users/{uid}") or {}
+        nft_data = {
+            "nftId": nft_id, "name": nft["name"], "rarity": nft["rarity"],
+            "serial": serial, "ofSupply": nft["supply"], "ownerUid": uid,
+            "ownerName": user_data.get("name", ""), "mintedAt": now,
+            "rub": nft["rub"], "paymentId": rid,
+        }
+        await fb_update_async("/", {
+            f"users/{uid}/nfts/{nft_id}/{serial}": nft_data,
+            f"nfts/{nft_id}/{serial}": nft_data,
+        })
+        result_text = f"\n\n✅ <b>Подтверждено</b>\n💎 NFT <b>{nft['name']}</b> · #{serial} выдан"
+        user_msg = f"🎉 <b>Оплата подтверждена!</b>\n\n💎 NFT: <b>{nft['name']}</b>\n🔢 Номер: <b>#{serial}</b>\n\nNFT уже отображается в профиле."
+    else:
+        stars = int(pay.get("stars", 0))
+        new_balance = await fb_increment_async(f"users/{uid}/stars", stars)
+        result_text = (
+            f"\n\n✅ <b>Подтверждено</b>\n"
+            f"⭐ +{stars} · баланс: <b>{new_balance}</b> ⭐"
+        )
+        user_msg = (
+            f"🎉 <b>Оплата подтверждена!</b>\n\n"
+            f"⭐ Зачислено: <b>{stars}</b>\n"
+            f"💰 Баланс: <b>{new_balance}</b> ⭐"
+        )
 
-        tg_uid = pay.get("tgUserId")
-        if tg_uid:
-            try:
-                await bot.send_message(tg_uid, user_msg)
-            except Exception:
-                logging.exception("Не удалось уведомить пользователя %s", tg_uid)
+    await fb_update_async(f"payments/{uid}/{rid}", {
+        "status": "confirmed",
+        "credited": True,
+        "confirmedAt": now,
+        "confirmedBy": callback.from_user.id,
+    })
 
-    except Exception as e:
-        logging.exception("Ошибка подтверждения payments/%s/%s", uid, rid)
+    try:
+        await callback.message.edit_caption(
+            caption=(callback.message.caption or "") + result_text,
+            reply_markup=None,
+        )
+    except Exception:
         try:
-            await callback.answer(f"Ошибка: {str(e)[:180]}", show_alert=True)
+            await callback.message.edit_reply_markup(reply_markup=None)
+        except Exception:
+            pass
+
+    # Вторая answer() уже не нужна: Telegram получил быстрый ответ в начале.
+    try:
+        if callback.message and callback.message.reply_markup:
+            await callback.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+
+    tg_uid = pay.get("tgUserId")
+    if tg_uid:
+        try:
+            await bot.send_message(tg_uid, user_msg)
         except Exception:
             pass
 
