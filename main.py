@@ -25,6 +25,7 @@ FIREBASE_URL   = "https://game-cd07d-default-rtdb.firebaseio.com"
 CARD_NUMBER = "2204 1201 4472 3133"
 BANK_NAME   = "ЮMoney"
 BANK_NUMBER = "4100118891507332"
+
 # Пакеты звёзд
 PACKS = {
     "p1": {"stars": 100,   "rub": 99},
@@ -314,125 +315,139 @@ async def handle_screenshot(message: Message):
 
 
 # ================= Подтверждение =================
-@dp.callback_query(F.data.startswith("confirm:"))
-@dp.callback_query(F.data.startswith("confirm_"))
+@dp.callback_query(F.data.startswith("confirm:") | F.data.startswith("confirm_"))
 async def cb_confirm(callback: CallbackQuery):
-    # Отвечаем Telegram сразу, чтобы кнопка не зависала, даже если Firebase
-    # или редактирование сообщения займёт время.
+    """Надёжное подтверждение заявки админом.
+    Поддерживает старые callback_data confirm_UID_RID и новые confirm:UID:RID.
+    Все ошибки показываются админу, а не теряются в фоне.
+    """
     if not is_admin(callback.from_user.id):
         await callback.answer("Нет доступа", show_alert=True)
         return
 
     data = callback.data or ""
-    if data.startswith("confirm:"):
-        parts = data.split(":", 2)
-    else:
-        parts = data.split("_", 2)
-    if len(parts) != 3:
-        await callback.answer("Ошибка данных", show_alert=True)
+    parts = data.split(":", 2) if data.startswith("confirm:") else data.split("_", 2)
+    if len(parts) != 3 or not parts[1] or not parts[2]:
+        await callback.answer("Некорректная заявка", show_alert=True)
         return
     _, uid, rid = parts
 
     try:
         pay = await fb_get_async(f"payments/{uid}/{rid}")
         if not pay:
-            await callback.answer("Заявка не найдена", show_alert=True)
+            await callback.answer("Заявка не найдена в Firebase", show_alert=True)
             return
         if pay.get("status") == "confirmed":
             await callback.answer("Уже подтверждена", show_alert=True)
             return
+        if pay.get("status") == "rejected":
+            await callback.answer("Эта заявка уже отклонена", show_alert=True)
+            return
 
-        await callback.answer("⏳ Обрабатываю…")
-    except Exception:
-        logging.exception("Ошибка чтения заявки %s/%s", uid, rid)
-        await callback.answer("Ошибка Firebase", show_alert=True)
-        return
+        # Сначала сообщаем Telegram, что callback принят.
+        await callback.answer("⏳ Подтверждаю оплату…")
 
-    kind = pay.get("type", "stars")
-    now = now_ms()
-    result_text = ""
+        kind = pay.get("type", "stars")
+        now = now_ms()
+        updates = {
+            f"payments/{uid}/{rid}/status": "confirmed",
+            f"payments/{uid}/{rid}/credited": True,
+            f"payments/{uid}/{rid}/confirmedAt": now,
+            f"payments/{uid}/{rid}/confirmedBy": callback.from_user.id,
+        }
 
-    if kind == "premium":
-        plan_id = pay.get("packId")
-        plan = PREMIUM_PLANS.get(plan_id) or {}
-        days = plan.get("days", 30)
+        if kind == "premium":
+            plan_id = pay.get("packId")
+            plan = PREMIUM_PLANS.get(plan_id)
+            if not plan:
+                raise RuntimeError(f"Неизвестный Premium-план: {plan_id}")
 
-        user_prem = await fb_get_async(f"users/{uid}/premium") or {}
-        cur_exp = user_prem.get("expiresAt", 0)
-        since   = user_prem.get("since", now)
+            user_prem = await fb_get_async(f"users/{uid}/premium") or {}
+            cur_exp = int(user_prem.get("expiresAt") or 0)
+            cur_active = bool(user_prem.get("active")) and cur_exp > now
 
-        if cur_exp and cur_exp > now and user_prem.get("active"):
-            # Продление
-            new_exp = cur_exp + days * 86400000
-            action = "продлён"
+            base = cur_exp if cur_active else now
+            new_exp = base + int(plan["days"]) * 86400000
+            since = int(user_prem.get("since") or now) if cur_active else now
+            action = "продлён" if cur_active else "активирован"
+
+            # Один multi-location update: Premium и заявка подтверждаются атомарно.
+            updates.update({
+                f"users/{uid}/premium/active": True,
+                f"users/{uid}/premium/plan": plan["plan"],
+                f"users/{uid}/premium/expiresAt": new_exp,
+                f"users/{uid}/premium/since": since,
+                f"users/{uid}/premium/rub": int(plan["rub"]),
+                f"users/{uid}/premium/lastPaymentId": rid,
+                f"users/{uid}/premium/lastPaymentAt": now,
+                f"users/{uid}/premium/lastPaymentRub": int(plan["rub"]),
+            })
+
+            await asyncio.get_event_loop().run_in_executor(
+                None, lambda: fbdb.reference("/").update(updates)
+            )
+
+            result_text = (
+                f"\n\n✅ <b>ПОДТВЕРЖДЕНО</b>\n"
+                f"👑 Premium {action}\n"
+                f"💰 {plan['rub']} ₽\n"
+                f"📅 До: <b>{fmt_date(new_exp)}</b>"
+            )
+            user_msg = (
+                f"🎉 <b>Оплата подтверждена!</b>\n\n"
+                f"👑 Premium {action}\n"
+                f"💰 Оплачено: <b>{plan['rub']} ₽</b>\n"
+                f"📅 Действует до: <b>{fmt_date(new_exp)}</b>\n\n"
+                f"✨ Premium-функции уже активны. Открой Flux."
+            )
         else:
-            # Новая активация
-            new_exp = now + days * 86400000
-            since = now
-            action = "активирован"
+            stars = int(pay.get("stars") or 0)
+            if stars <= 0:
+                raise RuntimeError("В заявке отсутствует количество Stars")
+            new_balance = await fb_increment_async(f"users/{uid}/stars", stars)
+            await asyncio.get_event_loop().run_in_executor(
+                None, lambda: fbdb.reference("/").update(updates)
+            )
+            result_text = (
+                f"\n\n✅ <b>ПОДТВЕРЖДЕНО</b>\n"
+                f"⭐ +{stars} · баланс: <b>{new_balance}</b> ⭐"
+            )
+            user_msg = (
+                f"🎉 <b>Оплата подтверждена!</b>\n\n"
+                f"⭐ Зачислено: <b>{stars}</b>\n"
+                f"💰 Баланс: <b>{new_balance}</b> ⭐"
+            )
 
-        await fb_update_async(f"users/{uid}/premium", {
-            "active": True,
-            "plan": plan.get("plan", "month"),
-            "expiresAt": new_exp,
-            "since": since,
-            "rub": plan.get("rub", 0),
-            "lastPaymentId": rid,
-        })
+        # Убираем кнопки и добавляем результат в карточку администратора.
+        if callback.message:
+            try:
+                if callback.message.photo:
+                    await callback.message.edit_caption(
+                        caption=(callback.message.caption or "") + result_text,
+                        reply_markup=None,
+                    )
+                else:
+                    await callback.message.edit_text(
+                        text=(callback.message.text or "") + result_text,
+                        reply_markup=None,
+                    )
+            except Exception:
+                try:
+                    await callback.message.edit_reply_markup(reply_markup=None)
+                except Exception:
+                    pass
 
-        result_text = (
-            f"\n\n✅ <b>Подтверждено</b>\n"
-            f"👑 Премиум {action}\n"
-            f"📅 До: <b>{fmt_date(new_exp)}</b>"
-        )
-        user_msg = (
-            f"🎉 <b>Оплата подтверждена!</b>\n\n"
-            f"👑 Премиум {action}\n"
-            f"📅 Действует до: <b>{fmt_date(new_exp)}</b>\n\n"
-            f"Открой приложение — бейдж уже появился."
-        )
-    else:
-        stars = int(pay.get("stars", 0))
-        new_balance = await fb_increment_async(f"users/{uid}/stars", stars)
-        result_text = (
-            f"\n\n✅ <b>Подтверждено</b>\n"
-            f"⭐ +{stars} · баланс: <b>{new_balance}</b> ⭐"
-        )
-        user_msg = (
-            f"🎉 <b>Оплата подтверждена!</b>\n\n"
-            f"⭐ Зачислено: <b>{stars}</b>\n"
-            f"💰 Баланс: <b>{new_balance}</b> ⭐"
-        )
+        tg_uid = pay.get("tgUserId")
+        if tg_uid:
+            try:
+                await bot.send_message(tg_uid, user_msg)
+            except Exception:
+                logging.exception("Не удалось уведомить пользователя %s", tg_uid)
 
-    await fb_update_async(f"payments/{uid}/{rid}", {
-        "status": "confirmed",
-        "credited": True,
-        "confirmedAt": now,
-        "confirmedBy": callback.from_user.id,
-    })
-
-    try:
-        await callback.message.edit_caption(
-            caption=(callback.message.caption or "") + result_text,
-            reply_markup=None,
-        )
-    except Exception:
+    except Exception as e:
+        logging.exception("Ошибка подтверждения payments/%s/%s", uid, rid)
         try:
-            await callback.message.edit_reply_markup(reply_markup=None)
-        except Exception:
-            pass
-
-    # Вторая answer() уже не нужна: Telegram получил быстрый ответ в начале.
-    try:
-        if callback.message and callback.message.reply_markup:
-            await callback.message.edit_reply_markup(reply_markup=None)
-    except Exception:
-        pass
-
-    tg_uid = pay.get("tgUserId")
-    if tg_uid:
-        try:
-            await bot.send_message(tg_uid, user_msg)
+            await callback.answer(f"Ошибка: {str(e)[:180]}", show_alert=True)
         except Exception:
             pass
 
