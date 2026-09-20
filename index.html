@@ -1604,7 +1604,7 @@ auth.onAuthStateChanged(async function(user){
     if(!data.stars&&data.stars!==0){myStars=100;db.ref('users/'+user.uid+'/stars').set(100).catch(function(){});toast('🎁 Бонус: 100 звёзд!');}
     if(pinLockEnabled&&pinLockCode){showPinLock();}
     goScreen('main-screen',true);
-    startSelfListener();startUserChatsListener();startSavedMetaListener();
+    startSelfListener();startMyNftListener();startUserChatsListener();startSavedMetaListener();
     startSessionTracking();updateSettingsUI();updateTogglesUI();applyWallpaper();startCallListener();refreshPushStatus();
     startPaymentListener();
     startPremiumListener();
@@ -1617,7 +1617,7 @@ auth.onAuthStateChanged(async function(user){
 });
 
 function cleanupListeners(){
-  try{if(unsubUserChats&&unsubUserChats.off)unsubUserChats.off();if(unsubSelfDoc&&unsubSelfDoc.off)unsubSelfDoc.off();if(unsubSavedMeta&&unsubSavedMeta.off)unsubSavedMeta.off();if(unsubChatMeta&&unsubChatMeta.off)unsubChatMeta.off();if(unsubMessages&&unsubMessages.off)unsubMessages.off();if(unsubChatUser&&unsubChatUser.off)unsubChatUser.off();}catch(e){}
+  try{if(unsubUserChats&&unsubUserChats.off)unsubUserChats.off();if(unsubSelfDoc&&unsubSelfDoc.off)unsubSelfDoc.off();if(unsubMyNfts&&unsubMyNfts.off)unsubMyNfts.off();if(unsubSavedMeta&&unsubSavedMeta.off)unsubSavedMeta.off();if(unsubChatMeta&&unsubChatMeta.off)unsubChatMeta.off();if(unsubMessages&&unsubMessages.off)unsubMessages.off();if(unsubChatUser&&unsubChatUser.off)unsubChatUser.off();}catch(e){}
   unsubUserChats=unsubSelfDoc=unsubSavedMeta=unsubChatMeta=unsubMessages=unsubChatUser=null;
   if(visibilityHandler){document.removeEventListener('visibilitychange',visibilityHandler);visibilityHandler=null;}
   if(beforeUnloadHandler){window.removeEventListener('beforeunload',beforeUnloadHandler);beforeUnloadHandler=null;}
@@ -1911,7 +1911,7 @@ $('onb-continue').onclick=async function(){
     currentUserData={uid:currentUser.uid,name:name,username:username,avatarId:onbAvatarId,stars:100};
     userCache[currentUser.uid]=currentUserData;myStars=100;
     goScreen('main-screen',true);
-    startSelfListener();startUserChatsListener();startSavedMetaListener();startSessionTracking();startCallListener();
+    startSelfListener();startMyNftListener();startUserChatsListener();startSavedMetaListener();startSessionTracking();startCallListener();
     startPaymentListener();
     startPremiumListener();
     updateSettingsUI();updateTogglesUI();renderProfileGifts();renderAvatarGiftBadge();
@@ -2706,11 +2706,44 @@ function updateTogglesUI(){
 
 function normalizeNftList(nftsRaw){
   var list=[];
-  Object.keys(nftsRaw||{}).forEach(function(nid){
-    var bySerial=nftsRaw[nid]||{};
-    Object.keys(bySerial).forEach(function(s){ if(bySerial[s]) list.push(bySerial[s]); });
+  if(!nftsRaw || typeof nftsRaw!=='object') return list;
+
+  // Поддерживаем оба формата Firebase:
+  // 1) users/UID/nfts/NFT_ID/SERIAL -> NFT
+  // 2) users/UID/nfts/SERIAL -> NFT
+  Object.keys(nftsRaw).forEach(function(key){
+    var value=nftsRaw[key];
+    if(!value || typeof value!=='object') return;
+
+    // Плоская запись самого NFT.
+    if(value.nftId || value.id || value.name || value.serial){
+      var flat=Object.assign({},value);
+      if(!flat.nftId) flat.nftId=flat.id||key;
+      if(flat.serial===undefined || flat.serial===null || flat.serial==='') flat.serial=key;
+      list.push(flat);
+      return;
+    }
+
+    // Вложенный формат NFT_ID/SERIAL.
+    Object.keys(value).forEach(function(serial){
+      var nft=value[serial];
+      if(!nft || typeof nft!=='object') return;
+      var item=Object.assign({},nft);
+      if(!item.nftId) item.nftId=key;
+      if(item.serial===undefined || item.serial===null || item.serial==='') item.serial=serial;
+      list.push(item);
+    });
   });
-  list.sort(function(a,b){return (b.mintedAt||0)-(a.mintedAt||0);});
+
+  // Не показываем дубликаты, если старый и новый формат одновременно присутствуют.
+  var seen={};
+  list=list.filter(function(n){
+    var k=String(n.nftId||n.id||'')+'#'+String(n.serial||'');
+    if(seen[k]) return false;
+    seen[k]=true;
+    return true;
+  });
+  list.sort(function(a,b){return Number(b.mintedAt||0)-Number(a.mintedAt||0);});
   return list;
 }
 function normalizeGiftList(giftsRaw){
@@ -2755,18 +2788,40 @@ async function renderProfileGifts(){
   if(!sec)return;
   if(!currentUser){sec.innerHTML='';sec.style.display='none';return;}
   try{
-    var snap=await db.ref('users/'+currentUser.uid).once('value');
-    var v=snap.val()||{};
-    var nftList=normalizeNftList(v.nfts);
-    var giftList=normalizeGiftList(v.giftsReceived);
-    if(giftsDisplay!=='profile'&&!nftList.length){sec.innerHTML='';sec.style.display='none';return;}
-    if(!nftList.length&&!giftList.length){sec.innerHTML='';sec.style.display='none';return;}
+    // Читаем именно узел nfts, а не полагаемся только на кэш профиля.
+    var nftSnap=await db.ref('users/'+currentUser.uid+'/nfts').once('value');
+    var giftSnap=await db.ref('users/'+currentUser.uid+'/giftsReceived').once('value');
+    var nftList=normalizeNftList(nftSnap.val()||{});
+    var giftList=normalizeGiftList(giftSnap.val()||{});
+
+    myNfts=nftSnap.val()||{};
+    myGifts=giftSnap.val()||{};
+
     var showGifts=(giftsDisplay==='profile')?giftList:[];
-    if(!nftList.length&&!showGifts.length){sec.innerHTML='';sec.style.display='none';return;}
+    if(!nftList.length&&!showGifts.length){
+      sec.innerHTML='';
+      sec.style.display='none';
+      return;
+    }
     sec.style.display='block';
     sec.innerHTML=renderProfileAssetsHtml(nftList, showGifts, {pad:'24px'});
     sec.onclick=function(){openProfileGiftsSheet();};
-  }catch(e){}
+  }catch(e){
+    console.error('[profile] NFT load error',e);
+  }
+}
+
+var unsubMyNfts=null;
+function startMyNftListener(){
+  if(!currentUser)return;
+  try{if(unsubMyNfts&&unsubMyNfts.off)unsubMyNfts.off();}catch(e){}
+  var ref=db.ref('users/'+currentUser.uid+'/nfts');
+  unsubMyNfts=ref.on('value',function(s){
+    myNfts=s.val()||{};
+    renderProfileGifts();
+  },function(e){
+    console.error('[profile] NFT listener error',e);
+  });
 }
 function renderAvatarGiftBadge(){
   var wrap=document.getElementById('profile-avatar-wrap');if(!wrap)return;
@@ -3019,6 +3074,9 @@ async function buyNft(n){
         var nftData={nftId:n.id,emoji:n.emoji,name:n.name,rarity:n.rarity,serial:serial,ofSupply:n.supply,ownerUid:currentUser.uid,ownerName:currentUserData.name||'',mintedAt:Date.now()};
         await db.ref('users/'+currentUser.uid+'/nfts/'+n.id+'/'+serial).set(nftData);
         await db.ref('nfts/'+n.id+'/'+serial).set(nftData);
+        // Перечитываем коллекцию из Firebase: профиль теперь гарантированно видит NFT.
+        myNfts[n.id]=myNfts[n.id]||{};myNfts[n.id][serial]=nftData;
+        await renderProfileGifts();
         toast('NFT #'+serial+' получен!');
         showNftAnimation(n);
         myNfts=myNfts||{};myNfts[n.id]=myNfts[n.id]||{};myNfts[n.id][serial]=nftData;
