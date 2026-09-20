@@ -326,10 +326,8 @@ async def start_handler(message: Message):
         await message.answer("⚠️ Неизвестный товар. Открой оплату заново из приложения.")
         return
 
-    # Premium — цифровая услуга, поэтому внутри Telegram продаём её за Stars (XTR).
-    if is_premium:
-        await send_premium_invoice(message, uid, item_id)
-        return
+    # Premium и NFT оплачиваются в рублях через заявку/перевод.
+    # Telegram Stars здесь не используются.
 
     user_data = await fb_get_async(f"users/{uid}")
     if not user_data or not user_data.get("name"):
