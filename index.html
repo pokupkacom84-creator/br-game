@@ -1213,9 +1213,36 @@ const NFT_SVGS = {
   aurora:'<svg viewBox="0 0 120 120" class="nft-art-svg"><defs><linearGradient id="g_aur1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#34d399"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient></defs><path d="M10 75 Q30 40 60 55 T110 45" stroke="url(#g_aur1)" stroke-width="14" fill="none" stroke-linecap="round"/></svg>',
   fusion:'<svg viewBox="0 0 120 120" class="nft-art-svg"><defs><radialGradient id="g_fs" cx="50%" cy="50%" r="55%"><stop offset="0%" stop-color="#fff"/><stop offset="50%" stop-color="#f97316"/><stop offset="100%" stop-color="#7f1d1d"/></radialGradient></defs><circle cx="60" cy="60" r="30" fill="url(#g_fs)"/><circle cx="60" cy="60" r="40" fill="none" stroke="#f97316" stroke-width="2" stroke-dasharray="4 6"/></svg>'
 };
+function resolveNftArtId(n){
+  n=n||{};
+  var raw=[n.id,n.nftId,n.type,n.slug].filter(Boolean).map(function(v){return String(v).trim().toLowerCase();});
+  for(var i=0;i<raw.length;i++){if(NFT_SVGS[raw[i]])return raw[i];}
+  var name=String(n.name||'').trim().toLowerCase();
+  if(name){
+    var aliases={
+      'cosmic orb':'cosmic','ice crystal':'crystal','blue diamond':'diamond','golden crown':'crown',
+      'retro rocket':'rocket','nebula core':'nebula','light prism':'prism','aurora wave':'aurora',
+      'fusion reactor':'fusion'
+    };
+    if(aliases[name])return aliases[name];
+    for(var j=0;j<NFTS.length;j++){
+      if(String(NFTS[j].name||'').trim().toLowerCase()===name && NFT_SVGS[NFTS[j].id]) return NFTS[j].id;
+    }
+  }
+  return null;
+}
 function nftArtSvg(id){ return NFT_SVGS[id] || NFT_SVGS.cosmic; }
+function nftFallbackArtSvg(n){
+  var rarity=String((n&&n.rarity)||'common').toLowerCase();
+  var grad=rarity==='legendary'?'#fbbf24':rarity==='epic'?'#a855f7':rarity==='rare'?'#38bdf8':'#94a3b8';
+  var label=String((n&&n.name)||'NFT').replace(/[<>&"']/g,'').slice(0,12);
+  return '<svg viewBox="0 0 120 120" class="nft-art-svg" aria-label="'+label+'"><defs><radialGradient id="nftfb_'+Math.random().toString(36).slice(2)+'"><stop offset="0%" stop-color="#ffffff"/><stop offset="35%" stop-color="'+grad+'"/><stop offset="100%" stop-color="#111827"/></radialGradient></defs><circle cx="60" cy="60" r="48" fill="url(#'+document.currentScript?.id+')"/></svg>';
+}
 function nftArtHtml(n, size){
-  return '<div class="nft-art-wrap '+(size==='small'?'small ':'')+'rarity-'+(n.rarity||'common')+'">'+nftArtSvg(n.id||n.nftId)+'</div>';
+  n=n||{};
+  var id=resolveNftArtId(n);
+  var art=id?nftArtSvg(id):nftFallbackArtSvg(n);
+  return '<div class="nft-art-wrap '+(size==='small'?'small ':'')+'rarity-'+(n.rarity||'common')+'">'+art+'</div>';
 }
 function showNftAnimation(n){
   var wrap=document.createElement('div');
@@ -2761,7 +2788,7 @@ function renderProfileAssetsHtml(nftList, giftList, opts){
     var limit=opts.nftLimit||9;
     nftList.slice(0,limit).forEach(function(nft){
       html+='<div class="profile-nft-item" title="'+escAttr((nft.name||'')+' #'+(nft.serial||''))+'">'+
-        nftArtHtml({id:nft.nftId||nft.id,rarity:nft.rarity},'small')+
+        nftArtHtml(nft,'small')+
         '<div class="profile-nft-serial">#'+(nft.serial||'')+'</div>'+
       '</div>';
     });
