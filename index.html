@@ -961,7 +961,7 @@ const FCM_VAPID_KEY='BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfck
 /* Вставь username своего бота (без @). Узнать можно здесь:
    https://api.telegram.org/bot8427043899:AAE-opYcKZWE-eO347tZRrOFqImOxSSOFnc/getMe
    В ответе найди поле "username" */
-const TELEGRAM_BOT_USERNAME = 't.me/FluxPayBot_bot'; // ← ОБЯЗАТЕЛЬНО заменить
+const TELEGRAM_BOT_USERNAME = 'https://t.me/FluxPayBot_bot'; // ← ОБЯЗАТЕЛЬНО заменить
 
 /* Реквизиты (используются только для отображения подсказки, если юзер
    откроет бота с ошибкой — сам бот их показывает в чате) */
@@ -1381,31 +1381,32 @@ function openTelegramPayment(pack){
   const payload = currentUser.uid + '_' + pack.id;
   const url = 'https://t.me/' + bot + '?start=' + encodeURIComponent(payload);
 
-  try {
-    if (window.Android && typeof window.Android.openUrl === 'function') {
-      window.Android.openUrl(url);
-    } else if (navigator.userAgent.match(/Android|iPhone|iPad|iPod/i)) {
-      window.location.href = url;
-    } else {
-      window.open(url, '_blank');
-    }
-  } catch(e) {
-    window.open(url, '_blank');
+  console.log('[pay] opening', url);
+
+  // 1. Пробуем мост Android (самый надёжный в WebView)
+  if (window.Android && typeof window.Android.openUrl === 'function') {
+    try { window.Android.openUrl(url); toast('Открываем Telegram…'); return; } catch(e){}
   }
 
-  toast('Открой Telegram и отправь скриншот');
-  vibrate('tap');
-  playSound('tap');
-
-  // Отслеживание: сохраним, что юзер инициировал оплату
+  // 2. Пробуем intent:// — тоже открывает приложение
   try {
-    db.ref('payments_tg_log/' + currentUser.uid).push({
-      packId: pack.id,
-      stars: pack.stars,
-      rub: pack.rub,
-      ts: TS
-    });
+    const intentUrl = 'intent://t.me/' + bot + '?start=' + encodeURIComponent(payload)
+      + '#Intent;scheme=https;package=org.telegram.messenger;end';
+    if (/Android/i.test(navigator.userAgent)) {
+      window.location.href = intentUrl;
+      toast('Открываем Telegram…');
+      return;
+    }
   } catch(e){}
+
+  // 3. Fallback
+  try {
+    const w = window.open(url, '_blank');
+    if (!w) window.location.href = url;
+  } catch(e) {
+    window.location.href = url;
+  }
+  toast('Открываем Telegram…');
 }
 
 function showPaymentInfoModal(pack){
