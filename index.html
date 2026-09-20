@@ -2783,31 +2783,53 @@ function renderProfileAssetsHtml(nftList, giftList, opts){
   }
   return html;
 }
+async function loadNftCollection(uid){
+  uid=uid|| (currentUser&&currentUser.uid);
+  if(!uid) return [];
+  var merged={};
+  // Основной источник: личная коллекция пользователя.
+  try{
+    var ownSnap=await db.ref('users/'+uid+'/nfts').once('value');
+    normalizeNftList(ownSnap.val()||{}).forEach(function(n){
+      var k=String(n.nftId||n.id||'')+'#'+String(n.serial||'');
+      merged[k]=n;
+    });
+  }catch(e){console.warn('[NFT] own collection read failed',e);}
+  // Резервный источник: общий реестр NFT. Нужен для уже выданных NFT из бота.
+  try{
+    var globalSnap=await db.ref('nfts').once('value');
+    var global=normalizeNftList(globalSnap.val()||{});
+    global.forEach(function(n){
+      if(String(n.ownerUid||'')!==String(uid)) return;
+      var k=String(n.nftId||n.id||'')+'#'+String(n.serial||'');
+      if(!merged[k]) merged[k]=n;
+    });
+  }catch(e){console.warn('[NFT] global collection read failed',e);}
+  return Object.keys(merged).map(function(k){return merged[k];}).sort(function(a,b){return Number(b.mintedAt||0)-Number(a.mintedAt||0);});
+}
 async function renderProfileGifts(){
   var sec=document.getElementById('profile-gifts-section');
   if(!sec)return;
   if(!currentUser){sec.innerHTML='';sec.style.display='none';return;}
   try{
-    // Читаем именно узел nfts, а не полагаемся только на кэш профиля.
-    var nftSnap=await db.ref('users/'+currentUser.uid+'/nfts').once('value');
+    var nftList=await loadNftCollection(currentUser.uid);
     var giftSnap=await db.ref('users/'+currentUser.uid+'/giftsReceived').once('value');
-    var nftList=normalizeNftList(nftSnap.val()||{});
     var giftList=normalizeGiftList(giftSnap.val()||{});
-
-    myNfts=nftSnap.val()||{};
     myGifts=giftSnap.val()||{};
+    myNfts={};
+    nftList.forEach(function(n){
+      myNfts[n.nftId]=myNfts[n.nftId]||{};
+      myNfts[n.nftId][n.serial]=n;
+    });
 
     var showGifts=(giftsDisplay==='profile')?giftList:[];
-    if(!nftList.length&&!showGifts.length){
-      sec.innerHTML='';
-      sec.style.display='none';
-      return;
-    }
     sec.style.display='block';
     sec.innerHTML=renderProfileAssetsHtml(nftList, showGifts, {pad:'24px'});
     sec.onclick=function(){openProfileGiftsSheet();};
   }catch(e){
     console.error('[profile] NFT load error',e);
+    sec.style.display='block';
+    sec.innerHTML='<div class="profile-assets-empty"><div class="profile-assets-empty-icon">◆</div><div style="margin-top:6px">Не удалось загрузить коллекцию</div></div>';
   }
 }
 
@@ -2816,11 +2838,9 @@ function startMyNftListener(){
   if(!currentUser)return;
   try{if(unsubMyNfts&&unsubMyNfts.off)unsubMyNfts.off();}catch(e){}
   var ref=db.ref('users/'+currentUser.uid+'/nfts');
-  unsubMyNfts=ref.on('value',function(s){
-    myNfts=s.val()||{};
-    renderProfileGifts();
-  },function(e){
+  unsubMyNfts=ref.on('value',function(){ renderProfileGifts(); },function(e){
     console.error('[profile] NFT listener error',e);
+    renderProfileGifts();
   });
 }
 function renderAvatarGiftBadge(){
@@ -2838,10 +2858,9 @@ function openProfileGiftsSheet(){
   if(!currentUser){body.innerHTML='';return;}
   (async function(){
     try{
-      var snap=await db.ref('users/'+currentUser.uid).once('value');
-      var v=snap.val()||{};
-      var nftList=normalizeNftList(v.nfts);
-      var giftList=normalizeGiftList(v.giftsReceived);
+      var snap=await db.ref('users/'+currentUser.uid+'/giftsReceived').once('value');
+      var nftList=await loadNftCollection(currentUser.uid);
+      var giftList=normalizeGiftList(snap.val()||{});
       var html='<div class="profile-sheet-title">◆ Коллекция</div>';
       html+=renderProfileAssetsHtml(nftList, giftList, {pad:'0px', nftLimit:999, giftLimit:999});
       html+='<button class="sheet-btn secondary ripple" id="my-gifts-close" style="margin-top:14px">Закрыть</button>';
@@ -2859,7 +2878,7 @@ async function loadMyAssets(){
     var s=await db.ref('users/'+currentUser.uid).once('value');
     var v=s.val()||{};
     myStars=v.stars||0;myNfts=v.nfts||{};myGifts=v.giftsReceived||{};
-    updateStarsUI();renderProfileGifts();renderAvatarGiftBadge();
+    updateStarsUI();await renderProfileGifts();renderAvatarGiftBadge();
   }catch(e){}
 }
 function updateStarsUI(noAnim){
