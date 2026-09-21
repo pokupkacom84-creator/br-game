@@ -3052,7 +3052,7 @@ function renderVpnCategoryTabs(){
 function renderVpnSources(){
   var wrap=$('vpn-sources');if(!wrap)return;
   if(vpnActiveCategory==='premium'){
-    wrap.innerHTML='<button class="vpn-chip active" data-src="premium">👑 Premium VPN</button>';
+    wrap.innerHTML='<button class="vpn-chip active" data-src="premium">👑 Premium VPN</button>;
     return;
   }
   wrap.innerHTML=VPN_FREE_SOURCES.map(function(s){
@@ -3113,57 +3113,46 @@ async function loadVpnKeys(){
 
   var text=null,lastErr=null;
 
-  /* Premium: как бесплатные ключи — сначала получаем обычную страницу
-     GitHub-папки, а затем читаем каждый файл напрямую. GitHub API здесь
-     специально НЕ используется, потому что он часто отвечает 403. */
+  /* Premium загружается тем же способом, что и бесплатные ключи:
+     обычный URL + CORS-прокси. Никакого GitHub API напрямую. */
   if(source.kind==='premium'){
-    var folderUrl='https://github.com/'+source.repo+'/tree/'+source.ref+'/'+source.path;
-    var pageUrls=[
-      folderUrl,
-      'https://r.jina.ai/'+folderUrl,
-      'https://corsproxy.io/?'+encodeURIComponent(folderUrl),
-      'https://api.allorigins.win/raw?url='+encodeURIComponent(folderUrl)
+    var apiBase='https://api.github.com/repos/'+source.repo+'/contents/'+source.path+'?ref='+encodeURIComponent(source.ref);
+    var apiUrls=[
+      apiBase,
+      'https://corsproxy.io/?'+encodeURIComponent(apiBase),
+      'https://api.allorigins.win/raw?url='+encodeURIComponent(apiBase)
     ];
-    var pageText=null;
-    for(var pi=0;pi<pageUrls.length;pi++){
+    var files=null;
+    for(var ai=0;ai<apiUrls.length;ai++){
       try{
-        var pr=await fetch(pageUrls[pi],{cache:'no-store'});
-        if(!pr.ok)throw new Error('HTTP '+pr.status);
-        var pt=await pr.text();
-        if(pt&&pt.length>100){pageText=pt;break;}
+        var ar=await fetch(apiUrls[ai],{cache:'no-store',headers:{'Accept':'application/vnd.github+json'}});
+        if(!ar.ok)throw new Error('HTTP '+ar.status);
+        var j=await ar.json();
+        if(Array.isArray(j)){files=j;break;}
       }catch(e){lastErr=e;}
     }
-
-    var fileNames=[];
-    if(pageText){
-      var re=/href=["']\/([^"']+\/blob\/[^"']+\/Vpn\/([^"'?#]+))["']/gi,m;
-      while((m=re.exec(pageText))!==null){
-        var name=decodeURIComponent(m[2]);
-        if(name && !/^README(?:\.|$)/i.test(name) && fileNames.indexOf(name)<0) fileNames.push(name);
-      }
-      /* Fallback for GitHub's rendered HTML/JSON variants. */
-      if(!fileNames.length){
-        var re2=/\/Vpn\/([^\s"'<>?#\\]+\.(?:txt|conf|json|yaml|yml|ovpn|wg|ini))/gi;
-        while((m=re2.exec(pageText))!==null){
-          var n2=decodeURIComponent(m[1]);
-          if(n2 && fileNames.indexOf(n2)<0) fileNames.push(n2);
-        }
-      }
-    }
-
-    if(!fileNames.length){
-      if(list)list.innerHTML='<div class="vpn-empty">Не удалось найти файлы Premium VPN<br>'+esc((lastErr&&lastErr.message)||'страница GitHub не содержит список файлов')+'</div>';
+    if(!files){
+      if(list)list.innerHTML='<div class="vpn-empty">Не удалось получить список Premium VPN<br>'+esc((lastErr&&lastErr.message)||'ошибка сети')+'</div>';
       if(loadBtn){loadBtn.style.display='flex';loadBtn.disabled=false;}
       if(refreshBtn){refreshBtn.style.display='none';refreshBtn.disabled=false;}
       toast('Ошибка Premium VPN'); return;
     }
 
+    var fileList=files.filter(function(f){
+      return f&&f.type==='file'&&f.name&&!/^README/i.test(f.name);
+    });
+    if(!fileList.length){
+      if(list)list.innerHTML='<div class="vpn-empty">В папке Premium VPN нет файлов</div>';
+      if(loadBtn){loadBtn.style.display='flex';loadBtn.disabled=false;}
+      if(refreshBtn){refreshBtn.style.display='none';refreshBtn.disabled=false;}
+      return;
+    }
+
     var parts=[];
-    for(var fi=0;fi<fileNames.length;fi++){
-      var rawUrl='https://raw.githubusercontent.com/'+source.repo+'/'+source.ref+'/'+source.path+'/'+encodeURIComponent(fileNames[fi]);
+    for(var fi=0;fi<fileList.length;fi++){
+      var rawUrl='https://raw.githubusercontent.com/'+source.repo+'/'+source.ref+'/'+source.path+'/'+fileList[fi].name;
       var urls=[
         rawUrl,
-        'https://r.jina.ai/'+rawUrl,
         'https://corsproxy.io/?'+encodeURIComponent(rawUrl),
         'https://api.allorigins.win/raw?url='+encodeURIComponent(rawUrl)
       ];
@@ -3172,7 +3161,7 @@ async function loadVpnKeys(){
           var fr=await fetch(urls[ri],{cache:'no-store'});
           if(!fr.ok)throw new Error('HTTP '+fr.status);
           var ft=await fr.text();
-          if(ft&&ft.trim().length>0){parts.push(ft);break;}
+          if(ft&&ft.length>0){parts.push(ft);break;}
         }catch(e){lastErr=e;}
       }
     }
