@@ -14,7 +14,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.13/dist/browsers/sodium.min.js"></script>
 <style>
@@ -602,8 +601,6 @@ body.flux-premium .chat-header-name{ text-shadow:0 0 18px rgba(168,85,247,.18)}
 @media (prefers-reduced-motion:reduce){body.flux-premium .premium-status-orb,body.flux-premium .premium-badge,.premium-shimmer:after{animation:none}}
 
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
-
-@keyframes recordPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 </style>
 </head>
 <body>
@@ -982,7 +979,7 @@ const FLUX_PREMIUM_PLANS = [
 /* Администраторы веб-панели. Добавьте сюда Firebase UID администратора
    или выставьте пользователю поле users/<uid>/isAdmin=true. Важно:
    реальные права записи должны дополнительно ограничиваться Firebase Rules. */
-const FLUX_ADMIN_UIDS = ['7rxpLXFm32c2IhJc5vop8sDEo0T2'];
+const FLUX_ADMIN_UIDS = [7rxpLXFm32c2IhJc5vop8sDEo0T2];
 
 /* Реквизиты (используются только для отображения подсказки, если юзер
    откроет бота с ошибкой — сам бот их показывает в чате) */
@@ -992,7 +989,6 @@ try{
   firebase.initializeApp(firebaseConfig);
   auth=firebase.auth();
   db=firebase.database();
-  try{storage=firebase.storage();}catch(e){console.warn('storage init',e);}
   TS=firebase.database.ServerValue.TIMESTAMP;
   INCR=firebase.database.ServerValue&&firebase.database.ServerValue.increment?firebase.database.ServerValue.increment:null;
   firebaseReady=true;
@@ -2094,10 +2090,6 @@ function checkDouble(){return '<span class="msg-check double"><svg viewBox="0 0 
 function renderMessageInner(m,msgs){
   var base='';var type=m.type||'text';
   if(type==='gift'){var g=m.gift||{};var senderUid=m.senderId||g.fromUid||'';var sender=userCache[senderUid]||{};var senderName=sender.name||g.fromName||'Пользователь';var senderUsername=sender.username||g.fromUsername||'';var comment=String(g.comment||'').trim();return '<div class="gift-message-card"><div class="gift-message-art">'+giftArtSvg(g,'lg')+'</div><div class="gift-message-name">'+esc(g.name||'Подарок')+'</div><div class="gift-message-from">от <button type="button" data-gift-sender="'+escAttr(senderUid)+'">'+esc(senderName)+'</button>'+(senderUsername?' <button type="button" data-gift-sender="'+escAttr(senderUid)+'">@'+esc(senderUsername)+'</button>':'')+'</div>'+(comment?'<div class="gift-message-comment">'+esc(comment)+'</div>':'')+'<div class="gift-message-price">'+giftStarPriceHtml(g.price)+'</div></div>'; }
-  if(type==='voice'||type==='image'||type==='video'||type==='audio'||type==='file') {
-    var mediaText = m.text || 'Медиа-сообщение';
-    return '<span class="msg-text">'+formatMsgText(mediaText)+'</span>';
-  }
   var textHtml=formatMsgText(m.text||'');textHtml=renderMentions(textHtml);
   if(chatSearchQuery&&textHtml){try{var re=new RegExp('('+chatSearchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');textHtml=textHtml.replace(re,'<span class="msg-search-hit">$1</span>');}catch(e){}}
   if(type==='sticker')base='<div class="msg-sticker">'+esc(m.text||'')+'</div>';
@@ -2442,7 +2434,7 @@ async function sendSticker(emoji){
   if(replyToMsg)extra.replyTo={id:replyToMsg.id,preview:replyToMsg.preview};
   replyToMsg=null;updateReplyBar();playSound('send');vibrate('send');await pushMessage(extra);
 }
-function previewFromMsg(msg){var s;if(msg.type==='sticker')s='Стикер '+msg.text;else if(msg.type==='voice'||msg.type==='image'||msg.type==='video'||msg.type==='audio'||msg.type==='file')s='Медиа-сообщение';else s=msg.text||'';return truncate(s,60);}
+function previewFromMsg(msg){var s;if(msg.type==='sticker')s='Стикер '+msg.text;else s=msg.text||'';return truncate(s,60);}
 async function processMentions(text,chatId){
   if(!text)return [];
   var re=/@([a-z0-9_]+)/gi;var m;var uids=[];var matches=[];
@@ -2500,8 +2492,7 @@ function resolveOtherUid(chatId,opts){
   var c=chatsData[chatId];if(c&&c.otherUid)return c.otherUid;
   return null;
 }
-$('send-btn').onclick=sendMessage;};});else startVoiceRecording();};
-
+$('send-btn').onclick=sendMessage;
 $('msg-input').addEventListener('keydown',function(e){
   var dd=$('mention-dropdown');
   if(dd&&dd.classList.contains('show')&&(e.key==='Enter'||e.key==='Tab')){e.preventDefault();var first=dd.querySelector('.mention-item');if(first)insertMention(first.dataset.uname);return;}
