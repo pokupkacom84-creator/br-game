@@ -1253,7 +1253,33 @@ const STAR_PACKS=[
 function starSvg(){return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2l2.7 6.5 7.1.6-5.4 4.6 1.7 6.9-6.1-3.8-6.1 3.8 1.7-6.9-5.4-4.6 7.1-.6z"/></svg>';}
 function giftStarPriceHtml(n){return '<span style="display:inline-flex;align-items:center;gap:4px">'+starSvg()+Number(n||0).toLocaleString('ru-RU')+'</span>'; }
 function giftArtSvg(g,size){
-  g=g||{};var id=String(g.id||g.giftId||'gift').toLowerCase();var tone=g.tone||['#73b8ff','#3159c7'];var a=tone[0],b=tone[1];
+  g=g||{};
+  // Gift records from Firebase can contain an internal `id` (push/NFT id)
+  // that is NOT the catalog gift id. The visual renderer must prefer giftId.
+  // Otherwise the card background and the highlight ellipse render, but the
+  // actual gift SVG stays empty — exactly the symptom seen in profiles.
+  var rawId=String(g.giftId||g.giftID||g.catalogId||g.id||'').trim().toLowerCase();
+  var nameKey=String(g.name||'').trim().toLowerCase();
+  var aliases={
+    'роза':'rose','rose':'rose',
+    'сердце':'heart','heart':'heart',
+    'синий подарок':'bluebox','blue gift':'bluebox','bluebox':'bluebox',
+    'золотой подарок':'goldbox','gold gift':'goldbox','goldbox':'goldbox',
+    'огонь':'fire','fire':'fire',
+    'торт':'cake','cake':'cake',
+    'мишка':'bear','bear':'bear',
+    'палитра':'palette','palette':'palette',
+    'гитара':'guitar','guitar':'guitar',
+    'ракета':'rocket','rocket':'rocket',
+    'кубок':'trophy','trophy':'trophy',
+    'единорог':'unicorn','unicorn':'unicorn',
+    'алмаз':'diamond','diamond':'diamond',
+    'корона':'crown','crown':'crown',
+    'кольцо':'ring','ring':'ring',
+    'королевский подарок':'royalbox','royal gift':'royalbox','royalbox':'royalbox'
+  };
+  var id=aliases[rawId]||aliases[nameKey]||rawId||'gift';
+  var tone=g.tone||['#73b8ff','#3159c7'];var a=tone[0],b=tone[1];
   var gid='ga_'+id.replace(/[^a-z0-9]/gi,'')+'_'+String(size||'m').replace(/[^a-z0-9]/gi,'');
   var defs='<defs><linearGradient id="'+gid+'_a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+a+'"/><stop offset="1" stop-color="'+b+'"/></linearGradient><linearGradient id="'+gid+'_b" x1="0" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".96"/><stop offset=".5" stop-color="'+a+'" stop-opacity=".8"/><stop offset="1" stop-color="'+b+'" stop-opacity=".9"/></linearGradient><linearGradient id="'+gid+'_gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff5a8"/><stop offset=".45" stop-color="#f3c64c"/><stop offset="1" stop-color="#9a5908"/></linearGradient><filter id="'+gid+'_s" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="7" stdDeviation="6" flood-color="#000" flood-opacity=".28"/></filter></defs>';
   var x='';
@@ -3047,8 +3073,8 @@ async function openGiftDetails(ownerUid,giftKey,isSent){
       '<div class="modal-actions stack"><button class="sheet-btn primary" id="gift-detail-close">Готово</button>'+(mine&&!isSent?'<button class="sheet-btn exchange-btn" id="gift-exchange">🔄 Обменять подарок</button>':'')+(mine&&!isSent&&g.visible!==false?'<button class="sheet-btn secondary" id="gift-hide">Скрыть из профиля</button>':'')+(mine&&!isSent&&g.visible===false?'<button class="sheet-btn secondary" id="gift-show">Показать в профиле</button>':'')+'</div>';
     var close=document.getElementById('gift-detail-close');if(close)close.onclick=function(){sheet.classList.remove('show');};
     var exchange=document.getElementById('gift-exchange');if(exchange)exchange.onclick=function(){sheet.classList.remove('show');openGiftExchangePicker(g,giftKey);};
-    var hide=document.getElementById('gift-hide');if(hide)hide.onclick=async function(){try{var ups={};ups['users/'+ownerUid+'/giftsReceived/'+giftKey+'/visible']=false;await db.ref().update(ups);toast('Подарок скрыт из профиля');sheet.classList.remove('show');renderProfileGifts();}catch(e){toast('Не удалось скрыть подарок');}};
-    var show=document.getElementById('gift-show');if(show)show.onclick=async function(){try{var ss=await db.ref('users/'+ownerUid+'/giftsReceived/'+giftKey).once('value');var gg=ss.val();if(!gg){toast('Подарок не найден');return;}gg=Object.assign({},gg,{visible:true,giftKey:giftKey});var ups={};ups['users/'+ownerUid+'/giftsReceived/'+giftKey+'/visible']=true;await db.ref().update(ups);toast('Подарок снова виден');sheet.classList.remove('show');renderProfileGifts();}catch(e){toast('Не удалось показать подарок');}};
+    var hide=document.getElementById('gift-hide');if(hide)hide.onclick=async function(){try{var ups={};ups['users/'+ownerUid+'/giftsReceived/'+giftKey+'/visible']=false;ups['publicGiftProfiles/'+ownerUid+'/'+giftKey]=null;await db.ref().update(ups);toast('Подарок скрыт из профиля');sheet.classList.remove('show');renderProfileGifts();}catch(e){toast('Не удалось скрыть подарок');}};
+    var show=document.getElementById('gift-show');if(show)show.onclick=async function(){try{var ss=await db.ref('users/'+ownerUid+'/giftsReceived/'+giftKey).once('value');var gg=ss.val();if(!gg){toast('Подарок не найден');return;}gg=Object.assign({},gg,{visible:true,giftKey:giftKey});var ups={};ups['users/'+ownerUid+'/giftsReceived/'+giftKey+'/visible']=true;ups['publicGiftProfiles/'+ownerUid+'/'+giftKey]=gg;await db.ref().update(ups);toast('Подарок снова виден');sheet.classList.remove('show');renderProfileGifts();}catch(e){toast('Не удалось показать подарок');}};
   }catch(e){body.innerHTML='<div class="empty">Не удалось открыть подарок</div><button class="sheet-btn secondary" id="gift-detail-close">Закрыть</button>';var c=document.getElementById('gift-detail-close');if(c)c.onclick=function(){sheet.classList.remove('show');};}
 }
 document.getElementById('gift-detail-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
@@ -3312,9 +3338,6 @@ $('profile-menu-btn').onclick=function(e){
 };
 
 async function showProfileSheet(u){
-  u=u||{};
-  if(!u.uid)return;
-  try{var fresh=await fetchUser(u.uid);if(fresh&&fresh.uid)u=Object.assign({},u,fresh,{uid:u.uid});}catch(e){}
   var sheet=$('profile-sheet');sheet.classList.add('show');
   var body=$('profile-sheet-body');
   var preset=u.avatarId?getPresetAvatar(u.avatarId):null;
@@ -3412,80 +3435,75 @@ async function loadProfileAssets(uid){
   var loading=document.getElementById('profile-assets-loading');
   if(!wrap||!uid)return;
   var token=++profileAssetsLoadToken;
-  uid=String(uid);
 
   function addGiftMap(target, source){
     if(!source || typeof source!=='object') return;
     Object.keys(source).forEach(function(k){
       var g=source[k];
       if(!g || typeof g!=='object') return;
-      // Some older records keep the key only in Firebase, while newer ones
-      // may already contain giftKey/giftId. Preserve both forms.
       target[k]=Object.assign({},g,{giftKey:g.giftKey||k});
-    });
-  }
-
-  function addOwnedRecords(target, source){
-    if(!source || typeof source!=='object') return;
-    Object.keys(source).forEach(function(k){
-      var g=source[k];
-      if(!g || typeof g!=='object') return;
-      var owner=String(g.toUid||g.recipientUid||g.recipientId||g.ownerUid||g.ownerId||g.userId||g.uid||'');
-      if(owner===uid){
-        target[k]=Object.assign({},g,{giftKey:g.giftKey||k});
-      }
     });
   }
 
   try{
     var raw={};
 
-    // Always read the friend's actual Firebase record. The rules supplied for
-    // this app allow authenticated users to read users/$uid and its children.
+    // IMPORTANT:
+    // Your Firebase rules already allow authenticated users to read
+    // users/$uid and users/$uid/nfts. Therefore the collection is read
+    // directly from the owner's record. No publicGiftProfiles mirror is used.
     var userSnap=await db.ref('users/'+uid).once('value');
     var userVal=userSnap.val()||{};
 
-    // Main/current storage locations.
+    // Current gift storage.
     addGiftMap(raw,userVal.giftsReceived);
+
+    // NFT storage supported by the existing Firebase rules.
     addGiftMap(raw,userVal.nfts);
+
+    // Compatibility with older versions of the app.
     addGiftMap(raw,userVal.gifts);
     addGiftMap(raw,userVal.collection);
     addGiftMap(raw,userVal.giftCollection);
-    addGiftMap(raw,userVal.receivedGifts);
     if(userVal.giftCollection && userVal.giftCollection.received)
       addGiftMap(raw,userVal.giftCollection.received);
     if(userVal.gifts && userVal.gifts.received)
       addGiftMap(raw,userVal.gifts.received);
 
-    // Direct reads cover databases where the nested maps are populated
-    // independently of the user object.
-    var reads=await Promise.all([
-      db.ref('users/'+uid+'/giftsReceived').once('value').catch(function(){return null;}),
-      db.ref('users/'+uid+'/nfts').once('value').catch(function(){return null;}),
-      db.ref('users/'+uid+'/giftCollection').once('value').catch(function(){return null;}),
-      db.ref('users/'+uid+'/collection').once('value').catch(function(){return null;})
-    ]);
-    addGiftMap(raw,reads[0]&&reads[0].val());
-    addGiftMap(raw,reads[1]&&reads[1].val());
-    addGiftMap(raw,reads[2]&&reads[2].val());
-    addGiftMap(raw,reads[3]&&reads[3].val());
+    // Direct reads are kept as fallbacks in case the nested object wasn't
+    // included by an older data structure.
+    try{
+      var receivedSnap=await db.ref('users/'+uid+'/giftsReceived').once('value');
+      addGiftMap(raw,receivedSnap.val());
+    }catch(e){ console.warn('[profile] giftsReceived read failed',e); }
 
-    // Compatibility: some older builds used a top-level /nfts collection.
-    // Also accept a top-level /gifts collection if it exists and records the
-    // recipient/owner in one of the common fields.
-    var topReads=await Promise.all([
-      db.ref('nfts').once('value').catch(function(){return null;}),
-      db.ref('gifts').once('value').catch(function(){return null;})
-    ]);
-    addOwnedRecords(raw,topReads[0]&&topReads[0].val());
-    addOwnedRecords(raw,topReads[1]&&topReads[1].val());
+    try{
+      var nftSnap=await db.ref('users/'+uid+'/nfts').once('value');
+      addGiftMap(raw,nftSnap.val());
+    }catch(e){ console.warn('[profile] users/nfts read failed',e); }
+
+    // IMPORTANT: the Firebase rules also expose the top-level /nfts node.
+    // Some versions of Flux store owned NFTs there instead of under users/$uid/nfts.
+    // Read it and keep only assets belonging to this profile.
+    try{
+      var allNftSnap=await db.ref('nfts').once('value');
+      var allNfts=allNftSnap.val()||{};
+      Object.keys(allNfts).forEach(function(k){
+        var n=allNfts[k];
+        if(!n || typeof n!=='object')return;
+        var owner=String(n.ownerUid||n.ownerId||n.userId||n.uid||n.owner||n.holderUid||'');
+        if(owner===String(uid)){
+          raw['nft_'+k]=Object.assign({},n,{giftKey:n.giftKey||n.id||k,nftKey:k});
+        }
+      });
+    }catch(e){ console.warn('[profile] top-level nfts read failed',e); }
 
     if(userVal && userVal.name){
       userCache[uid]=Object.assign({uid:uid},userVal);
     }
 
-    // Do not lose already loaded gifts because one optional source returned
-    // empty. Merge instead of replacing the cache.
+    // Keep the local cache, but NEVER replace a non-empty collection with
+    // an empty Firebase response.
     if(Object.keys(raw).length){
       profileGiftCache[uid]=Object.assign({},profileGiftCache[uid]||{},raw);
     }else if(profileGiftCache[uid]){
@@ -3494,6 +3512,7 @@ async function loadProfileAssets(uid){
 
     if(token!==profileAssetsLoadToken)return;
 
+    // Old gifts may not have a `visible` field. They must remain visible.
     var giftList=normalizeGiftList(raw).filter(function(g){
       return g.profileHidden!==true && g.visible!==false;
     });
@@ -3502,8 +3521,8 @@ async function loadProfileAssets(uid){
 
     var html=renderProfileAssetsHtml([],giftList,{pad:'0px',giftLimit:12});
 
-    // Sent gifts are private and are shown only on the owner's own profile.
-    if(currentUser&&uid===String(currentUser.uid)){
+    // Only the owner's sent-gifts section is private and shown in own profile.
+    if(currentUser&&uid===currentUser.uid){
       try{
         var sentSnap=await db.ref('users/'+uid+'/giftsSent').once('value');
         if(token!==profileAssetsLoadToken)return;
@@ -3512,7 +3531,7 @@ async function loadProfileAssets(uid){
           html+='<div class="profile-assets-label" style="padding:14px 0 0"><span class="gift-label-icon">↗</span> Отправленные · '+sentList.length+'</div><div class="profile-gifts-wrap" style="padding-left:0;padding-right:0">';
           sentList.slice(0,12).forEach(function(g){
             var c=String(g.comment||'').trim(),to=g.toName||g.toUsername||'пользователю';
-            html+='<div class="profile-gift-item profile-gift-card" data-gift-key="'+escAttr(g.giftKey||'')+'" data-sent-gift="1" title="'+escAttr((g.name||'Подарок')+' — '+to)+'"><div class="profile-gift-art">'+giftArtSvg(g,'sm')+'</div><div class="profile-gift-card-name">'+esc(g.name||'Подарок')+'</div><div class="profile-gift-card-from">→ '+esc(to)+'</div>'+(c?'<div class="profile-gift-card-comment">'+esc(c.length>58?c.slice(0,58)+'…':c)+'</div>':'')+'</div>';
+            html+='<div class="profile-gift-item profile-gift-card" data-gift-key="'+escAttr(g.giftKey||'')+'" data-sent-gift="1" title="'+escAttr((g.name||'Подарок')+' — '+to)+'"><div class="profile-gift-art">'+giftArtSvg(g,'sm')+'</div><div class="profile-gift-card-name">'+esc(g.name||'Подарок')+'</div><div class="profile-gift-card-from">→ '+esc(to)+'</div>'+(c?'<div class="profile-gift-card-comment">'+esc(c.length>58?c.slice(0,58)+'…':'')+'</div>':'')+'</div>';
           });
           html+='</div>';
         }
@@ -3533,10 +3552,13 @@ async function loadProfileAssets(uid){
     var cached=profileGiftCache[uid]||extractProfileGiftMap(userCache[uid]);
     if(cached&&Object.keys(cached).length){
       if(loading)loading.remove();
-      wrap.innerHTML=renderProfileAssetsHtml([],normalizeGiftList(cached).filter(function(g){return g.profileHidden!==true&&g.visible!==false;}),{pad:'0px'});
+      wrap.innerHTML=renderProfileAssetsHtml([],normalizeGiftList(cached).filter(function(g){
+        return g.profileHidden!==true && g.visible!==false;
+      }),{pad:'0px'});
     }else{
       if(loading)loading.textContent='Пока нет подарков';
-      if(!wrap.innerHTML.trim())wrap.innerHTML='<div class="profile-assets-empty"><div class="profile-assets-empty-icon">🎁</div><div style="margin-top:6px">Пока нет подарков</div></div>';
+      if(!wrap.innerHTML.trim())
+        wrap.innerHTML='<div class="profile-assets-empty"><div class="profile-assets-empty-icon">🎁</div><div style="margin-top:6px">Пока нет подарков</div></div>';
     }
     console.error('[profile] assets load error',e);
   }
