@@ -3185,29 +3185,51 @@ function buyPremium(plan){
   if(!currentUser||!plan){toast('Войдите в Flux');return;}
   var bot=getPaymentBotUsername();if(!bot)return;
   var payload=currentUser.uid+'_'+plan.id;
+  /* Всегда формируем обычную HTTPS-ссылку t.me. Не используем tg:// —
+   * Android WebView может вернуть ERR_UNKNOWN_URL_SCHEME. */
   var url='https://t.me/'+bot+'?start='+encodeURIComponent(payload);
-  if(window.Android&&typeof window.Android.openUrl==='function'){
-    try{window.Android.openUrl(url);toast('Открываем Telegram…');return;}catch(e){}
-  }
-  /* В Telegram Mini App нельзя отправлять tg:// через обычную навигацию
-   * WebView: Telegram сам должен обработать t.me-ссылку через openTelegramLink.
-   * Иначе Android WebView может показать ERR_UNKNOWN_URL_SCHEME. */
+  var opened=false;
+
+  /* 1) Настоящий Telegram Mini App: открыть ссылку внутри Telegram. */
   try{
-    if(window.Telegram&&window.Telegram.WebApp&&typeof window.Telegram.WebApp.openTelegramLink==='function'){
-      window.Telegram.WebApp.openTelegramLink(url);
-      toast('Открываем Telegram для оплаты в рублях…');
+    var tg=window.Telegram&&window.Telegram.WebApp;
+    if(tg&&typeof tg.openTelegramLink==='function'){
+      tg.openTelegramLink(url);
+      opened=true;
+      toast('Открываем Telegram для оплаты…');
       return;
     }
-  }catch(e){}
+  }catch(e){console.warn('openTelegramLink failed',e);}
+
+  /* 2) Android-обёртка: отдаём HTTPS-ссылку, а не tg://. */
   try{
-    if(window.Telegram&&window.Telegram.WebApp&&typeof window.Telegram.WebApp.openLink==='function'){
-      window.Telegram.WebApp.openLink(url);
-      toast('Открываем Telegram для оплаты в рублях…');
+    if(window.Android&&typeof window.Android.openUrl==='function'){
+      window.Android.openUrl(url);
+      opened=true;
+      toast('Открываем Telegram для оплаты…');
       return;
     }
+  }catch(e){console.warn('Android.openUrl failed',e);}
+
+  /* 3) Запасной вариант: открыть HTTPS в установленном браузере.
+   * Никаких tg://resolve — именно этот URI вызывал ошибку на скриншоте. */
+  try{
+    var tg2=window.Telegram&&window.Telegram.WebApp;
+    if(tg2&&typeof tg2.openLink==='function'){
+      try{tg2.openLink(url,{try_browser:'google-chrome'});}catch(e){tg2.openLink(url);}
+      opened=true;
+      toast('Открываем страницу оплаты…');
+      return;
+    }
+  }catch(e){console.warn('openLink failed',e);}
+
+  /* 4) Последний fallback — обычное окно браузера. */
+  try{
+    var w=window.open(url,'_blank','noopener,noreferrer');
+    if(w){opened=true;toast('Открываем страницу оплаты…');return;}
   }catch(e){}
-  try{window.location.href=url;}catch(e){window.open(url,'_blank');}
-  toast('Открываем Telegram для оплаты в рублях…');
+  try{window.location.assign(url);opened=true;}catch(e){}
+  if(!opened)toast('Не удалось открыть оплату. Скопируйте ссылку и откройте её в Telegram.');
 }
 async function loadPremiumState(){
   if(!currentUser||!db)return;
