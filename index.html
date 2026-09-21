@@ -1001,8 +1001,7 @@ const FLUX_ADMIN_UIDS = ['7rxpLXFm32c2IhJc5vop8sDEo0T2'];
 /* ==== VPN SOURCES: FREE + PREMIUM ==== */
 const VPN_PREMIUM_REPO = 'pokupkacom84-creator/Prem-VpnKey';
 const VPN_PREMIUM_PATH = 'Vpn';
-const VPN_PREMIUM_REF = 'd04c0f0e3618fa79cd9629df98549c21c70e7066';
-const VPN_PREMIUM_BLOB_URL = 'https://github.com/'+VPN_PREMIUM_REPO+'/tree/'+VPN_PREMIUM_REF+'/'+VPN_PREMIUM_PATH;
+let VPN_PREMIUM_REF = 'd04c0f0e3618fa79cd9629df98549c21c70e7066';
 
 let VPN_FREE_SOURCES = [
   {id:'v1',name:'🆓 Бесплатный VPN 1',kind:'free',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/26.txt'},
@@ -1012,7 +1011,7 @@ let VPN_FREE_SOURCES = [
 
 let vpnActiveCategory = (function(){try{return localStorage.getItem('flux_vpn_category')||'free';}catch(e){return 'free';}})();
 let vpnActiveSourceId = (function(){try{return localStorage.getItem('flux_vpn_source')||'v1';}catch(e){return 'v1';}})();
-let vpnPremiumLatestSha = VPN_PREMIUM_REF;
+let vpnPremiumLatestSha = null;
 let vpnPremiumUpdateAvailable = false;
 let vpnPremiumLastCheckedAt = 0;
 const VPN_UPDATE_INTERVAL_MS = 60 * 60 * 1000;
@@ -1032,9 +1031,6 @@ function getActiveVpnSource(){
 }
 
 async function checkVpnUpdates(force){
-  // Premium VPN is pinned to the exact commit requested by the user.
-  vpnPremiumLatestSha = VPN_PREMIUM_REF;
-  return;
   var now = Date.now();
   if(!force && (now - vpnPremiumLastCheckedAt) < 60000) return;
   vpnPremiumLastCheckedAt = now;
@@ -2102,7 +2098,7 @@ function checkDouble(){return '<span class="msg-check double"><svg viewBox="0 0 
 function renderMessageInner(m,msgs){
   var base='';var type=m.type||'text';
   var textHtml=formatMsgText(m.text||'');textHtml=renderMentions(textHtml);
-          var re=new RegExp("href=[\"](/[^\"]+/blob/"+refForApi+"/"+source.path+"/[^\"]+)[\"]","g");
+  if(chatSearchQuery&&textHtml){try{var re=new RegExp('('+chatSearchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');textHtml=textHtml.replace(re,'<span class="msg-search-hit">$1</span>');}catch(e){}}
   if(type==='sticker')base='<div class="msg-sticker">'+esc(m.text||'')+'</div>';
   else base='<span class="msg-text">'+textHtml+'</span>';
   var meta=currentChatMeta||{};
@@ -3021,7 +3017,7 @@ function extractVpnMeta(raw){
   var hashIdx=raw.indexOf('#');
   if(hashIdx!==-1){try{name=decodeURIComponent(raw.slice(hashIdx+1));}catch(e){name=raw.slice(hashIdx+1);}}
   if(!name&&/^vmess:\/\//i.test(raw)){try{var vm=raw.match(/vmess:\/\/([A-Za-z0-9+/=]+)/);if(vm){var cfg=JSON.parse(atob(vm[1]));if(cfg.ps)name=cfg.ps;}}catch(e){}}
-          var re=new RegExp("href=[\"](/[^\"]+/blob/"+refForApi+"/"+source.path+"/[^\"]+)[\"]","g");
+  if(name){var lower=name.toLowerCase();for(var i=0;i<COUNTRY_KEYS_LONG.length;i++){if(lower.indexOf(COUNTRY_KEYS_LONG[i])!==-1){flag=COUNTRY_FLAGS[COUNTRY_KEYS_LONG[i]];break;}}if(!flag){for(var j=0;j<COUNTRY_KEYS_SHORT.length;j++){var k=COUNTRY_KEYS_SHORT[j];var re=new RegExp('(^|[^a-z])'+k+'([^a-z]|$)','i');if(re.test(lower)){flag=COUNTRY_FLAGS[k];break;}}}}
   return {name:name,flag:flag||'🌐'};
 }
 function isPremiumUserNow(){
@@ -3112,99 +3108,76 @@ async function loadVpnKeys(){
     if(list)list.innerHTML='<div class="vpn-empty">👑 Premium VPN доступен только Premium-пользователям</div>';
     if(loadBtn){loadBtn.style.display='flex';loadBtn.disabled=false;}
     if(refreshBtn){refreshBtn.style.display='none';refreshBtn.disabled=false;}
-    toast('👑 Premium нужен для Premium VPN');
-    return;
+    toast('👑 Premium нужен для Premium VPN'); return;
   }
 
   var text=null,lastErr=null;
 
+  /* Premium: как бесплатные ключи — сначала получаем обычную страницу
+     GitHub-папки, а затем читаем каждый файл напрямую. GitHub API здесь
+     специально НЕ используется, потому что он часто отвечает 403. */
   if(source.kind==='premium'){
-    var refForApi = VPN_PREMIUM_REF;
-    var files = null;
-    var fileList = [];
-    var apiUrls = [
-      'https://api.github.com/repos/'+source.repo+'/contents/'+encodeURIComponent(source.path)+'?ref='+encodeURIComponent(refForApi),
-      'https://api.github.com/repos/'+source.repo+'/contents/'+encodeURIComponent(source.path)+'?ref='+encodeURIComponent(refForApi)+'&t='+Date.now()
+    var folderUrl='https://github.com/'+source.repo+'/tree/'+source.ref+'/'+source.path;
+    var pageUrls=[
+      folderUrl,
+      'https://r.jina.ai/'+folderUrl,
+      'https://corsproxy.io/?'+encodeURIComponent(folderUrl),
+      'https://api.allorigins.win/raw?url='+encodeURIComponent(folderUrl)
     ];
-    for(var ai=0; ai<apiUrls.length && !files; ai++){
+    var pageText=null;
+    for(var pi=0;pi<pageUrls.length;pi++){
       try{
-        var ar=await fetch(apiUrls[ai],{cache:'no-store',headers:{'Accept':'application/vnd.github+json'}});
-        if(!ar.ok) throw new Error('HTTP '+ar.status);
-        var j=await ar.json();
-        if(Array.isArray(j) && j.length) files=j;
+        var pr=await fetch(pageUrls[pi],{cache:'no-store'});
+        if(!pr.ok)throw new Error('HTTP '+pr.status);
+        var pt=await pr.text();
+        if(pt&&pt.length>100){pageText=pt;break;}
       }catch(e){lastErr=e;}
     }
 
-    // GitHub API can be rate-limited. Read the real folder page at the exact
-    // commit, extract its /blob/<sha>/Vpn/... links, then use raw.githubusercontent.com.
-    if(!files){
-      var folderUrls=[
-        'https://api.allorigins.win/raw?url='+encodeURIComponent(VPN_PREMIUM_BLOB_URL),
-        'https://corsproxy.io/?url='+encodeURIComponent(VPN_PREMIUM_BLOB_URL)
-      ];
-      for(var pi=0;pi<folderUrls.length && !files;pi++){
-        try{
-          var hr=await fetch(folderUrls[pi],{cache:'no-store'});
-          if(!hr.ok) throw new Error('Folder HTTP '+hr.status);
-          var html=await hr.text();
-          var re=new RegExp("href=[\"](/[^\"]+/blob/"+refForApi+"/"+source.path+"/[^\"]+)[\"]","g");
-          var seen={},found=[],m;
-          while((m=re.exec(html))){
-            var href=m[1].replace(/&amp;/g,'&').split('?')[0];
-            if(seen[href]) continue;
-            seen[href]=1;
-            var marker='/blob/'+refForApi+'/'+source.path+'/';
-            var pos=href.indexOf(marker);
-            if(pos<0) continue;
-            var rel=decodeURIComponent(href.slice(pos+marker.length));
-            if(!rel || rel.endsWith('/')) continue;
-            found.push({name:rel.split('/').pop(),path:source.path+'/'+rel,type:'file',download_url:'https://raw.githubusercontent.com/'+source.repo+'/'+refForApi+'/'+source.path+'/'+rel.split('/').map(encodeURIComponent).join('/')});
-          }
-          if(found.length) files=found;
-        }catch(e){lastErr=e;}
+    var fileNames=[];
+    if(pageText){
+      var re=/href=["']\/([^"']+\/blob\/[^"']+\/Vpn\/([^"'?#]+))["']/gi,m;
+      while((m=re.exec(pageText))!==null){
+        var name=decodeURIComponent(m[2]);
+        if(name && !/^README(?:\.|$)/i.test(name) && fileNames.indexOf(name)<0) fileNames.push(name);
+      }
+      /* Fallback for GitHub's rendered HTML/JSON variants. */
+      if(!fileNames.length){
+        var re2=/\/Vpn\/([^\s"'<>?#\\]+\.(?:txt|conf|json|yaml|yml|ovpn|wg|ini))/gi;
+        while((m=re2.exec(pageText))!==null){
+          var n2=decodeURIComponent(m[1]);
+          if(n2 && fileNames.indexOf(n2)<0) fileNames.push(n2);
+        }
       }
     }
 
-    // jsDelivr at the same immutable commit is the final fallback.
-    if(!files){
-      try{
-        var flatUrl='https://data.jsdelivr.com/v1/packages/gh/'+source.repo+'@'+refForApi+'?structure=flat';
-        var flatResp=await fetch(flatUrl,{cache:'no-store'});
-        if(!flatResp.ok) throw new Error('CDN HTTP '+flatResp.status);
-        var flatJson=await flatResp.json();
-        var flatFiles=Array.isArray(flatJson.files)?flatJson.files:[],mapped=[];
-        flatFiles.forEach(function(f){
-          var n=typeof f==='string'?f:((f&&f.name)||(f&&f.path)||'');
-          n=n.replace(/^\//,'');
-          if(n.indexOf(source.path+'/')===0 && !n.endsWith('/')) mapped.push({name:n.split('/').pop(),path:n,type:'file',download_url:'https://cdn.jsdelivr.net/gh/'+source.repo+'@'+refForApi+'/'+n});
-        });
-        if(mapped.length) files=mapped;
-      }catch(e){lastErr=e;}
+    if(!fileNames.length){
+      if(list)list.innerHTML='<div class="vpn-empty">Не удалось найти файлы Premium VPN<br>'+esc((lastErr&&lastErr.message)||'страница GitHub не содержит список файлов')+'</div>';
+      if(loadBtn){loadBtn.style.display='flex';loadBtn.disabled=false;}
+      if(refreshBtn){refreshBtn.style.display='none';refreshBtn.disabled=false;}
+      toast('Ошибка Premium VPN'); return;
     }
 
-    if(!files || !files.length){
-      if(list)list.innerHTML='<div class="vpn-empty">Не удалось получить список файлов Premium VPN<br>'+esc((lastErr&&lastErr.message)||'ошибка сети')+'</div>';
-      if(loadBtn){loadBtn.style.display='flex';loadBtn.disabled=false;}
-      if(refreshBtn){refreshBtn.style.display='none';refreshBtn.disabled=false;}
-      toast('Ошибка Premium VPN');
-      return;
-    }
-    fileList=files.filter(function(f){return f&&f.type==='file'&&f.download_url;});
-    if(!fileList.length){
-      if(list)list.innerHTML='<div class="vpn-empty">В папке '+esc(source.path)+' нет файлов</div>';
-      if(loadBtn){loadBtn.style.display='flex';loadBtn.disabled=false;}
-      if(refreshBtn){refreshBtn.style.display='none';refreshBtn.disabled=false;}
-      return;
-    }
     var parts=[];
-    for(var fi=0;fi<fileList.length;fi++){
-      try{
-        var fr=await fetch(fileList[fi].download_url+(fileList[fi].download_url.indexOf('?')===-1?'?':'&')+'t='+Date.now(),{cache:'no-store'});
-        if(fr.ok) parts.push(await fr.text());
-      }catch(ignore){}
+    for(var fi=0;fi<fileNames.length;fi++){
+      var rawUrl='https://raw.githubusercontent.com/'+source.repo+'/'+source.ref+'/'+source.path+'/'+encodeURIComponent(fileNames[fi]);
+      var urls=[
+        rawUrl,
+        'https://r.jina.ai/'+rawUrl,
+        'https://corsproxy.io/?'+encodeURIComponent(rawUrl),
+        'https://api.allorigins.win/raw?url='+encodeURIComponent(rawUrl)
+      ];
+      for(var ri=0;ri<urls.length;ri++){
+        try{
+          var fr=await fetch(urls[ri],{cache:'no-store'});
+          if(!fr.ok)throw new Error('HTTP '+fr.status);
+          var ft=await fr.text();
+          if(ft&&ft.trim().length>0){parts.push(ft);break;}
+        }catch(e){lastErr=e;}
+      }
     }
     text=parts.join('\n');
-  } else {
+  }else{
     var urls=[
       source.url+(source.url.indexOf('?')===-1?'?':'&')+'t='+Date.now(),
       'https://corsproxy.io/?'+encodeURIComponent(source.url),
@@ -3225,12 +3198,12 @@ async function loadVpnKeys(){
     if(list)list.innerHTML='<div class="vpn-empty">Не удалось загрузить «'+esc(source.name)+'»<br>'+esc((lastErr&&lastErr.message)||'ошибка сети')+'</div>';
     if(loadBtn){loadBtn.style.display='flex';loadBtn.disabled=false;}
     if(refreshBtn){refreshBtn.style.display='none';refreshBtn.disabled=false;}
-    toast('Ошибка сети');
-    return;
+    toast('Ошибка сети'); return;
   }
 
   try{
-    vpnKeys=parseVpnKeys(text);var seen=Object.create(null);
+    vpnKeys=parseVpnKeys(text);
+    var seen=Object.create(null);
     vpnKeys=vpnKeys.filter(function(k){if(seen[k.raw])return false;seen[k.raw]=1;return true;});
     vpnProtoFilter='all';vpnFiltered=vpnKeys.slice();
     renderVpnFilters();renderVpnKeys();
@@ -3238,17 +3211,9 @@ async function loadVpnKeys(){
       if(list)list.innerHTML='<div class="vpn-empty">Ключи не найдены</div>';
       if(loadBtn)loadBtn.style.display='flex';
       if(refreshBtn)refreshBtn.style.display='none';
-    } else {
+    }else{
       toast(source.name+': загружено '+vpnKeys.length+' ключей');
-      if(source.kind==='premium'){
-        try{
-          if(vpnPremiumLatestSha){
-            localStorage.setItem('flux_premium_vpn_used_sha', vpnPremiumLatestSha);
-          }
-        }catch(e){}
-        vpnPremiumUpdateAvailable=false;
-        renderVpnUpdateBar();
-      }
+      if(source.kind==='premium'){try{localStorage.setItem('flux_premium_vpn_used_sha',source.ref);}catch(e){}vpnPremiumUpdateAvailable=false;renderVpnUpdateBar();}
     }
   }catch(renderErr){if(list)list.innerHTML='<div class="vpn-empty">Ошибка парсинга</div>';}
   if(loadBtn)loadBtn.disabled=false;if(refreshBtn)refreshBtn.disabled=false;
