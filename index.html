@@ -3344,6 +3344,29 @@ async function showProfileSheet(u){
 }
 var profileAssetsLoadToken=0;
 var profileGiftCache={};
+function mergeGiftMaps(){
+  var out={};
+  for(var i=0;i<arguments.length;i++){
+    var src=arguments[i];
+    if(!src)continue;
+    if(Array.isArray(src)){
+      src.forEach(function(g,idx){if(g)out[g.giftKey||g.id||('gift_'+idx+'_'+i)]=g;});
+    }else if(typeof src==='object'){
+      Object.keys(src).forEach(function(k){if(src[k])out[k]=src[k];});
+    }
+  }
+  return out;
+}
+function extractProfileGiftMap(obj){
+  if(!obj||typeof obj!=='object')return {};
+  var maps=[];
+  ['giftsReceived','gifts','nfts','NFTs','collection','giftCollection','receivedGifts'].forEach(function(k){
+    if(obj[k])maps.push(obj[k]);
+  });
+  if(obj.giftCollection&&obj.giftCollection.received)maps.push(obj.giftCollection.received);
+  if(obj.gifts&&obj.gifts.received)maps.push(obj.gifts.received);
+  return mergeGiftMaps.apply(null,maps);
+}
 async function loadProfileAssets(uid){
   var wrap=document.getElementById('profile-assets-container');
   var loading=document.getElementById('profile-assets-loading');
@@ -3351,42 +3374,55 @@ async function loadProfileAssets(uid){
   var token=++profileAssetsLoadToken;
   try{
     var raw={};
-    var loaded=false;
-    // Primary source: the recipient's collection.
+    var sources=[];
+    var cachedUser=userCache[uid];
+    if(cachedUser){
+      var cachedMap=extractProfileGiftMap(cachedUser);
+      if(Object.keys(cachedMap).length)sources.push(cachedMap);
+    }
+
+    // Read the complete user record as a fallback. Some older builds stored
+    // the collection directly in the cached/public user object.
+    try{
+      var userSnap=await db.ref('users/'+uid).once('value');
+      var userVal=userSnap.val()||{};
+      var userMap=extractProfileGiftMap(userVal);
+      if(Object.keys(userMap).length)sources.push(userMap);
+      if(userVal&&userVal.name){userCache[uid]=Object.assign({uid:uid},userVal);}
+    }catch(userErr){
+      console.warn('[profile] user read failed',userErr);
+    }
+
+    // Primary collection path used by the current gift system.
     try{
       var snap=await db.ref('users/'+uid+'/giftsReceived').once('value');
-      raw=snap.val()||{};
-      loaded=true;
+      var direct=snap.val()||{};
+      if(Object.keys(direct).length)sources.push(direct);
     }catch(readErr){
       console.warn('[profile] giftsReceived read failed',readErr);
     }
 
-    // Fallback: some profiles may already have the collection embedded in cache.
-    if(!loaded||!Object.keys(raw).length){
-      var cachedUser=userCache[uid];
-      if(cachedUser&&cachedUser.giftsReceived){
-        raw=cachedUser.giftsReceived||{};
-        loaded=true;
-      }
-    }
-
+    raw=mergeGiftMaps.apply(null,sources);
     if(token!==profileAssetsLoadToken)return;
 
-    // Do not hide existing gifts merely because the field `visible` is missing
-    // or was left false by an older build. Only an explicit profileHidden flag
-    // suppresses a gift now.
+    // Keep a per-user cache so opening/closing the profile never makes the
+    // collection disappear because a later Firebase read is empty/denied.
+    if(Object.keys(raw).length){
+      profileGiftCache[uid]=Object.assign({},profileGiftCache[uid]||{},raw);
+    }else if(profileGiftCache[uid]){
+      raw=profileGiftCache[uid];
+    }
+
     var giftList=normalizeGiftList(raw).filter(function(g){return g.profileHidden!==true;});
     if(loading)loading.remove();
 
     var html=renderProfileAssetsHtml([],giftList,{pad:'0px',giftLimit:12});
 
-    // Sent gifts are shown only on the owner's own profile.
     if(currentUser&&uid===currentUser.uid){
       try{
         var sentSnap=await db.ref('users/'+uid+'/giftsSent').once('value');
         if(token!==profileAssetsLoadToken)return;
-        var sentRaw=sentSnap.val()||{};
-        var sentList=normalizeGiftList(sentRaw);
+        var sentList=normalizeGiftList(sentSnap.val()||{});
         if(sentList.length){
           html+='<div class="profile-assets-label" style="padding:14px 0 0"><span class="gift-label-icon">↗</span> Отправленные · '+sentList.length+'</div><div class="profile-gifts-wrap" style="padding-left:0;padding-right:0">';
           sentList.slice(0,12).forEach(function(g){
@@ -3406,7 +3442,7 @@ async function loadProfileAssets(uid){
     };
   }catch(e){
     if(token!==profileAssetsLoadToken)return;
-    var cached=profileGiftCache[uid];
+    var cached=profileGiftCache[uid]||extractProfileGiftMap(userCache[uid]);
     if(cached&&Object.keys(cached).length){
       if(loading)loading.remove();
       wrap.innerHTML=renderProfileAssetsHtml([],normalizeGiftList(cached).filter(function(g){return g.profileHidden!==true;}),{pad:'0px'});
