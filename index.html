@@ -999,15 +999,54 @@ const FLUX_PREMIUM_PLANS = [
 const FLUX_ADMIN_UIDS = ['7rxpLXFm32c2IhJc5vop8sDEo0T2'];
 
 /* ==== VPN SOURCES ==== */
+/*
+ * VPN sources are tied to GitHub repositories instead of fixed commit hashes.
+ * Every load/refresh resolves the current file from the repository's branch, so
+ * when the repository is updated the app picks up the new key list automatically.
+ */
 const VPN_FREE_SOURCES = [
-  {id:'v1',name:'🆓 Бесплатный VPN 1',kind:'free',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/26.txt'},
-  {id:'v2',name:'🆓 Бесплатный VPN 2',kind:'free',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/25.txt'},
-  {id:'v3',name:'🆓 Бесплатный VPN 3',kind:'free',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/24.txt'}
+  {id:'v1',name:'🆓 Бесплатный VPN 1',kind:'free',github:{owner:'AvenCores',repo:'goida-vpn-configs',branch:'main',path:'githubmirror/26.txt'}},
+  {id:'v2',name:'🆓 Бесплатный VPN 2',kind:'free',github:{owner:'AvenCores',repo:'goida-vpn-configs',branch:'main',path:'githubmirror/25.txt'}},
+  {id:'v3',name:'🆓 Бесплатный VPN 3',kind:'free',github:{owner:'AvenCores',repo:'goida-vpn-configs',branch:'main',path:'githubmirror/24.txt'}}
 ];
 
 const VPN_PREMIUM_SOURCES = [
-  {id:'p1',name:'👑 Premium VPN',kind:'premium',url:'https://raw.githubusercontent.com/pokupkacom84-creator/Prem-VpnKey/d04c0f0e3618fa79cd9629df98549c21c70e7066/Vpn'}
+  {id:'p1',name:'👑 Premium VPN',kind:'premium',github:{owner:'pokupkacom84-creator',repo:'Prem-VpnKey',branch:'main',path:'Vpn'}}
 ];
+
+function githubRawUrl(source){
+  var g=source&&source.github;if(!g)return source&&source.url||'';
+  return 'https://raw.githubusercontent.com/'+encodeURIComponent(g.owner)+'/'+encodeURIComponent(g.repo)+'/'+encodeURIComponent(g.branch)+'/'+g.path.split('/').map(encodeURIComponent).join('/');
+}
+
+async function fetchGithubSource(source){
+  if(!source||!source.github){
+    var direct=source&&source.url;
+    if(!direct)throw new Error('Источник не настроен');
+    var directResp=await fetch(direct+(direct.indexOf('?')===-1?'?':'&')+'t='+Date.now(),{cache:'no-store'});
+    if(!directResp.ok)throw new Error('HTTP '+directResp.status);
+    return {text:await directResp.text(),sha:null,url:direct};
+  }
+  var g=source.github;
+  var api='https://api.github.com/repos/'+encodeURIComponent(g.owner)+'/'+encodeURIComponent(g.repo)+'/contents/'+g.path.split('/').map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(g.branch)+'&t='+Date.now();
+  var lastErr=null;
+  try{
+    var metaResp=await fetch(api,{cache:'no-store',headers:{'Accept':'application/vnd.github+json'}});
+    if(!metaResp.ok)throw new Error('GitHub API HTTP '+metaResp.status);
+    var meta=await metaResp.json();
+    if(!meta.download_url)throw new Error('GitHub: файл не найден');
+    var rawResp=await fetch(meta.download_url+'?t='+Date.now(),{cache:'no-store'});
+    if(!rawResp.ok)throw new Error('GitHub raw HTTP '+rawResp.status);
+    return {text:await rawResp.text(),sha:meta.sha||null,url:meta.download_url};
+  }catch(e){lastErr=e;}
+  /* API can be rate-limited; raw branch URL still follows the latest branch content. */
+  var rawUrl=githubRawUrl(source);
+  try{
+    var raw=await fetch(rawUrl+'?t='+Date.now(),{cache:'no-store'});
+    if(!raw.ok)throw new Error('GitHub raw HTTP '+raw.status);
+    return {text:await raw.text(),sha:null,url:rawUrl};
+  }catch(e2){throw lastErr||e2;}
+}
 
 function isPremiumVpnSource(id){
   return String(id||'').charAt(0)==='p';
@@ -3059,31 +3098,12 @@ async function loadVpnKeys(){
     toast('Premium VPN доступен только Premium');
     return;
   }
-  var text=null,lastErr=null;
-  var urls=[];
-  if(source.id==='p1'){
-    /* GitHub file: сначала официальный /raw URL, затем raw.githubusercontent.com. */
-    urls=[
-      'https://raw.githubusercontent.com/pokupkacom84-creator/Prem-VpnKey/d04c0f0e3618fa79cd9629df98549c21c70e7066/Vpn?ts='+Date.now(),
-      'https://github.com/pokupkacom84-creator/Prem-VpnKey/raw/d04c0f0e3618fa79cd9629df98549c21c70e7066/Vpn?ts='+Date.now(),
-      'https://corsproxy.io/?'+encodeURIComponent('https://raw.githubusercontent.com/pokupkacom84-creator/Prem-VpnKey/d04c0f0e3618fa79cd9629df98549c21c70e7066/Vpn')
-    ];
-  }else{
-    urls=[
-      source.url+(source.url.indexOf('?')===-1?'?':'&')+'t='+Date.now(),
-      'https://corsproxy.io/?'+encodeURIComponent(source.url),
-      'https://api.allorigins.win/raw?url='+encodeURIComponent(source.url)
-    ];
-  }
-  for(var u=0;u<urls.length;u++){
-    try{
-      var resp=await fetch(urls[u],{cache:'no-store'});
-      if(!resp.ok)throw new Error('HTTP '+resp.status);
-      var t=await resp.text();
-      if(!t||t.length<20)throw new Error('Пустой ответ');
-      text=t;break;
-    }catch(err){lastErr=err;}
-  }
+  var text=null,lastErr=null,sourceMeta=null;
+  try{
+    sourceMeta=await fetchGithubSource(source);
+    text=sourceMeta.text;
+    if(!text||text.length<20)throw new Error('Пустой ответ');
+  }catch(err){lastErr=err;}
   if(!text){
     if(list)list.innerHTML='<div class="vpn-empty">Не удалось загрузить «'+esc(source.name)+'»<br>'+esc((lastErr&&lastErr.message)||'файл не найден')+'</div>';
     if(loadBtn){loadBtn.style.display='flex';loadBtn.disabled=false;}
@@ -3104,6 +3124,20 @@ async function loadVpnKeys(){
 }
 $('vpn-load-btn').onclick=loadVpnKeys;
 $('vpn-refresh-btn').onclick=loadVpnKeys;
+
+/* Автоматически проверяем GitHub каждые 10 минут, пока пользователь находится
+ * на VPN-вкладке. Ручная кнопка «Обновить» по-прежнему запускает проверку сразу. */
+var vpnAutoRefreshTimer=null;
+function startVpnAutoRefresh(){
+  if(vpnAutoRefreshTimer)clearInterval(vpnAutoRefreshTimer);
+  vpnAutoRefreshTimer=setInterval(function(){
+    try{
+      var tab=document.getElementById('tab-vpn');
+      if(tab&&tab.classList.contains('active'))loadVpnKeys();
+    }catch(e){}
+  },10*60*1000);
+}
+startVpnAutoRefresh();
 
 var _idb=null;
 function idbOpen(){if(_idb)return Promise.resolve(_idb);return new Promise(function(res,rej){try{var req=indexedDB.open('fluxdb',1);req.onupgradeneeded=function(){var db=req.result;if(!db.objectStoreNames.contains('messages'))db.createObjectStore('messages',{keyPath:'key'});};req.onsuccess=function(){_idb=req.result;res(_idb);};req.onerror=function(){rej(req.error);};}catch(e){rej(e);}});}
