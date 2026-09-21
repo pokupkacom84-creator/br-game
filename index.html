@@ -3006,13 +3006,20 @@ async function sendGiftTo(g,targetUid,comment){
 
 async function openGiftDetails(ownerUid,giftKey,isSent){
   if(!ownerUid||!giftKey)return;
+  // Opening/viewing a gift is read-only. It must never hide, delete or transfer it.
   var sheet=document.getElementById('gift-detail-sheet'),body=document.getElementById('gift-detail-body');
   sheet.classList.add('show');
   body.innerHTML='<div class="profile-sheet-title" style="text-align:center">Подарок</div><div class="spinner" style="margin:30px auto"></div>';
   try{
     var snap=await db.ref('users/'+ownerUid+'/'+(isSent?'giftsSent':'giftsReceived')+'/'+giftKey).once('value');
     var g=snap.val()||{};
+    if(!g.giftId){
+      // A temporary/failed read should not make an existing profile NFT disappear.
+      var cachedOwner=profileGiftCache[ownerUid]||{};
+      if(cachedOwner[giftKey])g=cachedOwner[giftKey];
+    }
     if(!g.giftId){body.innerHTML='<div class="empty">Подарок не найден</div><button class="sheet-btn secondary" id="gift-detail-close">Закрыть</button>';return;}
+    if(!isSent){profileGiftCache[ownerUid]=profileGiftCache[ownerUid]||{};profileGiftCache[ownerUid][giftKey]=Object.assign({},g);}
     var sender=userCache[g.fromUid];
     if(!sender&&g.fromUid)try{sender=await fetchUser(g.fromUid);}catch(e){}
     sender=sender||{uid:g.fromUid,name:g.fromName||'Пользователь',username:g.fromUsername||''};
@@ -3335,22 +3342,43 @@ async function showProfileSheet(u){
   $('profile-close').onclick=function(){sheet.classList.remove('show');};
   loadProfileAssets(u.uid);
 }
+var profileAssetsLoadToken=0;
+var profileGiftCache={};
 async function loadProfileAssets(uid){
   var wrap=document.getElementById('profile-assets-container');
   var loading=document.getElementById('profile-assets-loading');
-  if(!wrap)return;
+  if(!wrap||!uid)return;
+  var token=++profileAssetsLoadToken;
+  // Keep the current list visible while a detail sheet is opened/closed.
+  // Viewing a gift must never remove it from the profile.
   try{
     var snap=await db.ref('users/'+uid+'/giftsReceived').once('value');
-    var giftList=normalizeGiftList(snap.val()||{},{visibleOnly:true});
+    var raw=snap.val()||{};
+    profileGiftCache[uid]=raw;
+    if(token!==profileAssetsLoadToken)return;
+    var giftList=normalizeGiftList(raw,{visibleOnly:true});
     if(loading)loading.remove();
     var html=renderProfileAssetsHtml([], giftList, {pad:'0px'});
     if(currentUser&&uid===currentUser.uid){
-      var sentSnap=await db.ref('users/'+uid+'/giftsSent').once('value');var sentList=normalizeGiftList(sentSnap.val()||{});
+      var sentSnap=await db.ref('users/'+uid+'/giftsSent').once('value');
+      if(token!==profileAssetsLoadToken)return;
+      var sentRaw=sentSnap.val()||{};
+      var sentList=normalizeGiftList(sentRaw);
       if(sentList.length){html+='<div class="profile-assets-label" style="padding:14px 0 0"><span class="gift-label-icon">↗</span> Отправленные · '+sentList.length+'</div><div class="profile-gifts-wrap" style="padding-left:0;padding-right:0">';sentList.slice(0,12).forEach(function(g){var c=String(g.comment||'').trim(),to=g.toName||g.toUsername||'пользователю';html+='<div class="profile-gift-item profile-gift-card" data-gift-key="'+escAttr(g.giftKey||'')+'" data-sent-gift="1" title="'+escAttr((g.name||'Подарок')+' — '+to)+'"><div class="profile-gift-art">'+giftArtSvg(g,'sm')+'</div><div class="profile-gift-card-name">'+esc(g.name||'Подарок')+'</div><div class="profile-gift-card-from">→ '+esc(to)+'</div>'+(c?'<div class="profile-gift-card-comment">'+esc(c.length>58?c.slice(0,58)+'…':c)+'</div>':'')+'</div>';});html+='</div>';}
     }
+    if(token!==profileAssetsLoadToken)return;
     wrap.innerHTML=html;
     wrap.onclick=function(e){var item=e.target.closest('[data-gift-key]');if(item){e.stopPropagation();openGiftDetails(uid,item.dataset.giftKey,item.dataset.sentGift==='1');}};
-  }catch(e){if(loading)loading.textContent='Не удалось загрузить';}
+  }catch(e){
+    if(token!==profileAssetsLoadToken)return;
+    // Do not replace an already rendered collection with an empty/error state.
+    var cached=profileGiftCache[uid];
+    if(cached&&Object.keys(cached).length){
+      if(loading)loading.remove();
+      wrap.innerHTML=renderProfileAssetsHtml([],normalizeGiftList(cached,{visibleOnly:true}),{pad:'0px'});
+    }else if(loading){loading.textContent='Не удалось загрузить';}
+    console.error('[profile] assets load error',e);
+  }
 }
 function copyText(text){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){toast('Скопировано');}).catch(function(){fallbackCopy(text);});}else fallbackCopy(text);}
 function fallbackCopy(text){var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Скопировано');}catch(e){toast('Не удалось');}document.body.removeChild(ta);}
