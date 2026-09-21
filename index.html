@@ -649,6 +649,11 @@ body.dark .header,body.dark .chat-header,body.dark .bottom-nav,body.dark .chat-i
 
 /* Hard removal of legacy Stars/Gifts UI */
 .shop-banner-title,.shop-banner-desc,.shop-banner-balance,.star-pack-card,.gift-preview,.profile-gifts-wrap,.profile-gifts-label,.profile-assets-label:has(.gift-label-icon){display:none!important}
+
+/* Stability fix: bottom navigation must always receive pointer events. */
+#bottom-nav{position:relative!important;z-index:1000!important;pointer-events:auto!important;touch-action:manipulation!important;}
+#bottom-nav .nav-item{pointer-events:auto!important;touch-action:manipulation!important;}
+#bottom-nav .nav-item svg,#bottom-nav .nav-item span{pointer-events:none!important;}
 </style>
 </head>
 <body>
@@ -3305,7 +3310,7 @@ async function showProfileSheet(u){
       (u.bio?'<div class="info-row"><div class="info-value">'+esc(u.bio)+'</div><div class="info-label">О себе</div></div>':'')+
       '<div class="info-row"><div class="info-value">'+esc(status)+'</div><div class="info-label">Статус</div></div>'+
     '</div>'+
-    '<div id="profile-assets-loading" style="text-align:center;padding:10px;color:var(--text-2);font-size:13px">Загрузка подарков…</div>'+
+    ''+
     '<div id="profile-assets-container"></div>'+
     '<button class="sheet-btn secondary ripple" id="profile-close" style="margin-top:14px">Закрыть</button>';
   var msgBtn=$('profile-msg');if(msgBtn)msgBtn.onclick=function(){sheet.classList.remove('show');if(u.uid!==currentUser.uid)startChatWith(u.uid);};
@@ -3313,8 +3318,8 @@ async function showProfileSheet(u){
   var bb=$('profile-block');if(bb)bb.onclick=async function(){sheet.classList.remove('show');await toggleBlockUser(u.uid);};
   var eb=$('profile-edit');if(eb)eb.onclick=function(){sheet.classList.remove('show');$('btn-edit-profile').click();};
   $('profile-close').onclick=function(){sheet.classList.remove('show');};
-  loadProfileAssets(u.uid);
 }
+
 var profileAssetsLoadToken=0;
 var profileGiftCache={};
 function mergeGiftMaps(){
@@ -3674,6 +3679,30 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('./firebase-me
 setInterval(function(){if(currentUser)loadMyAssets();},60000);
 updateTogglesUI();refreshPushStatus();renderVpnTierTabs();renderVpnSources();setVpnRepoStatus('Проверка репозиториев…');checkVpnRepositoryUpdates(false).then(function(){setVpnRepoStatus('Репозитории проверены • автообновление каждые 15 мин');}).catch(function(){setVpnRepoStatus('Не удалось проверить GitHub');});setInterval(function(){if(navigator.onLine)checkVpnRepositoryUpdates(true).then(function(){setVpnRepoStatus('Последняя проверка: '+new Date().toLocaleTimeString());}).catch(function(){});},900000);
 if(!firebaseReady){setTimeout(function(){toast('Проверьте интернет');},500);}
+</script>
+
+<script>
+(function(){
+  function bindFluxBottomNav(){
+    var nav=document.getElementById('bottom-nav');
+    if(!nav || nav.__fluxNavFixed) return;
+    nav.__fluxNavFixed=true;
+    nav.addEventListener('click',function(e){
+      var item=e.target.closest('.nav-item');
+      if(!item || !nav.contains(item)) return;
+      e.preventDefault(); e.stopPropagation();
+      var tab=item.getAttribute('data-tab');
+      if(typeof switchTab==='function'){ switchTab(tab); }
+      else {
+        nav.querySelectorAll('.nav-item').forEach(function(x){x.classList.toggle('active',x===item);});
+        document.querySelectorAll('.tab-content').forEach(function(x){x.classList.toggle('active',x.id==='tab-'+tab);});
+      }
+    },true);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindFluxBottomNav);
+  else bindFluxBottomNav();
+  setTimeout(bindFluxBottomNav,500);
+})();
 </script>
 </body>
 </html>
