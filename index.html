@@ -3052,7 +3052,7 @@ function renderVpnCategoryTabs(){
 function renderVpnSources(){
   var wrap=$('vpn-sources');if(!wrap)return;
   if(vpnActiveCategory==='premium'){
-    wrap.innerHTML='<button class="vpn-chip active" data-src="premium">👑 Premium VPN · pokupkacom84/Prem-VpnKey</button>';
+    wrap.innerHTML='<button class="vpn-chip active" data-src="premium">👑 Premium VPN</button>';
     return;
   }
   wrap.innerHTML=VPN_FREE_SOURCES.map(function(s){
@@ -3129,8 +3129,30 @@ async function loadVpnKeys(){
         if(Array.isArray(j) && j.length){ files = j; break; }
       }catch(e){ lastErr = e; }
     }
+
+    /* GitHub API can return 403 because of rate limits. Use jsDelivr's public
+       package API as a read-only fallback so Premium VPN still loads in the app. */
     if(!files){
-      if(list)list.innerHTML='<div class="vpn-empty">Не удалось получить список файлов Premium VPN<br>'+esc((lastErr&&lastErr.message)||'')+'</div>';
+      try{
+        var cdnRef = (source.ref && /^[0-9a-f]{40}$/i.test(source.ref)) ? source.ref : 'main';
+        var flatUrl = 'https://data.jsdelivr.com/v1/package/gh/'+source.repo+'@'+encodeURIComponent(cdnRef)+'/flat';
+        var flatResp = await fetch(flatUrl, {cache:'no-store'});
+        if(!flatResp.ok) throw new Error('CDN HTTP '+flatResp.status);
+        var flatJson = await flatResp.json();
+        if(Array.isArray(flatJson.files)){
+          files = flatJson.files.filter(function(f){
+            var n=(f&&f.name)||'';
+            return n.indexOf('/'+source.path+'/')===0 && !n.endsWith('/');
+          }).map(function(f){
+            var n=(f.name||'').replace(/^\//,'');
+            return {type:'file',name:n.split('/').pop(),path:n,download_url:'https://cdn.jsdelivr.net/gh/'+source.repo+'@'+cdnRef+'/'+n};
+          });
+        }
+      }catch(e){ lastErr = e; }
+    }
+
+    if(!files || !files.length){
+      if(list)list.innerHTML='<div class="vpn-empty">Не удалось получить список файлов Premium VPN<br>'+esc((lastErr&&lastErr.message)||'ошибка сети')+'</div>';
       if(loadBtn){loadBtn.style.display='flex';loadBtn.disabled=false;}
       if(refreshBtn){refreshBtn.style.display='none';refreshBtn.disabled=false;}
       toast('Ошибка Premium VPN');
