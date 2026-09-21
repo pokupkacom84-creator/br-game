@@ -14,6 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.13/dist/browsers/sodium.min.js"></script>
 <style>
@@ -601,6 +602,10 @@ body.flux-premium .chat-header-name{ text-shadow:0 0 18px rgba(168,85,247,.18)}
 @media (prefers-reduced-motion:reduce){body.flux-premium .premium-status-orb,body.flux-premium .premium-badge,.premium-shimmer:after{animation:none}}
 
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Flux voice & media */
+.media-msg{padding:6px!important;min-width:180px}.media-msg img,.media-msg video{display:block;width:100%;max-width:310px;max-height:360px;object-fit:cover;border-radius:12px;background:#000}.media-msg video{max-height:300px}.media-caption{font-size:13px;margin:7px 4px 2px;word-break:break-word}.media-file{display:flex;align-items:center;gap:10px;padding:8px 6px;min-width:210px}.media-file-icon{width:42px;height:42px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:none}.media-file-name{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.media-file-meta{font-size:11px;color:var(--text-2);margin-top:2px}.voice-msg{display:flex;align-items:center;gap:9px;min-width:220px;padding:3px 2px}.voice-play{width:42px;height:42px;border:0;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}.voice-wave{height:28px;flex:1;display:flex;align-items:center;gap:2px;overflow:hidden}.voice-wave i{width:3px;border-radius:4px;background:currentColor;opacity:.45;height:var(--h)}.voice-duration{font-size:11px;opacity:.75;font-variant-numeric:tabular-nums;white-space:nowrap}.media-uploading{display:flex;align-items:center;gap:9px;padding:7px 4px;font-size:12px;color:var(--text-2)}.media-progress{height:4px;flex:1;background:rgba(128,128,128,.18);border-radius:9px;overflow:hidden}.media-progress i{display:block;height:100%;width:0;background:var(--accent);border-radius:9px}.recording-active{background:var(--danger)!important;color:#fff!important;animation:recordPulse 1s ease-in-out infinite}.recording-time{font-size:11px;color:var(--danger);font-weight:800;min-width:34px;text-align:center;font-variant-numeric:tabular-nums}.chat-input-bar .input-action-btn{position:relative}.media-hidden-input{display:none}
+@keyframes recordPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 </style>
 </head>
 <body>
@@ -838,7 +843,10 @@ body.flux-premium .chat-header-name{ text-shadow:0 0 18px rgba(168,85,247,.18)}
 <div class="chat-input-bar">
 <button class="input-action-btn ripple" id="emoji-btn"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg></button>
 <button class="input-action-btn ripple" id="sticker-btn"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></button>
+<button class="input-action-btn ripple" id="media-btn" title="Фото, видео или файл"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M3 16l5-5 4 4 2-2 5 5"/><path d="M19 16v6M16 19h6"/></svg></button>
+<input class="media-hidden-input" id="media-input" type="file" accept="image/*,video/*,audio/*,.pdf,.txt,.zip,.doc,.docx,.xls,.xlsx,.ppt,.pptx" multiple>
 <input type="text" id="msg-input" placeholder="Сообщение" autocomplete="off">
+<span class="recording-time" id="recording-time" style="display:none">0:00</span><button class="input-action-btn ripple" id="voice-btn" title="Голосовое сообщение"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg></button>
 <button id="send-btn" class="ripple"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
 </div>
 </div>
@@ -984,11 +992,12 @@ const FLUX_ADMIN_UIDS = ['7rxpLXFm32c2IhJc5vop8sDEo0T2'];
 /* Реквизиты (используются только для отображения подсказки, если юзер
    откроет бота с ошибкой — сам бот их показывает в чате) */
 
-let auth=null,db=null,TS=null,INCR=null,firebaseReady=false,messaging=null;
+let auth=null,db=null,storage=null,TS=null,INCR=null,firebaseReady=false,messaging=null;
 try{
   firebase.initializeApp(firebaseConfig);
   auth=firebase.auth();
   db=firebase.database();
+  try{storage=firebase.storage();}catch(e){console.warn('storage init',e);}
   TS=firebase.database.ServerValue.TIMESTAMP;
   INCR=firebase.database.ServerValue&&firebase.database.ServerValue.increment?firebase.database.ServerValue.increment:null;
   firebaseReady=true;
@@ -2090,6 +2099,18 @@ function checkDouble(){return '<span class="msg-check double"><svg viewBox="0 0 
 function renderMessageInner(m,msgs){
   var base='';var type=m.type||'text';
   if(type==='gift'){var g=m.gift||{};var senderUid=m.senderId||g.fromUid||'';var sender=userCache[senderUid]||{};var senderName=sender.name||g.fromName||'Пользователь';var senderUsername=sender.username||g.fromUsername||'';var comment=String(g.comment||'').trim();return '<div class="gift-message-card"><div class="gift-message-art">'+giftArtSvg(g,'lg')+'</div><div class="gift-message-name">'+esc(g.name||'Подарок')+'</div><div class="gift-message-from">от <button type="button" data-gift-sender="'+escAttr(senderUid)+'">'+esc(senderName)+'</button>'+(senderUsername?' <button type="button" data-gift-sender="'+escAttr(senderUid)+'">@'+esc(senderUsername)+'</button>':'')+'</div>'+(comment?'<div class="gift-message-comment">'+esc(comment)+'</div>':'')+'<div class="gift-message-price">'+giftStarPriceHtml(g.price)+'</div></div>'; }
+  if(type==='voice'){
+    var dur=formatVoiceDuration(m.duration||0);
+    var bars='';for(var bi=0;bi<34;bi++){var bh=5+Math.round(Math.abs(Math.sin((bi+1)*1.73))*20);bars+='<i style="--h:'+bh+'px"></i>';}
+    return '<div class="voice-msg"><button class="voice-play" data-voice-url="'+escAttr(m.mediaUrl||'')+'" data-playing="0"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><div class="voice-wave">'+bars+'</div><span class="voice-duration">'+esc(dur)+'</span></div>';
+  }
+  if(type==='image'||type==='video'||type==='audio'||type==='file'){
+    var url=m.mediaUrl||'';var name=esc(m.mediaName||'Файл');var cap=m.text?'<div class="media-caption">'+formatMsgText(m.text)+'</div>':'';
+    if(type==='image')return '<div class="media-msg"><img src="'+escAttr(url)+'" alt="'+name+'" loading="lazy">'+cap+'</div>';
+    if(type==='video')return '<div class="media-msg"><video src="'+escAttr(url)+'" controls playsinline preload="metadata"></video>'+cap+'</div>';
+    if(type==='audio')return '<div class="media-msg"><audio src="'+escAttr(url)+'" controls style="width:100%;min-width:230px"></audio>'+cap+'</div>';
+    return '<div class="media-file"><div class="media-file-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div><div style="min-width:0;flex:1"><div class="media-file-name">'+name+'</div><div class="media-file-meta">'+esc(formatBytes(m.mediaSize||0))+'</div></div><a href="'+escAttr(url)+'" target="_blank" rel="noopener" style="color:var(--accent);font-size:18px">↗</a></div>'+cap;
+  }
   var textHtml=formatMsgText(m.text||'');textHtml=renderMentions(textHtml);
   if(chatSearchQuery&&textHtml){try{var re=new RegExp('('+chatSearchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');textHtml=textHtml.replace(re,'<span class="msg-search-hit">$1</span>');}catch(e){}}
   if(type==='sticker')base='<div class="msg-sticker">'+esc(m.text||'')+'</div>';
@@ -2158,6 +2179,7 @@ function paintMessages(msgs){
   box.querySelectorAll('.reaction-chip').forEach(function(chip){chip.onclick=function(e){e.stopPropagation();toggleReaction(chip.dataset.msgid,chip.dataset.react,chip);};});
   box.querySelectorAll('.msg-reply').forEach(function(r){r.onclick=function(e){e.stopPropagation();jumpToMessage(r.dataset.jump);};});
   box.querySelectorAll('[data-gift-sender]').forEach(function(btn){btn.onclick=async function(e){e.stopPropagation();var uid=btn.dataset.giftSender;if(!uid)return;var u=userCache[uid]||await fetchUser(uid);if(u)showProfileSheet(u);};});
+  box.querySelectorAll('.voice-play').forEach(function(btn){btn.onclick=function(e){e.stopPropagation();toggleVoicePlayback(btn);};});
   box.querySelectorAll('[data-spoiler]').forEach(function(sp){sp.onclick=function(e){e.stopPropagation();sp.classList.add('revealed');};});
   box.querySelectorAll('.msg-retry').forEach(function(rt){rt.onclick=async function(e){e.stopPropagation();var id=rt.dataset.retry;await retryPendingMessage(id);};});
   if(selectionMode){box.querySelectorAll('.msg[data-msgid]').forEach(function(el){el.classList.toggle('selected',selectedMsgIds.has(el.dataset.msgid));});}
@@ -2415,6 +2437,39 @@ async function clearChat(){
 $('chat-menu-btn').onclick=function(e){e.stopPropagation();showChatMenu(this);};
 async function markAsRead(){if(!currentChatId||!currentUser||isSavedChat(currentChatId))return;try{db.ref('chats/'+currentChatId+'/meta/readBy/'+currentUser.uid).set(TS).catch(function(){});db.ref('userChats/'+currentUser.uid+'/'+currentChatId+'/unread').set(0).catch(function(){});}catch(e){}}
 
+function formatBytes(n){n=Number(n)||0;if(n<1024)return n+' Б';if(n<1048576)return (n/1024).toFixed(1)+' КБ';if(n<1073741824)return (n/1048576).toFixed(1)+' МБ';return (n/1073741824).toFixed(1)+' ГБ';}
+function formatVoiceDuration(sec){sec=Math.max(0,Math.round(Number(sec)||0));var m=Math.floor(sec/60),s=sec%60;return m+':'+String(s).padStart(2,'0');}
+var voiceRecorder=null,voiceChunks=[],voiceStartedAt=0,voiceTimer=null,voiceStream=null,voiceMime='audio/webm';
+function setVoiceRecordingUI(active){var b=$('voice-btn'),t=$('recording-time');if(!b)return;if(active){b.classList.add('recording-active');t.style.display='inline-block';}else{b.classList.remove('recording-active');t.style.display='none';}}
+async function startVoiceRecording(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){toast('Голосовые сообщения не поддерживаются');return;}
+  if(!currentChatId)return;
+  if(currentChatUser&&isBlocked(currentChatUser.uid)){toast('Пользователь заблокирован');return;}
+  try{
+    voiceStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    var opts={};if(MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))opts.mimeType='audio/webm;codecs=opus';else if(MediaRecorder.isTypeSupported('audio/webm'))opts.mimeType='audio/webm';
+    voiceRecorder=new MediaRecorder(voiceStream,opts);voiceMime=voiceRecorder.mimeType||'audio/webm';voiceChunks=[];voiceStartedAt=Date.now();setVoiceRecordingUI(true);vibrate('tap');
+    voiceTimer=setInterval(function(){var sec=Math.floor((Date.now()-voiceStartedAt)/1000);$('recording-time').textContent=formatVoiceDuration(sec);if(sec>=120)stopVoiceRecording();},500);
+    voiceRecorder.ondataavailable=function(e){if(e.data&&e.data.size)voiceChunks.push(e.data);};
+    voiceRecorder.onstop=async function(){var duration=Math.round((Date.now()-voiceStartedAt)/1000);clearInterval(voiceTimer);voiceTimer=null;setVoiceRecordingUI(false);if(voiceStream){voiceStream.getTracks().forEach(function(t){t.stop();});voiceStream=null;}var blob=new Blob(voiceChunks,{type:voiceMime});voiceRecorder=null;voiceChunks=[];if(blob.size<1000){toast('Голосовое слишком короткое');return;}await uploadAndSendMedia(blob,'voice','Голосовое сообщение',duration);};
+    voiceRecorder.start(250);
+  }catch(e){setVoiceRecordingUI(false);if(voiceStream){voiceStream.getTracks().forEach(function(t){t.stop();});voiceStream=null;}toast('Нет доступа к микрофону');}
+}
+function stopVoiceRecording(){if(voiceRecorder&&voiceRecorder.state!=='inactive'){try{voiceRecorder.stop();}catch(e){}}}
+async function uploadAndSendMedia(file,kind,name,duration){
+  if(!currentChatId||!currentUser||!storage)return;
+  var max=kind==='video'?80*1024*1024:kind==='image'?15*1024*1024:kind==='voice'||kind==='audio'?25*1024*1024:30*1024*1024;
+  if(file.size>max){toast('Файл слишком большой (лимит '+formatBytes(max)+')');return;}
+  var ext=(name&&name.indexOf('.')>-1)?name.split('.').pop().toLowerCase():(kind==='voice'?'webm':'bin');
+  var path='chatMedia/'+currentUser.uid+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,8)+'.'+ext;
+  var task=storage.ref(path).put(file,{contentType:file.type||'application/octet-stream',customMetadata:{ownerUid:currentUser.uid,chatId:currentChatId}});
+  var toastId='';try{toast('Загрузка…');var snap=await new Promise(function(resolve,reject){task.on('state_changed',function(s){var pct=s.totalBytes?Math.round(s.bytesTransferred/s.totalBytes*100):0;},reject, function(){resolve(task.snapshot);});});var url=await snap.ref.getDownloadURL();var type=kind==='voice'?'voice':kind;var extra={type:type,mediaUrl:url,mediaName:name||'Файл',mediaSize:file.size,mime:file.type||'',duration:duration||0};if(type==='image'||type==='video'||type==='audio')extra.text='';playSound('send');vibrate('send');await pushMessage(extra);toast('Отправлено');}catch(e){console.warn('media upload',e);toast('Не удалось загрузить файл');}
+}
+function mediaKind(file){var t=file.type||'';if(t.indexOf('image/')===0)return'image';if(t.indexOf('video/')===0)return'video';if(t.indexOf('audio/')===0)return'audio';return'file';}
+async function handleMediaFiles(files){var arr=Array.from(files||[]);for(var i=0;i<arr.length;i++){var f=arr[i];await uploadAndSendMedia(f,mediaKind(f),f.name,0);}if($('media-input'))$('media-input').value='';}
+var activeVoiceAudio=null;
+function toggleVoicePlayback(btn){var url=btn.dataset.voiceUrl;if(!url)return;if(activeVoiceAudio&&activeVoiceAudio.src===url&&!activeVoiceAudio.paused){activeVoiceAudio.pause();btn.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';return;}if(activeVoiceAudio){try{activeVoiceAudio.pause();}catch(e){}}activeVoiceAudio=new Audio(url);btn.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';activeVoiceAudio.onended=function(){btn.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';};activeVoiceAudio.play().catch(function(){toast('Не удалось воспроизвести');});}
+
 async function sendMessage(){
   var inp=$('msg-input');var text=inp.value.trim();
   if(!text||!currentChatId)return;
@@ -2434,7 +2489,7 @@ async function sendSticker(emoji){
   if(replyToMsg)extra.replyTo={id:replyToMsg.id,preview:replyToMsg.preview};
   replyToMsg=null;updateReplyBar();playSound('send');vibrate('send');await pushMessage(extra);
 }
-function previewFromMsg(msg){var s;if(msg.type==='sticker')s='Стикер '+msg.text;else s=msg.text||'';return truncate(s,60);}
+function previewFromMsg(msg){var s;if(msg.type==='sticker')s='Стикер '+msg.text;else if(msg.type==='voice')s='🎤 Голосовое сообщение';else if(msg.type==='image')s='🖼 Фото';else if(msg.type==='video')s='🎬 Видео';else if(msg.type==='audio')s='🎵 Аудио';else if(msg.type==='file')s='📎 '+(msg.mediaName||'Файл');else s=msg.text||'';return truncate(s,60);}
 async function processMentions(text,chatId){
   if(!text)return [];
   var re=/@([a-z0-9_]+)/gi;var m;var uids=[];var matches=[];
@@ -2493,6 +2548,10 @@ function resolveOtherUid(chatId,opts){
   return null;
 }
 $('send-btn').onclick=sendMessage;
+$('media-btn').onclick=function(){if($('media-input'))$('media-input').click();};
+$('media-input').addEventListener('change',function(){handleMediaFiles(this.files);});
+$('voice-btn').onclick=function(){if(voiceRecorder&&voiceRecorder.state==='recording')stopVoiceRecording();else startVoiceRecording();};
+
 $('msg-input').addEventListener('keydown',function(e){
   var dd=$('mention-dropdown');
   if(dd&&dd.classList.contains('show')&&(e.key==='Enter'||e.key==='Tab')){e.preventDefault();var first=dd.querySelector('.mention-item');if(first)insertMention(first.dataset.uname);return;}
