@@ -2457,13 +2457,45 @@ async function startVoiceRecording(){
 }
 function stopVoiceRecording(){if(voiceRecorder&&voiceRecorder.state!=='inactive'){try{voiceRecorder.stop();}catch(e){}}}
 async function uploadAndSendMedia(file,kind,name,duration){
-  if(!currentChatId||!currentUser||!storage)return;
+  if(!currentChatId||!currentUser){toast('Откройте чат перед отправкой');return;}
+  if(!storage){toast('Firebase Storage не подключён');return;}
+  if(!file||!file.size){toast('Файл пустой или не выбран');return;}
   var max=kind==='video'?80*1024*1024:kind==='image'?15*1024*1024:kind==='voice'||kind==='audio'?25*1024*1024:30*1024*1024;
   if(file.size>max){toast('Файл слишком большой (лимит '+formatBytes(max)+')');return;}
   var ext=(name&&name.indexOf('.')>-1)?name.split('.').pop().toLowerCase():(kind==='voice'?'webm':'bin');
   var path='chatMedia/'+currentUser.uid+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,8)+'.'+ext;
-  var task=storage.ref(path).put(file,{contentType:file.type||'application/octet-stream',customMetadata:{ownerUid:currentUser.uid,chatId:currentChatId}});
-  var toastId='';try{toast('Загрузка…');var snap=await new Promise(function(resolve,reject){task.on('state_changed',function(s){var pct=s.totalBytes?Math.round(s.bytesTransferred/s.totalBytes*100):0;},reject, function(){resolve(task.snapshot);});});var url=await snap.ref.getDownloadURL();var type=kind==='voice'?'voice':kind;var extra={type:type,mediaUrl:url,mediaName:name||'Файл',mediaSize:file.size,mime:file.type||'',duration:duration||0};if(type==='image'||type==='video'||type==='audio')extra.text='';playSound('send');vibrate('send');await pushMessage(extra);toast('Отправлено');}catch(e){console.warn('media upload',e);toast('Не удалось загрузить файл');}
+  var task;
+  try{
+    task=storage.ref(path).put(file,{contentType:file.type||'application/octet-stream'});
+    toast('Загрузка…');
+    var snap=await new Promise(function(resolve,reject){
+      task.on('state_changed',function(s){
+        var pct=s.totalBytes?Math.round(s.bytesTransferred/s.totalBytes*100):0;
+        if(pct===100)toast('Обработка файла…');
+      },reject,function(){resolve(task.snapshot);});
+    });
+    var url=await snap.ref.getDownloadURL();
+    var type=kind==='voice'?'voice':kind;
+    var extra={type:type,mediaUrl:url,mediaName:name||'Файл',mediaSize:file.size,mime:file.type||'application/octet-stream',duration:Number(duration)||0};
+    if(type==='image'||type==='video'||type==='audio')extra.text='';
+    await pushMessage(extra);
+    playSound('send');
+    vibrate('send');
+    toast('Отправлено');
+  }catch(e){
+    console.warn('Flux media upload error',e);
+    var code=e&&e.code?String(e.code):'';
+    var msg=e&&e.message?String(e.message):'';
+    if(code.indexOf('storage/unauthorized')!==-1||code.indexOf('permission-denied')!==-1){
+      toast('Нет доступа к Firebase Storage');
+    }else if(code.indexOf('storage/unknown')!==-1||code.indexOf('storage/bucket-not-found')!==-1){
+      toast('Firebase Storage не настроен');
+    }else if(code.indexOf('storage/canceled')!==-1){
+      toast('Загрузка отменена');
+    }else{
+      toast('Ошибка файла: '+(msg||code||'неизвестная ошибка'));
+    }
+  }
 }
 function mediaKind(file){var t=file.type||'';if(t.indexOf('image/')===0)return'image';if(t.indexOf('video/')===0)return'video';if(t.indexOf('audio/')===0)return'audio';return'file';}
 async function handleMediaFiles(files){var arr=Array.from(files||[]);for(var i=0;i<arr.length;i++){var f=arr[i];await uploadAndSendMedia(f,mediaKind(f),f.name,0);}if($('media-input'))$('media-input').value='';}
