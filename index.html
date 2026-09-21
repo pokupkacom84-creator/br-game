@@ -69,6 +69,20 @@ body.dark{
 body,.header,.chat-header,.bottom-nav,.msg,.msg.out,.msg.in,.chat-item,.nav-item,.settings-item,.modal,.profile-sheet-body,.fab,.btn-primary,.chat-input-bar,.search-bar input,.toggle,.vpn-card,.vpn-key-item,.profile-action,.profile-info-card,.avatar,.typing-bubble,.pinned-bar{transition:background-color .5s var(--ease-out),color .5s var(--ease-out),border-color .5s var(--ease-out),box-shadow .5s var(--ease-out)}
 html,body{height:100%;height:100dvh;overflow:hidden}
 body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Inter','Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:var(--fs);line-height:1.42;letter-spacing:-.01em;overscroll-behavior:none;-webkit-font-smoothing:antialiased}
+/* ==== Flux Purple Glass visual system ==== */
+body::before{content:'';position:fixed;inset:-18%;pointer-events:none;z-index:-1;background:radial-gradient(circle at 15% 15%,rgba(124,58,237,.18),transparent 28%),radial-gradient(circle at 85% 20%,rgba(168,85,247,.14),transparent 30%),radial-gradient(circle at 50% 90%,rgba(99,102,241,.12),transparent 34%);filter:blur(34px);animation:fluxAmbient 14s ease-in-out infinite alternate}
+body.dark::before{background:radial-gradient(circle at 15% 15%,rgba(124,58,237,.24),transparent 30%),radial-gradient(circle at 85% 20%,rgba(168,85,247,.18),transparent 32%),radial-gradient(circle at 50% 90%,rgba(79,70,229,.18),transparent 36%)}
+@keyframes fluxAmbient{from{transform:scale(1) translate3d(0,0,0);opacity:.72}to{transform:scale(1.08) translate3d(1.5%, -1%,0);opacity:1}}
+.header,.chat-header,.bottom-nav,.chat-input-bar,.profile-info-card,.profile-action,.modal,.profile-sheet-body,.shop-card,.premium-benefit,.premium-plan,.settings-item,.vpn-card,.vpn-key-item{border:1px solid rgba(168,85,247,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 12px 34px rgba(88,28,135,.07)}
+body.dark .header,body.dark .chat-header,body.dark .bottom-nav,body.dark .chat-input-bar,body.dark .profile-info-card,body.dark .profile-action,body.dark .modal,body.dark .profile-sheet-body,body.dark .shop-card,body.dark .premium-benefit,body.dark .premium-plan,body.dark .settings-item,body.dark .vpn-card,body.dark .vpn-key-item{border-color:rgba(168,85,247,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 16px 40px rgba(0,0,0,.24)}
+.avatar,.profile-avatar-big{background-image:linear-gradient(135deg,#6d28d9,#a855f7 48%,#c084fc);background-color:transparent}
+.btn-primary,.sheet-btn.primary,.modal-btn.primary{background:linear-gradient(135deg,#6d28d9,#8b5cf6 48%,#c026d3)!important;box-shadow:0 10px 28px rgba(124,58,237,.28)}
+.reaction-chip{background:linear-gradient(135deg,rgba(124,58,237,.10),rgba(192,38,211,.08));border:1px solid rgba(139,92,246,.18);box-shadow:0 5px 16px rgba(124,58,237,.08)}
+.reaction-chip.mine{background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(192,38,211,.14));box-shadow:0 0 0 1.5px #8b5cf6,0 6px 18px rgba(124,58,237,.18)}
+.premium-reaction-note{display:inline-flex;align-items:center;gap:5px;margin-left:6px;padding:3px 7px;border-radius:99px;background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(192,38,211,.13));color:#8b5cf6;font-size:10px;font-weight:900;vertical-align:middle}
+.gift-rarity-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:99px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;background:rgba(124,58,237,.10);color:#8b5cf6}
+.exchange-btn{background:linear-gradient(135deg,rgba(124,58,237,.13),rgba(192,38,211,.10));border:1px solid rgba(139,92,246,.2);color:#8b5cf6;font-weight:800}
+
 input,textarea,select{user-select:text;-webkit-user-select:text;font-family:inherit;font-size:16px;color:var(--text)}
 button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;background:none;color:inherit;outline:none;transition:transform .35s var(--ease-bounce),filter .24s var(--ease-out),background .24s var(--ease-out),color .24s var(--ease-out)}
 button:active{transform:scale(.94)}
@@ -2166,7 +2180,7 @@ function paintMessages(msgs){
     if(m.replyTo&&m.replyTo.id){var r=msgs.find(function(x){return x.id===m.replyTo.id;});var rName=r?(r.senderId===currentUser.uid?'Вы':(currentChatUser?currentChatUser.name:'')):'Сообщение';replyHtml='<div class="msg-reply" data-jump="'+escAttr(m.replyTo.id)+'"><div class="msg-reply-name">'+esc(rName)+'</div><div class="msg-reply-text">'+esc(m.replyTo.preview||'')+'</div></div>';}
     var fwdHtml='';if(m.forwardedFrom&&m.forwardedFrom.name)fwdHtml='<div class="msg-fwd">↪ Переслано от '+esc(m.forwardedFrom.name)+'</div>';
     var reactionsHtml='';
-    if(m.reactions){var grouped={};Object.keys(m.reactions).forEach(function(uid){var r=m.reactions[uid];if(!r)return;grouped[r]=grouped[r]||[];grouped[r].push(uid);});var chips='';Object.keys(grouped).forEach(function(r){var mine=grouped[r].indexOf(currentUser.uid)!==-1;chips+='<span class="reaction-chip'+(mine?' mine':'')+'" data-react="'+escAttr(r)+'" data-msgid="'+escAttr(m.id)+'">'+r+' '+grouped[r].length+'</span>';});if(chips)reactionsHtml='<div class="msg-reactions">'+chips+'</div>';}
+    if(m.reactions){var grouped={};Object.keys(m.reactions).forEach(function(uid){var rv=m.reactions[uid];if(!rv)return;var rs=Array.isArray(rv)?rv:[rv];rs.forEach(function(r){if(!r)return;grouped[r]=grouped[r]||[];grouped[r].push(uid);});});var chips='';Object.keys(grouped).forEach(function(r){var mine=grouped[r].indexOf(currentUser.uid)!==-1;chips+='<span class="reaction-chip'+(mine?' mine':'')+'" data-react="'+escAttr(r)+'" data-msgid="'+escAttr(m.id)+'">'+r+' '+grouped[r].length+'</span>';});if(chips)reactionsHtml='<div class="msg-reactions">'+chips+'</div>';}
     if(chatSearchQuery&&m.text&&m.text.toLowerCase().indexOf(chatSearchQuery.toLowerCase())===-1&&!m.forwardedFrom)return;
     var editedMark=m.editedAt?'<span class="msg-edited">изм.</span>':'';
     var extraCls=m._pending?' pending':(m._failed?' failed':'');
@@ -2286,7 +2300,7 @@ function openMsgMenu(el){
   var isPinned=currentChatMeta&&currentChatMeta.pins&&currentChatMeta.pins[msgId];
   var html='<div class="msg-menu-reactions">';
   QUICK_REACTIONS.forEach(function(r){html+='<button data-react="'+r+'">'+r+'</button>';});
-  html+='</div>';
+  html+='</div>'+(isUserPremium(currentUserData)?'<div style="padding:6px 12px 4px;font-size:10px;color:var(--accent);font-weight:800">👑 Premium · можно выбрать до 3 реакций</div>':'');
   html+='<div class="msg-menu-item" data-action="reply"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>Ответить</div>';
   if(!isSavedChat(currentChatId))html+='<div class="msg-menu-item" data-action="pin"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>'+(isPinned?'Открепить':'Закрепить')+'</div>';
   if(msg.text&&msg.type!=='sticker')html+='<div class="msg-menu-item" data-action="copy"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>Копировать</div>';
@@ -2381,20 +2395,24 @@ async function toggleReaction(msgId,emoji,sourceEl){
   if(!currentChatId||!currentUser)return;
   var burstX=null,burstY=null;
   try{
-    var r=null;
-    if(sourceEl&&sourceEl.getBoundingClientRect){var rr=sourceEl.getBoundingClientRect();if(rr.width||rr.height)r=rr;}
+    var r=null;if(sourceEl&&sourceEl.getBoundingClientRect){var rr=sourceEl.getBoundingClientRect();if(rr.width||rr.height)r=rr;}
     if(!r){var el=document.querySelector('.msg[data-msgid="'+msgId+'"]');if(el){var er=el.getBoundingClientRect();if(er.width||er.height)r=er;}}
     if(r&&(r.left||r.top)){burstX=r.left+r.width/2;burstY=r.top+r.height/2;}
   }catch(e){}
   var ref=db.ref('chats/'+currentChatId+'/messages/'+msgId+'/reactions/'+currentUser.uid);
   try{
-    var cur=await ref.once('value');
-    if(cur.val()===emoji){await ref.remove();}
+    var snap=await ref.once('value');var raw=snap.val();var current=Array.isArray(raw)?raw.slice():raw?[raw]:[];
+    var idx=current.indexOf(emoji);
+    if(idx>=0){current.splice(idx,1);}
     else{
-      await ref.set(emoji);
-      if(burstX!==null&&burstY!==null)spawnParticles(burstX,burstY,16);
-      playSound('react');vibrate('tap');
+      if(isUserPremium(currentUserData)){
+        if(current.length>=3){toast('Premium: максимум 3 реакции на сообщение');return;}
+        current.push(emoji);
+      }else{current=[emoji];}
     }
+    if(!current.length)await ref.remove();else await ref.set(current);
+    if(idx<0&&burstX!==null&&burstY!==null)spawnParticles(burstX,burstY,16);
+    if(idx<0){playSound('react');vibrate('tap');}
   }catch(e){toast('Не удалось поставить реакцию');}
 }
 function startReply(msg){
@@ -2789,7 +2807,7 @@ function renderShop(){
 function renderGiftsTab(list){
   var order=['common','rare','epic','legendary'];var titles={common:'Обычные',rare:'Редкие',epic:'Эпические',legendary:'Легендарные'};var grouped={common:[],rare:[],epic:[],legendary:[]};
   GIFTS.forEach(function(g){if(grouped[g.rarity])grouped[g.rarity].push(g);});
-  var html='<div class="shop-banner"><div class="shop-banner-title">Подарки Flux</div><div class="shop-banner-desc">Отправляйте красивые подарки друзьям за внутренние звёзды Flux.</div><div class="shop-banner-balance">'+starSvg()+' '+(myStars||0).toLocaleString('ru-RU')+' звёзд</div></div><div class="shop-grid">';
+  var html='<div class="shop-banner"><div class="shop-banner-title">Подарки Flux</div><div class="shop-banner-desc">Собирайте цифровые подарки, открывайте редкости, создавайте коллекции и обменивайтесь ими с друзьями.</div><div class="shop-banner-balance">'+starSvg()+' '+(myStars||0).toLocaleString('ru-RU')+' звёзд</div></div><div class="shop-grid">';
   order.forEach(function(r){if(!grouped[r].length)return;html+='<div class="shop-section-title">'+titles[r]+'</div>';grouped[r].forEach(function(g){html+='<div class="shop-card rarity-'+g.rarity+'" data-gift="'+g.id+'"><div class="shop-card-rarity">'+r+'</div>'+giftArtSvg(g,'')+'<div class="shop-card-name">'+esc(g.name)+'</div><div class="shop-card-price">'+starSvg()+g.price+'</div></div>';});});
   html+='</div>';list.innerHTML=html;list.querySelectorAll('[data-gift]').forEach(function(el){el.onclick=function(){var g=GIFTS.find(function(x){return x.id===el.dataset.gift;});buyGift(g,null);};});
 }
@@ -2838,6 +2856,7 @@ function renderPremiumTab(list){
     '<div class="premium-benefit"><div class="premium-benefit-icon">👑</div><div class="premium-benefit-title">Premium-бейдж</div><div class="premium-benefit-desc">Красивый бейдж рядом с именем и в профиле.</div></div>'+
     '<div class="premium-benefit"><div class="premium-benefit-icon">📌</div><div class="premium-benefit-title">Больше закреплений</div><div class="premium-benefit-desc">Расширенное количество закреплённых чатов.</div></div>'+
     ''+
+    '<div class="premium-benefit"><div class="premium-benefit-icon">🔥</div><div class="premium-benefit-title">3 реакции</div><div class="premium-benefit-desc">Ставьте до трёх разных реакций на одно сообщение.</div></div>'+
     '<div class="premium-benefit"><div class="premium-benefit-icon">✨</div><div class="premium-benefit-title">Premium-оформление</div><div class="premium-benefit-desc">Особый профиль, визуальные эффекты и анимации.</div></div>'+
     '<div class="premium-benefit"><div class="premium-benefit-icon">🎁</div><div class="premium-benefit-title">Эксклюзивные подарки</div><div class="premium-benefit-desc">Доступ к специальным Premium-подаркам и оформлению.</div></div>'+
     '<div class="premium-benefit"><div class="premium-benefit-icon">🎨</div><div class="premium-benefit-title">Дополнительное оформление</div><div class="premium-benefit-desc">Больше вариантов профиля и визуальных эффектов.</div></div>'+
@@ -2981,11 +3000,12 @@ async function openGiftDetails(ownerUid,giftKey,isSent){
     var personLabel=isSent?'Кому':'От';
     var personName=isSent?(g.toName||g.toUsername||'Пользователю'):(sender.name||'Пользователь');
     var personUsername=isSent?(g.toUsername||''):(sender.username||'');
-    body.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;padding:4px 0 16px">'+giftArtSvg(g,'lg')+'<div style="font-size:25px;font-weight:800;margin-top:2px">'+title+'</div><div style="font-size:14px;color:var(--text-2);margin-top:4px">'+esc(g.name||'Подарок')+'</div></div>'+ 
+    body.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;padding:4px 0 16px">'+giftArtSvg(g,'lg')+'<div style="font-size:25px;font-weight:800;margin-top:2px">'+title+'</div><div style="font-size:14px;color:var(--text-2);margin-top:4px">'+esc(g.name||'Подарок')+'</div><div class="gift-rarity-pill" style="margin-top:7px">'+esc(g.rarity||'common')+'</div></div>'+ 
       '<div class="profile-info-card" style="margin:0"><div class="info-row"><div class="info-value">'+esc(personName)+(personUsername?' <span style="color:var(--accent);font-weight:600">@'+esc(personUsername)+'</span>':'')+'</div><div class="info-label">'+personLabel+'</div></div><div class="info-row"><div class="info-value">'+esc(date)+'</div><div class="info-label">Дата</div></div><div class="info-row"><div class="info-value" style="display:flex;align-items:center;gap:5px">'+giftStarPriceHtml(g.price)+'</div><div class="info-label">Стоимость</div></div>'+(comment?'<div class="info-row"><div class="info-value" style="white-space:pre-wrap;word-break:break-word">'+esc(comment)+'</div><div class="info-label">Комментарий</div></div>':'<div class="info-row"><div class="info-value" style="color:var(--text-2)">Без комментария</div><div class="info-label">Комментарий</div></div>')+'</div>'+ 
       '<div style="font-size:12px;color:var(--text-2);text-align:center;margin:14px 8px">Комментарий сохраняется вместе с подарком и отображается в профиле.</div>'+ 
-      '<div class="modal-actions stack"><button class="sheet-btn primary" id="gift-detail-close">Готово</button>'+(mine&&!isSent&&g.visible!==false?'<button class="sheet-btn secondary" id="gift-hide">Скрыть из профиля</button>':'')+(mine&&!isSent&&g.visible===false?'<button class="sheet-btn secondary" id="gift-show">Показать в профиле</button>':'')+'</div>';
+      '<div class="modal-actions stack"><button class="sheet-btn primary" id="gift-detail-close">Готово</button>'+(mine&&!isSent?'<button class="sheet-btn exchange-btn" id="gift-exchange">🔄 Обменять подарок</button>':'')+(mine&&!isSent&&g.visible!==false?'<button class="sheet-btn secondary" id="gift-hide">Скрыть из профиля</button>':'')+(mine&&!isSent&&g.visible===false?'<button class="sheet-btn secondary" id="gift-show">Показать в профиле</button>':'')+'</div>';
     var close=document.getElementById('gift-detail-close');if(close)close.onclick=function(){sheet.classList.remove('show');};
+    var exchange=document.getElementById('gift-exchange');if(exchange)exchange.onclick=function(){sheet.classList.remove('show');openGiftExchangePicker(g,giftKey);};
     var hide=document.getElementById('gift-hide');if(hide)hide.onclick=async function(){try{await db.ref('users/'+ownerUid+'/giftsReceived/'+giftKey+'/visible').set(false);toast('Подарок скрыт из профиля');sheet.classList.remove('show');renderProfileGifts();}catch(e){toast('Не удалось скрыть подарок');}};
     var show=document.getElementById('gift-show');if(show)show.onclick=async function(){try{await db.ref('users/'+ownerUid+'/giftsReceived/'+giftKey+'/visible').set(true);toast('Подарок снова виден');sheet.classList.remove('show');renderProfileGifts();}catch(e){toast('Не удалось показать подарок');}};
   }catch(e){body.innerHTML='<div class="empty">Не удалось открыть подарок</div><button class="sheet-btn secondary" id="gift-detail-close">Закрыть</button>';var c=document.getElementById('gift-detail-close');if(c)c.onclick=function(){sheet.classList.remove('show');};}
@@ -3071,6 +3091,32 @@ async function openAdminUserActions(u){
     m.querySelector('#adm-premium').onclick=async function(){var days=prompt('На сколько дней выдать Premium?','30');if(days===null)return;days=Math.max(1,Math.floor(Number(days)));if(!Number.isFinite(days))return;try{var ref=db.ref('users/'+u.uid+'/premium'),snap=await ref.once('value'),p=snap.val()||{},base=isPremiumActive(p)?Number(p.expiresAt||Date.now()):Date.now(),exp=base+days*86400000;await ref.update({active:true,expiresAt:exp,plan:'admin',updatedAt:Date.now(),grantedBy:currentUser.uid});toast('Premium выдан на '+days+' дней');close();}catch(e){toast('Не удалось выдать Premium');}};
     m.querySelector('#adm-block').onclick=async function(){if(u.uid===currentUser.uid){toast('Нельзя заблокировать свой аккаунт');return;}try{await db.ref('users/'+u.uid+'/adminBlocked').set(!u.adminBlocked);toast(u.adminBlocked?'Пользователь разблокирован':'Пользователь заблокирован');close();}catch(e){toast('Не удалось изменить блокировку');}};
   });
+}
+
+function openGiftExchangePicker(g,giftKey){
+  var sheet=document.getElementById('gift-sheet');sheet.classList.add('show');
+  var body=document.getElementById('gift-sheet-body');
+  var html='<div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:6px 0 14px">'+giftArtSvg(g,'sm')+'<div style="font-size:19px;font-weight:850">Обмен подарком</div><div style="font-size:12px;color:var(--text-2);text-align:center">Выберите друга, которому хотите передать этот подарок.</div></div><input id="gift-exchange-search" class="sheet-input" placeholder="Поиск пользователя…" style="margin-bottom:10px"><div id="gift-exchange-people" style="max-height:48vh;overflow-y:auto"></div><button class="sheet-btn secondary ripple" id="gift-exchange-cancel" style="margin-top:10px">Отмена</button>';
+  body.innerHTML=html;var people=document.getElementById('gift-exchange-people');
+  function renderPeople(q){q=(q||'').toLowerCase();var ids=Object.keys(chatsData||{}).filter(function(id){return !isSavedChat(id)&&chatsData[id].otherUid;});var out='',found=0;ids.forEach(function(id){var u=userCache[chatsData[id].otherUid];if(!u||u.uid===currentUser.uid||!u.name)return;if(q&&((u.name||'')+' '+(u.username||'')).toLowerCase().indexOf(q)===-1)return;found++;out+='<div class="chat-item" data-exchange-pick="'+escAttr(u.uid)+'" style="padding:10px 6px">'+avatarHtml(u,'avatar-sm')+'<div class="chat-item-info"><div class="chat-item-top"><div class="chat-item-name">'+esc(u.name)+'</div></div>'+(u.username?'<div class="chat-item-bottom"><div class="chat-item-msg">@'+esc(u.username)+'</div></div>':'')+'</div></div>';});if(!found)out='<div class="empty" style="padding:30px 10px"><div class="empty-title">Никого не найдено</div></div>';people.innerHTML=out;applyAvatarUrls(people);people.querySelectorAll('[data-exchange-pick]').forEach(function(el){el.onclick=function(){sheet.classList.remove('show');confirmGiftExchange(g,giftKey,el.dataset.exchangePick);};});}
+  renderPeople('');var inp=document.getElementById('gift-exchange-search');if(inp)inp.oninput=function(){renderPeople(this.value.trim());};document.getElementById('gift-exchange-cancel').onclick=function(){sheet.classList.remove('show');};
+}
+function confirmGiftExchange(g,giftKey,targetUid){
+  var u=userCache[targetUid]||{};
+  showModal('<div class="modal-title">Обменять подарок?</div><div class="modal-text" style="text-align:center">'+giftArtSvg(g,'sm')+'<br><b>'+esc(g.name||'Подарок')+'</b><br><span style="color:var(--text-2)">Получатель: '+esc(u.name||'пользователь')+'</span></div><div class="modal-actions stack"><button class="modal-btn primary" id="exchange-confirm">Обменять</button><button class="modal-btn" id="exchange-cancel">Отмена</button></div>',function(m,close){m.querySelector('#exchange-cancel').onclick=close;m.querySelector('#exchange-confirm').onclick=async function(){close();await exchangeGiftWith(g,giftKey,targetUid);};});
+}
+async function exchangeGiftWith(g,giftKey,targetUid){
+  if(!currentUser||!g||!giftKey||!targetUid||targetUid===currentUser.uid)return;
+  try{
+    var ref=db.ref('users/'+currentUser.uid+'/giftsReceived/'+giftKey);var snap=await ref.once('value');var own=snap.val();
+    if(!own){toast('Подарок уже недоступен');return;}
+    var targetKey=db.ref('users/'+targetUid+'/giftsReceived').push().key;
+    var transferred=Object.assign({},own,{ownerUid:targetUid,exchangedAt:Date.now(),exchangedFrom:currentUser.uid,visible:true});
+    var updates={};updates['users/'+currentUser.uid+'/giftsReceived/'+giftKey]=null;updates['users/'+targetUid+'/giftsReceived/'+targetKey]=transferred;
+    await db.ref().update(updates);
+    toast('Подарок передан');playSound('react');vibrate('send');
+    myGifts=Object.assign({},myGifts);delete myGifts[giftKey];renderProfileGifts();renderAvatarGiftBadge();
+  }catch(e){toast('Не удалось обменять подарок');console.error('gift exchange',e);}
 }
 
 function openGiftPicker(targetUid){
