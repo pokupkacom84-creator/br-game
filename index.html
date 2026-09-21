@@ -640,7 +640,7 @@ body.dark .header,body.dark .chat-header,body.dark .bottom-nav,body.dark .chat-i
 .gift-message-card{background:var(--surface)!important;background-image:none!important}
 .shop-banner{background:var(--accent)!important;background-image:none!important;box-shadow:var(--shadow-1)!important}
 </style>
-</head>
+<style>.vpn-premium-locked{opacity:.72}.vpn-premium-locked::after{content:' Premium';font-size:9px;font-weight:800}</style></head>
 <body>
 
 <div id="pin-lock" class="pin-lock">
@@ -1069,11 +1069,12 @@ const CLOCK_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 const WARN_ICON='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z"/></svg>';
 
 let VPN_SOURCES=[
-  {id:'v1',name:'VPN 1',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/26.txt'},
-  {id:'v2',name:'VPN 2',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/25.txt'},
-  {id:'v3',name:'VPN 3',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/24.txt'}
+  {id:'v1',name:'🆓 Бесплатный VPN 1',kind:'free',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/26.txt'},
+  {id:'v2',name:'🆓 Бесплатный VPN 2',kind:'free',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/25.txt'},
+  {id:'v3',name:'🆓 Бесплатный VPN 3',kind:'free',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/24.txt'},
+  {id:'premium',name:'👑 Premium VPN',kind:'premium',repo:'pokupkacom84-creator/Prem-VpnKey',ref:'92954a11cdd627f05635bcb0a441b4fbd8d670a3',path:'Vpn',url:'https://raw.githubusercontent.com/pokupkacom84-creator/Prem-VpnKey/92954a11cdd627f05635bcb0a441b4fbd8d670a3/Vpn'}
 ];
-let vpnActiveSourceId=(function(){try{return localStorage.getItem('flux_vpn_source')||VPN_SOURCES[0].id;}catch(e){return VPN_SOURCES[0].id;}})();
+let vpnActiveSourceId=(function(){try{return localStorage.getItem('flux_vpn_source')||'v1';}catch(e){return VPN_SOURCES[0].id;}})();
 function getActiveVpnSource(){return VPN_SOURCES.find(function(s){return s.id===vpnActiveSourceId;})||VPN_SOURCES[0];}
 async function discoverVpnSources(){
   try{
@@ -2913,6 +2914,7 @@ async function loadPremiumState(){
   try{
     var snap=await db.ref('users/'+currentUser.uid+'/premium').once('value');
     var v=snap.val()||{};window.__fluxPremiumState=v;
+    try{renderVpnSources();}catch(e){}
     var active=isPremiumActive(v);
     if(v.active&&!active){try{await db.ref('users/'+currentUser.uid+'/premium/active').set(false);}catch(e){}}
     var body=document.body;body.classList.toggle('flux-premium',active);
@@ -3623,9 +3625,20 @@ function onVpnScroll(){if(vpnRenderedUpTo<vpnFiltered.length&&isVpnItemVisible()
 function renderVpnKeys(){var list=$('vpn-key-list'),count=$('vpn-count'),refreshBtn=$('vpn-refresh-btn'),loadBtn=$('vpn-load-btn');if(!list)return;list.innerHTML='';vpnRenderedUpTo=0;if(!vpnFiltered.length){list.innerHTML='<div class="vpn-empty">Нет ключей</div>';if(count)count.textContent='';if(refreshBtn)refreshBtn.style.display='none';if(loadBtn)loadBtn.style.display='flex';return;}if(loadBtn)loadBtn.style.display='none';if(refreshBtn)refreshBtn.style.display='flex';if(count)count.textContent='Показано: '+vpnFiltered.length+' из '+vpnKeys.length;appendVpnBatch();var c=$('vpn-container');if(c&&!c._vpnScrollBound){c._vpnScrollBound=true;c.addEventListener('scroll',onVpnScroll,{passive:true});}setTimeout(function(){if(vpnRenderedUpTo<vpnFiltered.length&&isVpnItemVisible())scheduleVpnAppend();},60);}
 function renderVpnSources(){
   var wrap=$('vpn-sources');if(!wrap)return;
-  wrap.innerHTML=VPN_SOURCES.map(function(s){return '<button class="vpn-chip'+(s.id===vpnActiveSourceId?' active':'')+'" data-src="'+escAttr(s.id)+'">'+esc(s.name)+'</button>';}).join('');
+  var premiumOk=isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{}));
+  wrap.innerHTML=VPN_SOURCES.map(function(s){
+    var locked=s.kind==='premium'&&!premiumOk;
+    return '<button class="vpn-chip'+(s.id===vpnActiveSourceId?' active':'')+(locked?' vpn-premium-locked':'')+'" data-src="'+escAttr(s.id)+'"'+(locked?' title="Доступно только Premium"':'')+'>'+esc(s.name)+(locked?' 🔒':'')+'</button>';
+  }).join('');
   wrap.querySelectorAll('.vpn-chip').forEach(function(ch){
     ch.onclick=function(){
+      var selected=VPN_SOURCES.find(function(x){return x.id===ch.dataset.src;});
+      var premiumOk=isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{}));
+      if(selected&&selected.kind==='premium'&&!premiumOk){
+        toast('👑 Premium нужен для Premium VPN');
+        if(typeof openPremiumManager==='function')openPremiumManager();
+        return;
+      }
       if(vpnActiveSourceId===ch.dataset.src)return;
       vpnActiveSourceId=ch.dataset.src;try{localStorage.setItem('flux_vpn_source',vpnActiveSourceId);}catch(e){}
       vpnKeys=[];vpnFiltered=[];vpnRenderedUpTo=0;vpnProtoFilter='all';
@@ -3643,9 +3656,46 @@ async function loadVpnKeys(){
   if(loadBtn)loadBtn.disabled=true;if(refreshBtn)refreshBtn.disabled=true;
   if(list)list.innerHTML='<div class="skeleton"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line"></div><div class="sk-line short"></div></div></div>';
   var source=getActiveVpnSource();
+  var premiumOk=isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{}));
+  if(source.kind==='premium'&&!premiumOk){
+    if(list)list.innerHTML='<div class="vpn-empty">👑 Premium VPN доступен только Premium-пользователям</div>';
+    if(loadBtn)loadBtn.style.display='flex';if(refreshBtn)refreshBtn.style.display='none';
+    if(loadBtn)loadBtn.disabled=false;if(refreshBtn)refreshBtn.disabled=false;
+    toast('👑 Premium нужен для Premium VPN');
+    return;
+  }
+
   var urls=[source.url+(source.url.indexOf('?')===-1?'?':'&')+'t='+Date.now(),'https://corsproxy.io/?'+encodeURIComponent(source.url),'https://api.allorigins.win/raw?url='+encodeURIComponent(source.url)];
+  if(source.kind==='premium'){
+    urls.unshift('https://api.github.com/repos/'+source.repo+'/contents/'+source.path+'?ref='+source.ref+'&t='+Date.now());
+  }
   var text=null,lastErr=null;
-  for(var u=0;u<urls.length;u++){try{var resp=await fetch(urls[u],{cache:'no-store'});if(!resp.ok)throw new Error('HTTP '+resp.status);var t=await resp.text();if(!t||t.length<20)throw new Error('Пустой ответ');text=t;break;}catch(err){lastErr=err;}}
+  for(var u=0;u<urls.length;u++){
+    try{
+      var resp=await fetch(urls[u],{cache:'no-store',headers:u===0&&source.kind==='premium'?{'Accept':'application/vnd.github+json'}:undefined});
+      if(!resp.ok)throw new Error('HTTP '+resp.status);
+      var t=await resp.text();
+
+      if(source.kind==='premium'&&u===0){
+        var items=JSON.parse(t);
+        if(!Array.isArray(items))throw new Error('GitHub API: неожиданный ответ');
+        var files=items.filter(function(f){return f&&f.type==='file'&&f.download_url;});
+        if(!files.length)throw new Error('В папке Vpn нет файлов');
+
+        var parts=[];
+        for(var fi=0;fi<files.length;fi++){
+          try{
+            var fr=await fetch(files[fi].download_url+'?t='+Date.now(),{cache:'no-store'});
+            if(fr.ok)parts.push(await fr.text());
+          }catch(ignore){}
+        }
+        t=parts.join('\n');
+      }
+
+      if(!t||t.length<20)throw new Error('Пустой ответ');
+      text=t;break;
+    }catch(err){lastErr=err;}
+  }
   if(!text){if(list)list.innerHTML='<div class="vpn-empty">Не удалось загрузить «'+esc(source.name)+'»<br>'+esc(lastErr&&lastErr.message||'ошибка сети')+'</div>';if(loadBtn)loadBtn.style.display='flex';if(refreshBtn)refreshBtn.style.display='none';toast('Ошибка сети');if(loadBtn)loadBtn.disabled=false;if(refreshBtn)refreshBtn.disabled=false;return;}
   try{
     vpnKeys=parseVpnKeys(text);var seen=Object.create(null);
