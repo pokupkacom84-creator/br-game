@@ -2497,14 +2497,7 @@ async function uploadAndSendMedia(file,kind,name,duration){
     }
   }
 }
-function mediaKind(file){
-  var t=String(file&&file.type||'').toLowerCase();
-  var n=String(file&&file.name||'').toLowerCase();
-  if(t.indexOf('image/')===0||/\.(jpg|jpeg|png|gif|webp|bmp|heic|heif)$/i.test(n))return'image';
-  if(t.indexOf('video/')===0||/\.(mp4|webm|mov|m4v|avi|mkv)$/i.test(n))return'video';
-  if(t.indexOf('audio/')===0||/\.(mp3|wav|ogg|oga|m4a|aac|flac|opus)$/i.test(n))return'audio';
-  return'file';
-}
+function mediaKind(file){var t=file.type||'';if(t.indexOf('image/')===0)return'image';if(t.indexOf('video/')===0)return'video';if(t.indexOf('audio/')===0)return'audio';return'file';}
 async function handleMediaFiles(files){var arr=Array.from(files||[]);for(var i=0;i<arr.length;i++){var f=arr[i];await uploadAndSendMedia(f,mediaKind(f),f.name,0);}if($('media-input'))$('media-input').value='';}
 var activeVoiceAudio=null;
 function toggleVoicePlayback(btn){var url=btn.dataset.voiceUrl;if(!url)return;if(activeVoiceAudio&&activeVoiceAudio.src===url&&!activeVoiceAudio.paused){activeVoiceAudio.pause();btn.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';return;}if(activeVoiceAudio){try{activeVoiceAudio.pause();}catch(e){}}activeVoiceAudio=new Audio(url);btn.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';activeVoiceAudio.onended=function(){btn.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';};activeVoiceAudio.play().catch(function(){toast('Не удалось воспроизвести');});}
@@ -2587,27 +2580,9 @@ function resolveOtherUid(chatId,opts){
   return null;
 }
 $('send-btn').onclick=sendMessage;
-$('media-btn').onclick=function(e){
-  if(e&&e.preventDefault)e.preventDefault();
-  var inp=$('media-input');
-  if(!inp){toast('Медиа-кнопка не готова');return;}
-  try{
-    if(typeof inp.showPicker==='function') inp.showPicker();
-    else inp.click();
-  }catch(err){
-    try{inp.click();}catch(x){toast('Не удалось открыть выбор файла');}
-  }
-};
-$('media-input').addEventListener('change',function(){
-  var files=this.files;
-  if(!files||!files.length){return;}
-  handleMediaFiles(files);
-});
-$('voice-btn').onclick=function(e){
-  if(e&&e.preventDefault)e.preventDefault();
-  if(voiceRecorder&&voiceRecorder.state==='recording') stopVoiceRecording();
-  else startVoiceRecording();
-};
+$('media-btn').onclick=function(){if($('media-input'))$('media-input').click();};
+$('media-input').addEventListener('change',function(){handleMediaFiles(this.files);});
+$('voice-btn').onclick=function(){if(voiceRecorder&&voiceRecorder.state==='recording')stopVoiceRecording();else startVoiceRecording();};
 
 $('msg-input').addEventListener('keydown',function(e){
   var dd=$('mention-dropdown');
