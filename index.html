@@ -3129,9 +3129,23 @@ async function loadVpnKeys(){
         if(Array.isArray(j) && j.length){ files = j; break; }
       }catch(e){ lastErr = e; }
     }
-
-    /* GitHub API can return 403 because of rate limits. Use jsDelivr's public
-       package API as a read-only fallback so Premium VPN still loads in the app. */
+    /* GitHub API may return HTTP 403 because of rate limits. Try public read-only
+       proxy endpoints and jsDelivr before giving up, so the Premium list can load. */
+    if(!files){
+      var directApi = apiUrls[0];
+      var proxyUrls = [
+        'https://api.allorigins.win/raw?url='+encodeURIComponent(directApi),
+        'https://corsproxy.io/?url='+encodeURIComponent(directApi)
+      ];
+      for(var pi=0; pi<proxyUrls.length && !files; pi++){
+        try{
+          var pr = await fetch(proxyUrls[pi], {cache:'no-store'});
+          if(!pr.ok) throw new Error('Proxy HTTP '+pr.status);
+          var pj = await pr.json();
+          if(Array.isArray(pj) && pj.length) files = pj;
+        }catch(e){ lastErr = e; }
+      }
+    }
     if(!files){
       try{
         var cdnRef = (source.ref && /^[0-9a-f]{40}$/i.test(source.ref)) ? source.ref : 'main';
@@ -3150,7 +3164,6 @@ async function loadVpnKeys(){
         }
       }catch(e){ lastErr = e; }
     }
-
     if(!files || !files.length){
       if(list)list.innerHTML='<div class="vpn-empty">Не удалось получить список файлов Premium VPN<br>'+esc((lastErr&&lastErr.message)||'ошибка сети')+'</div>';
       if(loadBtn){loadBtn.style.display='flex';loadBtn.disabled=false;}
