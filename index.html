@@ -3189,6 +3189,23 @@ function buyPremium(plan){
   if(window.Android&&typeof window.Android.openUrl==='function'){
     try{window.Android.openUrl(url);toast('Открываем Telegram…');return;}catch(e){}
   }
+  /* В Telegram Mini App нельзя отправлять tg:// через обычную навигацию
+   * WebView: Telegram сам должен обработать t.me-ссылку через openTelegramLink.
+   * Иначе Android WebView может показать ERR_UNKNOWN_URL_SCHEME. */
+  try{
+    if(window.Telegram&&window.Telegram.WebApp&&typeof window.Telegram.WebApp.openTelegramLink==='function'){
+      window.Telegram.WebApp.openTelegramLink(url);
+      toast('Открываем Telegram для оплаты в рублях…');
+      return;
+    }
+  }catch(e){}
+  try{
+    if(window.Telegram&&window.Telegram.WebApp&&typeof window.Telegram.WebApp.openLink==='function'){
+      window.Telegram.WebApp.openLink(url);
+      toast('Открываем Telegram для оплаты в рублях…');
+      return;
+    }
+  }catch(e){}
   try{window.location.href=url;}catch(e){window.open(url,'_blank');}
   toast('Открываем Telegram для оплаты в рублях…');
 }
