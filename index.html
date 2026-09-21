@@ -1024,7 +1024,7 @@ function getActiveVpnSource(){
       kind:'premium',
       repo: VPN_PREMIUM_REPO,
       path: VPN_PREMIUM_PATH,
-      ref: vpnPremiumLatestSha || VPN_PREMIUM_REF
+      ref: VPN_PREMIUM_REF
     };
   }
   return VPN_FREE_SOURCES.find(function(s){return s.id===vpnActiveSourceId;}) || VPN_FREE_SOURCES[0];
@@ -3136,17 +3136,30 @@ async function loadVpnKeys(){
 
     var fileNames=[];
     if(pageText){
-      var re=/href=["']\/([^"']+\/blob\/[^"']+\/Vpn\/([^"'?#]+))["']/gi,m;
-      while((m=re.exec(pageText))!==null){
-        var name=decodeURIComponent(m[2]);
+      /* GitHub can return normal HTML, Markdown (via r.jina.ai), or escaped HTML.
+         Do not depend on one exact href shape. Extract every link that points
+         into this exact Vpn folder at the pinned commit. */
+      var repoEsc=source.repo.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      var refEsc=source.ref.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      var pathEsc=source.path.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      var linkRe=new RegExp("(?:https?:\\/\\/github\\.com\\/)?"+repoEsc+"\\/blob\\/"+refEsc+"\\/"+pathEsc+"\\/([^\\s\"'<>?#)\\\\]+)",'gi'),m;
+      while((m=linkRe.exec(pageText))!==null){
+        var name=decodeURIComponent(m[1]).replace(/&amp;/g,'&');
         if(name && !/^README(?:\.|$)/i.test(name) && fileNames.indexOf(name)<0) fileNames.push(name);
       }
-      /* Fallback for GitHub's rendered HTML/JSON variants. */
+      /* Also handle relative /blob/... links and plain /Vpn/file.ext text. */
       if(!fileNames.length){
-        var re2=/\/Vpn\/([^\s"'<>?#\\]+\.(?:txt|conf|json|yaml|yml|ovpn|wg|ini))/gi;
+        var re2=new RegExp("\\/blob\\/"+refEsc+"\\/"+pathEsc+"\\/([^\\s\"'<>?#)\\\\]+)",'gi');
         while((m=re2.exec(pageText))!==null){
-          var n2=decodeURIComponent(m[1]);
-          if(n2 && fileNames.indexOf(n2)<0) fileNames.push(n2);
+          var n2=decodeURIComponent(m[1]).replace(/&amp;/g,'&');
+          if(n2 && !/^README(?:\.|$)/i.test(n2) && fileNames.indexOf(n2)<0) fileNames.push(n2);
+        }
+      }
+      if(!fileNames.length){
+        var re3=/\/Vpn\/([^\s"'<>?#\\]+\.(?:txt|conf|json|yaml|yml|ovpn|wg|ini))/gi;
+        while((m=re3.exec(pageText))!==null){
+          var n3=decodeURIComponent(m[1]);
+          if(n3 && !/^README(?:\.|$)/i.test(n3) && fileNames.indexOf(n3)<0) fileNames.push(n3);
         }
       }
     }
