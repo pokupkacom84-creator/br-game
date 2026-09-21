@@ -2970,7 +2970,6 @@ async function sendGiftTo(g,targetUid,comment){
     var updates={};
     var giftKey=db.ref('users/'+targetUid+'/giftsReceived').push().key;
     updates['users/'+targetUid+'/giftsReceived/'+giftKey]=gift;
-    updates['publicGiftProfiles/'+targetUid+'/'+giftKey]=Object.assign({},gift,{giftKey:giftKey});
     updates['users/'+currentUser.uid+'/giftsSent/'+giftKey]=Object.assign({},gift,{toUid:targetUid});
 
     if(targetUid===currentUser.uid){
@@ -3149,8 +3148,6 @@ async function exchangeGiftWith(g,giftKey,targetUid){
     var updates={};
     updates['users/'+currentUser.uid+'/giftsReceived/'+giftKey]=null;
     updates['users/'+targetUid+'/giftsReceived/'+targetKey]=transferred;
-    updates['publicGiftProfiles/'+currentUser.uid+'/'+giftKey]=null;
-    updates['publicGiftProfiles/'+targetUid+'/'+targetKey]=Object.assign({},transferred,{giftKey:targetKey});
     await db.ref().update(updates);
     toast('Подарок передан');playSound('react');vibrate('send');
     myGifts=Object.assign({},myGifts);delete myGifts[giftKey];renderProfileGifts();renderAvatarGiftBadge();
@@ -3449,7 +3446,23 @@ async function loadProfileAssets(uid){
     try{
       var nftSnap=await db.ref('users/'+uid+'/nfts').once('value');
       addGiftMap(raw,nftSnap.val());
-    }catch(e){ console.warn('[profile] nfts read failed',e); }
+    }catch(e){ console.warn('[profile] users/nfts read failed',e); }
+
+    // IMPORTANT: the Firebase rules also expose the top-level /nfts node.
+    // Some versions of Flux store owned NFTs there instead of under users/$uid/nfts.
+    // Read it and keep only assets belonging to this profile.
+    try{
+      var allNftSnap=await db.ref('nfts').once('value');
+      var allNfts=allNftSnap.val()||{};
+      Object.keys(allNfts).forEach(function(k){
+        var n=allNfts[k];
+        if(!n || typeof n!=='object')return;
+        var owner=String(n.ownerUid||n.ownerId||n.userId||n.uid||n.owner||n.holderUid||'');
+        if(owner===String(uid)){
+          raw['nft_'+k]=Object.assign({},n,{giftKey:n.giftKey||n.id||k,nftKey:k});
+        }
+      });
+    }catch(e){ console.warn('[profile] top-level nfts read failed',e); }
 
     if(userVal && userVal.name){
       userCache[uid]=Object.assign({uid:uid},userVal);
