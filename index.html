@@ -1958,7 +1958,15 @@ async function openChat(chatId,otherUid){
     unsubChatUser=null;unsubChatMeta=null;
   } else if(!isGroup){
     startChatMetaListener();startChatUserListener(otherUid);
-    if(CRYPTO_OK&&e2eKeyPriv){try{await e2eEnsureChatKey(chatId,otherUid);}catch(e){}}
+
+    // Не блокируем загрузку сообщений ожиданием E2E-ключа
+    startMessagesListener();
+
+    if(CRYPTO_OK&&e2eKeyPriv){
+      e2eEnsureChatKey(chatId,otherUid).then(function(){
+        if(currentChatId===chatId&&lastMessages.length){renderMessages(lastMessages);}
+      }).catch(function(e){console.warn('E2E key error:',e);});
+    }
   } else {
     if(unsubChatMeta&&unsubChatMeta.off){try{unsubChatMeta.off();}catch(e){}}
     if(unsubChatUser&&unsubChatUser.off){try{unsubChatUser.off();}catch(e){}}
@@ -1966,7 +1974,7 @@ async function openChat(chatId,otherUid){
     unsubChatMeta=db.ref('chats/'+chatId+'/meta').on('value',function(s){currentChatMeta=s.val()||{};updateMessageChecks();updatePinnedBar();updateTypingBubble();renderStreak();});
   }
   idbLoadMessages(chatId).then(function(cached){if(cached&&cached.length&&currentChatId===chatId)renderMessages(cached);});
-  startMessagesListener();
+  if(isGroup||savedMode)startMessagesListener();
   if(!savedMode&&!isGroup)statusRefreshInterval=setInterval(function(){updateChatStatus();},30000);
   setTimeout(function(){var inp=$('msg-input');if(inp)inp.focus();},120);
   setTimeout(function(){renderStreak();if(currentChatUser&&isBirthdayToday(currentChatUser.birthday)){if(!sessionStorage.getItem('bd_seen_'+currentChatUser.uid)){sessionStorage.setItem('bd_seen_'+currentChatUser.uid,'1');setTimeout(function(){showBirthdayModal(currentChatUser);},900);}}},300);
