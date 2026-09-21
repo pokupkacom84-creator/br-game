@@ -3007,11 +3007,22 @@ async function loadVpnKeys(){
   if(list)list.innerHTML='<div class="skeleton"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line"></div><div class="sk-line short"></div></div></div>';
   var source=getActiveVpnSource();
   var text=null,lastErr=null;
-  var urls=[
-    source.url+(source.url.indexOf('?')===-1?'?':'&')+'t='+Date.now(),
-    'https://corsproxy.io/?'+encodeURIComponent(source.url),
-    'https://api.allorigins.win/raw?url='+encodeURIComponent(source.url)
-  ];
+  var urls=[];
+  if(source.id==='v4'){
+    /* GitHub file: сначала официальный /raw URL, затем raw.githubusercontent.com. */
+    urls=[
+      'https://github.com/pokupkacom84-creator/Prem-VpnKey/raw/refs/heads/main/Vpn.txt?ts='+Date.now(),
+      'https://raw.githubusercontent.com/pokupkacom84-creator/Prem-VpnKey/main/Vpn.txt?ts='+Date.now(),
+      'https://raw.githubusercontent.com/pokupkacom84-creator/Prem-VpnKey/refs/heads/main/Vpn.txt?ts='+Date.now(),
+      'https://corsproxy.io/?'+encodeURIComponent('https://raw.githubusercontent.com/pokupkacom84-creator/Prem-VpnKey/main/Vpn.txt')
+    ];
+  }else{
+    urls=[
+      source.url+(source.url.indexOf('?')===-1?'?':'&')+'t='+Date.now(),
+      'https://corsproxy.io/?'+encodeURIComponent(source.url),
+      'https://api.allorigins.win/raw?url='+encodeURIComponent(source.url)
+    ];
+  }
   for(var u=0;u<urls.length;u++){
     try{
       var resp=await fetch(urls[u],{cache:'no-store'});
