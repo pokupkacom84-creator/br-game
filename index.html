@@ -365,7 +365,7 @@ body.dark .vpn-key-item{background:linear-gradient(135deg,rgba(35,46,60,.65),rgb
 .vpn-icon-btn{width:40px;height:40px;border-radius:50%;background:var(--accent-grad);color:#fff;display:flex;align-items:center;justify-content:center}
 .vpn-icon-btn.star{background:transparent;color:var(--text-2);border:1.5px solid var(--border)}
 .vpn-icon-btn.star.active{color:var(--warning);border-color:var(--warning)}
-.vpn-repo-status{text-align:center;font-size:11px;color:var(--text-3);min-height:16px}.vpn-empty{text-align:center;color:var(--text-2);font-size:14px;padding:var(--s-5)}
+.vpn-empty{text-align:center;color:var(--text-2);font-size:14px;padding:var(--s-5)}
 .vpn-count{font-size:var(--fs-xs);color:var(--text-2);text-align:center;font-weight:500}
 .ptr{position:absolute;top:0;left:0;right:0;height:60px;display:flex;align-items:center;justify-content:center;color:var(--text-2);font-size:var(--fs-sm);pointer-events:none;transform:translateY(-60px);transition:transform var(--dur)}
 .ptr.show{transform:translateY(0)}
@@ -637,23 +637,8 @@ body.dark .header,body.dark .chat-header,body.dark .bottom-nav,body.dark .chat-i
 .typing-bubble{background:var(--surface)!important;background-image:none!important;border-color:var(--border)!important;box-shadow:none!important}
 .chat-input-bar input[type=text]{background:var(--bg-2)!important;background-image:none!important}
 .vpn-key-item{background:var(--surface)!important;background-image:none!important}
-.vpn-tier-tabs{display:flex;gap:8px;margin:12px 0 10px;padding:4px;border:1px solid var(--border);border-radius:12px;background:var(--bg-2)}
-.vpn-tier-tab{flex:1;border:0;border-radius:9px;padding:9px 10px;background:transparent;color:var(--text-2);font-weight:800;font-size:12px;cursor:pointer}
-.vpn-tier-tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow-1)}
-.vpn-tier-tab.premium-locked{opacity:.65}
 .gift-message-card{background:var(--surface)!important;background-image:none!important}
 .shop-banner{background:var(--accent)!important;background-image:none!important;box-shadow:var(--shadow-1)!important}
-
-/* Flux: Stars and Gifts removed */
-#stars-balance,#stars-sheet,#gift-sheet,#my-gifts-sheet,#gift-detail-sheet,#profile-gifts-section,#btn-gifts-display,.gift-message-card,.gift-preview,[data-shop="gifts"],[data-shop="stars"],.stars-balance{display:none!important}
-
-/* Hard removal of legacy Stars/Gifts UI */
-.shop-banner-title,.shop-banner-desc,.shop-banner-balance,.star-pack-card,.gift-preview,.profile-gifts-wrap,.profile-gifts-label,.profile-assets-label:has(.gift-label-icon){display:none!important}
-
-/* Stability fix: bottom navigation must always receive pointer events. */
-#bottom-nav{position:relative!important;z-index:1000!important;pointer-events:auto!important;touch-action:manipulation!important;}
-#bottom-nav .nav-item{pointer-events:auto!important;touch-action:manipulation!important;}
-#bottom-nav .nav-item svg,#bottom-nav .nav-item span{pointer-events:none!important;}
 </style>
 </head>
 <body>
@@ -781,9 +766,12 @@ body.dark .header,body.dark .chat-header,body.dark .bottom-nav,body.dark .chat-i
 <div class="header">
   <div class="header-title">Магазин</div>
   <button class="header-btn ripple" id="shop-contacts-btn" title="Контакты"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></button>
+  <div class="stars-balance" id="stars-balance" role="button" tabindex="0" title="Купить звёзды"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 2.2l2.7 6.5 7.1.6-5.4 4.6 1.7 6.9-6.1-3.8-6.1 3.8 1.7-6.9-5.4-4.6 7.1-.6z"/></svg><span id="stars-count">0</span></div>
 </div>
 <div class="shop-tabs" id="shop-tabs">
-  <button class="shop-tab active" data-shop="premium"><span class="tab-emoji">👑</span>Premium</button>
+  <button class="shop-tab active" data-shop="gifts"><span class="tab-emoji">▣</span>Подарки</button>
+  <button class="shop-tab" data-shop="stars"><span class="tab-emoji">✦</span>Звёзды</button>
+  <button class="shop-tab" data-shop="premium"><span class="tab-emoji">👑</span>Premium</button>
 </div>
 <div class="list" id="shop-list"></div>
 </div>
@@ -792,9 +780,8 @@ body.dark .header,body.dark .chat-header,body.dark .bottom-nav,body.dark .chat-i
 <div class="header"><div class="header-title">VPN</div></div>
 <div class="vpn-container" id="vpn-container">
 <div class="vpn-card">
-<div class="vpn-card-title">VPN</div>
-<div class="vpn-card-desc">Выберите бесплатные VPN или Premium VPN. Premium-ключ доступен только пользователям с активным Flux Premium.</div>
-<div class="vpn-tier-tabs" id="vpn-tier-tabs"><button class="vpn-tier-tab active" data-tier="free">Бесплатные</button><button class="vpn-tier-tab" data-tier="premium">👑 Premium VPN</button></div>
+<div class="vpn-card-title">Источник ключей</div>
+<div class="vpn-card-desc">Выберите один из трёх файлов коллекции VLESS / VMess / Trojan / Shadowsocks / Hysteria2.</div>
 <div class="vpn-filters" id="vpn-sources"></div>
 <button class="vpn-btn ripple" id="vpn-load-btn">Загрузить ключи</button>
 <button class="vpn-btn outline ripple" id="vpn-refresh-btn" style="display:none">Обновить</button>
@@ -815,6 +802,7 @@ body.dark .header,body.dark .chat-header,body.dark .bottom-nav,body.dark .chat-i
   <div class="profile-display-name" id="profile-display-name">—</div>
   <div class="profile-display-status" id="profile-display-status"></div>
   <div id="profile-premium-status"></div>
+  <div id="profile-gifts-section"></div>
   <div class="profile-actions">
     <button class="profile-action ripple" id="btn-edit-profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Изменить</span></button>
     <button class="profile-action ripple" id="profile-btn-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>Настройки</span></button>
@@ -833,6 +821,7 @@ body.dark .header,body.dark .chat-header,body.dark .bottom-nav,body.dark .chat-i
     <div class="settings-item" id="btn-anim-wallpaper"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><span>Анимация обоев</span><div class="toggle" id="anim-toggle"></div></div>
     <div class="settings-item" id="btn-fontsize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg><span>Размер шрифта</span></div>
     <div class="settings-item" id="btn-quick-reactions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg><span>Быстрые реакции</span></div>
+    <div class="settings-item" id="btn-gifts-display"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5" rx="1"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg><span>Подарки в профиле</span><div class="settings-value" id="gifts-display-value">Профиль</div></div>
     <div class="settings-item" id="btn-promo-code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 12a2 2 0 000-4 2 2 0 010-4H5a2 2 0 000 4 2 2 0 010 4 2 2 0 000 4h15a2 2 0 010-4 2 2 0 000-4z"/><path d="M9 8h.01M15 16h.01M9 16l6-8"/></svg><span>Промокод</span><div class="settings-value">🎁</div></div>
 
     <div class="settings-item" id="btn-admin-panel" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6l7-4z"/><path d="M8 12l2.5 2.5L16 9"/></svg><span>Админ-панель</span><div class="settings-value">ADMIN</div></div>
@@ -997,7 +986,11 @@ body.dark .header,body.dark .chat-header,body.dark .bottom-nav,body.dark .chat-i
 <div id="quickreactions-sheet" class="profile-sheet"><div class="profile-sheet-body"><div class="profile-sheet-title">Быстрые реакции</div><div class="modal-text">Выберите 6 emoji для меню быстрых реакций</div><div id="quickreactions-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:12px 0"></div><div class="profile-sheet-subtitle">Доступные</div><div class="emoji-grid" id="quickreactions-available" style="max-height:220px;overflow-y:auto"></div><button class="sheet-btn ripple" id="quickreactions-save">Сохранить</button><button class="sheet-btn secondary ripple" id="quickreactions-cancel">Отмена</button></div></div>
 <div id="pins-sheet" class="profile-sheet"><div class="profile-sheet-body"><div class="profile-sheet-title">Закреплённые сообщения</div><div class="pins-list" id="pins-list"></div><button class="sheet-btn secondary ripple" id="pins-close">Закрыть</button></div></div>
 
+<div id="gift-sheet" class="profile-sheet"><div class="profile-sheet-body" id="gift-sheet-body"></div></div>
+<div id="stars-sheet" class="profile-sheet"><div class="profile-sheet-body" id="stars-sheet-body"></div></div>
 <div id="birthday-sheet" class="profile-sheet"><div class="profile-sheet-body" id="birthday-sheet-body"></div></div>
+<div id="my-gifts-sheet" class="profile-sheet"><div class="profile-sheet-body" id="my-gifts-body"></div></div>
+<div id="gift-detail-sheet" class="profile-sheet"><div class="profile-sheet-body" id="gift-detail-body"></div></div>
 <div id="promo-sheet" class="profile-sheet"><div class="profile-sheet-body" id="promo-body"></div></div>
 
 <div id="admin-sheet" class="profile-sheet"><div class="profile-sheet-body" id="admin-body"></div></div>
@@ -1075,51 +1068,28 @@ const TYPING_TTL_MS=5000;
 const CLOCK_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 const WARN_ICON='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z"/></svg>';
 
-let VPN_TIER=(function(){try{return localStorage.getItem('flux_vpn_tier')||'free';}catch(e){return 'free';}})();
 let VPN_SOURCES=[
   {id:'v1',name:'VPN 1',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/26.txt'},
   {id:'v2',name:'VPN 2',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/25.txt'},
   {id:'v3',name:'VPN 3',url:'https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/24.txt'}
 ];
-let PREMIUM_VPN_SOURCES=[{id:'prem-vpn-1',name:'Premium VPN',url:'https://raw.githubusercontent.com/pokupkacom84-creator/Prem-VpnKey/refs/heads/main/Vpn',sha:''}];
-const VPN_REPOS={free:{owner:'AvenCores',repo:'goida-vpn-configs',path:'githubmirror',branch:'main'},premium:{owner:'pokupkacom84-creator',repo:'Prem-VpnKey',path:'Vpn',branch:'main'}};
-let vpnRepoState={free:'',premium:''};
-try{vpnRepoState=JSON.parse(localStorage.getItem('flux_vpn_repo_state')||'{"free":"","premium":""}');}catch(e){vpnRepoState={free:'',premium:''};}
 let vpnActiveSourceId=(function(){try{return localStorage.getItem('flux_vpn_source')||VPN_SOURCES[0].id;}catch(e){return VPN_SOURCES[0].id;}})();
-function isCurrentUserPremium(){return !!(currentUserData&&isPremiumActive(currentUserData.premium||{}));}
-function getVisibleVpnSources(){return VPN_TIER==='premium'?PREMIUM_VPN_SOURCES:VPN_SOURCES;}
-function getActiveVpnSource(){var list=getVisibleVpnSources();return list.find(function(s){return s.id===vpnActiveSourceId;})||list[0];}
-function renderVpnTierTabs(){var wrap=$('vpn-tier-tabs');if(!wrap)return;wrap.querySelectorAll('[data-tier]').forEach(function(b){b.classList.toggle('active',b.dataset.tier===VPN_TIER);b.classList.toggle('premium-locked',b.dataset.tier==='premium'&&!isCurrentUserPremium());});}
-function setVpnTier(tier){
-  if(tier==='premium'&&!isCurrentUserPremium()){renderVpnTierTabs();if(typeof openPremiumManager==='function')openPremiumManager();else toast('Premium VPN доступен только Premium');return;}
-  VPN_TIER=tier==='premium'?'premium':'free';try{localStorage.setItem('flux_vpn_tier',VPN_TIER);}catch(e){}
-  var listSrc=getVisibleVpnSources();vpnActiveSourceId=listSrc[0].id;try{localStorage.setItem('flux_vpn_source',vpnActiveSourceId);}catch(e){}
-  vpnKeys=[];vpnFiltered=[];vpnRenderedUpTo=0;vpnProtoFilter='all';renderVpnTierTabs();renderVpnSources();renderVpnFilters();
-  var list=$('vpn-key-list');if(list)list.innerHTML='<div class="vpn-empty">Выберите источник и нажмите «Загрузить ключи»</div>';var cnt=$('vpn-count');if(cnt)cnt.textContent='';var lb=$('vpn-load-btn');if(lb)lb.style.display='flex';var rb=$('vpn-refresh-btn');if(rb)rb.style.display='none';
-}
-async function githubJson(url){var resp=await fetch(url+(url.indexOf('?')===-1?'?':'&')+'t='+Date.now(),{cache:'no-store',headers:{'Accept':'application/vnd.github+json'}});if(!resp.ok)throw new Error('GitHub API HTTP '+resp.status);return await resp.json();}
-async function discoverVpnSources(){try{var cfg=VPN_REPOS.free;var files=await githubJson('https://api.github.com/repos/'+cfg.owner+'/'+cfg.repo+'/contents/'+cfg.path+'?ref='+encodeURIComponent(cfg.branch));if(!Array.isArray(files))throw new Error('bad response');var txt=files.filter(function(f){return f.type==='file'&&/\.txt$/i.test(f.name);});if(!txt.length)throw new Error('в папке нет .txt файлов');txt.sort(function(a,b){return a.name.localeCompare(b.name,undefined,{numeric:true});});var pick=txt.slice(-3);var state=pick.map(function(f){return f.name+':'+(f.sha||'');}).join('|');var changed=state!==vpnRepoState.free;VPN_SOURCES=pick.map(function(f,i){return{id:'v'+(i+1),name:'VPN '+(i+1),url:f.download_url,sha:f.sha||''};});vpnRepoState.free=state;if(!VPN_SOURCES.find(function(x){return x.id===vpnActiveSourceId;})&&VPN_TIER==='free'){vpnActiveSourceId='v1';try{localStorage.setItem('flux_vpn_source','v1');}catch(e){}}return changed;}catch(e){console.warn('VPN free discovery:',e.message);return false;}}
-async function discoverPremiumVpnSources(){try{var cfg=VPN_REPOS.premium;var item=await githubJson('https://api.github.com/repos/'+cfg.owner+'/'+cfg.repo+'/contents/'+cfg.path+'?ref='+encodeURIComponent(cfg.branch));var files=Array.isArray(item)?item:[item];var candidates=files.filter(function(f){return f.type==='file'&&(f.name==='Vpn'||/\.(txt|conf|list)$/i.test(f.name));});if(!candidates.length)throw new Error('файл Vpn не найден');candidates.sort(function(a,b){return(a.name==='Vpn'?0:1)-(b.name==='Vpn'?0:1);});var f=candidates[0];var state=(f.path||cfg.path)+':'+(f.sha||'');var changed=state!==vpnRepoState.premium;PREMIUM_VPN_SOURCES=[{id:'prem-vpn-1',name:'Premium VPN',url:f.download_url||('https://raw.githubusercontent.com/'+cfg.owner+'/'+cfg.repo+'/refs/heads/'+cfg.branch+'/'+f.path),sha:f.sha||''}];vpnRepoState.premium=state;return changed;}catch(e){console.warn('VPN premium discovery:',e.message);return false;}}
-async function getVpnRepoHead(cfg){var j=await githubJson('https://api.github.com/repos/'+cfg.owner+'/'+cfg.repo+'/commits?path='+encodeURIComponent(cfg.path)+'&sha='+encodeURIComponent(cfg.branch)+'&per_page=1');if(!Array.isArray(j)||!j[0])throw new Error('commit not found');return j[0].sha||'';}
-async function checkVpnRepositoryUpdates(showToast){
-  var freeChanged=false,premiumChanged=false,freeHead='',premiumHead='';
-  try{freeHead=await getVpnRepoHead(VPN_REPOS.free);}catch(e){console.warn('VPN free head:',e.message);}
-  try{premiumHead=await getVpnRepoHead(VPN_REPOS.premium);}catch(e){console.warn('VPN premium head:',e.message);}
-  try{freeChanged=await discoverVpnSources();}catch(e){}
-  try{premiumChanged=await discoverPremiumVpnSources();}catch(e){}
-  var oldHead=(function(){try{return JSON.parse(localStorage.getItem('flux_vpn_repo_heads')||'{}');}catch(e){return {};}})();
-  if(freeHead&&oldHead.free&&freeHead!==oldHead.free)freeChanged=true;
-  if(premiumHead&&oldHead.premium&&premiumHead!==oldHead.premium)premiumChanged=true;
-  try{localStorage.setItem('flux_vpn_repo_heads',JSON.stringify({free:freeHead||oldHead.free||'',premium:premiumHead||oldHead.premium||'',checkedAt:Date.now()}));localStorage.setItem('flux_vpn_repo_state',JSON.stringify(vpnRepoState));}catch(e){}
-  renderVpnSources();
-  var changed=freeChanged||premiumChanged;
-  if(changed){
-    if(showToast)toast('VPN-репозитории обновлены');
-    var activeChanged=(VPN_TIER==='free'&&freeChanged)||(VPN_TIER==='premium'&&premiumChanged);
-    if(activeChanged&&vpnKeys.length)await loadVpnKeys();
-  }
-  setVpnRepoStatus((changed?'Обновление найдено • ':'')+'Проверено: '+new Date().toLocaleTimeString());
-  return changed;
+function getActiveVpnSource(){return VPN_SOURCES.find(function(s){return s.id===vpnActiveSourceId;})||VPN_SOURCES[0];}
+async function discoverVpnSources(){
+  try{
+    var apiUrl='https://api.github.com/repos/AvenCores/goida-vpn-configs/contents/githubmirror?ref=main&t='+Date.now();
+    var resp=await fetch(apiUrl,{cache:'no-store',headers:{'Accept':'application/vnd.github+json'}});
+    if(!resp.ok)throw new Error('GitHub API HTTP '+resp.status);
+    var files=await resp.json();
+    if(!Array.isArray(files))throw new Error('bad response');
+    var txt=files.filter(function(f){return f.type==='file' && /\.txt$/i.test(f.name);});
+    if(txt.length<1)throw new Error('в папке нет .txt файлов');
+    txt.sort(function(a,b){return a.name.localeCompare(b.name,undefined,{numeric:true});});
+    var pick=txt.slice(-3);
+    VPN_SOURCES=pick.map(function(f,i){return {id:'v'+(i+1),name:'VPN '+(i+1),url:f.download_url};});
+    if(!VPN_SOURCES.find(function(s){return s.id===vpnActiveSourceId;})){vpnActiveSourceId='v1';try{localStorage.setItem('flux_vpn_source','v1');}catch(e){}}
+    return true;
+  }catch(e){console.warn('VPN: автообнаружение не удалось →', e.message);return false;}
 }
 const NOTIF_ICON='data:image/png;base64,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';
 
@@ -1303,12 +1273,12 @@ function showGiftAnimation(g){
   setTimeout(function(){try{wrap.remove();}catch(e){}},1400);
 }
 
-let currentShopTab='premium';try{localStorage.setItem('flux_shop_tab','premium');}catch(e){}
+let currentShopTab='gifts';
 let myStars=0;
 let _lastStarsShown=null;
 let myGifts={};
 let animWallpapersEnabled=localStorage.getItem('flux_anim_wall')!=='0';
-let giftsDisplay='hidden';
+let giftsDisplay=(function(){try{return localStorage.getItem('flux_gifts_display')||'profile';}catch(e){return 'profile';}})();
 
 var pushSupported=false;var pushPermission='default';var pushReason='';let fcmToken=null;
 function detectPushEnvironment(){
@@ -1449,9 +1419,10 @@ function ageFromBirthday(bd){try{var y=parseInt(String(bd).split('-')[0],10);ret
 
 function showBirthdayModal(u){
   var m=document.createElement('div');m.className='birthday-modal show';
-  m.innerHTML='<div class="fireworks"></div><div class="birthday-cake">🎂</div><div class="birthday-title">С Днём Рождения!</div><div style="color:#fff;font-size:16px;margin-top:8px;position:relative;z-index:2;text-align:center;padding:0 20px"><b>'+esc(u.name||'Друг')+'</b> празднует сегодня!</div><div style="margin-top:20px;display:flex;gap:10px;position:relative;z-index:2"><button class="modal-btn" id="bd-close" style="color:#fff">Закрыть</button></div>';
+  m.innerHTML='<div class="fireworks"></div><div class="birthday-cake">🎂</div><div class="birthday-title">С Днём Рождения!</div><div style="color:#fff;font-size:16px;margin-top:8px;position:relative;z-index:2;text-align:center;padding:0 20px"><b>'+esc(u.name||'Друг')+'</b> празднует сегодня!</div><div style="margin-top:20px;display:flex;gap:10px;position:relative;z-index:2"><button class="modal-btn" id="bd-close" style="color:#fff">Закрыть</button><button class="modal-btn primary" id="bd-gift">Подарить</button></div>';
   document.body.appendChild(m);
   m.querySelector('#bd-close').onclick=function(){m.remove();};
+  m.querySelector('#bd-gift').onclick=function(){m.remove();openGiftPicker(u.uid);};
   setTimeout(function(){if(m.parentNode)m.remove();},9000);
 }
 
@@ -1599,14 +1570,16 @@ auth.onAuthStateChanged(async function(user){
     if(data.autoDeleteMonths){autoDeleteMonths=parseInt(data.autoDeleteMonths,10)||0;try{localStorage.setItem('flux_auto_delete',String(autoDeleteMonths));}catch(e){}}
     if(data.twofa&&data.twofa.enabled){twoFAEnabled=true;try{localStorage.setItem('flux_2fa','1');}catch(e){}}
     myGifts=data.giftsReceived||{};
-
+    syncPublicGiftProfile(user.uid,myGifts);
     if(pinLockEnabled&&pinLockCode){showPinLock();}
     goScreen('main-screen',true);
     startSelfListener();startUserChatsListener();startSavedMetaListener();
     startSessionTracking();updateSettingsUI();updateTogglesUI();applyWallpaper();startCallListener();refreshPushStatus();
     startPremiumListener();
+    startStarsListener();
     updateProfileDailyStreak();
     if(CRYPTO_OK&&!e2eKeyPriv){e2eInitUser().catch(function(e){});}
+    renderProfileGifts();renderAvatarGiftBadge();
     var pendingAnchor=sessionStorage.getItem('flux_pending_anchor');
     if(pendingAnchor){try{var pa=JSON.parse(pendingAnchor);setTimeout(function(){if(pa.chatId&&chatsData[pa.chatId]){openChat(pa.chatId,chatsData[pa.chatId].otherUid||null);if(pa.msgId)setTimeout(function(){jumpToMessage(pa.msgId);},1200);}},1500);}catch(e){}sessionStorage.removeItem('flux_pending_anchor');}
   }
@@ -1774,8 +1747,8 @@ function startSelfListener(){
       window.__fluxPremiumState=v.premium||window.__fluxPremiumState||{};
       userCache[currentUser.uid]=currentUserData;
       myGifts=v.giftsReceived||{};
-
-      updateSettingsUI();
+      syncPublicGiftProfile(currentUser.uid,myGifts);
+      updateSettingsUI();renderProfileGifts();renderAvatarGiftBadge();
     }
   });
   visibilityHandler=function(){var r=db.ref('users/'+currentUser.uid);if(document.hidden)r.update({online:false,lastSeen:TS}).catch(function(){});else r.update({online:hideOnline?false:true}).catch(function(){});};
@@ -1929,7 +1902,8 @@ $('onb-continue').onclick=async function(){
     updateProfileDailyStreak();
     startSelfListener();startUserChatsListener();startSavedMetaListener();startSessionTracking();startCallListener();
     startPremiumListener();
-    updateSettingsUI();updateTogglesUI();
+    startStarsListener();
+    updateSettingsUI();updateTogglesUI();renderProfileGifts();renderAvatarGiftBadge();
     if(notifyEnabled && Notification.permission==='granted') initFCM().catch(function(){});
   }catch(e){toast('Ошибка: '+(e.message||e.code));}
   this.disabled=false;
@@ -2185,7 +2159,7 @@ function checkSingle(){return '<span class="msg-check"><svg viewBox="0 0 16 11" 
 function checkDouble(){return '<span class="msg-check double"><svg viewBox="0 0 19 11" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 5.5L5.5 10L14 1"/><path d="M6 5.5L10.5 10L19 1"/></svg></span>';}
 function renderMessageInner(m,msgs){
   var base='';var type=m.type||'text';
-  if(type==='gift'){return ''; }
+  if(type==='gift'){var g=m.gift||{};var senderUid=m.senderId||g.fromUid||'';var sender=userCache[senderUid]||{};var senderName=sender.name||g.fromName||'Пользователь';var senderUsername=sender.username||g.fromUsername||'';var comment=String(g.comment||'').trim();return '<div class="gift-message-card"><div class="gift-message-art">'+giftArtSvg(g,'lg')+'</div><div class="gift-message-name">'+esc(g.name||'Подарок')+'</div><div class="gift-message-from">от <button type="button" data-gift-sender="'+escAttr(senderUid)+'">'+esc(senderName)+'</button>'+(senderUsername?' <button type="button" data-gift-sender="'+escAttr(senderUid)+'">@'+esc(senderUsername)+'</button>':'')+'</div>'+(comment?'<div class="gift-message-comment">'+esc(comment)+'</div>':'')+'<div class="gift-message-price">'+giftStarPriceHtml(g.price)+'</div></div>'; }
   var textHtml=formatMsgText(m.text||'');textHtml=renderMentions(textHtml);
   if(chatSearchQuery&&textHtml){try{var re=new RegExp('('+chatSearchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');textHtml=textHtml.replace(re,'<span class="msg-search-hit">$1</span>');}catch(e){}}
   if(type==='sticker')base='<div class="msg-sticker">'+esc(m.text||'')+'</div>';
@@ -2253,6 +2227,7 @@ function paintMessages(msgs){
   if(showUnreadSep)delete unreadSeparatorChats[currentChatId];
   box.querySelectorAll('.reaction-chip').forEach(function(chip){chip.onclick=function(e){e.stopPropagation();toggleReaction(chip.dataset.msgid,chip.dataset.react,chip);};});
   box.querySelectorAll('.msg-reply').forEach(function(r){r.onclick=function(e){e.stopPropagation();jumpToMessage(r.dataset.jump);};});
+  box.querySelectorAll('[data-gift-sender]').forEach(function(btn){btn.onclick=async function(e){e.stopPropagation();var uid=btn.dataset.giftSender;if(!uid)return;var u=userCache[uid]||await fetchUser(uid);if(u)showProfileSheet(u);};});
   box.querySelectorAll('[data-spoiler]').forEach(function(sp){sp.onclick=function(e){e.stopPropagation();sp.classList.add('revealed');};});
   box.querySelectorAll('.msg-retry').forEach(function(rt){rt.onclick=async function(e){e.stopPropagation();var id=rt.dataset.retry;await retryPendingMessage(id);};});
   if(selectionMode){box.querySelectorAll('.msg[data-msgid]').forEach(function(el){el.classList.toggle('selected',selectedMsgIds.has(el.dataset.msgid));});}
@@ -2711,7 +2686,7 @@ function updateSettingsUI(){
   var infoUid=$('info-uid');if(infoUid){var uid=currentUser.uid||'';infoUid.textContent=(uid.slice(0,4)+' '+uid.slice(4,8)+' '+uid.slice(8,12)).trim()||'—';}
   var bv=$('blocked-value');if(bv)bv.textContent=String(blockedUsers.size);
   var av=$('auto-delete-value');if(av)av.textContent=autoDeleteLabel(autoDeleteMonths);
-  updateAdminVisibility();
+  renderProfileGifts();renderAvatarGiftBadge();updateAdminVisibility();
 }
 function formatDateLong(ms){
   if(!ms)return '—';
@@ -2746,6 +2721,8 @@ function updateTogglesUI(){
   var uv=$('unread-value');if(uv)uv.textContent=unreadDisplay==='dot'?'Точка':'Цифра';
   var wv=$('wallpaper-value');if(wv){var w=WALLPAPERS.find(function(x){return x.id===wallpaperId;});wv.textContent=w?w.name:'Стандарт';}
   var tv=$('theme-color-value');if(tv){var t=THEMES.find(function(x){return x.id===currentTheme;});tv.textContent=t?t.name:'Violet';}
+  var gdv=$('gifts-display-value');
+  if(gdv){var labels={profile:'Профиль',avatar:'Рядом с аватаркой',hidden:'Скрыто'};gdv.textContent=labels[giftsDisplay]||'Профиль';}
   refreshPushStatus();
   var av=$('auto-delete-value');if(av)av.textContent=autoDeleteLabel(autoDeleteMonths);
   var bv=$('blocked-value');if(bv)bv.textContent=String(blockedUsers.size);
@@ -2759,9 +2736,27 @@ function normalizeGiftList(giftsRaw,opts){
   list.sort(function(a,b){return Number(b.ts||0)-Number(a.ts||0);});
   return list;
 }
-function renderProfileAssetsHtml(_ignoredNftList, giftList, opts){return ''; }
-async function renderProfileGifts(){return; /* gifts removed */
-  
+function renderProfileAssetsHtml(_ignoredNftList, giftList, opts){
+  opts=opts||{};
+  var pad=opts.pad!==undefined?opts.pad:'24px';
+  var html='';
+  if(giftList.length){
+    html+='<div class="profile-assets-label" style="padding-left:'+pad+';padding-right:'+pad+'"><span class="gift-label-icon">▣</span> Подарки · '+giftList.length+'</div>';
+    html+='<div class="profile-gifts-wrap" style="padding-left:'+pad+';padding-right:'+pad+'">';
+    var gLimit=opts.giftLimit||12;
+    giftList.slice(0,gLimit).forEach(function(g){
+      var giftComment=String(g.comment||'').trim();var senderName=g.fromName||'Пользователь';var commentPreview=giftComment.length>58?giftComment.slice(0,58)+'…':giftComment;
+      html+='<div class="profile-gift-item profile-gift-card" data-gift-key="'+escAttr(g.giftKey||'')+'" title="'+escAttr((g.name||'Подарок')+' — от '+senderName)+'">'+
+        '<div class="profile-gift-art">'+giftArtSvg(g,'sm')+'</div><div class="profile-gift-card-name">'+esc(g.name||'Подарок')+'</div><div class="profile-gift-card-from">от '+esc(senderName)+'</div>'+
+        (commentPreview?'<div class="profile-gift-card-comment">'+esc(commentPreview)+'</div>':'')+'</div>';
+    });
+    if(giftList.length>gLimit)html+='<div class="profile-gift-item more">+'+(giftList.length-gLimit)+'</div>';
+    html+='</div>';
+  }
+  if(!html)html='<div class="profile-assets-empty"><div class="profile-assets-empty-icon">▣</div><div style="margin-top:6px">Пока нет подарков</div></div>';
+  return html;
+}
+async function renderProfileGifts(){
   var sec=document.getElementById('profile-gifts-section');
   if(!sec)return;
   if(!currentUser){sec.innerHTML='';sec.style.display='none';return;}
@@ -2770,7 +2765,7 @@ async function renderProfileGifts(){return; /* gifts removed */
     var rawGifts=giftSnap.val()||{};
     var giftList=normalizeGiftList(rawGifts,{visibleOnly:true});
     myGifts=rawGifts;
-
+    syncPublicGiftProfile(currentUser.uid,rawGifts);
     var showGifts=(giftsDisplay==='profile')?giftList:[];
     sec.style.display='block';
     var html=renderProfileAssetsHtml([], showGifts, {pad:'24px'});
@@ -2817,10 +2812,24 @@ function openProfileGiftsSheet(){
     }catch(e){body.innerHTML='<div class="empty">Не удалось загрузить</div>';}
   })();
 }
-var _myGiftsSheet=document.getElementById('my-gifts-sheet');if(_myGiftsSheet)_myGiftsSheet.onclick=function(e){if(e.target===this)this.classList.remove('show');};
+document.getElementById('my-gifts-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
 
-async function loadMyAssets(){return;}
-function renderShop(){var list=document.getElementById('shop-list');if(!list)return;renderPremiumTab(list);loadPremiumState();}
+async function loadMyAssets(){
+  if(!currentUser)return;
+  try{
+    var s=await db.ref('users/'+currentUser.uid).once('value');
+    var v=s.val()||{};
+    myStars=Number(v.stars||0);updateStarsUI(true);
+    myGifts=v.giftsReceived||{};
+    await renderProfileGifts();renderAvatarGiftBadge();
+  }catch(e){}
+}
+function renderShop(){
+  var list=document.getElementById('shop-list');if(!list)return;
+  if(currentShopTab==='premium'){renderPremiumTab(list);loadPremiumState();return;}
+  if(currentShopTab==='stars'){renderStarsTab(list);return;}
+  currentShopTab='gifts';renderGiftsTab(list);
+}
 function renderGiftsTab(list){
   var order=['common','rare','epic','legendary'];var titles={common:'Обычные',rare:'Редкие',epic:'Эпические',legendary:'Легендарные'};var grouped={common:[],rare:[],epic:[],legendary:[]};
   GIFTS.forEach(function(g){if(grouped[g.rarity])grouped[g.rarity].push(g);});
@@ -2843,14 +2852,12 @@ function buyStarPack(pack){
   try{window.location.href=url;}catch(e){window.open(url,'_blank');}
   toast('Открываем оплату звёзд…');
 }
-function updateStarsUI(noAnim){return;
-
+function updateStarsUI(noAnim){
   var el=document.getElementById('stars-count');if(el)el.textContent=(myStars||0).toLocaleString('ru-RU');
   if(!noAnim&&_lastStarsShown!==null&&_lastStarsShown!==myStars){var b=document.getElementById('stars-balance');if(b){b.classList.remove('bump');void b.offsetWidth;b.classList.add('bump');}}
   _lastStarsShown=myStars;
 }
-function startStarsListener(){return;
-
+function startStarsListener(){
   if(!currentUser||!db)return;
   try{if(window.__starsListenerRef)window.__starsListenerRef.off();var ref=db.ref('users/'+currentUser.uid+'/stars');window.__starsListenerRef=ref;ref.on('value',function(snap){myStars=Number(snap.val()||0);updateStarsUI();if(currentShopTab==='gifts'||currentShopTab==='stars'){var list=document.getElementById('shop-list');if(list)renderShop();}});}catch(e){console.warn('stars listener',e);}
 }
@@ -2933,8 +2940,7 @@ function startPremiumListener(){
 }
 
 
-async function buyGift(g,targetUid){return;
-
+async function buyGift(g,targetUid){
   if(!g||!currentUser){toast('Войдите в Flux');return;}
   if(Number(myStars)<Number(g.price)){toast('Недостаточно звёзд: нужно '+g.price+' ⭐');vibrate('error');return;}
   if(targetUid){openGiftCommentSheet(g,targetUid);return;}
@@ -2964,12 +2970,13 @@ async function sendGiftTo(g,targetUid,comment){
     var updates={};
     var giftKey=db.ref('users/'+targetUid+'/giftsReceived').push().key;
     updates['users/'+targetUid+'/giftsReceived/'+giftKey]=gift;
+    updates['publicGiftProfiles/'+targetUid+'/'+giftKey]=Object.assign({},gift,{giftKey:giftKey});
     updates['users/'+currentUser.uid+'/giftsSent/'+giftKey]=Object.assign({},gift,{toUid:targetUid});
 
     if(targetUid===currentUser.uid){
       await db.ref().update(updates);
       myGifts=myGifts||{};myGifts[giftKey]=gift;
-      toast('Подарок сохранён');
+      toast('Подарок сохранён');renderProfileGifts();renderAvatarGiftBadge();
     }else{
       var chatId=[currentUser.uid,targetUid].sort().join('_');
       var metaSnap=await db.ref('chats/'+chatId+'/meta/members').once('value');
@@ -3037,7 +3044,7 @@ async function openGiftDetails(ownerUid,giftKey,isSent){
     var show=document.getElementById('gift-show');if(show)show.onclick=async function(){try{var ss=await db.ref('users/'+ownerUid+'/giftsReceived/'+giftKey).once('value');var gg=ss.val();if(!gg){toast('Подарок не найден');return;}gg=Object.assign({},gg,{visible:true,giftKey:giftKey});var ups={};ups['users/'+ownerUid+'/giftsReceived/'+giftKey+'/visible']=true;ups['publicGiftProfiles/'+ownerUid+'/'+giftKey]=gg;await db.ref().update(ups);toast('Подарок снова виден');sheet.classList.remove('show');renderProfileGifts();}catch(e){toast('Не удалось показать подарок');}};
   }catch(e){body.innerHTML='<div class="empty">Не удалось открыть подарок</div><button class="sheet-btn secondary" id="gift-detail-close">Закрыть</button>';var c=document.getElementById('gift-detail-close');if(c)c.onclick=function(){sheet.classList.remove('show');};}
 }
-var _giftDetailSheet=document.getElementById('gift-detail-sheet');if(_giftDetailSheet)_giftDetailSheet.onclick=function(e){if(e.target===this)this.classList.remove('show');};
+document.getElementById('gift-detail-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
 
 function isFluxAdmin(){
   if(!currentUser)return false;
@@ -3088,7 +3095,7 @@ document.getElementById('promo-sheet').onclick=function(e){if(e.target===this)th
 async function openAdminPanel(){
   if(!isFluxAdmin()){toast('Нет доступа');return;}
   var sheet=document.getElementById('admin-sheet'),body=document.getElementById('admin-body');sheet.classList.add('show');
-  body.innerHTML='<div class="profile-sheet-title">🛡️ Админ-панель</div><div id="admin-stats" class="profile-info-card"><div class="spinner" style="margin:20px auto"></div></div><div class="profile-sheet-subtitle">Последние платежи</div><div id="admin-payments" style="max-height:220px;overflow:auto"><div class="spinner" style="margin:20px auto"></div></div><div class="profile-sheet-subtitle">Пользователи</div><input class="sheet-input" id="admin-user-search" placeholder="Имя, @username или UID" autocomplete="off"><div id="admin-users" style="max-height:38vh;overflow:auto;margin-top:8px"></div><button class="sheet-btn secondary" id="admin-close">Закрыть</button>';
+  body.innerHTML='<div class="profile-sheet-title">🛡️ Админ-панель</div><div id="admin-stats" class="profile-info-card"><div class="spinner" style="margin:20px auto"></div></div><div class="profile-sheet-subtitle">Последние платежи</div><div id="admin-payments" style="max-height:220px;overflow:auto"><div class="spinner" style="margin:20px auto"></div></div><div class="profile-sheet-subtitle">Пользователи</div><input class="sheet-input" id="admin-user-search" placeholder="Имя, @username или UID" autocomplete="off"><div id="admin-users" style="max-height:38vh;overflow:auto;margin-top:8px"></div><div class="profile-sheet-subtitle">Промокоды</div><div class="profile-info-card"><input class="sheet-input" id="admin-promo-code" placeholder="Код, например WELCOME100" maxlength="32"><input class="sheet-input" id="admin-promo-stars" type="number" min="0" step="1" placeholder="Награда в звёздах" style="margin-top:8px"><input class="sheet-input" id="admin-promo-max" type="number" min="0" step="1" placeholder="Лимит использований (0 = без лимита)" style="margin-top:8px"><input class="sheet-input" id="admin-promo-exp" type="datetime-local" style="margin-top:8px"><button class="sheet-btn primary" id="admin-promo-create" style="margin-top:8px">Создать промокод</button></div><button class="sheet-btn secondary" id="admin-close">Закрыть</button>';
   document.getElementById('admin-close').onclick=function(){sheet.classList.remove('show');};
   try{
     var us=await db.ref('users').once('value'),users=us.val()||{},arr=Object.keys(users).map(function(uid){return Object.assign({uid:uid},users[uid]||{});});
@@ -3111,16 +3118,16 @@ document.getElementById('admin-sheet').onclick=function(e){if(e.target===this)th
 
 async function openAdminUserActions(u){
   if(!u||!isFluxAdmin())return;
-  showModal('<div class="modal-title">Управление пользователем</div><div class="modal-text"><b>'+esc(u.name||'Без имени')+'</b><br>'+esc(u.username?'@'+u.username:u.uid)+'</div><div class="profile-info-card"><div class="info-row"><div class="info-value">'+(isPremiumActive(u.premium||{})?'Активен':'Нет')+'</div><div class="info-label">Premium</div></div></div><div class="modal-actions stack"><button class="modal-btn" id="adm-premium">Выдать Premium</button><button class="modal-btn" id="adm-block">'+(u.adminBlocked?'Разблокировать':'Заблокировать')+'</button><button class="modal-btn" id="adm-open-profile">Открыть профиль</button><button class="modal-btn" id="adm-close">Закрыть</button></div>',function(m,close){
+  showModal('<div class="modal-title">Управление пользователем</div><div class="modal-text"><b>'+esc(u.name||'Без имени')+'</b><br>'+esc(u.username?'@'+u.username:u.uid)+'</div><div class="profile-info-card"><div class="info-row"><div class="info-value">'+Number(u.stars||0).toLocaleString('ru-RU')+' ⭐</div><div class="info-label">Баланс</div></div><div class="info-row"><div class="info-value">'+(isPremiumActive(u.premium||{})?'Активен':'Нет')+'</div><div class="info-label">Premium</div></div></div><div class="modal-actions stack"><button class="modal-btn primary" id="adm-stars">Изменить звёзды</button><button class="modal-btn" id="adm-premium">Выдать Premium</button><button class="modal-btn" id="adm-block">'+(u.adminBlocked?'Разблокировать':'Заблокировать')+'</button><button class="modal-btn" id="adm-open-profile">Открыть профиль</button><button class="modal-btn" id="adm-close">Закрыть</button></div>',function(m,close){
     m.querySelector('#adm-close').onclick=close;
     m.querySelector('#adm-open-profile').onclick=function(){close();showProfileSheet(u);};
+    m.querySelector('#adm-stars').onclick=async function(){var v=prompt('Сколько звёзд изменить?\nПоложительное число — выдать, отрицательное — списать.','100');if(v===null)return;var delta=Math.trunc(Number(v));if(!Number.isFinite(delta)||delta===0){toast('Некорректное число');return;}try{var tx=await db.ref('users/'+u.uid+'/stars').transaction(function(cur){return Math.max(0,Number(cur||0)+delta);});toast((delta>0?'+':'')+delta+' ⭐');close();}catch(e){toast('Не удалось изменить баланс');}};
     m.querySelector('#adm-premium').onclick=async function(){var days=prompt('На сколько дней выдать Premium?','30');if(days===null)return;days=Math.max(1,Math.floor(Number(days)));if(!Number.isFinite(days))return;try{var ref=db.ref('users/'+u.uid+'/premium'),snap=await ref.once('value'),p=snap.val()||{},base=isPremiumActive(p)?Number(p.expiresAt||Date.now()):Date.now(),exp=base+days*86400000;await ref.update({active:true,expiresAt:exp,plan:'admin',updatedAt:Date.now(),grantedBy:currentUser.uid});toast('Premium выдан на '+days+' дней');close();}catch(e){toast('Не удалось выдать Premium');}};
     m.querySelector('#adm-block').onclick=async function(){if(u.uid===currentUser.uid){toast('Нельзя заблокировать свой аккаунт');return;}try{await db.ref('users/'+u.uid+'/adminBlocked').set(!u.adminBlocked);toast(u.adminBlocked?'Пользователь разблокирован':'Пользователь заблокирован');close();}catch(e){toast('Не удалось изменить блокировку');}};
   });
 }
 
-function openGiftExchangePicker(g,giftKey){return;
-  
+function openGiftExchangePicker(g,giftKey){
   var sheet=document.getElementById('gift-sheet');sheet.classList.add('show');
   var body=document.getElementById('gift-sheet-body');
   var html='<div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:6px 0 14px">'+giftArtSvg(g,'sm')+'<div style="font-size:19px;font-weight:850">Обмен подарком</div><div style="font-size:12px;color:var(--text-2);text-align:center">Выберите друга, которому хотите передать этот подарок.</div></div><input id="gift-exchange-search" class="sheet-input" placeholder="Поиск пользователя…" style="margin-bottom:10px"><div id="gift-exchange-people" style="max-height:48vh;overflow-y:auto"></div><button class="sheet-btn secondary ripple" id="gift-exchange-cancel" style="margin-top:10px">Отмена</button>';
@@ -3142,14 +3149,15 @@ async function exchangeGiftWith(g,giftKey,targetUid){
     var updates={};
     updates['users/'+currentUser.uid+'/giftsReceived/'+giftKey]=null;
     updates['users/'+targetUid+'/giftsReceived/'+targetKey]=transferred;
+    updates['publicGiftProfiles/'+currentUser.uid+'/'+giftKey]=null;
+    updates['publicGiftProfiles/'+targetUid+'/'+targetKey]=Object.assign({},transferred,{giftKey:targetKey});
     await db.ref().update(updates);
     toast('Подарок передан');playSound('react');vibrate('send');
-    myGifts=Object.assign({},myGifts);delete myGifts[giftKey];
+    myGifts=Object.assign({},myGifts);delete myGifts[giftKey];renderProfileGifts();renderAvatarGiftBadge();
   }catch(e){toast('Не удалось обменять подарок');console.error('gift exchange',e);}
 }
 
-function openGiftPicker(targetUid){return;
-  
+function openGiftPicker(targetUid){
   var sheet=document.getElementById('gift-sheet');sheet.classList.add('show');
   var body=document.getElementById('gift-sheet-body');
   var u=userCache[targetUid]||{name:'друга'};
@@ -3188,7 +3196,7 @@ $('btn-vibration').onclick=function(){VIB_PREFS.enabled=!VIB_PREFS.enabled;try{l
 $('btn-gifts-display').onclick=function(){
   var opts=[{v:'profile',l:'👤 Показывать в профиле'},{v:'avatar',l:'✨ Рядом с аватаркой'},{v:'hidden',l:'🚫 Скрыть из профиля'}];
   showModal('<div class="modal-title">Подарки в профиле</div><div class="modal-actions stack">'+opts.map(function(o){return '<button class="modal-btn '+(giftsDisplay===o.v?'primary':'')+'" data-gifts-opt="'+o.v+'">'+o.l+'</button>';}).join('')+'<button class="modal-btn" id="gifts-opt-close">Отмена</button></div>',
-    function(m,close){m.querySelector('#gifts-opt-close').onclick=close;m.querySelectorAll('[data-gifts-opt]').forEach(function(b){b.onclick=function(){giftsDisplay=b.dataset.giftsOpt;try{localStorage.setItem('flux_gifts_display',giftsDisplay);}catch(e){}close();updateTogglesUI();toast('Настройка сохранена');};});});
+    function(m,close){m.querySelector('#gifts-opt-close').onclick=close;m.querySelectorAll('[data-gifts-opt]').forEach(function(b){b.onclick=function(){giftsDisplay=b.dataset.giftsOpt;try{localStorage.setItem('flux_gifts_display',giftsDisplay);}catch(e){}close();updateTogglesUI();renderProfileGifts();renderAvatarGiftBadge();toast('Настройка сохранена');};});});
 };
 $('btn-pin-lock').onclick=function(){if(pinLockEnabled){pinLockEnabled=false;pinLockCode='';try{localStorage.removeItem('flux_pin_code');localStorage.setItem('flux_pin_lock','0');}catch(e){}updateTogglesUI();toast('PIN-код отключён');}else{showPinSetup(function(code){pinLockEnabled=true;pinLockCode=code;try{localStorage.setItem('flux_pin_code',code);localStorage.setItem('flux_pin_lock','1');}catch(e){}updateTogglesUI();toast('PIN-код установлен');});}};
 $('btn-anim-wallpaper').onclick=function(){animWallpapersEnabled=!animWallpapersEnabled;try{localStorage.setItem('flux_anim_wall',animWallpapersEnabled?'1':'0');}catch(e){}updateTogglesUI();applyWallpaper();toast(animWallpapersEnabled?'✨ Анимация включена':'Анимация выключена');};
@@ -3322,6 +3330,7 @@ async function showProfileSheet(u){
     '<div class="profile-actions" style="grid-template-columns:repeat('+(canInteract?'4':'2')+',1fr);padding:0 0 14px">'+
       (canInteract?'<button class="profile-action ripple" id="profile-msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span>Написать</span></button>':'')+
       (canInteract?'<button class="profile-action ripple" id="profile-call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg><span>Звонок</span></button>':'')+
+      (canInteract?'<button class="profile-action ripple" id="profile-gift"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5" rx="1"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg><span>Подарок</span></button>':'')+
       (canInteract?'<button class="profile-action ripple" id="profile-block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg><span>'+(isBlockedUser?'Разблок.':'Блок')+'</span></button>':'')+
       (!canInteract?'<button class="profile-action ripple" id="profile-edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Изменить</span></button>':'')+
     '</div>'+
@@ -3330,16 +3339,17 @@ async function showProfileSheet(u){
       (u.bio?'<div class="info-row"><div class="info-value">'+esc(u.bio)+'</div><div class="info-label">О себе</div></div>':'')+
       '<div class="info-row"><div class="info-value">'+esc(status)+'</div><div class="info-label">Статус</div></div>'+
     '</div>'+
-    ''+
+    '<div id="profile-assets-loading" style="text-align:center;padding:10px;color:var(--text-2);font-size:13px">Загрузка подарков…</div>'+
     '<div id="profile-assets-container"></div>'+
     '<button class="sheet-btn secondary ripple" id="profile-close" style="margin-top:14px">Закрыть</button>';
   var msgBtn=$('profile-msg');if(msgBtn)msgBtn.onclick=function(){sheet.classList.remove('show');if(u.uid!==currentUser.uid)startChatWith(u.uid);};
   var cbtn=$('profile-call');if(cbtn)cbtn.onclick=function(){sheet.classList.remove('show');startCall(u.uid);};
+  var gbtn=$('profile-gift');if(gbtn)gbtn.onclick=function(){sheet.classList.remove('show');openGiftPicker(u.uid);};
   var bb=$('profile-block');if(bb)bb.onclick=async function(){sheet.classList.remove('show');await toggleBlockUser(u.uid);};
   var eb=$('profile-edit');if(eb)eb.onclick=function(){sheet.classList.remove('show');$('btn-edit-profile').click();};
   $('profile-close').onclick=function(){sheet.classList.remove('show');};
+  loadProfileAssets(u.uid);
 }
-
 var profileAssetsLoadToken=0;
 var profileGiftCache={};
 function mergeGiftMaps(){
@@ -3394,93 +3404,63 @@ async function loadProfileAssets(uid){
   var loading=document.getElementById('profile-assets-loading');
   if(!wrap||!uid)return;
   var token=++profileAssetsLoadToken;
-
-  function addGiftMap(target, source){
-    if(!source || typeof source!=='object') return;
-    Object.keys(source).forEach(function(k){
-      var g=source[k];
-      if(!g || typeof g!=='object') return;
-      target[k]=Object.assign({},g,{giftKey:g.giftKey||k});
-    });
-  }
-
   try{
     var raw={};
-
-    // IMPORTANT:
-    // Your Firebase rules already allow authenticated users to read
-    // users/$uid and users/$uid/nfts. Therefore the collection is read
-    // directly from the owner's record. No publicGiftProfiles mirror is used.
-    var userSnap=await db.ref('users/'+uid).once('value');
-    var userVal=userSnap.val()||{};
-
-    // Current gift storage.
-    addGiftMap(raw,userVal.giftsReceived);
-
-    // NFT storage supported by the existing Firebase rules.
-    addGiftMap(raw,userVal.nfts);
-
-    // Compatibility with older versions of the app.
-    addGiftMap(raw,userVal.gifts);
-    addGiftMap(raw,userVal.collection);
-    addGiftMap(raw,userVal.giftCollection);
-    if(userVal.giftCollection && userVal.giftCollection.received)
-      addGiftMap(raw,userVal.giftCollection.received);
-    if(userVal.gifts && userVal.gifts.received)
-      addGiftMap(raw,userVal.gifts.received);
-
-    // Direct reads are kept as fallbacks in case the nested object wasn't
-    // included by an older data structure.
+    var sources=[];
+    // Public gift mirror is the source used for viewing collections of other users.
+    // It avoids relying on private giftsReceived read permissions.
     try{
-      var receivedSnap=await db.ref('users/'+uid+'/giftsReceived').once('value');
-      addGiftMap(raw,receivedSnap.val());
-    }catch(e){ console.warn('[profile] giftsReceived read failed',e); }
-
-    try{
-      var nftSnap=await db.ref('users/'+uid+'/nfts').once('value');
-      addGiftMap(raw,nftSnap.val());
-    }catch(e){ console.warn('[profile] users/nfts read failed',e); }
-
-    // IMPORTANT: the Firebase rules also expose the top-level /nfts node.
-    // Some versions of Flux store owned NFTs there instead of under users/$uid/nfts.
-    // Read it and keep only assets belonging to this profile.
-    try{
-      var allNftSnap=await db.ref('nfts').once('value');
-      var allNfts=allNftSnap.val()||{};
-      Object.keys(allNfts).forEach(function(k){
-        var n=allNfts[k];
-        if(!n || typeof n!=='object')return;
-        var owner=String(n.ownerUid||n.ownerId||n.userId||n.uid||n.owner||n.holderUid||'');
-        if(owner===String(uid)){
-          raw['nft_'+k]=Object.assign({},n,{giftKey:n.giftKey||n.id||k,nftKey:k});
-        }
-      });
-    }catch(e){ console.warn('[profile] top-level nfts read failed',e); }
-
-    if(userVal && userVal.name){
-      userCache[uid]=Object.assign({uid:uid},userVal);
+      var publicMap=await readPublicGiftProfile(uid);
+      if(Object.keys(publicMap).length)sources.push(publicMap);
+    }catch(publicErr){}
+    var cachedUser=userCache[uid];
+    if(cachedUser){
+      var cachedMap=extractProfileGiftMap(cachedUser);
+      if(Object.keys(cachedMap).length)sources.push(cachedMap);
     }
 
-    // Keep the local cache, but NEVER replace a non-empty collection with
-    // an empty Firebase response.
+    // Read the complete user record as a fallback. Some older builds stored
+    // the collection directly in the cached/public user object.
+    try{
+      var userSnap=await db.ref('users/'+uid).once('value');
+      var userVal=userSnap.val()||{};
+      var userMap=extractProfileGiftMap(userVal);
+      if(Object.keys(userMap).length)sources.push(userMap);
+      if(userVal&&userVal.name){userCache[uid]=Object.assign({uid:uid},userVal);}
+    }catch(userErr){
+      console.warn('[profile] user read failed',userErr);
+    }
+
+    // Primary collection path used by the current gift system.
+    try{
+      var snap=await db.ref('users/'+uid+'/giftsReceived').once('value');
+      var direct=snap.val()||{};
+      if(Object.keys(direct).length)sources.push(direct);
+    }catch(readErr){
+      console.warn('[profile] giftsReceived read failed',readErr);
+    }
+
+    raw=mergeGiftMaps.apply(null,sources);
+    // Prefer the public mirror for display; it is intentionally limited to visible gifts.
+    try{
+      var authoritativePublic=await readPublicGiftProfile(uid);
+      if(Object.keys(authoritativePublic).length)raw=mergeGiftMaps(authoritativePublic);
+    }catch(e){}
+    if(token!==profileAssetsLoadToken)return;
+
+    // Keep a per-user cache so opening/closing the profile never makes the
+    // collection disappear because a later Firebase read is empty/denied.
     if(Object.keys(raw).length){
       profileGiftCache[uid]=Object.assign({},profileGiftCache[uid]||{},raw);
     }else if(profileGiftCache[uid]){
       raw=profileGiftCache[uid];
     }
 
-    if(token!==profileAssetsLoadToken)return;
-
-    // Old gifts may not have a `visible` field. They must remain visible.
-    var giftList=normalizeGiftList(raw).filter(function(g){
-      return g.profileHidden!==true && g.visible!==false;
-    });
-
+    var giftList=normalizeGiftList(raw).filter(function(g){return g.profileHidden!==true && g.visible!==false;});
     if(loading)loading.remove();
 
     var html=renderProfileAssetsHtml([],giftList,{pad:'0px',giftLimit:12});
 
-    // Only the owner's sent-gifts section is private and shown in own profile.
     if(currentUser&&uid===currentUser.uid){
       try{
         var sentSnap=await db.ref('users/'+uid+'/giftsSent').once('value');
@@ -3490,7 +3470,7 @@ async function loadProfileAssets(uid){
           html+='<div class="profile-assets-label" style="padding:14px 0 0"><span class="gift-label-icon">↗</span> Отправленные · '+sentList.length+'</div><div class="profile-gifts-wrap" style="padding-left:0;padding-right:0">';
           sentList.slice(0,12).forEach(function(g){
             var c=String(g.comment||'').trim(),to=g.toName||g.toUsername||'пользователю';
-            html+='<div class="profile-gift-item profile-gift-card" data-gift-key="'+escAttr(g.giftKey||'')+'" data-sent-gift="1" title="'+escAttr((g.name||'Подарок')+' — '+to)+'"><div class="profile-gift-art">'+giftArtSvg(g,'sm')+'</div><div class="profile-gift-card-name">'+esc(g.name||'Подарок')+'</div><div class="profile-gift-card-from">→ '+esc(to)+'</div>'+(c?'<div class="profile-gift-card-comment">'+esc(c.length>58?c.slice(0,58)+'…':'')+'</div>':'')+'</div>';
+            html+='<div class="profile-gift-item profile-gift-card" data-gift-key="'+escAttr(g.giftKey||'')+'" data-sent-gift="1" title="'+escAttr((g.name||'Подарок')+' — '+to)+'"><div class="profile-gift-art">'+giftArtSvg(g,'sm')+'</div><div class="profile-gift-card-name">'+esc(g.name||'Подарок')+'</div><div class="profile-gift-card-from">→ '+esc(to)+'</div>'+(c?'<div class="profile-gift-card-comment">'+esc(c.length>58?c.slice(0,58)+'…':c)+'</div>':'')+'</div>';
           });
           html+='</div>';
         }
@@ -3501,23 +3481,17 @@ async function loadProfileAssets(uid){
     wrap.innerHTML=html;
     wrap.onclick=function(e){
       var item=e.target.closest('[data-gift-key]');
-      if(item){
-        e.stopPropagation();
-        openGiftDetails(uid,item.dataset.giftKey,item.dataset.sentGift==='1');
-      }
+      if(item){e.stopPropagation();openGiftDetails(uid,item.dataset.giftKey,item.dataset.sentGift==='1');}
     };
   }catch(e){
     if(token!==profileAssetsLoadToken)return;
     var cached=profileGiftCache[uid]||extractProfileGiftMap(userCache[uid]);
     if(cached&&Object.keys(cached).length){
       if(loading)loading.remove();
-      wrap.innerHTML=renderProfileAssetsHtml([],normalizeGiftList(cached).filter(function(g){
-        return g.profileHidden!==true && g.visible!==false;
-      }),{pad:'0px'});
+      wrap.innerHTML=renderProfileAssetsHtml([],normalizeGiftList(cached).filter(function(g){return g.profileHidden!==true && g.visible!==false;}),{pad:'0px'});
     }else{
       if(loading)loading.textContent='Пока нет подарков';
-      if(!wrap.innerHTML.trim())
-        wrap.innerHTML='<div class="profile-assets-empty"><div class="profile-assets-empty-icon">🎁</div><div style="margin-top:6px">Пока нет подарков</div></div>';
+      if(!wrap.innerHTML.trim())wrap.innerHTML='<div class="profile-assets-empty"><div class="profile-assets-empty-icon">🎁</div><div style="margin-top:6px">Пока нет подарков</div></div>';
     }
     console.error('[profile] assets load error',e);
   }
@@ -3550,6 +3524,7 @@ $('search-toggle').onclick=function(){var sb=$('search-bar');sb.classList.toggle
 var searchDebounce=null;
 $('chat-search').addEventListener('input',function(){var v=this.value.trim();clearTimeout(searchDebounce);searchDebounce=setTimeout(function(){searchQuery=v;scheduleRenderChats();},150);});
 document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=function(){document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(x){x.classList.remove('active');});t.classList.add('active');currentShopTab=t.dataset.shop;renderShop();};});
+var starsBalanceEl=document.getElementById('stars-balance');if(starsBalanceEl)starsBalanceEl.onclick=function(){var st=document.querySelector('#shop-tabs .shop-tab[data-shop="stars"]');if(st)st.click();};
 
 (function ptrInit(){var list=$('chats-list'),ptr=$('ptr');if(!list||!ptr)return;var startY=0,pulling=false,dist=0;list.addEventListener('touchstart',function(e){if(list.scrollTop===0){startY=e.touches[0].clientY;pulling=true;dist=0;}},{passive:true});list.addEventListener('touchmove',function(e){if(!pulling)return;var y=e.touches[0].clientY-startY;if(y>0){dist=y;ptr.classList.add('show');ptr.style.transform='translateY(0) translateY('+Math.min(60,y)+'px)';}},{passive:true});list.addEventListener('touchend',function(){if(!pulling)return;pulling=false;if(dist>70){toast('Обновление...');setTimeout(function(){location.reload();},300);}ptr.classList.remove('show');ptr.style.transform='';dist=0;});})();
 
@@ -3647,16 +3622,23 @@ function isVpnItemVisible(){var c=$('vpn-container'),list=$('vpn-key-list');if(!
 function onVpnScroll(){if(vpnRenderedUpTo<vpnFiltered.length&&isVpnItemVisible())scheduleVpnAppend();}
 function renderVpnKeys(){var list=$('vpn-key-list'),count=$('vpn-count'),refreshBtn=$('vpn-refresh-btn'),loadBtn=$('vpn-load-btn');if(!list)return;list.innerHTML='';vpnRenderedUpTo=0;if(!vpnFiltered.length){list.innerHTML='<div class="vpn-empty">Нет ключей</div>';if(count)count.textContent='';if(refreshBtn)refreshBtn.style.display='none';if(loadBtn)loadBtn.style.display='flex';return;}if(loadBtn)loadBtn.style.display='none';if(refreshBtn)refreshBtn.style.display='flex';if(count)count.textContent='Показано: '+vpnFiltered.length+' из '+vpnKeys.length;appendVpnBatch();var c=$('vpn-container');if(c&&!c._vpnScrollBound){c._vpnScrollBound=true;c.addEventListener('scroll',onVpnScroll,{passive:true});}setTimeout(function(){if(vpnRenderedUpTo<vpnFiltered.length&&isVpnItemVisible())scheduleVpnAppend();},60);}
 function renderVpnSources(){
-  var wrap=$('vpn-sources');if(!wrap)return;renderVpnTierTabs();
-  var sources=getVisibleVpnSources();
-  wrap.innerHTML=sources.map(function(src){return '<button class="vpn-chip'+(src.id===vpnActiveSourceId?' active':'')+'" data-src="'+escAttr(src.id)+'">'+esc(src.name)+'</button>';}).join('');
-  wrap.querySelectorAll('.vpn-chip').forEach(function(ch){ch.onclick=function(){
-    if(vpnActiveSourceId===ch.dataset.src)return;vpnActiveSourceId=ch.dataset.src;try{localStorage.setItem('flux_vpn_source',vpnActiveSourceId);}catch(e){}
-    vpnKeys=[];vpnFiltered=[];vpnRenderedUpTo=0;vpnProtoFilter='all';renderVpnSources();renderVpnFilters();
-    var list=$('vpn-key-list');if(list)list.innerHTML='<div class="vpn-empty">Загрузка…</div>';var cnt=$('vpn-count');if(cnt)cnt.textContent='';var lb=$('vpn-load-btn');if(lb)lb.style.display='flex';var rb=$('vpn-refresh-btn');if(rb)rb.style.display='none';loadVpnKeys();
-  };});
+  var wrap=$('vpn-sources');if(!wrap)return;
+  wrap.innerHTML=VPN_SOURCES.map(function(s){return '<button class="vpn-chip'+(s.id===vpnActiveSourceId?' active':'')+'" data-src="'+escAttr(s.id)+'">'+esc(s.name)+'</button>';}).join('');
+  wrap.querySelectorAll('.vpn-chip').forEach(function(ch){
+    ch.onclick=function(){
+      if(vpnActiveSourceId===ch.dataset.src)return;
+      vpnActiveSourceId=ch.dataset.src;try{localStorage.setItem('flux_vpn_source',vpnActiveSourceId);}catch(e){}
+      vpnKeys=[];vpnFiltered=[];vpnRenderedUpTo=0;vpnProtoFilter='all';
+      renderVpnSources();renderVpnFilters();
+      var list=$('vpn-key-list');if(list)list.innerHTML='<div class="vpn-empty">Загрузка…</div>';
+      var cnt=$('vpn-count');if(cnt)cnt.textContent='';
+      var lb=$('vpn-load-btn');if(lb)lb.style.display='flex';
+      var rb=$('vpn-refresh-btn');if(rb)rb.style.display='none';
+      loadVpnKeys();
+    };
+  });
 }
-function setVpnRepoStatus(text){var el=$('vpn-repo-status');if(el)el.textContent=text||'';} async function loadVpnKeys(){
+async function loadVpnKeys(){
   var loadBtn=$('vpn-load-btn'),refreshBtn=$('vpn-refresh-btn'),list=$('vpn-key-list');
   if(loadBtn)loadBtn.disabled=true;if(refreshBtn)refreshBtn.disabled=true;
   if(list)list.innerHTML='<div class="skeleton"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line"></div><div class="sk-line short"></div></div></div>';
@@ -3671,13 +3653,12 @@ function setVpnRepoStatus(text){var el=$('vpn-repo-status');if(el)el.textContent
     vpnProtoFilter='all';vpnFiltered=vpnKeys.slice();
     renderVpnFilters();renderVpnKeys();
     if(vpnKeys.length===0){if(list)list.innerHTML='<div class="vpn-empty">Ключи не найдены</div>';if(loadBtn)loadBtn.style.display='flex';if(refreshBtn)refreshBtn.style.display='none';}
-    else {toast(source.name+': загружено '+vpnKeys.length+' ключей');setVpnRepoStatus('Источник проверен • ключи актуальны');}
+    else toast(source.name+': загружено '+vpnKeys.length+' ключей');
   }catch(renderErr){if(list)list.innerHTML='<div class="vpn-empty">Ошибка парсинга</div>';}
   if(loadBtn)loadBtn.disabled=false;if(refreshBtn)refreshBtn.disabled=false;
 }
-$('vpn-tier-tabs').querySelectorAll('[data-tier]').forEach(function(btn){btn.onclick=function(){setVpnTier(btn.dataset.tier);};});
 $('vpn-load-btn').onclick=loadVpnKeys;
-$('vpn-refresh-btn').onclick=function(){checkVpnRepositoryUpdates(false).then(loadVpnKeys).catch(loadVpnKeys);};
+$('vpn-refresh-btn').onclick=loadVpnKeys;
 
 var _idb=null;
 function idbOpen(){if(_idb)return Promise.resolve(_idb);return new Promise(function(res,rej){try{var req=indexedDB.open('fluxdb',1);req.onupgradeneeded=function(){var db=req.result;if(!db.objectStoreNames.contains('messages'))db.createObjectStore('messages',{keyPath:'key'});};req.onsuccess=function(){_idb=req.result;res(_idb);};req.onerror=function(){rej(req.error);};}catch(e){rej(e);}});}
@@ -3697,32 +3678,9 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('./firebase-me
 })();
 (function bindMentionInput(){var msgInp=$('msg-input');if(msgInp){msgInp.addEventListener('input',function(){handleMentionInput(msgInp);});msgInp.addEventListener('blur',function(){setTimeout(function(){var d=$('mention-dropdown');if(d)d.classList.remove('show');},150);});}})();
 setInterval(function(){if(currentUser)loadMyAssets();},60000);
-updateTogglesUI();refreshPushStatus();renderVpnTierTabs();renderVpnSources();setVpnRepoStatus('Проверка репозиториев…');checkVpnRepositoryUpdates(false).then(function(){setVpnRepoStatus('Репозитории проверены • автообновление каждые 15 мин');}).catch(function(){setVpnRepoStatus('Не удалось проверить GitHub');});setInterval(function(){if(navigator.onLine)checkVpnRepositoryUpdates(true).catch(function(){});},900000);window.addEventListener('online',function(){checkVpnRepositoryUpdates(true).catch(function(){});});document.addEventListener('visibilitychange',function(){if(!document.hidden&&navigator.onLine){var last=0;try{last=+(JSON.parse(localStorage.getItem('flux_vpn_repo_heads')||'{}').checkedAt||0);}catch(e){}if(Date.now()-last>300000)checkVpnRepositoryUpdates(false).catch(function(){});}});
+updateTogglesUI();refreshPushStatus();renderVpnSources();
+discoverVpnSources().then(function(ok){if(ok)renderVpnSources();});
 if(!firebaseReady){setTimeout(function(){toast('Проверьте интернет');},500);}
-</script>
-
-<script>
-(function(){
-  function bindFluxBottomNav(){
-    var nav=document.getElementById('bottom-nav');
-    if(!nav || nav.__fluxNavFixed) return;
-    nav.__fluxNavFixed=true;
-    nav.addEventListener('click',function(e){
-      var item=e.target.closest('.nav-item');
-      if(!item || !nav.contains(item)) return;
-      e.preventDefault(); e.stopPropagation();
-      var tab=item.getAttribute('data-tab');
-      if(typeof switchTab==='function'){ switchTab(tab); }
-      else {
-        nav.querySelectorAll('.nav-item').forEach(function(x){x.classList.toggle('active',x===item);});
-        document.querySelectorAll('.tab-content').forEach(function(x){x.classList.toggle('active',x.id==='tab-'+tab);});
-      }
-    },true);
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindFluxBottomNav);
-  else bindFluxBottomNav();
-  setTimeout(bindFluxBottomNav,500);
-})();
 </script>
 </body>
 </html>
