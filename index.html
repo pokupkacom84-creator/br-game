@@ -1654,23 +1654,67 @@ async function e2eEnsureChatKey(chatId,otherUid){
 }
 
 function startSelfListener(){
-  if(unsubSelfDoc&&unsubSelfDoc.off)unsubSelfDoc.off();
-  var ref=db.ref('users/'+currentUser.uid);
-  ref.update({online:!hideOnline,lastSeen:TS}).catch(function(){});
-  try{ref.child('online').onDisconnect().set(false);ref.child('lastSeen').onDisconnect().set(TS);}catch(e){}
-  unsubSelfDoc=ref.on('value',function(s){
+  if(!currentUser)return;
+
+  if(unsubSelfDoc){try{unsubSelfDoc.off();}catch(e){}unsubSelfDoc=null;}
+  if(visibilityHandler){try{document.removeEventListener('visibilitychange',visibilityHandler);}catch(e){}}
+  if(beforeUnloadHandler){try{window.removeEventListener('beforeunload',beforeUnloadHandler);}catch(e){}}
+
+  var uid=currentUser.uid;
+  var userRef=db.ref('users/'+uid);
+
+  // Profile listener: online/lastSeen are stored separately in presence/.
+  unsubSelfDoc=userRef.on('value',function(s){
     var v=s.val();
-    if(v){
-      if(v.adminBlocked===true){toast('Аккаунт заблокирован администратором');try{auth.signOut();}catch(e){}return;}
-      currentUserData=Object.assign({uid:currentUser.uid},v);
-      window.__fluxPremiumState=v.premium||window.__fluxPremiumState||{};
-      userCache[currentUser.uid]=currentUserData;
-      updateSettingsUI();
+    if(!v)return;
+    if(v.adminBlocked===true){
+      toast('Аккаунт заблокирован администратором');
+      try{auth.signOut();}catch(e){}
+      return;
     }
+    currentUserData=Object.assign({uid:uid},v);
+    window.__fluxPremiumState=v.premium||window.__fluxPremiumState||{};
+    userCache[uid]=currentUserData;
+    updateSettingsUI();
   });
-  visibilityHandler=function(){var r=db.ref('users/'+currentUser.uid);if(document.hidden)r.update({online:false,lastSeen:TS}).catch(function(){});else r.update({online:hideOnline?false:true}).catch(function(){});};
-  beforeUnloadHandler=function(){try{db.ref('users/'+currentUser.uid).update({online:false,lastSeen:TS});}catch(e){}};
+
+  var presenceRef=db.ref('presence/'+uid);
+  var connectedRef=db.ref('.info/connected');
+
+  function setOnline(){
+    if(!currentUser)return;
+    presenceRef.update({
+      online:hideOnline?false:true,
+      lastSeen:firebase.database.ServerValue.TIMESTAMP
+    }).catch(function(){});
+  }
+
+  function setOffline(){
+    if(!currentUser)return;
+    presenceRef.update({
+      online:false,
+      lastSeen:firebase.database.ServerValue.TIMESTAMP
+    }).catch(function(){});
+  }
+
+  connectedRef.on('value',function(snap){
+    if(snap.val()!==true)return;
+    try{
+      presenceRef.onDisconnect().update({
+        online:false,
+        lastSeen:firebase.database.ServerValue.TIMESTAMP
+      });
+    }catch(e){}
+    setOnline();
+  });
+
+  visibilityHandler=function(){
+    if(document.hidden)setOffline();
+    else setOnline();
+  };
   document.addEventListener('visibilitychange',visibilityHandler);
+
+  beforeUnloadHandler=function(){setOffline();};
   window.addEventListener('beforeunload',beforeUnloadHandler);
 }
 function startSavedMetaListener(){if(unsubSavedMeta&&unsubSavedMeta.off)unsubSavedMeta.off();unsubSavedMeta=db.ref('saved/'+currentUser.uid).on('value',function(s){var v=s.val()||{};savedLastMessage=v.lastMessage||'';savedLastTime=v.lastTime||null;scheduleRenderChats();});}
@@ -3183,45 +3227,40 @@ function renderPremiumTab(list){
 }
 function openPaymentInExternalBrowser(url){
   if(!url||!/^https:\/\//i.test(url))return false;
-  /* Telegram Mini Apps officially provide openLink() specifically for opening
-   * a URL in the external browser. This must be called directly from the
-   * user's click handler. */
+
+  /* In the Sketchware WebView the most reliable path is the Android
+   * JavascriptInterface. It sends the HTTPS payment URL directly to the
+   * native Activity instead of letting WebView rewrite it to tg://resolve. */
+  try{
+    if(window.Android&&typeof window.Android.openExternalBrowser==='function'){
+      window.Android.openExternalBrowser(String(url));
+      return true;
+    }
+  }catch(e){console.warn('Android external browser bridge failed',e);}
+
+  /* Normal Telegram Mini App fallback. */
   try{
     if(window.Telegram&&window.Telegram.WebApp&&typeof window.Telegram.WebApp.openLink==='function'){
-      window.Telegram.WebApp.openLink(url,{try_instant_view:false,try_browser:'chrome'});
+      window.Telegram.WebApp.openLink(url,{try_instant_view:false});
       return true;
     }
   }catch(e){console.warn('Telegram openLink failed',e);}
-  /* Android wrappers sometimes expose a dedicated external-browser bridge. */
+
+  /* Last resort for a normal browser/WebView. */
   try{
-    if(window.Android){
-      if(typeof window.Android.openExternalBrowser==='function'){window.Android.openExternalBrowser(url);return true;}
-      if(typeof window.Android.openExternalUrl==='function'){window.Android.openExternalUrl(url);return true;}
-      if(typeof window.Android.openBrowser==='function'){window.Android.openBrowser(url);return true;}
-    }
-  }catch(e){console.warn('Android external browser bridge failed',e);}
-  /* Last resort for Android WebView: ask the OS to handle the HTTPS URL in
-   * Chrome. No tg:// URL is ever generated by this code. */
-  try{
-    var u=new URL(url);
-    var intent='intent://'+u.host+u.pathname+u.search+'#Intent;scheme=https;package=com.android.chrome;end';
-    window.location.href=intent;
+    window.open(url,'_blank','noopener,noreferrer');
     return true;
-  }catch(e){
-    try{window.open(url,'_blank','noopener,noreferrer');return true;}catch(e2){return false;}
-  }
+  }catch(e){return false;}
 }
 function buyPremium(plan){
   if(!currentUser||!plan){toast('Войдите в Flux');return;}
   var bot=getPaymentBotUsername();if(!bot)return;
   var payload=currentUser.uid+'_'+plan.id;
-  /* Keep the payment URL HTTPS. It is deliberately opened outside the
-   * Mini App so the Android WebView cannot turn it into tg://resolve. */
   var url='https://t.me/'+bot+'?start='+encodeURIComponent(payload);
   if(openPaymentInExternalBrowser(url)){
-    toast('Открываем оплату во внешнем браузере…');
+    toast('Открываем оплату…');
   }else{
-    toast('Не удалось открыть внешний браузер');
+    toast('Не удалось открыть оплату');
   }
 }
 async function loadPremiumState(){
