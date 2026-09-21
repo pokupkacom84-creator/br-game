@@ -755,7 +755,7 @@ body.flux-premium .chat-header-name{ text-shadow:0 0 18px rgba(168,85,247,.18)}
     <div class="settings-item" id="btn-quick-reactions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg><span>Быстрые реакции</span></div>
     <div class="settings-item" id="btn-gifts-display"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5" rx="1"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg><span>Подарки в профиле</span><div class="settings-value" id="gifts-display-value">Профиль</div></div>
     <div class="settings-item" id="btn-promo-code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 12a2 2 0 000-4 2 2 0 010-4H5a2 2 0 000 4 2 2 0 010 4 2 2 0 000 4h15a2 2 0 010-4 2 2 0 000-4z"/><path d="M9 8h.01M15 16h.01M9 16l6-8"/></svg><span>Промокод</span><div class="settings-value">🎁</div></div>
-    <div class="settings-item" id="btn-referrals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="3"/><path d="M3 21c0-3.3 2.7-6 6-6 1.9 0 3.6.9 4.7 2.3M14 15c3.9 0 7 2.2 7 6"/></svg><span>Пригласить друзей</span><div class="settings-value">⭐</div></div>
+
     <div class="settings-item" id="btn-admin-panel" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6l7-4z"/><path d="M8 12l2.5 2.5L16 9"/></svg><span>Админ-панель</span><div class="settings-value">ADMIN</div></div>
   </div>
   <div class="settings-section-title">Приватность</div>
@@ -924,7 +924,7 @@ body.flux-premium .chat-header-name{ text-shadow:0 0 18px rgba(168,85,247,.18)}
 <div id="my-gifts-sheet" class="profile-sheet"><div class="profile-sheet-body" id="my-gifts-body"></div></div>
 <div id="gift-detail-sheet" class="profile-sheet"><div class="profile-sheet-body" id="gift-detail-body"></div></div>
 <div id="promo-sheet" class="profile-sheet"><div class="profile-sheet-body" id="promo-body"></div></div>
-<div id="referral-sheet" class="profile-sheet"><div class="profile-sheet-body" id="referral-body"></div></div>
+
 <div id="admin-sheet" class="profile-sheet"><div class="profile-sheet-body" id="admin-body"></div></div>
 
 <div id="call-screen" class="call-screen">
@@ -1829,7 +1829,6 @@ $('onb-continue').onclick=async function(){
     currentUserData={uid:currentUser.uid,name:name,username:username,avatarId:onbAvatarId};
     userCache[currentUser.uid]=currentUserData;
     goScreen('main-screen',true);
-    processReferralOnSignup();
     updateProfileDailyStreak();
     startSelfListener();startUserChatsListener();startSavedMetaListener();startSessionTracking();startCallListener();
     startPremiumListener();
@@ -2807,7 +2806,7 @@ function renderPremiumTab(list){
   html+='<div class="premium-benefits">'+
     '<div class="premium-benefit"><div class="premium-benefit-icon">👑</div><div class="premium-benefit-title">Premium-бейдж</div><div class="premium-benefit-desc">Красивый бейдж рядом с именем и в профиле.</div></div>'+
     '<div class="premium-benefit"><div class="premium-benefit-icon">📌</div><div class="premium-benefit-title">Больше закреплений</div><div class="premium-benefit-desc">Расширенное количество закреплённых чатов.</div></div>'+
-    '<div class="premium-benefit"><div class="premium-benefit-icon">💬</div><div class="premium-benefit-title">Без увеличения лимита сообщений</div><div class="premium-benefit-desc">Premium не увеличивает лимит сообщений.</div></div>'+
+    ''+
     '<div class="premium-benefit"><div class="premium-benefit-icon">✨</div><div class="premium-benefit-title">Premium-оформление</div><div class="premium-benefit-desc">Особый профиль, визуальные эффекты и анимации.</div></div>'+
     '<div class="premium-benefit"><div class="premium-benefit-icon">🎁</div><div class="premium-benefit-title">Эксклюзивные подарки</div><div class="premium-benefit-desc">Доступ к специальным Premium-подаркам и оформлению.</div></div>'+
     '<div class="premium-benefit"><div class="premium-benefit-icon">🎨</div><div class="premium-benefit-title">Дополнительное оформление</div><div class="premium-benefit-desc">Больше вариантов профиля и визуальных эффектов.</div></div>'+
@@ -2970,10 +2969,6 @@ function isFluxAdmin(){
 }
 function updateAdminVisibility(){var b=document.getElementById('btn-admin-panel');if(b)b.style.display=isFluxAdmin()?'flex':'none';}
 
-function referralLinkFor(){return location.origin+location.pathname+'?ref='+encodeURIComponent(currentUser&&currentUser.uid||'');}
-async function processReferralOnSignup(){if(!currentUser)return;var params=new URLSearchParams(location.search),refUid=String(params.get('ref')||'').trim();if(!refUid||refUid===currentUser.uid)return;try{var marker=await db.ref('users/'+currentUser.uid+'/referral').once('value');if(marker.exists())return;var rs=await db.ref('users/'+refUid).once('value');if(!rs.exists())return;var now=Date.now(),bonus=25,updates={};updates['users/'+currentUser.uid+'/referral']={referrerUid:refUid,joinedAt:now,bonusStars:bonus};updates['users/'+refUid+'/referrals/'+currentUser.uid]={joinedAt:now,bonusStars:bonus};var a=Number((await db.ref('users/'+currentUser.uid+'/stars').once('value')).val()||0),b=Number((rs.val()||{}).stars||0);updates['users/'+currentUser.uid+'/stars']=a+bonus;updates['users/'+refUid+'/stars']=b+bonus;await db.ref().update(updates);myStars+=bonus;updateStarsUI();toast('🎉 За приглашение +'+bonus+' ⭐');try{history.replaceState({},document.title,location.pathname+location.hash);}catch(e){}}catch(e){console.warn('referral signup',e);}}
-async function openReferralSheet(){if(!currentUser)return;var sheet=document.getElementById('referral-sheet'),body=document.getElementById('referral-body');sheet.classList.add('show');var link=referralLinkFor();body.innerHTML='<div class="profile-sheet-title">👥 Пригласить друзей</div><div class="modal-text">Пригласите друга по ссылке. После его регистрации вы оба получите бонус.</div><div class="profile-info-card" style="margin:12px 0"><div class="info-row"><div class="info-value" style="font-size:13px;word-break:break-all">'+esc(link)+'</div><div class="info-label">Ваша ссылка</div></div><div class="info-row"><div class="info-value" id="ref-count">…</div><div class="info-label">Приглашено</div></div></div><div class="modal-actions stack"><button class="modal-btn primary" id="ref-share">Поделиться ссылкой</button><button class="modal-btn" id="ref-copy">Скопировать</button><button class="modal-btn" id="ref-close">Закрыть</button></div>';try{var snap=await db.ref('users/'+currentUser.uid+'/referrals').once('value');document.getElementById('ref-count').textContent=String(Object.keys(snap.val()||{}).length);}catch(e){document.getElementById('ref-count').textContent='0';}document.getElementById('ref-close').onclick=function(){sheet.classList.remove('show');};document.getElementById('ref-copy').onclick=function(){copyText(link);};document.getElementById('ref-share').onclick=async function(){try{if(navigator.share){await navigator.share({title:'Flux',text:'Присоединяйся к Flux 💙',url:link});return;}}catch(e){}copyText(link);toast('Ссылка скопирована');};}
-document.getElementById('referral-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
 function profileDailyStreakKey(ts){var d=new Date(ts||Date.now());return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function previousStreakDay(key){var p=key.split('-').map(Number),d=new Date(p[0],p[1]-1,p[2]-1);return profileDailyStreakKey(d.getTime());}
 async function updateProfileDailyStreak(){if(!currentUser)return;try{var ref=db.ref('users/'+currentUser.uid+'/dailyStreak'),snap=await ref.once('value'),st=snap.val()||{},today=profileDailyStreakKey(Date.now());if(st.lastDate===today)return;var count=st.lastDate===previousStreakDay(today)?Number(st.count||0)+1:1;var reward=count%7===0?10:2;await ref.set({count:count,lastDate:today,updatedAt:Date.now()});var tx=await db.ref('users/'+currentUser.uid+'/stars').transaction(function(v){return Number(v||0)+reward;});myStars=Number(tx.snapshot.val()||0);updateStarsUI();toast('🔥 Серия '+count+' дн. · +'+reward+' ⭐');}catch(e){console.warn('daily streak',e);}}
@@ -3068,7 +3063,7 @@ function openGiftPicker(targetUid){
   document.getElementById('gift-picker-cancel').onclick=function(){sheet.classList.remove('show');};
 }
 
-var promoBtn=document.getElementById('btn-promo-code');if(promoBtn)promoBtn.onclick=openPromoSheet;var referralBtn=document.getElementById('btn-referrals');if(referralBtn)referralBtn.onclick=openReferralSheet;
+var promoBtn=document.getElementById('btn-promo-code');if(promoBtn)promoBtn.onclick=openPromoSheet;
 var adminBtn=document.getElementById('btn-admin-panel');if(adminBtn)adminBtn.onclick=openAdminPanel;
 updateAdminVisibility();
 $('btn-theme').onclick=function(){setTheme(!document.body.classList.contains('dark'));updateTogglesUI();};
