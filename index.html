@@ -1570,6 +1570,7 @@ auth.onAuthStateChanged(async function(user){
     if(data.autoDeleteMonths){autoDeleteMonths=parseInt(data.autoDeleteMonths,10)||0;try{localStorage.setItem('flux_auto_delete',String(autoDeleteMonths));}catch(e){}}
     if(data.twofa&&data.twofa.enabled){twoFAEnabled=true;try{localStorage.setItem('flux_2fa','1');}catch(e){}}
     myGifts=data.giftsReceived||{};
+
     if(pinLockEnabled&&pinLockCode){showPinLock();}
     goScreen('main-screen',true);
     startSelfListener();startUserChatsListener();startSavedMetaListener();
@@ -1746,6 +1747,7 @@ function startSelfListener(){
       window.__fluxPremiumState=v.premium||window.__fluxPremiumState||{};
       userCache[currentUser.uid]=currentUserData;
       myGifts=v.giftsReceived||{};
+
       updateSettingsUI();renderProfileGifts();renderAvatarGiftBadge();
     }
   });
@@ -2763,6 +2765,7 @@ async function renderProfileGifts(){
     var rawGifts=giftSnap.val()||{};
     var giftList=normalizeGiftList(rawGifts,{visibleOnly:true});
     myGifts=rawGifts;
+
     var showGifts=(giftsDisplay==='profile')?giftList:[];
     sec.style.display='block';
     var html=renderProfileAssetsHtml([], showGifts, {pad:'24px'});
@@ -2967,6 +2970,7 @@ async function sendGiftTo(g,targetUid,comment){
     var updates={};
     var giftKey=db.ref('users/'+targetUid+'/giftsReceived').push().key;
     updates['users/'+targetUid+'/giftsReceived/'+giftKey]=gift;
+    updates['publicGiftProfiles/'+targetUid+'/'+giftKey]=Object.assign({},gift,{giftKey:giftKey});
     updates['users/'+currentUser.uid+'/giftsSent/'+giftKey]=Object.assign({},gift,{toUid:targetUid});
 
     if(targetUid===currentUser.uid){
@@ -3036,8 +3040,8 @@ async function openGiftDetails(ownerUid,giftKey,isSent){
       '<div class="modal-actions stack"><button class="sheet-btn primary" id="gift-detail-close">Готово</button>'+(mine&&!isSent?'<button class="sheet-btn exchange-btn" id="gift-exchange">🔄 Обменять подарок</button>':'')+(mine&&!isSent&&g.visible!==false?'<button class="sheet-btn secondary" id="gift-hide">Скрыть из профиля</button>':'')+(mine&&!isSent&&g.visible===false?'<button class="sheet-btn secondary" id="gift-show">Показать в профиле</button>':'')+'</div>';
     var close=document.getElementById('gift-detail-close');if(close)close.onclick=function(){sheet.classList.remove('show');};
     var exchange=document.getElementById('gift-exchange');if(exchange)exchange.onclick=function(){sheet.classList.remove('show');openGiftExchangePicker(g,giftKey);};
-    var hide=document.getElementById('gift-hide');if(hide)hide.onclick=async function(){try{await db.ref('users/'+ownerUid+'/giftsReceived/'+giftKey+'/visible').set(false);toast('Подарок скрыт из профиля');sheet.classList.remove('show');renderProfileGifts();}catch(e){toast('Не удалось скрыть подарок');}};
-    var show=document.getElementById('gift-show');if(show)show.onclick=async function(){try{await db.ref('users/'+ownerUid+'/giftsReceived/'+giftKey+'/visible').set(true);toast('Подарок снова виден');sheet.classList.remove('show');renderProfileGifts();}catch(e){toast('Не удалось показать подарок');}};
+    var hide=document.getElementById('gift-hide');if(hide)hide.onclick=async function(){try{var ups={};ups['users/'+ownerUid+'/giftsReceived/'+giftKey+'/visible']=false;ups['publicGiftProfiles/'+ownerUid+'/'+giftKey]=null;await db.ref().update(ups);toast('Подарок скрыт из профиля');sheet.classList.remove('show');renderProfileGifts();}catch(e){toast('Не удалось скрыть подарок');}};
+    var show=document.getElementById('gift-show');if(show)show.onclick=async function(){try{var ss=await db.ref('users/'+ownerUid+'/giftsReceived/'+giftKey).once('value');var gg=ss.val();if(!gg){toast('Подарок не найден');return;}gg=Object.assign({},gg,{visible:true,giftKey:giftKey});var ups={};ups['users/'+ownerUid+'/giftsReceived/'+giftKey+'/visible']=true;ups['publicGiftProfiles/'+ownerUid+'/'+giftKey]=gg;await db.ref().update(ups);toast('Подарок снова виден');sheet.classList.remove('show');renderProfileGifts();}catch(e){toast('Не удалось показать подарок');}};
   }catch(e){body.innerHTML='<div class="empty">Не удалось открыть подарок</div><button class="sheet-btn secondary" id="gift-detail-close">Закрыть</button>';var c=document.getElementById('gift-detail-close');if(c)c.onclick=function(){sheet.classList.remove('show');};}
 }
 document.getElementById('gift-detail-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
@@ -3142,7 +3146,11 @@ async function exchangeGiftWith(g,giftKey,targetUid){
     if(!own){toast('Подарок уже недоступен');return;}
     var targetKey=db.ref('users/'+targetUid+'/giftsReceived').push().key;
     var transferred=Object.assign({},own,{ownerUid:targetUid,exchangedAt:Date.now(),exchangedFrom:currentUser.uid,visible:true});
-    var updates={};updates['users/'+currentUser.uid+'/giftsReceived/'+giftKey]=null;updates['users/'+targetUid+'/giftsReceived/'+targetKey]=transferred;
+    var updates={};
+    updates['users/'+currentUser.uid+'/giftsReceived/'+giftKey]=null;
+    updates['users/'+targetUid+'/giftsReceived/'+targetKey]=transferred;
+    updates['publicGiftProfiles/'+currentUser.uid+'/'+giftKey]=null;
+    updates['publicGiftProfiles/'+targetUid+'/'+targetKey]=Object.assign({},transferred,{giftKey:targetKey});
     await db.ref().update(updates);
     toast('Подарок передан');playSound('react');vibrate('send');
     myGifts=Object.assign({},myGifts);delete myGifts[giftKey];renderProfileGifts();renderAvatarGiftBadge();
@@ -3367,57 +3375,106 @@ function extractProfileGiftMap(obj){
   if(obj.gifts&&obj.gifts.received)maps.push(obj.gifts.received);
   return mergeGiftMaps.apply(null,maps);
 }
+async function syncPublicGiftProfile(uid, giftsRaw){
+  if(!uid || !db)return;
+  try{
+    var raw=giftsRaw || {};
+    var publicMap={};
+    Object.keys(raw||{}).forEach(function(k){
+      var g=raw[k];
+      if(!g || g.visible===false || g.profileHidden===true)return;
+      publicMap[k]=Object.assign({},g,{giftKey:k});
+    });
+    await db.ref('publicGiftProfiles/'+uid).set(publicMap);
+  }catch(e){ console.warn('[gifts] public mirror write failed',e); }
+}
+async function readPublicGiftProfile(uid){
+  if(!uid || !db)return {};
+  try{
+    var s=await db.ref('publicGiftProfiles/'+uid).once('value');
+    return s.val()||{};
+  }catch(e){
+    console.warn('[gifts] public mirror read failed',e);
+    return {};
+  }
+}
+
 async function loadProfileAssets(uid){
   var wrap=document.getElementById('profile-assets-container');
   var loading=document.getElementById('profile-assets-loading');
   if(!wrap||!uid)return;
   var token=++profileAssetsLoadToken;
+
+  function addGiftMap(target, source){
+    if(!source || typeof source!=='object') return;
+    Object.keys(source).forEach(function(k){
+      var g=source[k];
+      if(!g || typeof g!=='object') return;
+      target[k]=Object.assign({},g,{giftKey:g.giftKey||k});
+    });
+  }
+
   try{
     var raw={};
-    var sources=[];
-    var cachedUser=userCache[uid];
-    if(cachedUser){
-      var cachedMap=extractProfileGiftMap(cachedUser);
-      if(Object.keys(cachedMap).length)sources.push(cachedMap);
-    }
 
-    // Read the complete user record as a fallback. Some older builds stored
-    // the collection directly in the cached/public user object.
+    // IMPORTANT:
+    // Your Firebase rules already allow authenticated users to read
+    // users/$uid and users/$uid/nfts. Therefore the collection is read
+    // directly from the owner's record. No publicGiftProfiles mirror is used.
+    var userSnap=await db.ref('users/'+uid).once('value');
+    var userVal=userSnap.val()||{};
+
+    // Current gift storage.
+    addGiftMap(raw,userVal.giftsReceived);
+
+    // NFT storage supported by the existing Firebase rules.
+    addGiftMap(raw,userVal.nfts);
+
+    // Compatibility with older versions of the app.
+    addGiftMap(raw,userVal.gifts);
+    addGiftMap(raw,userVal.collection);
+    addGiftMap(raw,userVal.giftCollection);
+    if(userVal.giftCollection && userVal.giftCollection.received)
+      addGiftMap(raw,userVal.giftCollection.received);
+    if(userVal.gifts && userVal.gifts.received)
+      addGiftMap(raw,userVal.gifts.received);
+
+    // Direct reads are kept as fallbacks in case the nested object wasn't
+    // included by an older data structure.
     try{
-      var userSnap=await db.ref('users/'+uid).once('value');
-      var userVal=userSnap.val()||{};
-      var userMap=extractProfileGiftMap(userVal);
-      if(Object.keys(userMap).length)sources.push(userMap);
-      if(userVal&&userVal.name){userCache[uid]=Object.assign({uid:uid},userVal);}
-    }catch(userErr){
-      console.warn('[profile] user read failed',userErr);
-    }
+      var receivedSnap=await db.ref('users/'+uid+'/giftsReceived').once('value');
+      addGiftMap(raw,receivedSnap.val());
+    }catch(e){ console.warn('[profile] giftsReceived read failed',e); }
 
-    // Primary collection path used by the current gift system.
     try{
-      var snap=await db.ref('users/'+uid+'/giftsReceived').once('value');
-      var direct=snap.val()||{};
-      if(Object.keys(direct).length)sources.push(direct);
-    }catch(readErr){
-      console.warn('[profile] giftsReceived read failed',readErr);
+      var nftSnap=await db.ref('users/'+uid+'/nfts').once('value');
+      addGiftMap(raw,nftSnap.val());
+    }catch(e){ console.warn('[profile] nfts read failed',e); }
+
+    if(userVal && userVal.name){
+      userCache[uid]=Object.assign({uid:uid},userVal);
     }
 
-    raw=mergeGiftMaps.apply(null,sources);
-    if(token!==profileAssetsLoadToken)return;
-
-    // Keep a per-user cache so opening/closing the profile never makes the
-    // collection disappear because a later Firebase read is empty/denied.
+    // Keep the local cache, but NEVER replace a non-empty collection with
+    // an empty Firebase response.
     if(Object.keys(raw).length){
       profileGiftCache[uid]=Object.assign({},profileGiftCache[uid]||{},raw);
     }else if(profileGiftCache[uid]){
       raw=profileGiftCache[uid];
     }
 
-    var giftList=normalizeGiftList(raw).filter(function(g){return g.profileHidden!==true;});
+    if(token!==profileAssetsLoadToken)return;
+
+    // Old gifts may not have a `visible` field. They must remain visible.
+    var giftList=normalizeGiftList(raw).filter(function(g){
+      return g.profileHidden!==true && g.visible!==false;
+    });
+
     if(loading)loading.remove();
 
     var html=renderProfileAssetsHtml([],giftList,{pad:'0px',giftLimit:12});
 
+    // Only the owner's sent-gifts section is private and shown in own profile.
     if(currentUser&&uid===currentUser.uid){
       try{
         var sentSnap=await db.ref('users/'+uid+'/giftsSent').once('value');
@@ -3427,7 +3484,7 @@ async function loadProfileAssets(uid){
           html+='<div class="profile-assets-label" style="padding:14px 0 0"><span class="gift-label-icon">↗</span> Отправленные · '+sentList.length+'</div><div class="profile-gifts-wrap" style="padding-left:0;padding-right:0">';
           sentList.slice(0,12).forEach(function(g){
             var c=String(g.comment||'').trim(),to=g.toName||g.toUsername||'пользователю';
-            html+='<div class="profile-gift-item profile-gift-card" data-gift-key="'+escAttr(g.giftKey||'')+'" data-sent-gift="1" title="'+escAttr((g.name||'Подарок')+' — '+to)+'"><div class="profile-gift-art">'+giftArtSvg(g,'sm')+'</div><div class="profile-gift-card-name">'+esc(g.name||'Подарок')+'</div><div class="profile-gift-card-from">→ '+esc(to)+'</div>'+(c?'<div class="profile-gift-card-comment">'+esc(c.length>58?c.slice(0,58)+'…':c)+'</div>':'')+'</div>';
+            html+='<div class="profile-gift-item profile-gift-card" data-gift-key="'+escAttr(g.giftKey||'')+'" data-sent-gift="1" title="'+escAttr((g.name||'Подарок')+' — '+to)+'"><div class="profile-gift-art">'+giftArtSvg(g,'sm')+'</div><div class="profile-gift-card-name">'+esc(g.name||'Подарок')+'</div><div class="profile-gift-card-from">→ '+esc(to)+'</div>'+(c?'<div class="profile-gift-card-comment">'+esc(c.length>58?c.slice(0,58)+'…':'')+'</div>':'')+'</div>';
           });
           html+='</div>';
         }
@@ -3438,17 +3495,23 @@ async function loadProfileAssets(uid){
     wrap.innerHTML=html;
     wrap.onclick=function(e){
       var item=e.target.closest('[data-gift-key]');
-      if(item){e.stopPropagation();openGiftDetails(uid,item.dataset.giftKey,item.dataset.sentGift==='1');}
+      if(item){
+        e.stopPropagation();
+        openGiftDetails(uid,item.dataset.giftKey,item.dataset.sentGift==='1');
+      }
     };
   }catch(e){
     if(token!==profileAssetsLoadToken)return;
     var cached=profileGiftCache[uid]||extractProfileGiftMap(userCache[uid]);
     if(cached&&Object.keys(cached).length){
       if(loading)loading.remove();
-      wrap.innerHTML=renderProfileAssetsHtml([],normalizeGiftList(cached).filter(function(g){return g.profileHidden!==true;}),{pad:'0px'});
+      wrap.innerHTML=renderProfileAssetsHtml([],normalizeGiftList(cached).filter(function(g){
+        return g.profileHidden!==true && g.visible!==false;
+      }),{pad:'0px'});
     }else{
       if(loading)loading.textContent='Пока нет подарков';
-      if(!wrap.innerHTML.trim())wrap.innerHTML='<div class="profile-assets-empty"><div class="profile-assets-empty-icon">🎁</div><div style="margin-top:6px">Пока нет подарков</div></div>';
+      if(!wrap.innerHTML.trim())
+        wrap.innerHTML='<div class="profile-assets-empty"><div class="profile-assets-empty-icon">🎁</div><div style="margin-top:6px">Пока нет подарков</div></div>';
     }
     console.error('[profile] assets load error',e);
   }
