@@ -3149,17 +3149,20 @@ async function loadVpnKeys(){
     if(!files){
       try{
         var cdnRef = (source.ref && /^[0-9a-f]{40}$/i.test(source.ref)) ? source.ref : 'main';
-        var flatUrl = 'https://data.jsdelivr.com/v1/package/gh/'+source.repo+'@'+encodeURIComponent(cdnRef)+'/flat';
-        var flatResp = await fetch(flatUrl, {cache:'no-store'});
+        /* Current jsDelivr API uses /v1/packages/gh/... with structure=flat.
+           The old /v1/package/... endpoint can return 403. */
+        var flatUrl = 'https://data.jsdelivr.com/v1/packages/gh/'+source.repo+'@'+encodeURIComponent(cdnRef)+'?structure=flat';
+        var flatResp = await fetch(flatUrl, {cache:'no-store', headers:{'Accept':'application/json'}});
         if(!flatResp.ok) throw new Error('CDN HTTP '+flatResp.status);
         var flatJson = await flatResp.json();
-        if(Array.isArray(flatJson.files)){
-          files = flatJson.files.filter(function(f){
-            var n=(f&&f.name)||'';
-            return n.indexOf('/'+source.path+'/')===0 && !n.endsWith('/');
-          }).map(function(f){
-            var n=(f.name||'').replace(/^\//,'');
-            return {type:'file',name:n.split('/').pop(),path:n,download_url:'https://cdn.jsdelivr.net/gh/'+source.repo+'@'+cdnRef+'/'+n};
+        var flatFiles = Array.isArray(flatJson.files) ? flatJson.files : [];
+        if(flatFiles.length){
+          files = flatFiles.map(function(f){
+            var n = typeof f === 'string' ? f : ((f&&f.name)||(f&&f.path)||'');
+            n = n.replace(/^\//,'');
+            return {name:n.split('/').pop(),path:n,type:'file',download_url:'https://cdn.jsdelivr.net/gh/'+source.repo+'@'+cdnRef+'/'+n};
+          }).filter(function(f){
+            return f.path && (f.path===source.path || f.path.indexOf(source.path+'/')===0) && f.path.indexOf(source.path+'/')===0;
           });
         }
       }catch(e){ lastErr = e; }
