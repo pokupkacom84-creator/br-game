@@ -964,12 +964,6 @@ const FLUX_PREMIUM_PLANS = [
 
 /* Реквизиты (используются только для отображения подсказки, если юзер
    откроет бота с ошибкой — сам бот их показывает в чате) */
-const PAYMENT_INFO = {
-  card: '2204120144723133',
-  bankNumber: '4100118891507332',
-  bankName: 'ЮMoney',
-  adminId: '8295645690'
-};
 
 let auth=null,db=null,TS=null,INCR=null,firebaseReady=false,messaging=null;
 try{
@@ -2756,7 +2750,10 @@ function startStarsListener(){
 function spendStars(amount){
   amount=Number(amount)||0;if(!currentUser||amount<=0)return Promise.resolve(false);
   var ref=db.ref('users/'+currentUser.uid+'/stars');
-  return ref.transaction(function(cur){cur=Number(cur||0);if(cur<amount)return;return cur-amount;}).then(function(r){if(!r.committed){toast('Недостаточно звёзд: нужно '+amount+' ⭐');vibrate('error');return false;}myStars=Number(r.snapshot.val()||0);updateStarsUI();return true;});
+  return ref.transaction(function(cur){cur=Number(cur||0);if(cur<amount)return;return cur-amount;}).then(function(r){
+    if(!r.committed){toast('Недостаточно звёзд: нужно '+amount+' ⭐');vibrate('error');return false;}
+    myStars=Number(r.snapshot.val()||0);updateStarsUI();return true;
+  }).catch(function(e){console.warn('spendStars',e);toast('Не удалось списать звёзды. Попробуйте ещё раз.');return false;});
 }
 
 function getPremiumPlan(id){return FLUX_PREMIUM_PLANS.find(function(x){return x.id===id;})||null;}
@@ -2844,20 +2841,53 @@ function openGiftCommentSheet(g,targetUid){
   showModal('<div class="modal-title">Подарить '+esc(g.name)+'</div><div style="display:flex;justify-content:center;margin:4px 0">'+giftArtSvg(g,'lg')+'</div><div style="font-size:13px;color:var(--text-2);text-align:center;margin-bottom:10px">Получатель: <b style="color:var(--text)">'+esc(u.name||'пользователь')+'</b></div><textarea id="gift-comment" class="sheet-input" maxlength="160" rows="3" placeholder="Добавьте комментарий…" style="resize:none;width:100%;box-sizing:border-box"></textarea><div style="font-size:10px;color:var(--text-3);text-align:right;margin-top:4px"><span id="gift-comment-count">0</span>/160</div><div class="modal-actions stack"><button class="modal-btn primary" id="gift-send-confirm">Подарить за '+g.price+' ⭐</button><button class="modal-btn" id="gift-comment-cancel">Отмена</button></div>',function(m,close){var ta=m.querySelector('#gift-comment'),cnt=m.querySelector('#gift-comment-count');ta.addEventListener('input',function(){cnt.textContent=String(ta.value.length);});m.querySelector('#gift-comment-cancel').onclick=close;m.querySelector('#gift-send-confirm').onclick=async function(){var comment=String(ta.value||'').trim().slice(0,160);close();await sendGiftTo(g,targetUid,comment);};});
 }
 async function sendGiftTo(g,targetUid,comment){
-  if(!g||!currentUser||!targetUid)return;comment=String(comment||'').trim().slice(0,160);
-  if(!await spendStars(g.price))return;
-  var gift={giftId:g.id,name:g.name,price:g.price,rarity:g.rarity,fromUid:currentUser.uid,fromName:currentUserData.name||'Аноним',fromUsername:currentUserData.username||'',comment:comment,ts:Date.now()};
+  if(!g||!currentUser||!targetUid)return;
+  comment=String(comment||'').trim().slice(0,160);
+  var price=Number(g.price)||0;
+  if(price<=0){toast('Некорректная цена подарка');return;}
+  if(!await spendStars(price))return;
+
+  var gift={giftId:g.id,name:g.name,price:price,rarity:g.rarity,fromUid:currentUser.uid,fromName:currentUserData.name||'Аноним',fromUsername:currentUserData.username||'',comment:comment,ts:Date.now()};
   try{
-    await db.ref('users/'+targetUid+'/giftsReceived').push(gift);
-    if(targetUid===currentUser.uid){myGifts=myGifts||{};myGifts['g_'+Date.now()]=gift;toast('Подарок сохранён');renderProfileGifts();renderAvatarGiftBadge();}
-    else{
-      var chatId=[currentUser.uid,targetUid].sort().join('_');var metaSnap=await db.ref('chats/'+chatId+'/meta/members').once('value');
-      if(!metaSnap.exists()){var members={};members[currentUser.uid]=true;members[targetUid]=true;await db.ref('chats/'+chatId+'/meta/members').set(members);}
-      var msgRef=db.ref('chats/'+chatId+'/messages').push();var msg={senderId:currentUser.uid,timestamp:TS,type:'gift',text:g.name,gift:gift};await msgRef.set(msg);
-      var updates={};var preview='Подарок · '+g.name;[currentUser.uid,targetUid].forEach(function(uid){var base='userChats/'+uid+'/'+chatId;updates[base+'/otherUid']=uid===currentUser.uid?targetUid:currentUser.uid;updates[base+'/lastMessage']=preview;updates[base+'/lastMessageTime']=TS;updates[base+'/lastSender']=currentUser.uid;});updates['userChats/'+currentUser.uid+'/'+chatId+'/unread']=0;if(INCR)updates['userChats/'+targetUid+'/'+chatId+'/unread']=INCR(1);await db.ref().update(updates);toast('Подарок отправлен');}
+    var updates={};
+    var giftKey=db.ref('users/'+targetUid+'/giftsReceived').push().key;
+    updates['users/'+targetUid+'/giftsReceived/'+giftKey]=gift;
+
+    if(targetUid===currentUser.uid){
+      await db.ref().update(updates);
+      myGifts=myGifts||{};myGifts[giftKey]=gift;
+      toast('Подарок сохранён');renderProfileGifts();renderAvatarGiftBadge();
+    }else{
+      var chatId=[currentUser.uid,targetUid].sort().join('_');
+      var metaSnap=await db.ref('chats/'+chatId+'/meta/members').once('value');
+      if(!metaSnap.exists()){var members={};members[currentUser.uid]=true;members[targetUid]=true;updates['chats/'+chatId+'/meta/members']=members;}
+      var msgKey=db.ref('chats/'+chatId+'/messages').push().key;
+      var msg={senderId:currentUser.uid,timestamp:TS,type:'gift',text:g.name,gift:gift};
+      updates['chats/'+chatId+'/messages/'+msgKey]=msg;
+      var preview='Подарок · '+g.name;
+      [currentUser.uid,targetUid].forEach(function(uid){
+        var base='userChats/'+uid+'/'+chatId;
+        updates[base+'/otherUid']=uid===currentUser.uid?targetUid:currentUser.uid;
+        updates[base+'/lastMessage']=preview;
+        updates[base+'/lastMessageTime']=TS;
+        updates[base+'/lastSender']=currentUser.uid;
+      });
+      updates['userChats/'+currentUser.uid+'/'+chatId+'/unread']=0;
+      if(INCR)updates['userChats/'+targetUid+'/'+chatId+'/unread']=INCR(1);
+      else updates['userChats/'+targetUid+'/'+chatId+'/unread']=(Number((chatsData[chatId]||{}).unread)||0)+1;
+      await db.ref().update(updates);
+      toast('Подарок отправлен');
+    }
     playSound('react');vibrate('send');showGiftAnimation(g);
-  }catch(e){try{await db.ref('users/'+currentUser.uid+'/stars').transaction(function(cur){return Number(cur||0)+Number(g.price||0);});}catch(_e){}myStars+=Number(g.price||0);updateStarsUI();toast('Не удалось отправить подарок: '+(e.message||''));}
+  }catch(e){
+    // The gift/message writes above are one atomic RTDB update, so refunding here
+    // cannot leave a delivered gift behind when the update itself failed.
+    try{await db.ref('users/'+currentUser.uid+'/stars').transaction(function(cur){return Number(cur||0)+price;});}catch(_e){console.error('gift refund failed',_e);}
+    myStars+=price;updateStarsUI();
+    toast('Не удалось отправить подарок: '+(e.message||'ошибка'));
+  }
 }
+
 function openGiftPicker(targetUid){
   var sheet=document.getElementById('gift-sheet');sheet.classList.add('show');
   var body=document.getElementById('gift-sheet-body');
