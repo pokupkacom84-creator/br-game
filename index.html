@@ -480,6 +480,18 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 .star-game-title{font-size:18px;font-weight:900}.star-game-sub{font-size:12.5px;color:var(--text-2);margin-top:2px}.star-balance{margin-left:auto;text-align:right}.star-balance strong{display:block;font-size:18px}.star-balance span{font-size:11px;color:var(--text-2)}
 .star-game-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px}.star-stat{padding:10px;border-radius:14px;background:var(--surface-glass);border:1px solid var(--border);text-align:center}.star-stat b{display:block;font-size:15px}.star-stat span{font-size:10.5px;color:var(--text-2)}
 .star-game-stage{position:relative;height:360px;margin:14px 0 10px;border-radius:22px;overflow:hidden;background:radial-gradient(circle at 50% 20%,rgba(135,116,225,.24),transparent 48%),linear-gradient(180deg,#111827,#0b1020);border:1px solid rgba(255,255,255,.08);touch-action:none}
+.tap-target{position:absolute;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-size:30px;z-index:4;cursor:pointer;user-select:none;transform:scale(1);animation:tapTargetIn .22s var(--ease-bounce),tapTargetPulse 1.05s ease-in-out infinite;box-shadow:0 0 0 8px rgba(135,116,225,.12),0 10px 28px rgba(0,0,0,.35)}
+.tap-target.small{width:48px;height:48px;font-size:23px}.tap-target.gold{background:radial-gradient(circle at 35% 30%,#fff6a0,#ffd43b 48%,#f59e0b);box-shadow:0 0 0 9px rgba(255,193,7,.14),0 0 34px rgba(255,193,7,.48)}
+.tap-target.normal{background:radial-gradient(circle at 35% 30%,#fff,#a291f0 42%,#6d5bd0);box-shadow:0 0 0 8px rgba(135,116,225,.14),0 0 28px rgba(135,116,225,.38)}
+.tap-target.trap{background:radial-gradient(circle at 35% 30%,#ffb0ad,#ef5350 48%,#b71c1c);box-shadow:0 0 0 8px rgba(239,83,80,.12),0 0 28px rgba(239,83,80,.38)}
+.tap-target.freeze{background:radial-gradient(circle at 35% 30%,#d9fbff,#42c8e8 48%,#147ca0);box-shadow:0 0 0 8px rgba(66,200,232,.14),0 0 30px rgba(66,200,232,.4)}
+@keyframes tapTargetIn{from{opacity:0;transform:scale(.35) rotate(-12deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes tapTargetPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+.tap-float{position:absolute;z-index:8;font-weight:950;font-size:20px;color:#fff;pointer-events:none;animation:tapFloat .65s var(--ease-out) forwards;text-shadow:0 2px 12px rgba(0,0,0,.4)}
+@keyframes tapFloat{from{opacity:1;transform:translateY(0) scale(.8)}to{opacity:0;transform:translateY(-48px) scale(1.12)}}
+.tap-flash{position:absolute;inset:0;z-index:7;pointer-events:none;animation:tapFlash .28s ease-out forwards}.tap-flash.good{background:radial-gradient(circle,rgba(255,213,79,.22),transparent 55%)}.tap-flash.bad{background:radial-gradient(circle,rgba(239,83,80,.24),transparent 55%)}
+@keyframes tapFlash{from{opacity:1}to{opacity:0}}
+
 .star-game-stage::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.55) 1px,transparent 1.5px);background-size:46px 46px;opacity:.18}
 .star-game-hud{position:absolute;z-index:5;left:12px;right:12px;top:10px;display:flex;justify-content:space-between;pointer-events:none}.star-game-hud span{padding:7px 10px;border-radius:999px;background:rgba(0,0,0,.35);backdrop-filter:blur(10px);font-weight:800;font-size:12px;color:#fff}
 .star-target{position:absolute;z-index:3;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-size:30px;cursor:pointer;user-select:none;animation:starPop .22s var(--ease-bounce);filter:drop-shadow(0 7px 12px rgba(255,193,7,.35));}.star-target.bomb{filter:drop-shadow(0 7px 12px rgba(239,83,80,.35));font-size:27px}
@@ -1435,9 +1447,11 @@ document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=
 /* ============================================================
    FLUX STAR RUSH
    ============================================================ */
-var STAR_GAME_DURATION=20;
+var STAR_GAME_DURATION=25;
 var STAR_DAILY_LIMIT=1000;
 var STAR_PREMIUM_COST=1000;
+var STAR_PREMIUM_DAYS=3;
+var TAP_ROUND_LIMIT=100;
 var starGameTimer=null,starGameActive=false,starGameScore=0,starGameCollected=0,starGameEndsAt=0,starGameTargetTimer=null;
 function starTodayKey(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function starStateLocal(){try{return JSON.parse(localStorage.getItem('flux_star_state')||'{}')||{};}catch(e){return {};}}
@@ -1462,12 +1476,12 @@ async function exchangeStars(){
   var pv=window.__fluxPremiumState||currentUserData.premium||{};
   var now=Date.now(),active=isPremiumActive(pv),oldExp=Number(pv.expiresAt||0);
   var base=active&&oldExp>now?oldExp:now;
-  var newExp=base+86400000;
+  var newExp=base+STAR_PREMIUM_DAYS*86400000;
   try{
     await db.ref('users/'+currentUser.uid+'/stars').set(bal-STAR_PREMIUM_COST);
     await db.ref('users/'+currentUser.uid+'/premium').update({active:true,expiresAt:newExp,plan:'stars_1day',source:'star_rush'});
     spawnConfetti();playSound('premium');vibrate('success');
-    toast('👑 +1 день Premium!');renderGameTab(document.getElementById('games-list'));loadPremiumState();
+    toast('👑 +'+STAR_PREMIUM_DAYS+' дня Premium!');renderGameTab(document.getElementById('games-list'));loadPremiumState();
   }catch(e){toast('Не удалось обменять ⭐');}
 }
 function renderGameTab(list){
@@ -1477,16 +1491,16 @@ function renderGameTab(list){
   var left=Math.max(0,STAR_DAILY_LIMIT-earned);
   list.innerHTML=''+
     '<div class="star-game-card">'+
-      '<div class="star-game-head"><div class="star-game-icon">⭐</div><div><div class="star-game-title">Star Rush</div><div class="star-game-sub">Лови ⭐ и обменивай их на Premium</div></div><div class="star-balance"><strong id="star-balance">'+balance.toLocaleString('ru-RU')+' ⭐</strong><span>твой баланс</span></div></div>'+
-      '<div class="star-game-stats"><div class="star-stat"><b id="star-score">0</b><span>за раунд</span></div><div class="star-stat"><b>'+earned+'</b><span>сегодня</span></div><div class="star-stat"><b>'+left+'</b><span>лимит</span></div></div>'+
+      '<div class="star-game-head"><div class="star-game-icon">⚡</div><div><div class="star-game-title">Flux Tap</div><div class="star-game-sub">Тапай по целям, но не ошибись</div></div><div class="star-balance"><strong id="star-balance">'+balance.toLocaleString('ru-RU')+' ⭐</strong><span>твой баланс</span></div></div>'+
+      '<div class="star-game-stats"><div class="star-stat"><b id="star-score">0</b><span>за раунд</span></div><div class="star-stat"><b>'+earned+'</b><span>сегодня</span></div><div class="star-stat"><b>'+left+'</b><span>лимит</span></div></div>'+ 
       '<div class="star-game-stage" id="star-stage">'+
-        '<div class="star-game-hud"><span id="star-time">20 сек</span><span id="star-live-score">⭐ 0</span></div>'+
-        '<div class="star-game-overlay" id="star-overlay"><h3>⭐ Star Rush</h3><p>За 20 секунд собери как можно больше звёзд. 💣 отнимает одну.</p><div class="star-game-result" id="star-result">+0 ⭐</div><button class="star-game-btn" id="star-start">Начать игру</button></div>'+ 
+        '<div class="star-game-hud"><span id="star-time">25 сек</span><span id="star-live-score">⭐ 0</span></div>'+ 
+        '<div class="star-game-overlay" id="star-overlay"><h3>⚡ Flux Tap</h3><p>Тапай по ⭐. Золотая ⭐ даёт больше. 🔴 ловушка отнимает. 🔵 замораживает время на мгновение.</p><div class="star-game-result" id="star-result">+0 ⭐</div><button class="star-game-btn" id="star-start">Начать игру</button></div>'+ 
       '</div>'+ 
       '<div class="star-progress"><i id="star-progress"></i></div>'+ 
-      '<div class="star-game-note">Максимум '+STAR_DAILY_LIMIT+' ⭐ в день. 1000 ⭐ = 1 день Flux Premium.</div>'+ 
+      '<div class="star-game-note">Раунд 25 секунд. Максимум '+STAR_DAILY_LIMIT+' ⭐ в день. 1000 ⭐ = 3 дня Flux Premium.</div>'+ 
     '</div>'+ 
-    '<div class="star-exchange"><div class="star-exchange-row"><div><div class="star-exchange-title">👑 1 день Premium</div><div class="star-exchange-sub">Стоимость: '+STAR_PREMIUM_COST.toLocaleString('ru-RU')+' ⭐</div></div><button class="star-exchange-btn" id="star-exchange" '+(balance<STAR_PREMIUM_COST?'disabled':'')+'>Обменять</button></div></div>';
+    '<div class="star-exchange"><div class="star-exchange-row"><div><div class="star-exchange-title">👑 3 дня Premium</div><div class="star-exchange-sub">Стоимость: '+STAR_PREMIUM_COST.toLocaleString('ru-RU')+' ⭐</div></div><button class="star-exchange-btn" id="star-exchange" '+(balance<STAR_PREMIUM_COST?'disabled':'')+'>Обменять</button></div></div>';
   $('star-start').onclick=startStarRound;
   $('star-exchange').onclick=exchangeStars;
 }
@@ -1495,31 +1509,44 @@ async function startStarRound(){
   var earned=starTodayEarned();
   if(earned>=STAR_DAILY_LIMIT){toast('Сегодня лимит ⭐ уже достигнут');return;}
   starGameActive=true;starGameScore=0;starGameCollected=0;starGameEndsAt=Date.now()+STAR_GAME_DURATION*1000;
+  window.__tapFreezeUntil=0;window.__tapRoundCount=0;
   var overlay=$('star-overlay');if(overlay)overlay.classList.add('hidden');
-  var stage=$('star-stage');if(stage)stage.querySelectorAll('.star-target').forEach(function(x){x.remove();});
-  spawnStarTarget();
+  var stage=$('star-stage');if(stage)stage.querySelectorAll('.tap-target').forEach(function(x){x.remove();});
+  spawnTapTarget();
   clearInterval(starGameTimer);
   starGameTimer=setInterval(function(){
-    var left=Math.max(0,starGameEndsAt-Date.now());
-    var sec=Math.ceil(left/1000);var time=$('star-time');if(time)time.textContent=sec+' сек';
+    var now=Date.now(),left=Math.max(0,starGameEndsAt-now);
+    var frozen=Math.max(0,(window.__tapFreezeUntil||0)-now);
+    var sec=Math.ceil(left/1000);var time=$('star-time');if(time)time.textContent=(frozen>0?'❄️ '+Math.ceil(frozen/1000)+'':'')+(frozen>0?'':'')+' '+sec+' сек';
     var progress=$('star-progress');if(progress)progress.style.width=(Math.max(0,Math.min(1,(STAR_GAME_DURATION*1000-left)/(STAR_GAME_DURATION*1000)))*100)+'%';
     if(left<=0)finishStarRound();
-  },100);
+  },80);
 }
-function spawnStarTarget(){
+function spawnTapTarget(){
   if(!starGameActive)return;var stage=$('star-stage');if(!stage)return;
-  stage.querySelectorAll('.star-target').forEach(function(x){x.remove();});
-  var el=document.createElement('div');var bomb=Math.random()<0.14;el.className='star-target'+(bomb?' bomb':'');el.textContent=bomb?'💣':'⭐';
-  var maxX=Math.max(8,stage.clientWidth-60),maxY=Math.max(70,stage.clientHeight-70);
-  el.style.left=(8+Math.random()*Math.max(1,maxX-8))+'px';el.style.top=(55+Math.random()*Math.max(1,maxY-55))+'px';
-  el.onclick=function(e){e.preventDefault();if(!starGameActive)return;if(bomb){starGameScore=Math.max(0,starGameScore-2);vibrate('error');}else{starGameScore++;starGameCollected++;vibrate(8);}updateStarHud();spawnStarTarget();};
+  stage.querySelectorAll('.tap-target').forEach(function(x){x.remove();});
+  var roll=Math.random(),kind=roll<0.13?'trap':(roll<0.24?'freeze':(roll<0.34?'gold':'normal'));
+  var el=document.createElement('div');el.className='tap-target '+kind;el.textContent=kind==='trap'?'×':(kind==='freeze'?'❄️':'⭐');
+  if(kind==='gold')el.classList.add('small');
+  var pad=12,maxX=Math.max(pad,stage.clientWidth-el.offsetWidth-pad),maxY=Math.max(80,stage.clientHeight-80-el.offsetHeight);
+  el.style.left=(pad+Math.random()*Math.max(1,maxX-pad))+'px';el.style.top=(64+Math.random()*Math.max(1,maxY-64))+'px';
+  var life=kind==='gold'?620:(kind==='trap'?720:820);
+  el.onclick=function(e){e.preventDefault();if(!starGameActive)return;var rect=stage.getBoundingClientRect();var x=e.clientX-rect.left,y=e.clientY-rect.top;
+    if(kind==='trap'){starGameScore=Math.max(0,starGameScore-3);flashTap(stage,'bad');floatTap(stage,x,y,'−3 ⭐');vibrate('error');toast('💥 Ловушка! −3 ⭐');}
+    else if(kind==='freeze'){starGameScore+=2;starGameCollected+=2;window.__tapFreezeUntil=Date.now()+1200;flashTap(stage,'good');floatTap(stage,x,y,'+2 ⭐ ❄️');vibrate('success');}
+    else if(kind==='gold'){starGameScore+=4;starGameCollected+=4;flashTap(stage,'good');floatTap(stage,x,y,'+4 ⭐');vibrate(12);}
+    else{starGameScore++;starGameCollected++;flashTap(stage,'good');floatTap(stage,x,y,'+1 ⭐');vibrate(8);}
+    window.__tapRoundCount++;updateStarHud();spawnTapTarget();
+  };
   stage.appendChild(el);
-  starGameTargetTimer=setTimeout(function(){if(starGameActive&&el.parentNode)spawnStarTarget();},850);
+  setTimeout(function(){if(starGameActive&&el.parentNode)spawnTapTarget();},life);
 }
+function flashTap(stage,type){var f=document.createElement('div');f.className='tap-flash '+type;stage.appendChild(f);setTimeout(function(){try{f.remove();}catch(e){}},300);}
+function floatTap(stage,x,y,text){var f=document.createElement('div');f.className='tap-float';f.textContent=text;f.style.left=Math.max(8,x-25)+'px';f.style.top=Math.max(60,y-12)+'px';stage.appendChild(f);setTimeout(function(){try{f.remove();}catch(e){}},700);}
 function updateStarHud(){var s=$('star-live-score');if(s)s.textContent='⭐ '+starGameScore;var ss=$('star-score');if(ss)ss.textContent=starGameScore;}
 async function finishStarRound(){
-  if(!starGameActive)return;starGameActive=false;clearInterval(starGameTimer);clearTimeout(starGameTargetTimer);
-  var stage=$('star-stage');if(stage)stage.querySelectorAll('.star-target').forEach(function(x){x.remove();});
+  if(!starGameActive)return;starGameActive=false;clearInterval(starGameTimer);
+  var stage=$('star-stage');if(stage)stage.querySelectorAll('.tap-target').forEach(function(x){x.remove();});
   var current=starTodayEarned(),allowed=Math.max(0,STAR_DAILY_LIMIT-current),reward=Math.min(starGameCollected,allowed);
   if(reward>0){saveStarLocal(current+reward);await addStars(reward);}
   var bal=await getStarBalance();window.__fluxStarBalance=bal;
@@ -1528,7 +1555,6 @@ async function finishStarRound(){
   var start=$('star-start');if(start)start.textContent='Играть ещё';
   updateStarHud();
   renderGameTab(document.getElementById('games-list'));
-  var newOverlay=$('star-overlay');if(newOverlay)newOverlay.classList.remove('hidden');
 }
 async function initStarGame(){window.__fluxStarBalance=await getStarBalance();}
 
