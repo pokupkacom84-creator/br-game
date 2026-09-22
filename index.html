@@ -101,6 +101,32 @@ button:disabled{transform:none}
 .tab-content.active{display:flex;animation:tabFade var(--dur-slow) var(--ease-out)}
 @keyframes tabFade{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 
+/* Flux Home */
+.home-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px 140px;overscroll-behavior:contain}
+.home-hero{padding:22px 2px 14px}
+.home-greeting{font-size:14px;color:var(--text-2);font-weight:650;margin-bottom:4px}
+.home-title{font-size:30px;font-weight:800;letter-spacing:-.04em}
+.home-vpn-card{position:relative;overflow:hidden;margin-top:8px;padding:20px;border-radius:26px;background:var(--accent-grad);color:#fff;box-shadow:0 18px 45px rgba(99,102,241,.24)}
+.home-vpn-card:before{content:'';position:absolute;width:170px;height:170px;border-radius:50%;right:-65px;top:-85px;background:rgba(255,255,255,.12)}
+.home-vpn-top{display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.home-vpn-dot{width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 0 0 7px rgba(255,255,255,.14)}
+.home-vpn-status{font-size:14px;font-weight:750;opacity:.92}
+.home-vpn-state{font-size:25px;font-weight:850;margin-top:18px;position:relative;z-index:1}
+.home-vpn-meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:16px;position:relative;z-index:1}
+.home-meta-box{padding:10px 9px;border-radius:15px;background:rgba(255,255,255,.13);min-width:0}
+.home-meta-label{font-size:10px;opacity:.72;margin-bottom:3px}
+.home-meta-value{font-size:13px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-connect{width:100%;margin-top:16px;padding:14px 18px;border-radius:17px;background:#fff;color:#4f46e5;font-weight:800;font-size:15px;box-shadow:0 8px 20px rgba(0,0,0,.12);position:relative;z-index:1}
+.home-section-title{font-size:16px;font-weight:800;margin:22px 2px 10px}
+.home-action-card{display:flex;align-items:center;gap:13px;padding:15px;border:1px solid var(--border);background:var(--surface);border-radius:20px;box-shadow:var(--shadow-sm);margin-bottom:10px}
+.home-action-icon{width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--accent-soft);color:var(--accent);font-size:20px;flex-shrink:0}
+.home-action-copy{flex:1;min-width:0}.home-action-title{font-weight:750}.home-action-desc{font-size:12px;color:var(--text-2);margin-top:2px}
+.home-action-arrow{font-size:22px;color:var(--text-3)}
+.home-premium-card{padding:17px;border-radius:22px;border:1px solid var(--border);background:linear-gradient(135deg,var(--surface),var(--bg-2));margin-bottom:18px}
+.home-premium-row{display:flex;align-items:center;gap:12px}.home-crown{width:44px;height:44px;border-radius:15px;background:rgba(245,158,11,.14);display:flex;align-items:center;justify-content:center;font-size:22px}
+.home-premium-title{font-weight:800}.home-premium-desc{font-size:12px;color:var(--text-2);margin-top:2px}
+.home-premium-btn{margin-top:13px;width:100%;padding:12px;border-radius:15px;background:var(--bg-2);border:1px solid var(--border);font-weight:750}
+
 .header{display:flex;align-items:center;padding:12px var(--s-4);color:var(--text);min-height:60px;gap:var(--s-2);padding-top:calc(12px + env(safe-area-inset-top));z-index:10;background:var(--surface);border-bottom:1px solid var(--border)}
 .header-title{font-size:22px;font-weight:700;flex:1;letter-spacing:-.03em}
 .header-btn{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-full);color:var(--text);flex-shrink:0}
@@ -562,7 +588,33 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 <div id="main-screen" class="screen">
 <div class="main-body">
 
-<div id="tab-shop" class="tab-content active">
+<div id="tab-home" class="tab-content active">
+<div class="header"><div class="header-title">Главная</div></div>
+<div class="home-scroll" id="home-scroll">
+  <div class="home-hero">
+    <div class="home-greeting" id="home-greeting">Добро пожаловать</div>
+    <div class="home-title">Flux Client</div>
+  </div>
+  <div class="home-vpn-card">
+    <div class="home-vpn-top"><div class="home-vpn-dot"></div><div class="home-vpn-status">VPN статус</div></div>
+    <div class="home-vpn-state" id="home-vpn-state">Не подключено</div>
+    <div class="home-vpn-meta">
+      <div class="home-meta-box"><div class="home-meta-label">Сервер</div><div class="home-meta-value" id="home-server">—</div></div>
+      <div class="home-meta-box"><div class="home-meta-label">Ping</div><div class="home-meta-value" id="home-ping">—</div></div>
+      <div class="home-meta-box"><div class="home-meta-label">Сессия</div><div class="home-meta-value" id="home-time">—</div></div>
+    </div>
+    <button class="home-connect ripple" id="home-connect-btn">Подключиться</button>
+  </div>
+  <div class="home-section-title">Быстрый доступ</div>
+  <button class="home-action-card ripple" id="home-vpn-action"><div class="home-action-icon">🛡️</div><div class="home-action-copy"><div class="home-action-title">Выбрать VPN-ключ</div><div class="home-action-desc" id="home-recent-key">Ключ ещё не выбран</div></div><div class="home-action-arrow">›</div></button>
+  <div class="home-premium-card">
+    <div class="home-premium-row"><div class="home-crown">👑</div><div><div class="home-premium-title" id="home-premium-title">Flux Premium</div><div class="home-premium-desc" id="home-premium-desc">Premium VPN, дополнительные возможности и оформление</div></div></div>
+    <button class="home-premium-btn ripple" id="home-premium-btn">Открыть Premium</button>
+  </div>
+</div>
+</div>
+
+<div id="tab-shop" class="tab-content">
 <div class="header"><div class="header-title">Магазин</div></div>
 <div class="shop-tabs" id="shop-tabs">
   <button class="shop-tab active" data-shop="premium"><span class="tab-emoji">👑</span>Premium</button>
@@ -643,7 +695,8 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 
 <div class="bottom-nav" id="bottom-nav">
 <div class="nav-indicator" id="nav-indicator"></div>
-<div class="nav-item active" data-tab="shop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg><span>Магазин</span></div>
+<div class="nav-item active" data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg><span>Главная</span></div>
+<div class="nav-item" data-tab="shop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg><span>Магазин</span></div>
 <div class="nav-item" data-tab="vpn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg><span>VPN</span></div>
 <div class="nav-item" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1"/></svg><span>Профиль</span></div>
 </div>
@@ -1361,6 +1414,37 @@ function unlockApp(){pinLocked=false;pinInput='';$('pin-lock').classList.remove(
 function showPinSetup(cb){var code1='',code2='',step=1;pinInput='';var modal=document.createElement('div');modal.className='modal-backdrop show';modal.style.zIndex='99998';modal.innerHTML='<div class="modal"><div class="modal-title" id="setup-title">Придумайте PIN</div><div class="pin-dots" id="setup-dots" style="justify-content:center;display:flex;margin:var(--s-4) 0"><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div></div><div class="pin-pad" id="setup-pad" style="margin:0 auto;max-width:240px"></div><div class="modal-actions" style="margin-top:var(--s-3)"><button class="modal-btn" id="setup-cancel">Отмена</button></div></div>';document.body.appendChild(modal);var pad=modal.querySelector('#setup-pad');var keys=['1','2','3','4','5','6','7','8','9','','0','⌫'];keys.forEach(function(k){var btn=document.createElement('div');btn.className='pin-key'+(k===''?' blank':'');btn.textContent=k;if(k!=='')btn.onclick=function(){onKey(k);};pad.appendChild(btn);});function updateDots(){var dots=modal.querySelectorAll('#setup-dots .pin-dot');dots.forEach(function(d,i){d.classList.toggle('filled',i<pinInput.length);});}function onKey(k){if(k==='⌫'){pinInput=pinInput.slice(0,-1);updateDots();return;}if(pinInput.length>=4)return;pinInput+=k;updateDots();if(pinInput.length===4){setTimeout(function(){if(step===1){code1=pinInput;pinInput='';step=2;modal.querySelector('#setup-title').textContent='Повторите PIN';updateDots();}else{code2=pinInput;if(code1===code2){modal.remove();cb(code1);}else{modal.querySelector('#setup-title').textContent='Не совпадают';code1='';code2='';step=1;pinInput='';updateDots();}}},150);}}modal.querySelector('#setup-cancel').onclick=function(){modal.remove();};}
 
 /* ============================================================
+   HOME
+   ============================================================ */
+function formatHomeDuration(sec){sec=Math.max(0,Math.floor(sec||0));var m=Math.floor(sec/60),h=Math.floor(m/60);m%=60;if(h)return h+'ч '+m+'м';if(m)return m+'м';return sec+'с';}
+function updateHomeUI(){
+  var u=currentUser||{};
+  var g=$('home-greeting');if(g){var name=u.displayName||u.name||'';g.textContent=name?'Привет, '+name+' 👋':'Добро пожаловать 👋';}
+  var recent='';try{recent=localStorage.getItem('flux_recent_vpn_key')||'';}catch(e){}
+  var rk=$('home-recent-key');if(rk)rk.textContent=recent?(recent.length>58?recent.slice(0,58)+'…':recent):'Ключ ещё не выбран';
+  var server=$('home-server');if(server){var host='';try{host=recent?getVpnHost(recent):'';}catch(e){}server.textContent=host||'—';}
+  var active=false;try{active=!!window.__fluxVpnConnected;}catch(e){}
+  var state=$('home-vpn-state');if(state)state.textContent=active?'Подключено':'Не подключено';
+  var btn=$('home-connect-btn');if(btn)btn.textContent=active?'Открыть VPN':'Подключиться';
+  var started=0;try{started=+(localStorage.getItem('flux_vpn_connected_at')||0);}catch(e){}
+  var tm=$('home-time');if(tm)tm.textContent=active&&started?formatHomeDuration((Date.now()-started)/1000):'—';
+  var ping=$('home-ping');if(ping)ping.textContent='—';
+  var pt=$('home-premium-title'),pd=$('home-premium-desc'),pb=$('home-premium-btn');
+  var prem=false;try{prem=isPremiumUserNow();}catch(e){}
+  if(pt)pt.textContent=prem?'Premium активен':'Flux Premium';
+  if(pd)pd.textContent=prem?'Доступ активен — срок можно посмотреть в профиле':'Premium VPN, дополнительные возможности и оформление';
+  if(pb)pb.textContent=prem?'Открыть статус':'Открыть Premium';
+}
+function initHome(){
+  var c=$('home-connect-btn');if(c&&!c._bound){c._bound=true;c.onclick=function(){switchTab('vpn');setTimeout(function(){var b=$('vpn-load-btn');if(b&&!b.disabled){b.click();}},120);};}
+  var a=$('home-vpn-action');if(a&&!a._bound){a._bound=true;a.onclick=function(){switchTab('vpn');};}
+  var p=$('home-premium-btn');if(p&&!p._bound){p._bound=true;p.onclick=function(){switchTab('shop');};}
+  updateHomeUI();
+}
+try{initHome();}catch(e){}
+setInterval(function(){try{updateHomeUI();}catch(e){}},1000);
+
+/* ============================================================
    TABS
    ============================================================ */
 function switchTab(tab){
@@ -1370,9 +1454,10 @@ function switchTab(tab){
     var activeNav=document.querySelector('.nav-item[data-tab="'+tab+'"]');if(activeNav)activeNav.classList.add('active');
     document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active');});
     var tc=document.getElementById('tab-'+tab);if(tc)tc.classList.add('active');
+    if(tab==='home'){updateHomeUI();}
     if(tab==='settings'){updateSettingsUI();updateTogglesUI();}
-    if(tab==='shop'){renderShop();loadPremiumState();}
-    if(tab==='vpn'){renderVpnCategoryTabs();renderVpnSources();}
+    if(tab==='shop'){renderShop();loadPremiumState();updateHomeUI();}
+    if(tab==='vpn'){renderVpnCategoryTabs();renderVpnSources();updateHomeUI();}
     vibrate('tap');
     // #20 обновляем положение индикатора
     positionNavIndicator();
@@ -1388,7 +1473,7 @@ document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=
   var body=document.querySelector('.main-body');
   if(!body)return;
   var startX=0,startY=0,tracking=false,ignored=false;
-  var order=['shop','vpn','settings'];
+  var order=['home','shop','vpn','settings'];
   body.addEventListener('touchstart',function(e){
     if(e.touches.length!==1){tracking=false;return;}
     var t=e.target;
@@ -1603,7 +1688,7 @@ function vpnKeyItemHtml(k){
   var host=getVpnHost(k.raw);var title=meta.name?meta.name:(k.proto.toUpperCase()+' · '+(host||'server'));
   return '<div class="vpn-key-item"><div class="vpn-key-info"><div class="vpn-key-header"><span class="vpn-key-flag">'+meta.flag+'</span><span class="vpn-key-title">'+esc(truncate(title,48))+'</span></div><div class="vpn-key-proto">'+esc(k.proto)+'</div><div class="vpn-key-text">'+esc(truncate(k.raw,140))+'</div></div><div class="vpn-key-actions"><button class="vpn-icon-btn star'+(isFav?' active':'')+'" data-star="'+idx+'"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></button><button class="vpn-icon-btn" data-copy="'+idx+'"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button></div></div>';
 }
-function bindVpnActions(root){root.querySelectorAll('.vpn-icon-btn[data-copy]').forEach(function(btn){if(btn._bound)return;btn._bound=true;btn.onclick=function(){var k=vpnKeys[+btn.dataset.copy];if(!k)return;copyText(k.raw);vibrate('tap');};});root.querySelectorAll('.vpn-icon-btn[data-star]').forEach(function(btn){if(btn._bound)return;btn._bound=true;btn.onclick=function(){var k=vpnKeys[+btn.dataset.star];if(!k)return;if(vpnFavorites[k.raw]){delete vpnFavorites[k.raw];btn.classList.remove('active');}else{vpnFavorites[k.raw]=1;btn.classList.add('active');}saveVpnFavorites();vibrate('tap');};});}
+function bindVpnActions(root){root.querySelectorAll('.vpn-icon-btn[data-copy]').forEach(function(btn){if(btn._bound)return;btn._bound=true;btn.onclick=function(){var k=vpnKeys[+btn.dataset.copy];if(!k)return;copyText(k.raw);try{localStorage.setItem('flux_recent_vpn_key',k.raw);}catch(e){}try{updateHomeUI();}catch(e){}vibrate('tap');};});root.querySelectorAll('.vpn-icon-btn[data-star]').forEach(function(btn){if(btn._bound)return;btn._bound=true;btn.onclick=function(){var k=vpnKeys[+btn.dataset.star];if(!k)return;if(vpnFavorites[k.raw]){delete vpnFavorites[k.raw];btn.classList.remove('active');}else{vpnFavorites[k.raw]=1;btn.classList.add('active');}saveVpnFavorites();vibrate('tap');};});}
 function appendVpnBatch(){var list=$('vpn-key-list');if(!list)return;if(vpnRenderedUpTo>=vpnFiltered.length)return;var start=vpnRenderedUpTo,end=Math.min(vpnFiltered.length,start+VPN_BATCH_SIZE);var html='';for(var i=start;i<end;i++)html+=vpnKeyItemHtml(vpnFiltered[i]);var tmp=document.createElement('div');tmp.innerHTML=html;while(tmp.firstChild)list.appendChild(tmp.firstChild);vpnRenderedUpTo=end;bindVpnActions(list);}
 function scheduleVpnAppend(){if(vpnRafId)return;vpnRafId=requestAnimationFrame(function(){vpnRafId=0;appendVpnBatch();});}
 function isVpnItemVisible(){var c=$('vpn-container'),list=$('vpn-key-list');if(!c||!list)return false;var last=list.lastElementChild;if(!last)return true;var cR=c.getBoundingClientRect(),lR=last.getBoundingClientRect();return lR.top<cR.bottom+400;}
