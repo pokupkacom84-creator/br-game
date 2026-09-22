@@ -1420,7 +1420,11 @@ function switchTab(tab){
     var tc=document.getElementById('tab-'+tab);if(tc)tc.classList.add('active');
     if(tab==='settings'){updateSettingsUI();updateTogglesUI();}
     if(tab==='shop'){renderShop();loadPremiumState();}
-    if(tab==='games'){initStarGame().then(function(){renderGameTab(document.getElementById('games-list'));});}
+    if(tab==='games'){
+      var gamesList=document.getElementById('games-list');
+      renderGameTab(gamesList);
+      initStarGame().then(function(){renderGameTab(gamesList);}).catch(function(e){console.warn('initStarGame',e);renderGameTab(gamesList);});
+    }
     if(tab==='vpn'){renderVpnCategoryTabs();renderVpnSources();}
     vibrate('tap');
     positionNavIndicator();
@@ -1534,7 +1538,11 @@ function clickerTap(e){
   clickerState.flux+=gain;clickerState.total+=gain;clickerState.last=now;
   var daily=clickerTodayEarned(),room=Math.max(0,STAR_DAILY_LIMIT-daily);
   var starGain=crit?Math.min(2,room):Math.min(1,room);
-  if(starGain>0)clickerSaveToday(daily+starGain);
+  if(starGain>0){
+    clickerSaveToday(daily+starGain);
+    window.__fluxStarBalance=Number(window.__fluxStarBalance||0)+starGain;
+    syncStarBalance();
+  }
   var core=document.getElementById('flux-core');
   var stage=document.getElementById('clicker-stage');
   if(core){core.classList.remove('tap');void core.offsetWidth;core.classList.add('tap');if(crit)core.classList.add('crit');setTimeout(function(){core.classList.remove('crit');},400);}
@@ -1636,6 +1644,28 @@ function upgradeHtml(type,icon,title,desc){
   return '<button class="clicker-upgrade" id="upgrade-'+type+'"><span class="upgrade-icon">'+icon+'</span><span class="upgrade-info"><b>'+title+'</b><small>'+desc+'</small></span><strong>'+c.toLocaleString('ru-RU')+' Flux</strong></button>';
 }
 async function initStarGame(){clickerLoad();window.__fluxStarBalance=await getStarBalance();}
+async function getStarBalance(){
+  try{
+    if(!currentUser || !db) return Number(window.__fluxStarBalance||0);
+    var snap=await db.ref('users/'+currentUser.uid+'/stars').once('value');
+    var v=snap.val();
+    return Number(v||0);
+  }catch(e){
+    console.warn('getStarBalance',e);
+    return Number(window.__fluxStarBalance||0);
+  }
+}
+
+var starSyncTimer=null;
+function syncStarBalance(){
+  if(starSyncTimer)clearTimeout(starSyncTimer);
+  starSyncTimer=setTimeout(function(){
+    starSyncTimer=null;
+    if(!currentUser||!db)return;
+    db.ref('users/'+currentUser.uid+'/stars').set(Math.max(0,Math.floor(Number(window.__fluxStarBalance||0)))).catch(function(e){console.warn('star sync',e);});
+  },350);
+}
+
 /* ============================================================
    PREMIUM
    ============================================================ */
