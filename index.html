@@ -579,9 +579,13 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 <div class="header"><div class="header-title">Магазин</div></div>
 <div class="shop-tabs" id="shop-tabs">
   <button class="shop-tab active" data-shop="premium"><span class="tab-emoji">👑</span>Premium</button>
-  <button class="shop-tab" data-shop="games"><span class="tab-emoji">🎮</span>Игры</button>
 </div>
 <div class="list" id="shop-list"></div>
+</div>
+
+<div id="tab-games" class="tab-content">
+<div class="header"><div class="header-title">Игры</div></div>
+<div class="list" id="games-list"></div>
 </div>
 
 <div id="tab-vpn" class="tab-content">
@@ -658,6 +662,7 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 <div class="bottom-nav" id="bottom-nav">
 <div class="nav-indicator" id="nav-indicator"></div>
 <div class="nav-item active" data-tab="shop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg><span>Магазин</span></div>
+<div class="nav-item" data-tab="games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10a5 5 0 015 5v3.5a3.5 3.5 0 01-6.1 2.35L14 16H10l-1.9 1.85A3.5 3.5 0 012 15.5V12a5 5 0 015-5z"/><path d="M7 11v4M5 13h4M16.5 12.5h.01M19 15h.01"/></svg><span>Игры</span></div>
 <div class="nav-item" data-tab="vpn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg><span>VPN</span></div>
 <div class="nav-item" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1"/></svg><span>Профиль</span></div>
 </div>
@@ -1386,11 +1391,11 @@ function switchTab(tab){
     var tc=document.getElementById('tab-'+tab);if(tc)tc.classList.add('active');
     if(tab==='settings'){updateSettingsUI();updateTogglesUI();}
     if(tab==='shop'){renderShop();loadPremiumState();}
+    if(tab==='games'){initStarGame().then(function(){renderGameTab(document.getElementById('games-list'));});}
     if(tab==='vpn'){renderVpnCategoryTabs();renderVpnSources();}
     vibrate('tap');
-    // #20 обновляем положение индикатора
     positionNavIndicator();
-  }catch(e){}
+  }catch(e){console.warn('switchTab',e);}
 }
 document.querySelectorAll('.nav-item').forEach(function(item){item.addEventListener('click',function(e){e.preventDefault();switchTab(item.dataset.tab);});});
 document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=function(){document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(x){x.classList.remove('active');});t.classList.add('active');renderShop();};});
@@ -1402,7 +1407,7 @@ document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=
   var body=document.querySelector('.main-body');
   if(!body)return;
   var startX=0,startY=0,tracking=false,ignored=false;
-  var order=['shop','vpn','settings'];
+  var order=['shop','games','vpn','settings'];
   body.addEventListener('touchstart',function(e){
     if(e.touches.length!==1){tracking=false;return;}
     var t=e.target;
@@ -1428,6 +1433,106 @@ document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=
 })();
 
 /* ============================================================
+   FLUX STAR RUSH
+   ============================================================ */
+var STAR_GAME_DURATION=20;
+var STAR_DAILY_LIMIT=1000;
+var STAR_PREMIUM_COST=1000;
+var starGameTimer=null,starGameActive=false,starGameScore=0,starGameCollected=0,starGameEndsAt=0,starGameTargetTimer=null;
+function starTodayKey(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function starStateLocal(){try{return JSON.parse(localStorage.getItem('flux_star_state')||'{}')||{};}catch(e){return {};}}
+function starTodayEarned(){var st=starStateLocal();return st.day===starTodayKey()?Number(st.earned||0):0;}
+function saveStarLocal(earned){try{localStorage.setItem('flux_star_state',JSON.stringify({day:starTodayKey(),earned:earned}));}catch(e){}}
+async function getStarBalance(){
+  if(!currentUser||!db)return 0;
+  try{var s=await db.ref('users/'+currentUser.uid+'/stars').once('value');return Number(s.val()||0);}catch(e){return 0;}
+}
+async function addStars(amount){
+  amount=Math.max(0,Math.floor(Number(amount)||0));if(!amount||!currentUser||!db)return 0;
+  try{
+    var ref=db.ref('users/'+currentUser.uid+'/stars');
+    var snap=await ref.once('value');var next=Number(snap.val()||0)+amount;
+    await ref.set(next);return next;
+  }catch(e){return null;}
+}
+async function exchangeStars(){
+  if(!currentUser||!db){toast('Войдите в аккаунт');return;}
+  var bal=await getStarBalance();
+  if(bal<STAR_PREMIUM_COST){toast('Нужно ещё '+(STAR_PREMIUM_COST-bal)+' ⭐');return;}
+  var pv=window.__fluxPremiumState||currentUserData.premium||{};
+  var now=Date.now(),active=isPremiumActive(pv),oldExp=Number(pv.expiresAt||0);
+  var base=active&&oldExp>now?oldExp:now;
+  var newExp=base+86400000;
+  try{
+    await db.ref('users/'+currentUser.uid+'/stars').set(bal-STAR_PREMIUM_COST);
+    await db.ref('users/'+currentUser.uid+'/premium').update({active:true,expiresAt:newExp,plan:'stars_1day',source:'star_rush'});
+    spawnConfetti();playSound('premium');vibrate('success');
+    toast('👑 +1 день Premium!');renderGameTab(document.getElementById('games-list'));loadPremiumState();
+  }catch(e){toast('Не удалось обменять ⭐');}
+}
+function renderGameTab(list){
+  if(!list)return;
+  var balance=Number((window.__fluxStarBalance||0));
+  var earned=starTodayEarned();
+  var left=Math.max(0,STAR_DAILY_LIMIT-earned);
+  list.innerHTML=''+
+    '<div class="star-game-card">'+
+      '<div class="star-game-head"><div class="star-game-icon">⭐</div><div><div class="star-game-title">Star Rush</div><div class="star-game-sub">Лови ⭐ и обменивай их на Premium</div></div><div class="star-balance"><strong id="star-balance">'+balance.toLocaleString('ru-RU')+' ⭐</strong><span>твой баланс</span></div></div>'+
+      '<div class="star-game-stats"><div class="star-stat"><b id="star-score">0</b><span>за раунд</span></div><div class="star-stat"><b>'+earned+'</b><span>сегодня</span></div><div class="star-stat"><b>'+left+'</b><span>лимит</span></div></div>'+
+      '<div class="star-game-stage" id="star-stage">'+
+        '<div class="star-game-hud"><span id="star-time">20 сек</span><span id="star-live-score">⭐ 0</span></div>'+
+        '<div class="star-game-overlay" id="star-overlay"><h3>⭐ Star Rush</h3><p>За 20 секунд собери как можно больше звёзд. 💣 отнимает одну.</p><div class="star-game-result" id="star-result">+0 ⭐</div><button class="star-game-btn" id="star-start">Начать игру</button></div>'+ 
+      '</div>'+ 
+      '<div class="star-progress"><i id="star-progress"></i></div>'+ 
+      '<div class="star-game-note">Максимум '+STAR_DAILY_LIMIT+' ⭐ в день. 1000 ⭐ = 1 день Flux Premium.</div>'+ 
+    '</div>'+ 
+    '<div class="star-exchange"><div class="star-exchange-row"><div><div class="star-exchange-title">👑 1 день Premium</div><div class="star-exchange-sub">Стоимость: '+STAR_PREMIUM_COST.toLocaleString('ru-RU')+' ⭐</div></div><button class="star-exchange-btn" id="star-exchange" '+(balance<STAR_PREMIUM_COST?'disabled':'')+'>Обменять</button></div></div>';
+  $('star-start').onclick=startStarRound;
+  $('star-exchange').onclick=exchangeStars;
+}
+async function startStarRound(){
+  if(starGameActive)return;
+  var earned=starTodayEarned();
+  if(earned>=STAR_DAILY_LIMIT){toast('Сегодня лимит ⭐ уже достигнут');return;}
+  starGameActive=true;starGameScore=0;starGameCollected=0;starGameEndsAt=Date.now()+STAR_GAME_DURATION*1000;
+  var overlay=$('star-overlay');if(overlay)overlay.classList.add('hidden');
+  var stage=$('star-stage');if(stage)stage.querySelectorAll('.star-target').forEach(function(x){x.remove();});
+  spawnStarTarget();
+  clearInterval(starGameTimer);
+  starGameTimer=setInterval(function(){
+    var left=Math.max(0,starGameEndsAt-Date.now());
+    var sec=Math.ceil(left/1000);var time=$('star-time');if(time)time.textContent=sec+' сек';
+    var progress=$('star-progress');if(progress)progress.style.width=(Math.max(0,Math.min(1,(STAR_GAME_DURATION*1000-left)/(STAR_GAME_DURATION*1000)))*100)+'%';
+    if(left<=0)finishStarRound();
+  },100);
+}
+function spawnStarTarget(){
+  if(!starGameActive)return;var stage=$('star-stage');if(!stage)return;
+  stage.querySelectorAll('.star-target').forEach(function(x){x.remove();});
+  var el=document.createElement('div');var bomb=Math.random()<0.14;el.className='star-target'+(bomb?' bomb':'');el.textContent=bomb?'💣':'⭐';
+  var maxX=Math.max(8,stage.clientWidth-60),maxY=Math.max(70,stage.clientHeight-70);
+  el.style.left=(8+Math.random()*Math.max(1,maxX-8))+'px';el.style.top=(55+Math.random()*Math.max(1,maxY-55))+'px';
+  el.onclick=function(e){e.preventDefault();if(!starGameActive)return;if(bomb){starGameScore=Math.max(0,starGameScore-2);vibrate('error');}else{starGameScore++;starGameCollected++;vibrate(8);}updateStarHud();spawnStarTarget();};
+  stage.appendChild(el);
+  starGameTargetTimer=setTimeout(function(){if(starGameActive&&el.parentNode)spawnStarTarget();},850);
+}
+function updateStarHud(){var s=$('star-live-score');if(s)s.textContent='⭐ '+starGameScore;var ss=$('star-score');if(ss)ss.textContent=starGameScore;}
+async function finishStarRound(){
+  if(!starGameActive)return;starGameActive=false;clearInterval(starGameTimer);clearTimeout(starGameTargetTimer);
+  var stage=$('star-stage');if(stage)stage.querySelectorAll('.star-target').forEach(function(x){x.remove();});
+  var current=starTodayEarned(),allowed=Math.max(0,STAR_DAILY_LIMIT-current),reward=Math.min(starGameCollected,allowed);
+  if(reward>0){saveStarLocal(current+reward);await addStars(reward);}
+  var bal=await getStarBalance();window.__fluxStarBalance=bal;
+  var overlay=$('star-overlay');if(overlay)overlay.classList.remove('hidden');
+  var result=$('star-result');if(result)result.textContent='+'+reward+' ⭐';
+  var start=$('star-start');if(start)start.textContent='Играть ещё';
+  updateStarHud();
+  renderGameTab(document.getElementById('games-list'));
+  var newOverlay=$('star-overlay');if(newOverlay)newOverlay.classList.remove('hidden');
+}
+async function initStarGame(){window.__fluxStarBalance=await getStarBalance();}
+
+/* ============================================================
    PREMIUM
    ============================================================ */
 function getPremiumPlan(id){return FLUX_PREMIUM_PLANS.find(function(x){return x.id===id;})||null;}
@@ -1435,7 +1540,6 @@ function premiumPlanTitle(plan){return ({month:'1 месяц',quarter:'3 мес�
 function renderShop(){
   var list=document.getElementById('shop-list');if(!list)return;
   var activeTab=(document.querySelector('#shop-tabs .shop-tab.active')||{}).dataset;
-  if(activeTab&&activeTab.shop==='games'){renderGameTab(list);return;}
   renderPremiumTab(list);loadPremiumState();
 }
 function renderPremiumTab(list){
