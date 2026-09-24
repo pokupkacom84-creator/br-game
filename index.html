@@ -763,8 +763,37 @@ async function fetchGithubSource(source){
 }
 
 function isPremiumVpnSource(id){return String(id||'').charAt(0)==='p';}
-function isPremiumActive(v){v=v||{};return !!v.active && Number(v.expiresAt||0)>Date.now();}
-function isPremiumUserNow(){return isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{}));}
+/* Глобальный Premium: состояние хранится в /settings/globalPremium и имеет приоритет
+   над индивидуальным Premium. При выключении доступ пропадает у всех сразу. */
+function isGlobalPremiumEnabled(){
+  var g=window.__fluxGlobalPremiumState||{};
+  return g.active===true;
+}
+function isPremiumActive(v){
+  if(isGlobalPremiumEnabled())return true;
+  v=v||{};
+  return !!v.active && Number(v.expiresAt||0)>Date.now();
+}
+function isPremiumUserNow(){
+  if(isGlobalPremiumEnabled())return true;
+  return isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{}));
+}
+function startGlobalPremiumListener(){
+  if(!db)return;
+  try{
+    if(window.__globalPremiumListenerRef)window.__globalPremiumListenerRef.off();
+    var ref=db.ref('settings/globalPremium');
+    window.__globalPremiumListenerRef=ref;
+    ref.on('value',function(snap){
+      window.__fluxGlobalPremiumState=snap.val()||{active:false};
+      var active=isGlobalPremiumEnabled();
+      document.body.classList.toggle('flux-premium',active||isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{})));
+      try{renderVpnCategoryTabs();renderVpnSources();}catch(e){}
+      try{updateSettingsUI();}catch(e){}
+      var list=document.getElementById('shop-list');if(list)renderPremiumTab(list);
+    });
+  }catch(e){console.warn('global premium listener',e);}
+}
 
 let vpnActiveCategory = (function(){try{return localStorage.getItem('flux_vpn_category')||'free';}catch(e){return 'free';}})();
 let vpnActiveSourceId = (function(){try{return localStorage.getItem('flux_vpn_source')||'v1';}catch(e){return 'v1';}})();
@@ -1035,7 +1064,7 @@ if(firebaseReady&&auth){
       if(data.twofa&&data.twofa.enabled){twoFAEnabled=true;try{localStorage.setItem('flux_2fa','1');}catch(e){}}
       if(pinLockEnabled&&pinLockCode){showPinLock();}
       goScreen('main-screen',true);
-      startSelfListener();startSessionTracking();updateSettingsUI();updateTogglesUI();startPremiumListener();
+      startSelfListener();startSessionTracking();updateSettingsUI();updateTogglesUI();startGlobalPremiumListener();startPremiumListener();
       try{db.ref('users/'+user.uid).update({online:true,lastSeen:TS});}catch(e){}
       setTimeout(positionNavIndicator,200);
     }
@@ -1709,8 +1738,27 @@ document.getElementById('promo-sheet').onclick=function(e){if(e.target===this)th
 async function openAdminPanel(){
   if(!isFluxAdmin()){toast('Нет доступа');return;}
   var sheet=document.getElementById('admin-sheet'),body=document.getElementById('admin-body');sheet.classList.add('show');
-  body.innerHTML='<div class="profile-sheet-title">🛡️ Админ-панель</div><div id="admin-stats" class="profile-info-card"><div class="spinner" style="margin:20px auto"></div></div><div class="profile-sheet-subtitle">Последние платежи</div><div id="admin-payments" style="max-height:220px;overflow:auto"><div class="spinner" style="margin:20px auto"></div></div><div class="profile-sheet-subtitle">Пользователи</div><input class="sheet-input" id="admin-user-search" placeholder="Имя, @username или UID" autocomplete="off"><div id="admin-users" style="max-height:38vh;overflow:auto;margin-top:8px"></div><div class="profile-sheet-subtitle">Промокоды</div><div class="profile-info-card" style="padding:12px"><input class="sheet-input" id="admin-promo-code" placeholder="Код, например WELCOME" maxlength="32"><input class="sheet-input" id="admin-promo-max" type="number" min="0" step="1" placeholder="Лимит использований (0 = без лимита)" style="margin-top:8px"><input class="sheet-input" id="admin-promo-exp" type="datetime-local" style="margin-top:8px"><button class="sheet-btn primary" id="admin-promo-create" style="margin-top:8px">Создать промокод</button></div><button class="sheet-btn secondary" id="admin-close">Закрыть</button>';
+  body.innerHTML='<div class="profile-sheet-title">🛡️ Админ-панель</div><div class="profile-info-card" style="margin-bottom:12px"><div class="settings-item" style="border-radius:16px;cursor:default"><span><b>👑 Premium для всех</b><small style="display:block;color:var(--text-2);font-size:11px;margin-top:2px">Включено — Premium сразу у всех пользователей</small></span><button id="admin-global-premium-toggle" class="toggle" aria-label="Глобальный Premium"></button></div></div><div id="admin-stats" class="profile-info-card"><div class="spinner" style="margin:20px auto"></div></div><div class="profile-sheet-subtitle">Последние платежи</div><div id="admin-payments" style="max-height:220px;overflow:auto"><div class="spinner" style="margin:20px auto"></div></div><div class="profile-sheet-subtitle">Пользователи</div><input class="sheet-input" id="admin-user-search" placeholder="Имя, @username или UID" autocomplete="off"><div id="admin-users" style="max-height:38vh;overflow:auto;margin-top:8px"></div><div class="profile-sheet-subtitle">Промокоды</div><div class="profile-info-card" style="padding:12px"><input class="sheet-input" id="admin-promo-code" placeholder="Код, например WELCOME" maxlength="32"><input class="sheet-input" id="admin-promo-max" type="number" min="0" step="1" placeholder="Лимит использований (0 = без лимита)" style="margin-top:8px"><input class="sheet-input" id="admin-promo-exp" type="datetime-local" style="margin-top:8px"><button class="sheet-btn primary" id="admin-promo-create" style="margin-top:8px">Создать промокод</button></div><button class="sheet-btn secondary" id="admin-close">Закрыть</button>';
   document.getElementById('admin-close').onclick=function(){sheet.classList.remove('show');};
+  var globalPremiumToggle=document.getElementById('admin-global-premium-toggle');
+  if(globalPremiumToggle){
+    globalPremiumToggle.classList.toggle('on',isGlobalPremiumEnabled());
+    globalPremiumToggle.onclick=async function(){
+      var next=!isGlobalPremiumEnabled();
+      this.disabled=true;
+      try{
+        await db.ref('settings/globalPremium').set({active:next,updatedAt:Date.now(),updatedBy:currentUser.uid});
+        window.__fluxGlobalPremiumState={active:next,updatedAt:Date.now(),updatedBy:currentUser.uid};
+        this.classList.toggle('on',next);
+        document.body.classList.toggle('flux-premium',next||isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{})));
+        try{renderVpnCategoryTabs();renderVpnSources();}catch(e){}
+        toast(next?'👑 Premium включён для всех пользователей':'Premium для всех выключен');
+      }catch(e){
+        toast('Не удалось изменить глобальный Premium');
+        console.warn('global premium toggle',e);
+      }finally{this.disabled=false;}
+    };
+  }
   try{
     var us=await db.ref('users').once('value'),users=us.val()||{},arr=Object.keys(users).map(function(uid){return Object.assign({uid:uid},users[uid]||{});});
     var ps=await db.ref('payments').once('value'),payments=ps.val()||{},payCount=0,rub=0;
