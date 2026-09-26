@@ -79,7 +79,7 @@ button:disabled{transform:none}
 
 /* ============ AMBIENT BACKGROUND (auth-flow only) ============ */
 #auth-screen,#splash-screen,#onboarding-screen,#twofa-screen{position:relative;overflow:hidden}
-#auth-screen::before,#splash-screen::before,#onboarding-screen::before,#twofa-screen::before{
+#auth-screen::before,#onboarding-screen::before,#twofa-screen::before{
   content:'';position:absolute;inset:-30%;pointer-events:none;z-index:0;
   background:
     radial-gradient(38% 38% at 22% 28%,var(--accent-soft) 0%,transparent 62%),
@@ -94,7 +94,117 @@ button:disabled{transform:none}
 }
 #auth-screen .auth-container,#splash-screen .auth-container,#onboarding-screen .auth-container,#twofa-screen .auth-container{position:relative;z-index:1}
 
-/* ============ LOGO ASSEMBLE ============ */
+/* ============================================================
+   SPLASH SCREEN — REDESIGNED
+   ============================================================ */
+#splash-screen{
+  background:radial-gradient(ellipse at 50% 25%,#2c1a6d 0%,#160b3e 45%,#06021a 100%);
+  background-size:200% 200%;
+  animation:splashBgShift 12s ease-in-out infinite;
+}
+@keyframes splashBgShift{
+  0%,100%{background-position:0% 0%}
+  50%{background-position:100% 100%}
+}
+#splash-screen::before{
+  content:'';position:absolute;inset:-30%;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(45% 45% at 28% 25%,rgba(139,92,246,.42) 0%,transparent 65%),
+    radial-gradient(50% 50% at 72% 78%,rgba(168,85,247,.32) 0%,transparent 68%);
+  opacity:1;will-change:transform;
+  animation:ambientFloat 26s ease-in-out infinite;
+  transform:translate3d(0,0,0);
+  filter:blur(2px);
+}
+.splash-wrap{
+  position:relative;z-index:1;
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:6px;width:100%;max-width:420px;margin:0 auto;
+  padding:32px 24px;
+}
+.splash-logo-wrap{
+  position:relative;
+  width:132px;height:132px;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:14px;
+}
+.splash-logo-glow{
+  position:absolute;inset:-26px;
+  background:radial-gradient(circle,rgba(139,92,246,.55) 0%,transparent 70%);
+  filter:blur(26px);
+  animation:splashGlow 2.6s ease-in-out infinite;
+  pointer-events:none;
+}
+@keyframes splashGlow{
+  0%,100%{opacity:.55;transform:scale(.9)}
+  50%{opacity:1;transform:scale(1.15)}
+}
+.splash-logo{
+  width:100px;height:100px;display:block;position:relative;z-index:1;
+  filter:drop-shadow(0 14px 36px rgba(139,92,246,.55));
+  animation:splashLogoFloat 3.4s ease-in-out 1.5s infinite;
+}
+.splash-logo svg{width:100%;height:100%;display:block}
+.splash-logo svg path{
+  opacity:0;transform-origin:center;
+  animation:logoPathIn .9s var(--ease-bounce) forwards;
+  will-change:transform,opacity;
+}
+.splash-logo svg path:nth-of-type(1){animation-delay:.08s}
+.splash-logo svg path:nth-of-type(2){animation-delay:.32s}
+@keyframes splashLogoFloat{
+  0%,100%{transform:translateY(0) scale(1)}
+  50%{transform:translateY(-6px) scale(1.03)}
+}
+.splash-title{
+  font-size:32px;font-weight:800;letter-spacing:-.045em;
+  margin-top:4px;line-height:1.1;
+  background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 50%,#f0abfc 120%);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:var(--accent);
+  opacity:0;transform:translateY(20px) scale(.92);
+  animation:splashTitleIn .85s var(--ease-bounce) .15s forwards;
+}
+@keyframes splashTitleIn{
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.splash-tagline{
+  color:rgba(255,255,255,.5);
+  font-size:11px;font-weight:600;
+  letter-spacing:.28em;text-transform:uppercase;
+  opacity:0;animation:splashTitleIn .8s var(--ease-out) .35s forwards;
+  margin-top:2px;
+}
+.splash-loader{
+  position:relative;width:190px;height:4px;
+  border-radius:6px;
+  background:rgba(255,255,255,.09);
+  overflow:hidden;margin-top:34px;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.35);
+}
+.splash-loader-bar{
+  position:absolute;top:0;left:0;
+  height:100%;width:38%;
+  border-radius:6px;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  box-shadow:0 0 14px var(--accent-glow),0 0 6px rgba(139,92,246,.85);
+  animation:splashLoaderSlide 1.4s cubic-bezier(.65,0,.35,1) infinite;
+}
+@keyframes splashLoaderSlide{
+  0%{left:-40%}
+  100%{left:100%}
+}
+.splash-status{
+  font-size:12px;font-weight:500;
+  color:rgba(255,255,255,.45);
+  margin-top:12px;min-height:16px;text-align:center;
+  letter-spacing:.02em;
+  transition:opacity .4s var(--ease-out);
+}
+.splash-status.err{color:#fca5a5}
+
+/* ============ LOGO ASSEMBLE (auth/other screens) ============ */
 .auth-logo svg path{opacity:0;transform-origin:center;animation:logoPathIn .9s var(--ease-bounce) forwards;will-change:transform,opacity}
 .auth-logo svg path:nth-of-type(1){animation-delay:.08s}
 .auth-logo svg path:nth-of-type(2){animation-delay:.32s}
@@ -473,7 +583,10 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
   body::before{animation:none!important}
-  .auth-logo svg path{opacity:1!important;transform:none!important;animation:none!important}
+  .auth-logo svg path,.splash-logo svg path{opacity:1!important;transform:none!important;animation:none!important}
+  .splash-title,.splash-tagline{opacity:1!important;transform:none!important;animation:none!important}
+  .splash-logo-glow{animation:none!important;opacity:.8!important}
+  .splash-loader-bar{animation:none!important;width:100%!important;left:0!important}
   .success-overlay svg circle,.success-overlay svg path{stroke-dashoffset:0!important;animation:none!important}
   #vpn-load-btn{animation:none!important}
 }
@@ -492,15 +605,23 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 <div id="net-banner" class="net-banner">Нет подключения к интернету</div>
 <div id="success-overlay" class="success-overlay"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45"/><path d="M30 52 L45 66 L72 38"/></svg></div>
 
+<!-- ============ SPLASH SCREEN (REDESIGNED) ============ -->
 <div id="splash-screen" class="screen active">
-<div class="auth-container">
-<div class="auth-logo"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-<defs><linearGradient id="fluxLogoGradientSplash" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#a51cff"/><stop offset="52%" stop-color="#8a16ef"/><stop offset="100%" stop-color="#6d0cda"/></linearGradient></defs>
-<path fill="url(#fluxLogoGradientSplash)" d="M 354 162 L 297 77 L 282 62 L 260 50 L 244 46 L 224 46 L 196 54 L 177 66 L 164 81 L 122 146 L 119 148 L 120 149 L 67 228 L 41 269 L 40 268 L 41 270 L 20 299 L 17 306 L 14 308 L 0 334 L 124 334 L 129 329 L 128 328 L 135 319 L 138 311 L 147 300 L 147 297 L 168 266 L 170 260 L 229 166 L 286 260 L 289 261 L 291 257 L 293 257 L 292 256 L 305 237 L 307 237 L 306 235 L 331 198 L 336 193 L 353 167 Z"/>
-<path fill="url(#fluxLogoGradientSplash)" d="M 511 183 L 384 184 L 368 208 L 365 210 L 366 211 L 282 336 L 234 261 L 231 261 L 203 301 L 200 302 L 201 304 L 198 305 L 199 307 L 195 312 L 193 312 L 194 314 L 171 347 L 168 349 L 187 380 L 195 390 L 194 393 L 195 392 L 198 395 L 214 422 L 218 426 L 217 428 L 219 428 L 233 445 L 245 453 L 259 460 L 274 464 L 291 465 L 313 461 L 328 454 L 341 445 L 354 429 L 366 409 L 369 407 L 368 406 L 422 322 L 433 308 L 443 291 L 444 292 L 443 290 L 471 247 L 473 247 L 472 245 L 481 231 L 484 229 L 489 218 L 491 216 L 492 217 L 492 214 L 509 189 Z"/>
-</svg></div>
-<h1 class="auth-title">Flux Client</h1>
-<div class="spinner"></div>
+<div class="splash-wrap">
+  <div class="splash-logo-wrap">
+    <div class="splash-logo-glow"></div>
+    <div class="splash-logo">
+      <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="fluxLogoGradientSplash" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#a51cff"/><stop offset="52%" stop-color="#8a16ef"/><stop offset="100%" stop-color="#6d0cda"/></linearGradient></defs>
+        <path fill="url(#fluxLogoGradientSplash)" d="M 354 162 L 297 77 L 282 62 L 260 50 L 244 46 L 224 46 L 196 54 L 177 66 L 164 81 L 122 146 L 119 148 L 120 149 L 67 228 L 41 269 L 40 268 L 41 270 L 20 299 L 17 306 L 14 308 L 0 334 L 124 334 L 129 329 L 128 328 L 135 319 L 138 311 L 147 300 L 147 297 L 168 266 L 170 260 L 229 166 L 286 260 L 289 261 L 291 257 L 293 257 L 292 256 L 305 237 L 307 237 L 306 235 L 331 198 L 336 193 L 353 167 Z"/>
+        <path fill="url(#fluxLogoGradientSplash)" d="M 511 183 L 384 184 L 368 208 L 365 210 L 366 211 L 282 336 L 234 261 L 231 261 L 203 301 L 200 302 L 201 304 L 198 305 L 199 307 L 195 312 L 193 312 L 194 314 L 171 347 L 168 349 L 187 380 L 195 390 L 194 393 L 195 392 L 198 395 L 214 422 L 218 426 L 217 428 L 219 428 L 233 445 L 245 453 L 259 460 L 274 464 L 291 465 L 313 461 L 328 454 L 341 445 L 354 429 L 366 409 L 369 407 L 368 406 L 422 322 L 433 308 L 443 291 L 444 292 L 443 290 L 471 247 L 473 247 L 472 245 L 481 231 L 484 229 L 489 218 L 491 216 L 492 217 L 492 214 L 509 189 Z"/>
+      </svg>
+    </div>
+  </div>
+  <h1 class="splash-title">Flux Client</h1>
+  <p class="splash-tagline">VPN · Premium · Comfort</p>
+  <div class="splash-loader"><div class="splash-loader-bar"></div></div>
+  <div class="splash-status" id="splash-status">Загрузка…</div>
 </div>
 </div>
 
@@ -710,6 +831,32 @@ const TS=Date.now();
     firebaseReady=true;
   }catch(e){console.error('Firebase init failed:',e);firebaseReady=false;}
 })();
+
+/* ============================================================
+   SPLASH GUARD — never let splash get stuck
+   ============================================================ */
+const splashState={hidden:false,statusEl:null};
+function setSplashStatus(text,isErr){
+  var el=splashState.statusEl||(splashState.statusEl=document.getElementById('splash-status'));
+  if(!el)return;
+  el.textContent=text||'Загрузка…';
+  el.classList.toggle('err',!!isErr);
+}
+function hideSplashIfVisible(){
+  if(splashState.hidden)return;
+  if(currentScreenId!=='splash-screen')return;
+  splashState.hidden=true;
+  try{goScreen('auth-screen',true);}catch(e){console.warn(e);}
+}
+// Hard fallback: даже если Firebase не отвечает — уводим со splash через 2.5с
+setTimeout(function(){
+  if(currentScreenId==='splash-screen'){
+    if(!firebaseReady)setSplashStatus('Не удалось подключиться к серверу',true);
+    hideSplashIfVisible();
+  }
+},2500);
+// Дополнительный страховочный таймер на всякий случай
+setTimeout(function(){hideSplashIfVisible();},6000);
 
 const TELEGRAM_BOT_USERNAME = 'FluxPremPay_bot';
 const FLUX_PREMIUM_PLANS = [
@@ -1136,36 +1283,55 @@ $('register-btn').onclick=async function(){
 var authProcessing=false;
 if(firebaseReady&&auth){
   try{auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(function(){});});}catch(e){}
-  auth.onAuthStateChanged(async function(user){
-    if(!user){
-      currentUser=null;currentUserData=null;
-      goScreen('auth-screen',true);return;
-    }
-    if(currentUser&&currentUser.uid===user.uid)return;
-    if(authProcessing)return;
-    authProcessing=true;setTimeout(function(){authProcessing=false;},1000);
-    currentUser=user;
-    var snap;try{snap=await db.ref('users/'+user.uid).once('value');}catch(e){toast('Ошибка соединения');goScreen('auth-screen',true);return;}
-    var data=snap.val();
-    if(data&&data.adminBlocked===true){toast('Аккаунт заблокирован администратором');try{await auth.signOut();}catch(e){}return;}
-    if(!data||!data.name){buildOnbAvatarGrid();goScreen('onboarding-screen',true);}
-    else{
-      currentUserData=Object.assign({uid:user.uid},data);
-      if(data.autoDeleteMonths){autoDeleteMonths=parseInt(data.autoDeleteMonths,10)||0;try{localStorage.setItem('flux_auto_delete',String(autoDeleteMonths));}catch(e){}}
-      if(data.twofa&&data.twofa.enabled){twoFAEnabled=true;try{localStorage.setItem('flux_2fa','1');}catch(e){}}
-      if(pinLockEnabled&&pinLockCode){showPinLock();}
-      goScreen('main-screen',true);
-      startSelfListener();startSessionTracking();updateSettingsUI();updateTogglesUI();startGlobalPremiumListener();startPremiumListener();
-      try{db.ref('users/'+user.uid).update({online:true,lastSeen:TS});}catch(e){}
-      requestAnimationFrame(positionNavIndicator);
-    }
-    authProcessing=false;
-  });
+  try{
+    auth.onAuthStateChanged(async function(user){
+      try{
+        if(!user){
+          currentUser=null;currentUserData=null;
+          goScreen('auth-screen',true);
+          return;
+        }
+        if(currentUser&&currentUser.uid===user.uid)return;
+        if(authProcessing)return;
+        authProcessing=true;setTimeout(function(){authProcessing=false;},1000);
+        currentUser=user;
+        setSplashStatus('Проверка сессии…');
+        var snap;try{snap=await db.ref('users/'+user.uid).once('value');}catch(e){toast('Ошибка соединения');goScreen('auth-screen',true);return;}
+        var data=snap.val();
+        if(data&&data.adminBlocked===true){toast('Аккаунт заблокирован администратором');try{await auth.signOut();}catch(e){}return;}
+        if(!data||!data.name){buildOnbAvatarGrid();goScreen('onboarding-screen',true);}
+        else{
+          currentUserData=Object.assign({uid:user.uid},data);
+          if(data.autoDeleteMonths){autoDeleteMonths=parseInt(data.autoDeleteMonths,10)||0;try{localStorage.setItem('flux_auto_delete',String(autoDeleteMonths));}catch(e){}}
+          if(data.twofa&&data.twofa.enabled){twoFAEnabled=true;try{localStorage.setItem('flux_2fa','1');}catch(e){}}
+          if(pinLockEnabled&&pinLockCode){showPinLock();}
+          goScreen('main-screen',true);
+          startSelfListener();startSessionTracking();updateSettingsUI();updateTogglesUI();startGlobalPremiumListener();startPremiumListener();
+          try{db.ref('users/'+user.uid).update({online:true,lastSeen:TS});}catch(e){}
+          requestAnimationFrame(positionNavIndicator);
+        }
+        authProcessing=false;
+      }catch(innerErr){
+        console.error('Auth handler error:',innerErr);
+        authProcessing=false;
+        hideSplashIfVisible();
+      }
+    });
+  }catch(e){
+    console.error('onAuthStateChanged setup failed:',e);
+    setTimeout(hideSplashIfVisible,600);
+  }
 }else{
   setTimeout(function(){if(currentScreenId==='splash-screen')goScreen('auth-screen',true);},700);
   setTimeout(function(){toast('Firebase не загружен. Проверьте интернет.');},1400);
 }
-setTimeout(function(){if(currentScreenId==='splash-screen'){goScreen('auth-screen',true);if(!firebaseReady)toast('Не удалось подключиться к серверу');}},9000);
+// Финальный гарантированный выход со сплеша
+setTimeout(function(){
+  if(currentScreenId==='splash-screen'){
+    hideSplashIfVisible();
+    if(!firebaseReady)toast('Не удалось подключиться к серверу');
+  }
+},9000);
 
 function startSelfListener(){
   if(!currentUser)return;
