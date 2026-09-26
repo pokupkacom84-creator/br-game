@@ -68,6 +68,7 @@ body.dark{
 body{transition:background-color .5s var(--ease-out),color .5s var(--ease-out)}
 .header,.bottom-nav,.settings-item,.modal,.profile-sheet-body,.fab,.btn-primary,.search-bar input,.toggle,.vpn-card,.vpn-key-item,.profile-action,.profile-info-card,.avatar,.premium-status-card,.premium-plan,.premium-benefit{transition:background-color .5s var(--ease-out),color .5s var(--ease-out),border-color .5s var(--ease-out),box-shadow .5s var(--ease-out),transform .35s var(--ease-bounce)}
 html,body{height:100%;height:100dvh;overflow:hidden}
+html{background:#0b0520}
 body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Inter','Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:var(--fs);line-height:1.42;letter-spacing:-.01em;overscroll-behavior:none;-webkit-font-smoothing:antialiased}
 input,textarea,select{user-select:text;-webkit-user-select:text;font-family:inherit;font-size:16px;color:var(--text)}
 button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;background:none;color:inherit;outline:none;transition:transform .35s var(--ease-bounce),filter .24s var(--ease-out),background .24s var(--ease-out),color .24s var(--ease-out),box-shadow .35s var(--ease-out)}
@@ -78,7 +79,7 @@ button:disabled{transform:none}
 .flux-ic{display:inline-block;vertical-align:-0.15em;flex-shrink:0}
 
 /* ============ AMBIENT BACKGROUND (auth-flow only) ============ */
-#auth-screen,#splash-screen,#onboarding-screen,#twofa-screen{position:relative;overflow:hidden}
+#auth-screen,#onboarding-screen,#twofa-screen{position:relative;overflow:hidden}
 #auth-screen::before,#onboarding-screen::before,#twofa-screen::before{
   content:'';position:absolute;inset:-30%;pointer-events:none;z-index:0;
   background:
@@ -92,117 +93,167 @@ button:disabled{transform:none}
   0%,100%{transform:translate3d(0,0,0) scale(1)}
   50%{transform:translate3d(2.5%,-3%,0) scale(1.08)}
 }
-#auth-screen .auth-container,#splash-screen .auth-container,#onboarding-screen .auth-container,#twofa-screen .auth-container{position:relative;z-index:1}
+#auth-screen .auth-container,#onboarding-screen .auth-container,#twofa-screen .auth-container{position:relative;z-index:1}
 
 /* ============================================================
-   SPLASH SCREEN — REDESIGNED
+   SPLASH SCREEN — полностью переработан
    ============================================================ */
 #splash-screen{
-  background:radial-gradient(ellipse at 50% 25%,#2c1a6d 0%,#160b3e 45%,#06021a 100%);
-  background-size:200% 200%;
-  animation:splashBgShift 12s ease-in-out infinite;
+  position:fixed;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 15%, #3a1d7a 0%, transparent 60%),
+    radial-gradient(ellipse 110% 80% at 50% 100%, #4c1d95 0%, transparent 65%),
+    radial-gradient(circle at 15% 45%, rgba(99,102,241,.5) 0%, transparent 50%),
+    radial-gradient(circle at 85% 55%, rgba(217,70,239,.4) 0%, transparent 50%),
+    linear-gradient(180deg, #1c0e4a 0%, #14082f 45%, #0b0420 100%);
+  background-color:#0b0420;
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:env(safe-area-inset-bottom);
+  overflow:hidden;
+  z-index:10;
 }
-@keyframes splashBgShift{
-  0%,100%{background-position:0% 0%}
-  50%{background-position:100% 100%}
-}
+#splash-screen.active{display:flex}
 #splash-screen::before{
   content:'';position:absolute;inset:-30%;pointer-events:none;z-index:0;
   background:
-    radial-gradient(45% 45% at 28% 25%,rgba(139,92,246,.42) 0%,transparent 65%),
-    radial-gradient(50% 50% at 72% 78%,rgba(168,85,247,.32) 0%,transparent 68%);
+    radial-gradient(40% 40% at 30% 30%, rgba(139,92,246,.55) 0%, transparent 60%),
+    radial-gradient(45% 45% at 72% 70%, rgba(168,85,247,.45) 0%, transparent 62%),
+    radial-gradient(35% 35% at 50% 90%, rgba(99,102,241,.35) 0%, transparent 60%);
   opacity:1;will-change:transform;
-  animation:ambientFloat 26s ease-in-out infinite;
-  transform:translate3d(0,0,0);
-  filter:blur(2px);
+  animation:splashOrbFloat 22s ease-in-out infinite;
+  filter:blur(6px);
 }
+#splash-screen::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 30%, rgba(0,0,0,.35) 100%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.015) 0px, rgba(255,255,255,.015) 1px, transparent 1px, transparent 3px);
+  mix-blend-mode:overlay;
+}
+@keyframes splashOrbFloat{
+  0%,100%{transform:translate3d(0,0,0) scale(1) rotate(0deg)}
+  33%{transform:translate3d(3%,-2%,0) scale(1.08) rotate(4deg)}
+  66%{transform:translate3d(-2%,3%,0) scale(1.04) rotate(-3deg)}
+}
+
 .splash-wrap{
-  position:relative;z-index:1;
+  position:relative;z-index:2;
   flex:1;display:flex;flex-direction:column;
   align-items:center;justify-content:center;
-  gap:6px;width:100%;max-width:420px;margin:0 auto;
-  padding:32px 24px;
+  gap:8px;width:100%;max-width:420px;margin:0 auto;
+  padding:24px 28px;
 }
+
 .splash-logo-wrap{
   position:relative;
-  width:132px;height:132px;
+  width:148px;height:148px;
   display:flex;align-items:center;justify-content:center;
-  margin-bottom:14px;
+  margin-bottom:18px;
 }
 .splash-logo-glow{
-  position:absolute;inset:-26px;
-  background:radial-gradient(circle,rgba(139,92,246,.55) 0%,transparent 70%);
-  filter:blur(26px);
-  animation:splashGlow 2.6s ease-in-out infinite;
+  position:absolute;inset:-32px;
+  background:radial-gradient(circle,rgba(168,85,247,.65) 0%,rgba(139,92,246,.35) 35%,transparent 72%);
+  filter:blur(30px);
+  animation:splashGlow 3s ease-in-out infinite;
   pointer-events:none;
 }
 @keyframes splashGlow{
-  0%,100%{opacity:.55;transform:scale(.9)}
-  50%{opacity:1;transform:scale(1.15)}
+  0%,100%{opacity:.6;transform:scale(.88)}
+  50%{opacity:1;transform:scale(1.18)}
+}
+.splash-logo-ring{
+  position:absolute;inset:-10px;
+  border-radius:50%;
+  background:conic-gradient(from 0deg,transparent 0%,rgba(168,85,247,.75) 18%,transparent 40%,transparent 60%,rgba(217,70,239,.6) 78%,transparent 100%);
+  filter:blur(10px);
+  opacity:.7;
+  animation:splashRingSpin 6s linear infinite;
+  pointer-events:none;
+  mask:radial-gradient(circle, transparent 56%, #000 58%);
+  -webkit-mask:radial-gradient(circle, transparent 56%, #000 58%);
+}
+@keyframes splashRingSpin{
+  0%{transform:rotate(0deg)}
+  100%{transform:rotate(360deg)}
 }
 .splash-logo{
-  width:100px;height:100px;display:block;position:relative;z-index:1;
-  filter:drop-shadow(0 14px 36px rgba(139,92,246,.55));
-  animation:splashLogoFloat 3.4s ease-in-out 1.5s infinite;
+  width:108px;height:108px;display:block;position:relative;z-index:1;
+  filter:drop-shadow(0 16px 44px rgba(139,92,246,.65)) drop-shadow(0 0 22px rgba(168,85,247,.45));
+  animation:splashLogoFloat 3.6s ease-in-out 1.6s infinite;
 }
 .splash-logo svg{width:100%;height:100%;display:block}
 .splash-logo svg path{
   opacity:0;transform-origin:center;
-  animation:logoPathIn .9s var(--ease-bounce) forwards;
+  animation:logoPathIn .95s var(--ease-bounce) forwards;
   will-change:transform,opacity;
 }
-.splash-logo svg path:nth-of-type(1){animation-delay:.08s}
-.splash-logo svg path:nth-of-type(2){animation-delay:.32s}
+.splash-logo svg path:nth-of-type(1){animation-delay:.10s}
+.splash-logo svg path:nth-of-type(2){animation-delay:.36s}
 @keyframes splashLogoFloat{
   0%,100%{transform:translateY(0) scale(1)}
-  50%{transform:translateY(-6px) scale(1.03)}
+  50%{transform:translateY(-7px) scale(1.03)}
 }
+
 .splash-title{
-  font-size:32px;font-weight:800;letter-spacing:-.045em;
-  margin-top:4px;line-height:1.1;
-  background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 50%,#f0abfc 120%);
+  font-size:34px;font-weight:800;letter-spacing:-.05em;
+  margin-top:6px;line-height:1.05;
+  background:linear-gradient(120deg,#e9d5ff 0%,#c4b5fd 35%,#a78bfa 55%,#f0abfc 100%);
   -webkit-background-clip:text;background-clip:text;
-  -webkit-text-fill-color:transparent;color:var(--accent);
-  opacity:0;transform:translateY(20px) scale(.92);
-  animation:splashTitleIn .85s var(--ease-bounce) .15s forwards;
+  -webkit-text-fill-color:transparent;color:#c4b5fd;
+  opacity:0;transform:translateY(22px) scale(.94);
+  animation:splashTitleIn .9s var(--ease-bounce) .20s forwards;
+  filter:drop-shadow(0 4px 18px rgba(168,85,247,.35));
 }
 @keyframes splashTitleIn{
   to{opacity:1;transform:translateY(0) scale(1)}
 }
 .splash-tagline{
-  color:rgba(255,255,255,.5);
-  font-size:11px;font-weight:600;
-  letter-spacing:.28em;text-transform:uppercase;
-  opacity:0;animation:splashTitleIn .8s var(--ease-out) .35s forwards;
-  margin-top:2px;
+  color:rgba(226,213,255,.55);
+  font-size:10.5px;font-weight:700;
+  letter-spacing:.36em;text-transform:uppercase;
+  opacity:0;animation:splashTitleIn .85s var(--ease-out) .42s forwards;
+  margin-top:6px;
+  padding-left:.36em;
 }
+
 .splash-loader{
-  position:relative;width:190px;height:4px;
-  border-radius:6px;
-  background:rgba(255,255,255,.09);
-  overflow:hidden;margin-top:34px;
-  box-shadow:inset 0 1px 2px rgba(0,0,0,.35);
+  position:relative;width:200px;height:4px;
+  border-radius:8px;
+  background:rgba(255,255,255,.10);
+  overflow:hidden;margin-top:40px;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.04);
+  opacity:0;animation:splashTitleIn .8s var(--ease-out) .55s forwards;
 }
 .splash-loader-bar{
-  position:absolute;top:0;left:0;
-  height:100%;width:38%;
-  border-radius:6px;
-  background:linear-gradient(90deg,var(--accent),var(--accent-2));
-  box-shadow:0 0 14px var(--accent-glow),0 0 6px rgba(139,92,246,.85);
-  animation:splashLoaderSlide 1.4s cubic-bezier(.65,0,.35,1) infinite;
+  position:absolute;top:0;left:-40%;
+  height:100%;width:40%;
+  border-radius:8px;
+  background:linear-gradient(90deg,rgba(139,92,246,.15) 0%,#8b5cf6 45%,#d946ef 100%);
+  box-shadow:0 0 16px rgba(168,85,247,.85), 0 0 8px rgba(217,70,239,.6);
+  animation:splashLoaderSlide 1.5s cubic-bezier(.65,.05,.35,.95) infinite;
 }
 @keyframes splashLoaderSlide{
-  0%{left:-40%}
-  100%{left:100%}
+  0%{left:-45%}
+  100%{left:105%}
 }
 .splash-status{
   font-size:12px;font-weight:500;
-  color:rgba(255,255,255,.45);
-  margin-top:12px;min-height:16px;text-align:center;
+  color:rgba(226,213,255,.55);
+  margin-top:14px;min-height:16px;text-align:center;
   letter-spacing:.02em;
-  transition:opacity .4s var(--ease-out);
+  transition:color .4s var(--ease-out);
+  opacity:0;animation:splashTitleIn .8s var(--ease-out) .7s forwards;
 }
-.splash-status.err{color:#fca5a5}
+.splash-status.err{color:#fca5a5;animation:splashStatusPulse 1.6s ease-in-out infinite}
+@keyframes splashStatusPulse{
+  0%,100%{opacity:1}
+  50%{opacity:.55}
+}
 
 /* ============ LOGO ASSEMBLE (auth/other screens) ============ */
 .auth-logo svg path{opacity:0;transform-origin:center;animation:logoPathIn .9s var(--ease-bounce) forwards;will-change:transform,opacity}
@@ -583,9 +634,11 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
   body::before{animation:none!important}
+  #splash-screen::before{animation:none!important}
+  .splash-logo-ring{animation:none!important}
   .auth-logo svg path,.splash-logo svg path{opacity:1!important;transform:none!important;animation:none!important}
-  .splash-title,.splash-tagline{opacity:1!important;transform:none!important;animation:none!important}
-  .splash-logo-glow{animation:none!important;opacity:.8!important}
+  .splash-title,.splash-tagline,.splash-loader,.splash-status{opacity:1!important;transform:none!important;animation:none!important}
+  .splash-logo-glow{animation:none!important;opacity:.85!important}
   .splash-loader-bar{animation:none!important;width:100%!important;left:0!important}
   .success-overlay svg circle,.success-overlay svg path{stroke-dashoffset:0!important;animation:none!important}
   #vpn-load-btn{animation:none!important}
@@ -605,24 +658,31 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 <div id="net-banner" class="net-banner">Нет подключения к интернету</div>
 <div id="success-overlay" class="success-overlay"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45"/><path d="M30 52 L45 66 L72 38"/></svg></div>
 
-<!-- ============ SPLASH SCREEN (REDESIGNED) ============ -->
+<!-- ============ SPLASH SCREEN ============ -->
 <div id="splash-screen" class="screen active">
-<div class="splash-wrap">
-  <div class="splash-logo-wrap">
-    <div class="splash-logo-glow"></div>
-    <div class="splash-logo">
-      <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-        <defs><linearGradient id="fluxLogoGradientSplash" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#a51cff"/><stop offset="52%" stop-color="#8a16ef"/><stop offset="100%" stop-color="#6d0cda"/></linearGradient></defs>
-        <path fill="url(#fluxLogoGradientSplash)" d="M 354 162 L 297 77 L 282 62 L 260 50 L 244 46 L 224 46 L 196 54 L 177 66 L 164 81 L 122 146 L 119 148 L 120 149 L 67 228 L 41 269 L 40 268 L 41 270 L 20 299 L 17 306 L 14 308 L 0 334 L 124 334 L 129 329 L 128 328 L 135 319 L 138 311 L 147 300 L 147 297 L 168 266 L 170 260 L 229 166 L 286 260 L 289 261 L 291 257 L 293 257 L 292 256 L 305 237 L 307 237 L 306 235 L 331 198 L 336 193 L 353 167 Z"/>
-        <path fill="url(#fluxLogoGradientSplash)" d="M 511 183 L 384 184 L 368 208 L 365 210 L 366 211 L 282 336 L 234 261 L 231 261 L 203 301 L 200 302 L 201 304 L 198 305 L 199 307 L 195 312 L 193 312 L 194 314 L 171 347 L 168 349 L 187 380 L 195 390 L 194 393 L 195 392 L 198 395 L 214 422 L 218 426 L 217 428 L 219 428 L 233 445 L 245 453 L 259 460 L 274 464 L 291 465 L 313 461 L 328 454 L 341 445 L 354 429 L 366 409 L 369 407 L 368 406 L 422 322 L 433 308 L 443 291 L 444 292 L 443 290 L 471 247 L 473 247 L 472 245 L 481 231 L 484 229 L 489 218 L 491 216 L 492 217 L 492 214 L 509 189 Z"/>
-      </svg>
+  <div class="splash-wrap">
+    <div class="splash-logo-wrap">
+      <div class="splash-logo-glow"></div>
+      <div class="splash-logo-ring"></div>
+      <div class="splash-logo">
+        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="fluxLogoGradientSplash" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#c084fc"/>
+              <stop offset="52%" stop-color="#a855f7"/>
+              <stop offset="100%" stop-color="#7c3aed"/>
+            </linearGradient>
+          </defs>
+          <path fill="url(#fluxLogoGradientSplash)" d="M 354 162 L 297 77 L 282 62 L 260 50 L 244 46 L 224 46 L 196 54 L 177 66 L 164 81 L 122 146 L 119 148 L 120 149 L 67 228 L 41 269 L 40 268 L 41 270 L 20 299 L 17 306 L 14 308 L 0 334 L 124 334 L 129 329 L 128 328 L 135 319 L 138 311 L 147 300 L 147 297 L 168 266 L 170 260 L 229 166 L 286 260 L 289 261 L 291 257 L 293 257 L 292 256 L 305 237 L 307 237 L 306 235 L 331 198 L 336 193 L 353 167 Z"/>
+          <path fill="url(#fluxLogoGradientSplash)" d="M 511 183 L 384 184 L 368 208 L 365 210 L 366 211 L 282 336 L 234 261 L 231 261 L 203 301 L 200 302 L 201 304 L 198 305 L 199 307 L 195 312 L 193 312 L 194 314 L 171 347 L 168 349 L 187 380 L 195 390 L 194 393 L 195 392 L 198 395 L 214 422 L 218 426 L 217 428 L 219 428 L 233 445 L 245 453 L 259 460 L 274 464 L 291 465 L 313 461 L 328 454 L 341 445 L 354 429 L 366 409 L 369 407 L 368 406 L 422 322 L 433 308 L 443 291 L 444 292 L 443 290 L 471 247 L 473 247 L 472 245 L 481 231 L 484 229 L 489 218 L 491 216 L 492 217 L 492 214 L 509 189 Z"/>
+        </svg>
+      </div>
     </div>
+    <h1 class="splash-title">Flux Client</h1>
+    <p class="splash-tagline">VPN · Premium · Comfort</p>
+    <div class="splash-loader"><div class="splash-loader-bar"></div></div>
+    <div class="splash-status" id="splash-status">Загрузка…</div>
   </div>
-  <h1 class="splash-title">Flux Client</h1>
-  <p class="splash-tagline">VPN · Premium · Comfort</p>
-  <div class="splash-loader"><div class="splash-loader-bar"></div></div>
-  <div class="splash-status" id="splash-status">Загрузка…</div>
-</div>
 </div>
 
 <div id="auth-screen" class="screen">
@@ -848,14 +908,14 @@ function hideSplashIfVisible(){
   splashState.hidden=true;
   try{goScreen('auth-screen',true);}catch(e){console.warn(e);}
 }
-// Hard fallback: даже если Firebase не отвечает — уводим со splash через 2.5с
+// Жёсткий fallback: если Firebase молчит — уводим со splash через 2.5с
 setTimeout(function(){
   if(currentScreenId==='splash-screen'){
     if(!firebaseReady)setSplashStatus('Не удалось подключиться к серверу',true);
     hideSplashIfVisible();
   }
 },2500);
-// Дополнительный страховочный таймер на всякий случай
+// Дополнительный страховочный таймер
 setTimeout(function(){hideSplashIfVisible();},6000);
 
 const TELEGRAM_BOT_USERNAME = 'FluxPremPay_bot';
@@ -867,7 +927,7 @@ const FLUX_PREMIUM_PLANS = [
 const FLUX_ADMIN_UIDS = ['7rxpLXFm32c2IhJc5vop8sDEo0T2'];
 
 /* ============================================================
-   SVG ICON LIBRARY (замена эмодзи на отрисованные иконки)
+   SVG ICON LIBRARY
    ============================================================ */
 function ic(name,size){
   size=size||16;
@@ -896,7 +956,7 @@ function _benefit(iconName,name,desc){
 }
 
 /* ============================================================
-   PERF: debounce / throttle / rAF helpers
+   PERF helpers
    ============================================================ */
 function rafThrottle(fn){
   var scheduled=false,lastArgs=null;
@@ -1013,7 +1073,6 @@ const THEMES=[
 ];
 let currentTheme=localStorage.getItem('flux_theme_color')||'violet';
 
-/* Пресеты аватаров — оставлены emoji (это выбор пользователя, не UI-иконки) */
 const PRESET_AVATARS=[
   {id:'a1',emoji:'😎',bg:'#e17076'},{id:'a2',emoji:'🐱',bg:'#7bc862'},{id:'a3',emoji:'🦊',bg:'#e5ca77'},{id:'a4',emoji:'🐼',bg:'#65aadd'},
   {id:'a5',emoji:'🦁',bg:'#a695e7'},{id:'a6',emoji:'🐸',bg:'#ee7aae'},{id:'a7',emoji:'🐧',bg:'#6ec9cb'},{id:'a8',emoji:'🦄',bg:'#faa774'},
@@ -1077,7 +1136,7 @@ function animateNumber(el,to,duration){
 }
 
 /* ============================================================
-   SUCCESS OVERLAY (checkmark draw)
+   SUCCESS OVERLAY
    ============================================================ */
 let _soTimer=null;
 function showSuccessOverlay(){
@@ -1122,7 +1181,7 @@ const VIB={tap:8,success:20,error:[50,30,50]};
 function vibrate(type){if(!VIB_PREFS.enabled||prefersReducedMotion)return;if(!navigator.vibrate)return;try{navigator.vibrate(typeof type==='number'?type:(VIB[type]||10));}catch(e){}}
 
 /* ============================================================
-   #44 Confetti при активации Premium
+   Confetti
    ============================================================ */
 function spawnConfetti(){
   if(prefersReducedMotion)return;
@@ -1192,7 +1251,7 @@ window.addEventListener('popstate',function(){
 try{history.replaceState({s:'splash-screen'},'');}catch(e){}
 
 /* ============================================================
-   #20 Индикатор активной вкладки
+   Nav indicator
    ============================================================ */
 function positionNavIndicator(){
   var nav=$('bottom-nav');var ind=$('nav-indicator');var active=document.querySelector('.nav-item.active');
@@ -1663,7 +1722,7 @@ document.querySelectorAll('.nav-item').forEach(function(item){item.addEventListe
 document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=function(){document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(x){x.classList.remove('active');});t.classList.add('active');renderShop();};});
 
 /* ============================================================
-   #22 Swipe между вкладками
+   Swipe между вкладками
    ============================================================ */
 (function initTabSwipe(){
   var body=document.querySelector('.main-body');
@@ -1998,7 +2057,7 @@ async function loadVpnKeys(){
 $('vpn-load-btn').onclick=loadVpnKeys;
 $('vpn-refresh-btn').onclick=loadVpnKeys;
 
-/* #51 Pull-to-refresh на VPN (оптимизировано: rAF-троттлинг) */
+/* Pull-to-refresh на VPN */
 (function initVpnPTR(){
   var c=document.getElementById('vpn-container');
   if(!c)return;
@@ -2136,7 +2195,7 @@ window.addEventListener('offline',function(){$('net-banner').classList.add('show
 if(!navigator.onLine)$('net-banner').classList.add('show');
 
 /* ============================================================
-   #47 Ripple с точкой клика — DELEGATED (работает на динамике, оптимизировано)
+   Ripple с точкой клика — DELEGATED
    ============================================================ */
 (function initRipple(){
   if(prefersReducedMotion)return;
@@ -2146,7 +2205,7 @@ if(!navigator.onLine)$('net-banner').classList.add('show');
     var el=e.target.closest('.ripple');
     if(!el)return;
     var now=performance.now();
-    if(now-lastRippleTs<50)return; // throttle: не более одного ripple в 50мс
+    if(now-lastRippleTs<50)return;
     lastRippleTs=now;
     var rect=el.getBoundingClientRect();
     var size=Math.max(rect.width,rect.height)*1.8;
