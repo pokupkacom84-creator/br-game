@@ -15,9 +15,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
-/* ============================================================
-   #6 SMOOTH ACCENT TRANSITION (@property Houdini)
-   ============================================================ */
 @property --accent{syntax:'<color>';inherits:true;initial-value:#8774e1}
 @property --accent-2{syntax:'<color>';inherits:true;initial-value:#a291f0}
 @property --accent-soft{syntax:'<color>';inherits:true;initial-value:rgba(135,116,225,.14)}
@@ -75,10 +72,8 @@ button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;backgrou
 button:active{transform:scale(.94)}
 button:disabled{transform:none}
 
-/* ============ SVG ICON BASE ============ */
 .flux-ic{display:inline-block;vertical-align:-0.15em;flex-shrink:0}
 
-/* ============ AMBIENT BACKGROUND (auth-flow only) ============ */
 #auth-screen,#onboarding-screen,#twofa-screen{position:relative;overflow:hidden}
 #auth-screen::before,#onboarding-screen::before,#twofa-screen::before{
   content:'';position:absolute;inset:-30%;pointer-events:none;z-index:0;
@@ -96,7 +91,7 @@ button:disabled{transform:none}
 #auth-screen .auth-container,#onboarding-screen .auth-container,#twofa-screen .auth-container{position:relative;z-index:1}
 
 /* ============================================================
-   SPLASH SCREEN — полностью переработан
+   SPLASH SCREEN
    ============================================================ */
 #splash-screen{
   position:fixed;
@@ -118,6 +113,8 @@ button:disabled{transform:none}
   z-index:10;
 }
 #splash-screen.active{display:flex}
+/* КРИТИЧЕСКИЙ ФИКС: перебивает #splash-screen{display:flex} когда снят .active */
+#splash-screen:not(.active){display:none!important}
 #splash-screen::before{
   content:'';position:absolute;inset:-30%;pointer-events:none;z-index:0;
   background:
@@ -255,7 +252,6 @@ button:disabled{transform:none}
   50%{opacity:.55}
 }
 
-/* ============ LOGO ASSEMBLE (auth/other screens) ============ */
 .auth-logo svg path{opacity:0;transform-origin:center;animation:logoPathIn .9s var(--ease-bounce) forwards;will-change:transform,opacity}
 .auth-logo svg path:nth-of-type(1){animation-delay:.08s}
 .auth-logo svg path:nth-of-type(2){animation-delay:.32s}
@@ -265,7 +261,6 @@ button:disabled{transform:none}
   100%{opacity:1;transform:translateY(0) scale(1)}
 }
 
-/* #47 Ripple от точки клика */
 .ripple{position:relative;overflow:hidden;isolation:isolate}
 .ripple:active::before{content:'';position:absolute;inset:0;background:currentColor;opacity:.12;pointer-events:none}
 .ripple-ink{position:absolute;display:block;border-radius:50%;background:currentColor;opacity:.28;transform:scale(0);animation:rippleExpand .65s var(--ease-out) forwards;pointer-events:none;will-change:transform,opacity;z-index:-1}
@@ -384,7 +379,6 @@ body.flux-premium .profile-premium-crown{opacity:1;transform:scale(1) rotate(-15
 .spinner{width:30px;height:30px;border:3px solid var(--accent-soft);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-top:var(--s-4)}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ============ SUCCESS CHECKMARK OVERLAY ============ */
 .success-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:99998;opacity:0;transition:opacity .2s}
 .success-overlay.show{opacity:1}
 .success-overlay svg{width:120px;height:120px;filter:drop-shadow(0 12px 32px rgba(74,222,128,.5))}
@@ -455,7 +449,6 @@ body.dark .vpn-key-item{background:rgba(30,42,54,.55);border:1px solid rgba(255,
 .vpn-empty{text-align:center;color:var(--text-2);font-size:14px;padding:var(--s-5)}
 .vpn-count{font-size:var(--fs-xs);color:var(--text-2);text-align:center;font-weight:500}
 
-/* ============ VPN SKELETON ============ */
 .vpn-key-skeleton{display:flex;align-items:flex-start;gap:12px;padding:14px;border-radius:var(--r-lg);background:var(--bg-2);border:1px solid var(--border);min-height:82px;contain:content}
 .vks-flag{width:32px;height:32px;border-radius:50%;background:linear-gradient(90deg,var(--bg-2) 25%,var(--bg-3) 50%,var(--bg-2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;flex-shrink:0}
 .vks-body{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0}
@@ -627,10 +620,8 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 .skeleton .sk-line.short{width:45%}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
-/* ============ PERF: preconnect to reduce jank ============ */
 .vpn-key-item,.settings-item,.premium-benefit,.premium-plan{transform:translateZ(0)}
 
-/* ============ ACCESSIBILITY: reduce motion ============ */
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
   body::before{animation:none!important}
@@ -904,13 +895,11 @@ function setSplashStatus(text,isErr){
   el.classList.toggle('err',!!isErr);
 }
 
-/* Ждём, пока сплеш показывался хотя бы minMs (сглаживает мгновенные ответы) */
 function whenMinSplashElapsed(){
   var wait=Math.max(0,splashState.minMs-(Date.now()-splashState.startedAt));
   return wait?new Promise(function(r){setTimeout(r,wait);}):Promise.resolve();
 }
 
-/* Аварийный выход: сплеш не должен висеть вечно */
 function hideSplashIfVisible(){
   if(splashState.hidden)return;
   if(currentScreenId!=='splash-screen')return;
@@ -918,14 +907,12 @@ function hideSplashIfVisible(){
   try{goScreen('auth-screen',true);}catch(e){console.warn(e);}
 }
 
-/* Авария №1: если Firebase молчит 8 секунд */
 setTimeout(function(){
   if(currentScreenId==='splash-screen'){
     if(!firebaseReady)setSplashStatus('Не удалось подключиться к серверу',true);
     hideSplashIfVisible();
   }
 },8000);
-/* Авария №2: окончательная страховка */
 setTimeout(function(){hideSplashIfVisible();},12000);
 
 const TELEGRAM_BOT_USERNAME = 'FluxPremPay_bot';
@@ -1124,9 +1111,6 @@ function hexToRgba(hex,a){var c=hexToRgb(hex);return 'rgba('+c.r+','+c.g+','+c.b
 function copyText(text){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){toast('Скопировано');}).catch(function(){fallbackCopy(text);});}else fallbackCopy(text);}
 function fallbackCopy(text){var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Скопировано');}catch(e){toast('Не удалось');}document.body.removeChild(ta);}
 
-/* ============================================================
-   PERF: animated number counter
-   ============================================================ */
 function animateNumber(el,to,duration){
   if(!el)return;
   duration=duration||600;
@@ -1145,9 +1129,6 @@ function animateNumber(el,to,duration){
   requestAnimationFrame(tick);
 }
 
-/* ============================================================
-   SUCCESS OVERLAY
-   ============================================================ */
 let _soTimer=null;
 function showSuccessOverlay(){
   if(prefersReducedMotion)return;
@@ -1159,9 +1140,6 @@ function showSuccessOverlay(){
   _soTimer=setTimeout(function(){el.classList.remove('show');},900);
 }
 
-/* ============================================================
-   SOUND / VIBRATION
-   ============================================================ */
 let _audioCtx=null;
 function getAudioCtx(){if(_audioCtx)return _audioCtx;try{_audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){return null;}return _audioCtx;}
 const SOUND_PREFS={enabled:localStorage.getItem('flux_sound')!=='0'};
@@ -1190,9 +1168,6 @@ const VIB_PREFS={enabled:localStorage.getItem('flux_vibration')!=='0'};
 const VIB={tap:8,success:20,error:[50,30,50]};
 function vibrate(type){if(!VIB_PREFS.enabled||prefersReducedMotion)return;if(!navigator.vibrate)return;try{navigator.vibrate(typeof type==='number'?type:(VIB[type]||10));}catch(e){}}
 
-/* ============================================================
-   Confetti
-   ============================================================ */
 function spawnConfetti(){
   if(prefersReducedMotion)return;
   var colors=['#8b5cf6','#a855f7','#f59e0b','#ec4899','#06b6d4','#10b981','#facc15','#fb7185'];
@@ -1260,9 +1235,6 @@ window.addEventListener('popstate',function(){
 });
 try{history.replaceState({s:'splash-screen'},'');}catch(e){}
 
-/* ============================================================
-   Nav indicator
-   ============================================================ */
 function positionNavIndicator(){
   var nav=$('bottom-nav');var ind=$('nav-indicator');var active=document.querySelector('.nav-item.active');
   if(!nav||!ind||!active)return;
@@ -1276,9 +1248,6 @@ function positionNavIndicator(){
 window.addEventListener('resize',debounce(positionNavIndicator,120),{passive:true});
 window.addEventListener('orientationchange',function(){setTimeout(positionNavIndicator,200);},{passive:true});
 
-/* ============================================================
-   THEME
-   ============================================================ */
 function setTheme(dark){if(dark)document.body.classList.add('dark');else document.body.classList.remove('dark');try{localStorage.setItem('tg_theme',dark?'dark':'light');}catch(e){}var tg=$('theme-toggle');if(tg)tg.classList.toggle('on',dark);applyTheme(currentTheme);}
 function applyTheme(themeId){
   var t=THEMES.find(function(x){return x.id===themeId;})||THEMES[0];
@@ -1295,17 +1264,11 @@ function applyTheme(themeId){
 function setFontSize(px){document.documentElement.style.setProperty('--fs',px+'px');try{localStorage.setItem('flux_font',px);}catch(e){}}
 var savedTheme=localStorage.getItem('tg_theme');setTheme(savedTheme?savedTheme==='dark':true);applyTheme(currentTheme);setFontSize(localStorage.getItem('flux_font')||15);
 
-/* ============================================================
-   MODAL
-   ============================================================ */
 function showModal(html,setup){var bd=$('modal-backdrop'),m=$('modal');m.innerHTML=html;bd.classList.add('show');var close=function(){bd.classList.remove('show');m.innerHTML='';};if(setup)setup(m,close);}
 function hideModal(){var bd=$('modal-backdrop');bd.classList.remove('show');$('modal').innerHTML='';}
 $('modal-backdrop').onclick=function(e){if(e.target===this)hideModal();};
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){if($('modal-backdrop').classList.contains('show'))hideModal();document.querySelectorAll('.profile-sheet.show').forEach(function(s){s.classList.remove('show');});}});
 
-/* ============================================================
-   AUTH FLOW
-   ============================================================ */
 function authError(code){var m={'auth/invalid-email':'Неверный email','auth/user-not-found':'Пользователь не найден','auth/wrong-password':'Неверный пароль','auth/invalid-credential':'Неверные данные','auth/email-already-in-use':'Email уже используется','auth/weak-password':'Слабый пароль','auth/network-request-failed':'Нет соединения','auth/too-many-requests':'Слишком много попыток','auth/operation-not-allowed':'Email/Password выключен','auth/configuration-not-found':'Включите Email/Password','auth/api-key-not-valid':'Неверный API-ключ'};return m[code]||('Ошибка: '+code);}
 
 $('go-register').onclick=function(){$('login-form').classList.add('hidden');$('register-form').classList.remove('hidden');$('auth-subtitle').textContent='Создайте новый аккаунт';};
@@ -1400,7 +1363,6 @@ if(firebaseReady&&auth){
   setTimeout(async function(){if(currentScreenId==='splash-screen'){await whenMinSplashElapsed();goScreen('auth-screen',true);}},700);
   setTimeout(function(){toast('Firebase не загружен. Проверьте интернет.');},1400);
 }
-/* Финальный гарантированный выход со сплеша */
 setTimeout(function(){
   if(currentScreenId==='splash-screen'){
     hideSplashIfVisible();
@@ -1422,9 +1384,6 @@ function startSelfListener(){
   },function(err){console.warn('users listener:',err);});
 }
 
-/* ============================================================
-   ONBOARDING
-   ============================================================ */
 function buildOnbAvatarGrid(){
   var g=$('onb-avatar-grid');if(!g)return;
   var html='';PRESET_AVATARS.forEach(function(a){html+='<div class="avatar-option'+(onbAvatarId===a.id?' selected':'')+'" data-id="'+a.id+'" style="background:'+a.bg+'">'+a.emoji+'</div>';});
@@ -1467,9 +1426,6 @@ $('onb-continue').onclick=async function(){
   this.disabled=false;
 };
 
-/* ============================================================
-   SESSIONS
-   ============================================================ */
 function getDeviceInfo(){var ua=navigator.userAgent;var device='Устройство';if(/iPhone/i.test(ua))device='iPhone';else if(/iPad/i.test(ua))device='iPad';else if(/Android/i.test(ua))device='Android';else if(/Macintosh/i.test(ua))device='Mac';else if(/Windows/i.test(ua))device='Windows';else if(/Linux/i.test(ua))device='Linux';var browser='Browser';if(/Chrome/i.test(ua)&&!/Edg/i.test(ua))browser='Chrome';else if(/Safari/i.test(ua)&&!/Chrome/i.test(ua))browser='Safari';else if(/Firefox/i.test(ua))browser='Firefox';else if(/Edg/i.test(ua))browser='Edge';return {device:device,browser:browser,ua:ua};}
 function startSessionTracking(){
   if(!currentUser)return;
@@ -1481,9 +1437,6 @@ function startSessionTracking(){
   setInterval(function(){if(currentUser)ref.child('lastActive').set(TS).catch(function(){});},60000);
 }
 
-/* ============================================================
-   PROFILE UI
-   ============================================================ */
 $('btn-edit-profile').onclick=function(){
   var sheet=$('edit-profile-sheet');sheet.classList.add('show');
   editAvatarId=currentUserData.avatarId||'a1';
@@ -1550,9 +1503,6 @@ $('profile-menu-btn').onclick=function(e){
 };
 $('btn-open-premium').onclick=function(){switchTab('shop');};
 
-/* ============================================================
-   SETTINGS UI
-   ============================================================ */
 function autoDeleteLabel(m){if(!m)return 'Никогда';if(m===12)return '1 год';if(m===1)return '1 месяц';return m+' мес.';}
 
 function premiumDaysCircleHtml(expiresAt){
@@ -1635,9 +1585,6 @@ function isFluxAdmin(){
 }
 function updateAdminVisibility(){var b=document.getElementById('btn-admin-panel');if(b)b.style.display=isFluxAdmin()?'flex':'none';}
 
-/* ============================================================
-   SETTINGS HANDLERS
-   ============================================================ */
 $('btn-theme').onclick=function(){setTheme(!document.body.classList.contains('dark'));updateTogglesUI();};
 $('btn-theme-color').onclick=function(){
   var sheet=$('theme-sheet');sheet.classList.add('show');var g=$('theme-grid');
@@ -1706,9 +1653,6 @@ $('profile-btn-settings').onclick=function(){var wrap=$('profile-page');if(wrap)
 $('profile-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
 $('edit-profile-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
 
-/* ============================================================
-   PIN LOCK
-   ============================================================ */
 function buildPinPad(){var pad=$('pin-pad');if(!pad)return;var keys=['1','2','3','4','5','6','7','8','9','','0','⌫'];pad.innerHTML='';keys.forEach(function(k){var btn=document.createElement('div');btn.className='pin-key'+(k===''?' blank':'');btn.textContent=k;if(k!=='')btn.onclick=function(){pinKeyPress(k);};pad.appendChild(btn);});}
 var pinInput='';
 function pinKeyPress(k){if(k==='⌫'){pinInput=pinInput.slice(0,-1);updatePinDots();return;}if(pinInput.length>=4)return;pinInput+=k;updatePinDots();if(pinInput.length===4){setTimeout(function(){if(pinInput===pinLockCode){unlockApp();}else{toast('Неверный PIN');pinInput='';updatePinDots();}},150);}}
@@ -1717,9 +1661,6 @@ function showPinLock(){pinLocked=true;pinInput='';buildPinPad();updatePinDots();
 function unlockApp(){pinLocked=false;pinInput='';$('pin-lock').classList.remove('show');}
 function showPinSetup(cb){var code1='',code2='',step=1;pinInput='';var modal=document.createElement('div');modal.className='modal-backdrop show';modal.style.zIndex='99998';modal.innerHTML='<div class="modal"><div class="modal-title" id="setup-title">Придумайте PIN</div><div class="pin-dots" id="setup-dots" style="justify-content:center;display:flex;margin:var(--s-4) 0"><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div></div><div class="pin-pad" id="setup-pad" style="margin:0 auto;max-width:240px"></div><div class="modal-actions" style="margin-top:var(--s-3)"><button class="modal-btn" id="setup-cancel">Отмена</button></div></div>';document.body.appendChild(modal);var pad=modal.querySelector('#setup-pad');var keys=['1','2','3','4','5','6','7','8','9','','0','⌫'];keys.forEach(function(k){var btn=document.createElement('div');btn.className='pin-key'+(k===''?' blank':'');btn.textContent=k;if(k!=='')btn.onclick=function(){onKey(k);};pad.appendChild(btn);});function updateDots(){var dots=modal.querySelectorAll('#setup-dots .pin-dot');dots.forEach(function(d,i){d.classList.toggle('filled',i<pinInput.length);});}function onKey(k){if(k==='⌫'){pinInput=pinInput.slice(0,-1);updateDots();return;}if(pinInput.length>=4)return;pinInput+=k;updateDots();if(pinInput.length===4){setTimeout(function(){if(step===1){code1=pinInput;pinInput='';step=2;modal.querySelector('#setup-title').textContent='Повторите PIN';updateDots();}else{code2=pinInput;if(code1===code2){modal.remove();cb(code1);}else{modal.querySelector('#setup-title').textContent='Не совпадают';code1='';code2='';step=1;pinInput='';updateDots();}}},150);}}modal.querySelector('#setup-cancel').onclick=function(){modal.remove();};}
 
-/* ============================================================
-   TABS
-   ============================================================ */
 function switchTab(tab){
   if(!tab)return;
   try{
@@ -1737,9 +1678,6 @@ function switchTab(tab){
 document.querySelectorAll('.nav-item').forEach(function(item){item.addEventListener('click',function(e){e.preventDefault();switchTab(item.dataset.tab);});});
 document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=function(){document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(x){x.classList.remove('active');});t.classList.add('active');renderShop();};});
 
-/* ============================================================
-   Swipe между вкладками
-   ============================================================ */
 (function initTabSwipe(){
   var body=document.querySelector('.main-body');
   if(!body)return;
@@ -1768,9 +1706,6 @@ document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=
   },{passive:true});
 })();
 
-/* ============================================================
-   PREMIUM
-   ============================================================ */
 function getPremiumPlan(id){return FLUX_PREMIUM_PLANS.find(function(x){return x.id===id;})||null;}
 function premiumPlanTitle(plan){return ({month:'1 месяц',quarter:'3 месяца',year:'1 год'})[plan]||'Premium';}
 function renderShop(){
@@ -1876,9 +1811,6 @@ function startPremiumListener(){
   }catch(e){console.warn('premium listener',e);}
 }
 
-/* ============================================================
-   VPN UI
-   ============================================================ */
 let vpnKeys=[],vpnFiltered=[],vpnRenderedUpTo=0,vpnRafId=0,vpnProtoFilter='all';
 const VPN_BATCH_SIZE=30;
 let vpnFavorites={};try{vpnFavorites=JSON.parse(localStorage.getItem('flux_vpn_fav')||'{}');}catch(e){vpnFavorites={};}
@@ -2073,7 +2005,6 @@ async function loadVpnKeys(){
 $('vpn-load-btn').onclick=loadVpnKeys;
 $('vpn-refresh-btn').onclick=loadVpnKeys;
 
-/* Pull-to-refresh на VPN */
 (function initVpnPTR(){
   var c=document.getElementById('vpn-container');
   if(!c)return;
@@ -2114,9 +2045,6 @@ function startVpnAutoRefresh(){
 }
 startVpnAutoRefresh();
 
-/* ============================================================
-   PROMO CODES
-   ============================================================ */
 async function openPromoSheet(){
   var sheet=document.getElementById('promo-sheet'),body=document.getElementById('promo-body');sheet.classList.add('show');
   body.innerHTML='<div class="profile-sheet-title">'+ic('gift',24)+'<span>Промокод</span></div><div class="modal-text">Введите код и активируйте его, если он активен.</div><input class="sheet-input" id="promo-input" maxlength="32" autocomplete="off" placeholder="Например: WELCOME"><button class="sheet-btn primary" id="promo-redeem" style="margin-top:10px">Активировать</button><button class="sheet-btn secondary" id="promo-close">Закрыть</button><div id="promo-result" style="margin-top:10px"></div>';
@@ -2141,9 +2069,6 @@ async function openPromoSheet(){
 }
 document.getElementById('promo-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
 
-/* ============================================================
-   ADMIN PANEL
-   ============================================================ */
 async function openAdminPanel(){
   if(!isFluxAdmin()){toast('Нет доступа');return;}
   var sheet=document.getElementById('admin-sheet'),body=document.getElementById('admin-body');sheet.classList.add('show');
@@ -2196,23 +2121,14 @@ async function openAdminUserActions(u){
   });
 }
 
-/* ============================================================
-   HANDLERS WIRE-UP
-   ============================================================ */
 var promoBtn=document.getElementById('btn-promo-code');if(promoBtn)promoBtn.onclick=openPromoSheet;
 var adminBtn=document.getElementById('btn-admin-panel');if(adminBtn)adminBtn.onclick=openAdminPanel;
 updateAdminVisibility();
 
-/* ============================================================
-   NETWORK
-   ============================================================ */
 window.addEventListener('online',function(){$('net-banner').classList.remove('show');});
 window.addEventListener('offline',function(){$('net-banner').classList.add('show');});
 if(!navigator.onLine)$('net-banner').classList.add('show');
 
-/* ============================================================
-   Ripple с точкой клика — DELEGATED
-   ============================================================ */
 (function initRipple(){
   if(prefersReducedMotion)return;
   var lastRippleTs=0;
@@ -2235,16 +2151,10 @@ if(!navigator.onLine)$('net-banner').classList.add('show');
   },{passive:true});
 })();
 
-/* ============================================================
-   PERF: pause heavy listeners when tab hidden
-   ============================================================ */
 document.addEventListener('visibilitychange',function(){
   document.body.classList.toggle('page-hidden',document.hidden);
 });
 
-/* ============================================================
-   INIT
-   ============================================================ */
 updateTogglesUI();renderVpnCategoryTabs();renderVpnSources();
 requestAnimationFrame(positionNavIndicator);
 window.addEventListener('load',function(){requestAnimationFrame(positionNavIndicator);},{passive:true,once:true});
