@@ -74,134 +74,9 @@ button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;backgrou
 button:active{transform:scale(.94)}
 button:disabled{transform:none}
 
-/* ============================================================
-   SPLASH SCREEN — полностью переделан
-   ============================================================ */
-#splash-screen{
-  background:
-    radial-gradient(70% 55% at 50% 40%, rgba(135,116,225,.16) 0%, transparent 62%),
-    radial-gradient(90% 70% at 50% 100%, rgba(76,29,149,.14) 0%, transparent 70%),
-    var(--bg);
-  overflow: hidden;
-}
-#splash-screen::before{
-  content:'';position:absolute;inset:-30%;pointer-events:none;
-  background:
-    radial-gradient(38% 38% at 30% 30%,var(--accent-soft) 0%,transparent 60%),
-    radial-gradient(44% 44% at 70% 70%,rgba(76,29,149,.16) 0%,transparent 65%);
-  animation:ambientFloat 24s ease-in-out infinite;
-  will-change:transform;
-}
-.splash-container{
-  position:absolute;inset:0;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  padding:24px;
-  z-index:2;
-  gap:0;
-  isolation:isolate;
-}
-.splash-logo{
-  width:118px;
-  height:118px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  filter: drop-shadow(0 16px 44px rgba(139,92,246,.55));
-  animation: splashLogoFloat 3.2s cubic-bezier(.4,0,.2,1) infinite;
-  will-change: transform;
-}
-.splash-logo svg{width:100%;height:100%;display:block;overflow:visible}
-.splash-logo svg path{
-  opacity:0;
-  transform-origin:center;
-  animation:logoPathIn .9s var(--ease-bounce) forwards;
-}
-.splash-logo svg path:nth-of-type(1){animation-delay:.08s}
-.splash-logo svg path:nth-of-type(2){animation-delay:.3s}
-@keyframes splashLogoFloat{
-  0%,100%{transform:translateY(0) scale(1)}
-  50%{transform:translateY(-8px) scale(1.015)}
-}
-.splash-brand{
-  margin-top:26px;
-  font-size:32px;
-  font-weight:800;
-  letter-spacing:-.035em;
-  line-height:1;
-  background:linear-gradient(135deg,var(--text) 0%,var(--text-2) 140%);
-  -webkit-background-clip:text;
-  background-clip:text;
-  color:transparent;
-  text-align:center;
-  opacity:0;
-  transform:translateY(12px);
-  animation: splashBrandIn .7s var(--ease-out) .35s forwards;
-}
-@keyframes splashBrandIn{
-  to{opacity:1;transform:translateY(0)}
-}
-.splash-tagline{
-  margin-top:8px;
-  font-size:12.5px;
-  color:var(--text-3);
-  letter-spacing:.12em;
-  text-transform:uppercase;
-  font-weight:600;
-  opacity:0;
-  animation: splashBrandIn .7s var(--ease-out) .5s forwards;
-}
-
-/* ============================================================
-   MATERIAL 3 CIRCULAR PROGRESS INDICATOR
-   ============================================================ */
-.m3-spinner{
-  width:48px;
-  height:48px;
-  margin-top:36px;
-  animation: m3Spin 1.4s linear infinite;
-  will-change: transform;
-  opacity:0;
-  animation-fill-mode: forwards;
-  animation-name: m3FadeInSpin;
-  animation-duration: 1.4s, .5s;
-  animation-delay: 0s, .6s;
-  animation-iteration-count: infinite, 1;
-  animation-timing-function: linear, ease-out;
-  animation-direction: normal, normal;
-  animation-play-state: running, running;
-}
-@keyframes m3FadeInSpin{
-  0%{opacity:0;transform:rotate(0deg)}
-  100%{opacity:1;transform:rotate(360deg)}
-}
-.m3-spinner svg{display:block;width:100%;height:100%;overflow:visible}
-.m3-spinner svg circle{
-  fill:none;
-  stroke-width:4;
-  stroke-linecap:round;
-}
-.m3-spinner .m3-track{
-  stroke: var(--accent-soft);
-}
-.m3-spinner .m3-arc{
-  stroke: var(--accent);
-  stroke-dasharray: 1,200;
-  stroke-dashoffset: 0;
-  animation: m3Arc 1.4s cubic-bezier(.4,0,.2,1) infinite;
-  filter:drop-shadow(0 0 6px var(--accent-glow));
-}
-@keyframes m3Arc{
-  0%   { stroke-dasharray: 1,200; stroke-dashoffset: 0; }
-  50%  { stroke-dasharray: 90,200; stroke-dashoffset: -35; }
-  100% { stroke-dasharray: 90,200; stroke-dashoffset: -124; }
-}
-
-/* ============ AMBIENT BACKGROUND (auth-flow) ============ */
-#auth-screen,#onboarding-screen,#twofa-screen{position:relative;overflow:hidden}
-#auth-screen::before,#onboarding-screen::before,#twofa-screen::before{
+/* ============ AMBIENT BACKGROUND (auth-flow only) ============ */
+#auth-screen,#splash-screen,#onboarding-screen,#twofa-screen{position:relative;overflow:hidden}
+#auth-screen::before,#splash-screen::before,#onboarding-screen::before,#twofa-screen::before{
   content:'';position:absolute;inset:-30%;pointer-events:none;z-index:0;
   background:
     radial-gradient(38% 38% at 22% 28%,var(--accent-soft) 0%,transparent 62%),
@@ -214,9 +89,9 @@ button:disabled{transform:none}
   0%,100%{transform:translate3d(0,0,0) scale(1)}
   50%{transform:translate3d(2.5%,-3%,0) scale(1.08)}
 }
-#auth-screen .auth-container,#onboarding-screen .auth-container,#twofa-screen .auth-container{position:relative;z-index:1}
+#auth-screen .auth-container,#splash-screen .auth-container,#onboarding-screen .auth-container,#twofa-screen .auth-container{position:relative;z-index:1}
 
-/* ============ LOGO ASSEMBLE (auth screens) ============ */
+/* ============ LOGO ASSEMBLE ============ */
 .auth-logo svg path{opacity:0;transform-origin:center;animation:logoPathIn .9s var(--ease-bounce) forwards;will-change:transform,opacity}
 .auth-logo svg path:nth-of-type(1){animation-delay:.08s}
 .auth-logo svg path:nth-of-type(2){animation-delay:.32s}
@@ -226,7 +101,7 @@ button:disabled{transform:none}
   100%{opacity:1;transform:translateY(0) scale(1)}
 }
 
-/* Ripple */
+/* #47 Ripple от точки клика */
 .ripple{position:relative;overflow:hidden;isolation:isolate}
 .ripple:active::before{content:'';position:absolute;inset:0;background:currentColor;opacity:.12;pointer-events:none}
 .ripple-ink{position:absolute;display:block;border-radius:50%;background:currentColor;opacity:.28;transform:scale(0);animation:rippleExpand .65s var(--ease-out) forwards;pointer-events:none;will-change:transform,opacity;z-index:-1}
@@ -311,9 +186,16 @@ body.dark .bottom-nav{box-shadow:0 16px 40px rgba(0,0,0,.55), 0 4px 10px rgba(0,
 .profile-avatar-big.avatar-flyin{animation:avatarFlyIn .8s var(--ease-bounce) both}
 @keyframes avatarFlyIn{0%{transform:scale(.4) translateY(-40px);opacity:0}60%{transform:scale(1.08) translateY(0);opacity:1}100%{transform:scale(1) translateY(0);opacity:1}}
 .profile-avatar-big:hover{transform:scale(1.04)}
-.profile-premium-crown{position:absolute;bottom:14px;left:calc(50% + 30px);font-size:26px;filter:drop-shadow(0 3px 8px rgba(245,158,11,.65));opacity:0;transform:scale(0) rotate(-25deg);transition:opacity .5s var(--ease-out), transform .6s var(--ease-bounce);pointer-events:none;z-index:2}
+.profile-premium-crown{
+  position:absolute;bottom:14px;left:calc(50% + 30px);font-size:26px;
+  filter:drop-shadow(0 3px 8px rgba(245,158,11,.65));
+  opacity:0;transform:scale(0) rotate(-25deg);
+  transition:opacity .5s var(--ease-out), transform .6s var(--ease-bounce);
+  pointer-events:none;z-index:2;
+}
 body.flux-premium .profile-premium-crown{opacity:1;transform:scale(1) rotate(-15deg);animation:crownBadgePulse 2.4s ease-in-out infinite 1s}
 @keyframes crownBadgePulse{0%,100%{transform:scale(1) rotate(-15deg);filter:drop-shadow(0 3px 8px rgba(245,158,11,.65))}50%{transform:scale(1.15) rotate(-5deg);filter:drop-shadow(0 5px 16px rgba(245,158,11,.95))}}
+
 .profile-display-name{text-align:center;font-size:24px;font-weight:700;letter-spacing:-.025em;padding:0 24px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2}
 .profile-display-status{text-align:center;color:var(--text-2);font-size:13.5px;margin-top:6px;min-height:20px;padding:0 24px;font-weight:500}
 .profile-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:20px 12px 8px}
@@ -335,6 +217,7 @@ body.flux-premium .profile-premium-crown{opacity:1;transform:scale(1) rotate(-15
 .spinner{width:30px;height:30px;border:3px solid var(--accent-soft);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-top:var(--s-4)}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* ============ SUCCESS CHECKMARK OVERLAY ============ */
 .success-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:99998;opacity:0;transition:opacity .2s}
 .success-overlay.show{opacity:1}
 .success-overlay svg{width:120px;height:120px;filter:drop-shadow(0 12px 32px rgba(74,222,128,.5))}
@@ -364,6 +247,7 @@ body.flux-premium .profile-premium-crown{opacity:1;transform:scale(1) rotate(-15
   0%,100%{box-shadow:0 8px 24px rgba(135,116,225,.32), inset 0 1px 0 rgba(255,255,255,.6);transform:scale(1)}
   50%{box-shadow:0 14px 34px rgba(135,116,225,.5), inset 0 1px 0 rgba(255,255,255,.6);transform:scale(1.012)}
 }
+
 .vpn-btn.outline{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
 .vpn-filters{display:flex;gap:8px;overflow-x:auto;flex-shrink:0;min-height:42px;padding:2px 0;scrollbar-width:none;position:relative;z-index:1}
 .vpn-filters::-webkit-scrollbar{display:none}
@@ -401,6 +285,7 @@ body.dark .vpn-key-item{background:rgba(30,42,54,.55);border:1px solid rgba(255,
 .vpn-empty{text-align:center;color:var(--text-2);font-size:14px;padding:var(--s-5)}
 .vpn-count{font-size:var(--fs-xs);color:var(--text-2);text-align:center;font-weight:500}
 
+/* ============ VPN SKELETON ============ */
 .vpn-key-skeleton{display:flex;align-items:flex-start;gap:12px;padding:14px;border-radius:var(--r-lg);background:var(--bg-2);border:1px solid var(--border);min-height:82px;contain:content}
 .vks-flag{width:32px;height:32px;border-radius:50%;background:linear-gradient(90deg,var(--bg-2) 25%,var(--bg-3) 50%,var(--bg-2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;flex-shrink:0}
 .vks-body{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0}
@@ -565,14 +450,14 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 .skeleton .sk-line.short{width:45%}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
+/* ============ PERF: preconnect to reduce jank ============ */
 .vpn-key-item,.settings-item,.premium-benefit,.premium-plan{transform:translateZ(0)}
 
+/* ============ ACCESSIBILITY: reduce motion ============ */
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
-  body::before,.splash-container::before{animation:none!important}
-  .auth-logo svg path,.splash-logo svg path{opacity:1!important;transform:none!important;animation:none!important}
-  .splash-brand,.splash-tagline{opacity:1!important;transform:none!important;animation:none!important}
-  .m3-spinner{opacity:1!important;animation:m3Spin 1.4s linear infinite!important}
+  body::before{animation:none!important}
+  .auth-logo svg path{opacity:1!important;transform:none!important;animation:none!important}
   .success-overlay svg circle,.success-overlay svg path{stroke-dashoffset:0!important;animation:none!important}
   #vpn-load-btn{animation:none!important}
 }
@@ -591,33 +476,16 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 <div id="net-banner" class="net-banner">Нет подключения к интернету</div>
 <div id="success-overlay" class="success-overlay"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45"/><path d="M30 52 L45 66 L72 38"/></svg></div>
 
-<!-- ============================================================
-     SPLASH SCREEN — переделан: абсолютное центрирование + M3 спиннер
-     ============================================================ -->
 <div id="splash-screen" class="screen active">
-  <div class="splash-container">
-    <div class="splash-logo">
-      <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="fluxLogoGradientSplash" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#a51cff"/>
-            <stop offset="52%" stop-color="#8a16ef"/>
-            <stop offset="100%" stop-color="#6d0cda"/>
-          </linearGradient>
-        </defs>
-        <path fill="url(#fluxLogoGradientSplash)" d="M 354 162 L 297 77 L 282 62 L 260 50 L 244 46 L 224 46 L 196 54 L 177 66 L 164 81 L 122 146 L 119 148 L 120 149 L 67 228 L 41 269 L 40 268 L 41 270 L 20 299 L 17 306 L 14 308 L 0 334 L 124 334 L 129 329 L 128 328 L 135 319 L 138 311 L 147 300 L 147 297 L 168 266 L 170 260 L 229 166 L 286 260 L 289 261 L 291 257 L 293 257 L 292 256 L 305 237 L 307 237 L 306 235 L 331 198 L 336 193 L 353 167 Z"/>
-        <path fill="url(#fluxLogoGradientSplash)" d="M 511 183 L 384 184 L 368 208 L 365 210 L 366 211 L 282 336 L 234 261 L 231 261 L 203 301 L 200 302 L 201 304 L 198 305 L 199 307 L 195 312 L 193 312 L 194 314 L 171 347 L 168 349 L 187 380 L 195 390 L 194 393 L 195 392 L 198 395 L 214 422 L 218 426 L 217 428 L 219 428 L 233 445 L 245 453 L 259 460 L 274 464 L 291 465 L 313 461 L 328 454 L 341 445 L 354 429 L 366 409 L 369 407 L 368 406 L 422 322 L 433 308 L 443 291 L 444 292 L 443 290 L 471 247 L 473 247 L 472 245 L 481 231 L 484 229 L 489 218 L 491 216 L 492 217 L 492 214 L 509 189 Z"/>
-      </svg>
-    </div>
-    <div class="splash-brand">Flux Client</div>
-    <div class="splash-tagline">Secure · Fast · Private</div>
-    <div class="m3-spinner" role="progressbar" aria-label="Загрузка">
-      <svg viewBox="0 0 48 48">
-        <circle class="m3-track" cx="24" cy="24" r="20"/>
-        <circle class="m3-arc" cx="24" cy="24" r="20"/>
-      </svg>
-    </div>
-  </div>
+<div class="auth-container">
+<div class="auth-logo"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="fluxLogoGradientSplash" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#a51cff"/><stop offset="52%" stop-color="#8a16ef"/><stop offset="100%" stop-color="#6d0cda"/></linearGradient></defs>
+<path fill="url(#fluxLogoGradientSplash)" d="M 354 162 L 297 77 L 282 62 L 260 50 L 244 46 L 224 46 L 196 54 L 177 66 L 164 81 L 122 146 L 119 148 L 120 149 L 67 228 L 41 269 L 40 268 L 41 270 L 20 299 L 17 306 L 14 308 L 0 334 L 124 334 L 129 329 L 128 328 L 135 319 L 138 311 L 147 300 L 147 297 L 168 266 L 170 260 L 229 166 L 286 260 L 289 261 L 291 257 L 293 257 L 292 256 L 305 237 L 307 237 L 306 235 L 331 198 L 336 193 L 353 167 Z"/>
+<path fill="url(#fluxLogoGradientSplash)" d="M 511 183 L 384 184 L 368 208 L 365 210 L 366 211 L 282 336 L 234 261 L 231 261 L 203 301 L 200 302 L 201 304 L 198 305 L 199 307 L 195 312 L 193 312 L 194 314 L 171 347 L 168 349 L 187 380 L 195 390 L 194 393 L 195 392 L 198 395 L 214 422 L 218 426 L 217 428 L 219 428 L 233 445 L 245 453 L 259 460 L 274 464 L 291 465 L 313 461 L 328 454 L 341 445 L 354 429 L 366 409 L 369 407 L 368 406 L 422 322 L 433 308 L 443 291 L 444 292 L 443 290 L 471 247 L 473 247 L 472 245 L 481 231 L 484 229 L 489 218 L 491 216 L 492 217 L 492 214 L 509 189 Z"/>
+</svg></div>
+<h1 class="auth-title">Flux Client</h1>
+<div class="spinner"></div>
+</div>
 </div>
 
 <div id="auth-screen" class="screen">
@@ -835,8 +703,26 @@ const FLUX_PREMIUM_PLANS = [
 ];
 const FLUX_ADMIN_UIDS = ['7rxpLXFm32c2IhJc5vop8sDEo0T2'];
 
-function rafThrottle(fn){var scheduled=false,lastArgs=null;return function(){lastArgs=arguments;if(scheduled)return;scheduled=true;requestAnimationFrame(function(){scheduled=false;fn.apply(null,lastArgs);});};}
-function debounce(fn,wait){var t=null;return function(){var args=arguments,ctx=this;if(t)clearTimeout(t);t=setTimeout(function(){t=null;fn.apply(ctx,args);},wait||150);};}
+/* ============================================================
+   PERF: debounce / throttle / rAF helpers
+   ============================================================ */
+function rafThrottle(fn){
+  var scheduled=false,lastArgs=null;
+  return function(){
+    lastArgs=arguments;
+    if(scheduled)return;
+    scheduled=true;
+    requestAnimationFrame(function(){scheduled=false;fn.apply(null,lastArgs);});
+  };
+}
+function debounce(fn,wait){
+  var t=null;
+  return function(){
+    var args=arguments,ctx=this;
+    if(t)clearTimeout(t);
+    t=setTimeout(function(){t=null;fn.apply(ctx,args);},wait||150);
+  };
+}
 const prefersReducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ============================================================
@@ -888,9 +774,19 @@ async function fetchGithubSource(source){
 }
 
 function isPremiumVpnSource(id){return String(id||'').charAt(0)==='p';}
-function isGlobalPremiumEnabled(){var g=window.__fluxGlobalPremiumState||{};return g.active===true;}
-function isPremiumActive(v){if(isGlobalPremiumEnabled())return true;v=v||{};return !!v.active && Number(v.expiresAt||0)>Date.now();}
-function isPremiumUserNow(){if(isGlobalPremiumEnabled())return true;return isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{}));}
+function isGlobalPremiumEnabled(){
+  var g=window.__fluxGlobalPremiumState||{};
+  return g.active===true;
+}
+function isPremiumActive(v){
+  if(isGlobalPremiumEnabled())return true;
+  v=v||{};
+  return !!v.active && Number(v.expiresAt||0)>Date.now();
+}
+function isPremiumUserNow(){
+  if(isGlobalPremiumEnabled())return true;
+  return isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{}));
+}
 function startGlobalPremiumListener(){
   if(!db)return;
   try{
@@ -966,6 +862,9 @@ function hexToRgba(hex,a){var c=hexToRgb(hex);return 'rgba('+c.r+','+c.g+','+c.b
 function copyText(text){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){toast('Скопировано');}).catch(function(){fallbackCopy(text);});}else fallbackCopy(text);}
 function fallbackCopy(text){var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Скопировано');}catch(e){toast('Не удалось');}document.body.removeChild(ta);}
 
+/* ============================================================
+   PERF: animated number counter
+   ============================================================ */
 function animateNumber(el,to,duration){
   if(!el)return;
   duration=duration||600;
@@ -984,6 +883,9 @@ function animateNumber(el,to,duration){
   requestAnimationFrame(tick);
 }
 
+/* ============================================================
+   SUCCESS OVERLAY (checkmark draw)
+   ============================================================ */
 let _soTimer=null;
 function showSuccessOverlay(){
   if(prefersReducedMotion)return;
@@ -995,7 +897,9 @@ function showSuccessOverlay(){
   _soTimer=setTimeout(function(){el.classList.remove('show');},900);
 }
 
-/* SOUND / VIBRATION */
+/* ============================================================
+   SOUND / VIBRATION
+   ============================================================ */
 let _audioCtx=null;
 function getAudioCtx(){if(_audioCtx)return _audioCtx;try{_audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){return null;}return _audioCtx;}
 const SOUND_PREFS={enabled:localStorage.getItem('flux_sound')!=='0'};
@@ -1024,6 +928,9 @@ const VIB_PREFS={enabled:localStorage.getItem('flux_vibration')!=='0'};
 const VIB={tap:8,success:20,error:[50,30,50]};
 function vibrate(type){if(!VIB_PREFS.enabled||prefersReducedMotion)return;if(!navigator.vibrate)return;try{navigator.vibrate(typeof type==='number'?type:(VIB[type]||10));}catch(e){}}
 
+/* ============================================================
+   #44 Confetti при активации Premium
+   ============================================================ */
 function spawnConfetti(){
   if(prefersReducedMotion)return;
   var colors=['#8b5cf6','#a855f7','#f59e0b','#ec4899','#06b6d4','#10b981','#facc15','#fb7185'];
@@ -1091,6 +998,9 @@ window.addEventListener('popstate',function(){
 });
 try{history.replaceState({s:'splash-screen'},'');}catch(e){}
 
+/* ============================================================
+   #20 Индикатор активной вкладки
+   ============================================================ */
 function positionNavIndicator(){
   var nav=$('bottom-nav');var ind=$('nav-indicator');var active=document.querySelector('.nav-item.active');
   if(!nav||!ind||!active)return;
@@ -1104,7 +1014,9 @@ function positionNavIndicator(){
 window.addEventListener('resize',debounce(positionNavIndicator,120),{passive:true});
 window.addEventListener('orientationchange',function(){setTimeout(positionNavIndicator,200);},{passive:true});
 
-/* THEME */
+/* ============================================================
+   THEME
+   ============================================================ */
 function setTheme(dark){if(dark)document.body.classList.add('dark');else document.body.classList.remove('dark');try{localStorage.setItem('tg_theme',dark?'dark':'light');}catch(e){}var tg=$('theme-toggle');if(tg)tg.classList.toggle('on',dark);applyTheme(currentTheme);}
 function applyTheme(themeId){
   var t=THEMES.find(function(x){return x.id===themeId;})||THEMES[0];
@@ -1121,13 +1033,17 @@ function applyTheme(themeId){
 function setFontSize(px){document.documentElement.style.setProperty('--fs',px+'px');try{localStorage.setItem('flux_font',px);}catch(e){}}
 var savedTheme=localStorage.getItem('tg_theme');setTheme(savedTheme?savedTheme==='dark':true);applyTheme(currentTheme);setFontSize(localStorage.getItem('flux_font')||15);
 
-/* MODAL */
+/* ============================================================
+   MODAL
+   ============================================================ */
 function showModal(html,setup){var bd=$('modal-backdrop'),m=$('modal');m.innerHTML=html;bd.classList.add('show');var close=function(){bd.classList.remove('show');m.innerHTML='';};if(setup)setup(m,close);}
 function hideModal(){var bd=$('modal-backdrop');bd.classList.remove('show');$('modal').innerHTML='';}
 $('modal-backdrop').onclick=function(e){if(e.target===this)hideModal();};
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){if($('modal-backdrop').classList.contains('show'))hideModal();document.querySelectorAll('.profile-sheet.show').forEach(function(s){s.classList.remove('show');});}});
 
-/* AUTH */
+/* ============================================================
+   AUTH FLOW
+   ============================================================ */
 function authError(code){var m={'auth/invalid-email':'Неверный email','auth/user-not-found':'Пользователь не найден','auth/wrong-password':'Неверный пароль','auth/invalid-credential':'Неверные данные','auth/email-already-in-use':'Email уже используется','auth/weak-password':'Слабый пароль','auth/network-request-failed':'Нет соединения','auth/too-many-requests':'Слишком много попыток','auth/operation-not-allowed':'Email/Password выключен','auth/configuration-not-found':'Включите Email/Password','auth/api-key-not-valid':'Неверный API-ключ'};return m[code]||('Ошибка: '+code);}
 
 $('go-register').onclick=function(){$('login-form').classList.add('hidden');$('register-form').classList.remove('hidden');$('auth-subtitle').textContent='Создайте новый аккаунт';};
@@ -1168,12 +1084,17 @@ $('register-btn').onclick=async function(){
   this.disabled=false;this.textContent=old;
 };
 
-/* AUTH STATE */
+/* ============================================================
+   AUTH STATE
+   ============================================================ */
 var authProcessing=false;
 if(firebaseReady&&auth){
   try{auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(function(){});});}catch(e){}
   auth.onAuthStateChanged(async function(user){
-    if(!user){currentUser=null;currentUserData=null;goScreen('auth-screen',true);return;}
+    if(!user){
+      currentUser=null;currentUserData=null;
+      goScreen('auth-screen',true);return;
+    }
     if(currentUser&&currentUser.uid===user.uid)return;
     if(authProcessing)return;
     authProcessing=true;setTimeout(function(){authProcessing=false;},1000);
@@ -1214,7 +1135,9 @@ function startSelfListener(){
   },function(err){console.warn('users listener:',err);});
 }
 
-/* ONBOARDING */
+/* ============================================================
+   ONBOARDING
+   ============================================================ */
 function buildOnbAvatarGrid(){
   var g=$('onb-avatar-grid');if(!g)return;
   var html='';PRESET_AVATARS.forEach(function(a){html+='<div class="avatar-option'+(onbAvatarId===a.id?' selected':'')+'" data-id="'+a.id+'" style="background:'+a.bg+'">'+a.emoji+'</div>';});
@@ -1257,7 +1180,9 @@ $('onb-continue').onclick=async function(){
   this.disabled=false;
 };
 
-/* SESSIONS */
+/* ============================================================
+   SESSIONS
+   ============================================================ */
 function getDeviceInfo(){var ua=navigator.userAgent;var device='Устройство';if(/iPhone/i.test(ua))device='iPhone';else if(/iPad/i.test(ua))device='iPad';else if(/Android/i.test(ua))device='Android';else if(/Macintosh/i.test(ua))device='Mac';else if(/Windows/i.test(ua))device='Windows';else if(/Linux/i.test(ua))device='Linux';var browser='Browser';if(/Chrome/i.test(ua)&&!/Edg/i.test(ua))browser='Chrome';else if(/Safari/i.test(ua)&&!/Chrome/i.test(ua))browser='Safari';else if(/Firefox/i.test(ua))browser='Firefox';else if(/Edg/i.test(ua))browser='Edge';return {device:device,browser:browser,ua:ua};}
 function startSessionTracking(){
   if(!currentUser)return;
@@ -1269,7 +1194,9 @@ function startSessionTracking(){
   setInterval(function(){if(currentUser)ref.child('lastActive').set(TS).catch(function(){});},60000);
 }
 
-/* PROFILE UI */
+/* ============================================================
+   PROFILE UI
+   ============================================================ */
 $('btn-edit-profile').onclick=function(){
   var sheet=$('edit-profile-sheet');sheet.classList.add('show');
   editAvatarId=currentUserData.avatarId||'a1';
@@ -1336,8 +1263,11 @@ $('profile-menu-btn').onclick=function(e){
 };
 $('btn-open-premium').onclick=function(){switchTab('shop');};
 
-/* SETTINGS UI */
+/* ============================================================
+   SETTINGS UI
+   ============================================================ */
 function autoDeleteLabel(m){if(!m)return 'Никогда';if(m===12)return '1 год';if(m===1)return '1 месяц';return m+' мес.';}
+
 function premiumDaysCircleHtml(expiresAt){
   var now=Date.now();
   var left=Math.max(0,Number(expiresAt||0)-now);
@@ -1354,6 +1284,7 @@ function premiumDaysCircleHtml(expiresAt){
     '<span class="days-num">'+days+'</span>'+
   '</div>';
 }
+
 function updateSettingsUI(){
   if(!currentUserData)return;
   var pn=$('profile-display-name');if(pn)pn.innerHTML=esc(currentUserData.name||'')+(document.body.classList.contains('flux-premium')?'<span class="premium-badge">Premium</span>':'');
@@ -1417,7 +1348,9 @@ function isFluxAdmin(){
 }
 function updateAdminVisibility(){var b=document.getElementById('btn-admin-panel');if(b)b.style.display=isFluxAdmin()?'flex':'none';}
 
-/* SETTINGS HANDLERS */
+/* ============================================================
+   SETTINGS HANDLERS
+   ============================================================ */
 $('btn-theme').onclick=function(){setTheme(!document.body.classList.contains('dark'));updateTogglesUI();};
 $('btn-theme-color').onclick=function(){
   var sheet=$('theme-sheet');sheet.classList.add('show');var g=$('theme-grid');
@@ -1486,7 +1419,9 @@ $('profile-btn-settings').onclick=function(){var wrap=$('profile-page');if(wrap)
 $('profile-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
 $('edit-profile-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
 
-/* PIN LOCK */
+/* ============================================================
+   PIN LOCK
+   ============================================================ */
 function buildPinPad(){var pad=$('pin-pad');if(!pad)return;var keys=['1','2','3','4','5','6','7','8','9','','0','⌫'];pad.innerHTML='';keys.forEach(function(k){var btn=document.createElement('div');btn.className='pin-key'+(k===''?' blank':'');btn.textContent=k;if(k!=='')btn.onclick=function(){pinKeyPress(k);};pad.appendChild(btn);});}
 var pinInput='';
 function pinKeyPress(k){if(k==='⌫'){pinInput=pinInput.slice(0,-1);updatePinDots();return;}if(pinInput.length>=4)return;pinInput+=k;updatePinDots();if(pinInput.length===4){setTimeout(function(){if(pinInput===pinLockCode){unlockApp();}else{toast('Неверный PIN');pinInput='';updatePinDots();}},150);}}
@@ -1495,7 +1430,9 @@ function showPinLock(){pinLocked=true;pinInput='';buildPinPad();updatePinDots();
 function unlockApp(){pinLocked=false;pinInput='';$('pin-lock').classList.remove('show');}
 function showPinSetup(cb){var code1='',code2='',step=1;pinInput='';var modal=document.createElement('div');modal.className='modal-backdrop show';modal.style.zIndex='99998';modal.innerHTML='<div class="modal"><div class="modal-title" id="setup-title">Придумайте PIN</div><div class="pin-dots" id="setup-dots" style="justify-content:center;display:flex;margin:var(--s-4) 0"><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div></div><div class="pin-pad" id="setup-pad" style="margin:0 auto;max-width:240px"></div><div class="modal-actions" style="margin-top:var(--s-3)"><button class="modal-btn" id="setup-cancel">Отмена</button></div></div>';document.body.appendChild(modal);var pad=modal.querySelector('#setup-pad');var keys=['1','2','3','4','5','6','7','8','9','','0','⌫'];keys.forEach(function(k){var btn=document.createElement('div');btn.className='pin-key'+(k===''?' blank':'');btn.textContent=k;if(k!=='')btn.onclick=function(){onKey(k);};pad.appendChild(btn);});function updateDots(){var dots=modal.querySelectorAll('#setup-dots .pin-dot');dots.forEach(function(d,i){d.classList.toggle('filled',i<pinInput.length);});}function onKey(k){if(k==='⌫'){pinInput=pinInput.slice(0,-1);updateDots();return;}if(pinInput.length>=4)return;pinInput+=k;updateDots();if(pinInput.length===4){setTimeout(function(){if(step===1){code1=pinInput;pinInput='';step=2;modal.querySelector('#setup-title').textContent='Повторите PIN';updateDots();}else{code2=pinInput;if(code1===code2){modal.remove();cb(code1);}else{modal.querySelector('#setup-title').textContent='Не совпадают';code1='';code2='';step=1;pinInput='';updateDots();}}},150);}}modal.querySelector('#setup-cancel').onclick=function(){modal.remove();};}
 
-/* TABS */
+/* ============================================================
+   TABS
+   ============================================================ */
 function switchTab(tab){
   if(!tab)return;
   try{
@@ -1513,7 +1450,9 @@ function switchTab(tab){
 document.querySelectorAll('.nav-item').forEach(function(item){item.addEventListener('click',function(e){e.preventDefault();switchTab(item.dataset.tab);});});
 document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=function(){document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(x){x.classList.remove('active');});t.classList.add('active');renderShop();};});
 
-/* Swipe tabs */
+/* ============================================================
+   #22 Swipe между вкладками
+   ============================================================ */
 (function initTabSwipe(){
   var body=document.querySelector('.main-body');
   if(!body)return;
@@ -1523,7 +1462,9 @@ document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=
     if(e.touches.length!==1){tracking=false;return;}
     var t=e.target;
     if(t.closest('input, textarea, button, .vpn-key-item, .vpn-key-list, .premium-plan, .premium-plan-crown, .shop-tab, .vpn-chip, .vpn-cat-tab, .profile-info-card, .settings-item, .profile-sheet, .modal-backdrop, .toast, .profile-page, .list, .shop-tabs, .vpn-filters, .vpn-container, .premium-benefits, .premium-hero, .premium-plans')){ignored=true;tracking=false;return;}
-    startX=e.touches[0].clientX;startY=e.touches[0].clientY;tracking=true;ignored=false;
+    startX=e.touches[0].clientX;
+    startY=e.touches[0].clientY;
+    tracking=true;ignored=false;
   },{passive:true});
   body.addEventListener('touchend',function(e){
     if(!tracking||ignored){tracking=false;ignored=false;return;}
@@ -1531,17 +1472,24 @@ document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=
     var dx=e.changedTouches[0].clientX-startX;
     var dy=e.changedTouches[0].clientY-startY;
     if(Math.abs(dx)<70||Math.abs(dy)>60)return;
-    var current=document.querySelector('.nav-item.active');if(!current)return;
-    var i=order.indexOf(current.dataset.tab);if(i<0)return;
-    if(dx<0&&i<order.length-1)switchTab(order[i+1]);
-    else if(dx>0&&i>0)switchTab(order[i-1]);
+    var current=document.querySelector('.nav-item.active');
+    if(!current)return;
+    var i=order.indexOf(current.dataset.tab);
+    if(i<0)return;
+    if(dx<0&&i<order.length-1){switchTab(order[i+1]);}
+    else if(dx>0&&i>0){switchTab(order[i-1]);}
   },{passive:true});
 })();
 
-/* PREMIUM */
+/* ============================================================
+   PREMIUM
+   ============================================================ */
 function getPremiumPlan(id){return FLUX_PREMIUM_PLANS.find(function(x){return x.id===id;})||null;}
 function premiumPlanTitle(plan){return ({month:'1 месяц',quarter:'3 месяца',year:'1 год'})[plan]||'Premium';}
-function renderShop(){var list=document.getElementById('shop-list');if(!list)return;renderPremiumTab(list);loadPremiumState();}
+function renderShop(){
+  var list=document.getElementById('shop-list');if(!list)return;
+  renderPremiumTab(list);loadPremiumState();
+}
 function renderPremiumTab(list){
   var prem=(window.__fluxPremiumState||{});var active=isPremiumActive(prem);var exp=Number(prem.expiresAt||0);
   var until=exp?new Date(exp).toLocaleDateString('ru-RU',{day:'2-digit',month:'long',year:'numeric'}):'';
@@ -1614,6 +1562,7 @@ async function loadPremiumState(){
     return active;
   }catch(e){return false;}
 }
+
 var prevPremiumActive=false;
 function startPremiumListener(){
   if(!currentUser||!db)return;
@@ -1626,7 +1575,12 @@ function startPremiumListener(){
       var active=isPremiumActive(v);
       var wasActive=prevPremiumActive;
       document.body.classList.toggle('flux-premium',active);
-      if(active&&!wasActive){spawnConfetti();playSound('premium');vibrate('success');setTimeout(function(){toast('👑 Premium активирован!');},300);}
+      if(active&&!wasActive){
+        spawnConfetti();
+        playSound('premium');
+        vibrate('success');
+        setTimeout(function(){toast('👑 Premium активирован!');},300);
+      }
       prevPremiumActive=active;
       try{renderVpnCategoryTabs();renderVpnSources();}catch(e){}
       updateSettingsUI();
@@ -1635,7 +1589,9 @@ function startPremiumListener(){
   }catch(e){console.warn('premium listener',e);}
 }
 
-/* VPN UI */
+/* ============================================================
+   VPN UI
+   ============================================================ */
 let vpnKeys=[],vpnFiltered=[],vpnRenderedUpTo=0,vpnRafId=0,vpnProtoFilter='all';
 const VPN_BATCH_SIZE=30;
 let vpnFavorites={};try{vpnFavorites=JSON.parse(localStorage.getItem('flux_vpn_fav')||'{}');}catch(e){vpnFavorites={};}
@@ -1669,7 +1625,8 @@ function renderVpnCategoryTabs(){
       if(wantPremium&&!isPremiumUserNow()){toast('👑 Premium VPN доступен только Premium пользователям');return;}
       var id=wantPremium?'p1':'v1';
       if(vpnActiveSourceId===id)return;
-      vpnActiveSourceId=id;vpnActiveCategory=wantPremium?'premium':'free';
+      vpnActiveSourceId=id;
+      vpnActiveCategory=wantPremium?'premium':'free';
       try{localStorage.setItem('flux_vpn_source',vpnActiveSourceId);localStorage.setItem('flux_vpn_category',vpnActiveCategory);}catch(e){}
       vpnKeys=[];vpnFiltered=[];vpnRenderedUpTo=0;vpnProtoFilter='all';
       renderVpnCategoryTabs();renderVpnSources();renderVpnFilters();
@@ -1692,7 +1649,8 @@ function renderVpnSources(){
       var id=ch.dataset.src;
       if(isPremiumVpnSource(id)&&!isPremiumUserNow()){toast('👑 Premium VPN доступен только Premium пользователям');return;}
       if(vpnActiveSourceId===id)return;
-      vpnActiveSourceId=id;vpnActiveCategory=isPremiumVpnSource(id)?'premium':'free';
+      vpnActiveSourceId=id;
+      vpnActiveCategory=isPremiumVpnSource(id)?'premium':'free';
       try{localStorage.setItem('flux_vpn_source',vpnActiveSourceId);localStorage.setItem('flux_vpn_category',vpnActiveCategory);}catch(e){}
       vpnKeys=[];vpnFiltered=[];vpnRenderedUpTo=0;vpnProtoFilter='all';
       renderVpnCategoryTabs();renderVpnSources();renderVpnFilters();
@@ -1717,9 +1675,11 @@ function bindVpnActions(root){
     if(btn._bound)return;btn._bound=true;
     btn.onclick=function(){
       var k=vpnKeys[+btn.dataset.copy];if(!k)return;
-      copyText(k.raw);vibrate('tap');
+      copyText(k.raw);
+      vibrate('tap');
       if(btn._orig===undefined)btn._orig=btn.innerHTML;
-      btn.innerHTML=COPY_CHECK_SVG;btn.classList.add('copied');
+      btn.innerHTML=COPY_CHECK_SVG;
+      btn.classList.add('copied');
       if(btn._timer)clearTimeout(btn._timer);
       btn._timer=setTimeout(function(){btn.innerHTML=btn._orig;btn.classList.remove('copied');},1200);
     };
@@ -1730,7 +1690,8 @@ function bindVpnActions(root){
       var k=vpnKeys[+btn.dataset.star];if(!k)return;
       if(vpnFavorites[k.raw]){delete vpnFavorites[k.raw];btn.classList.remove('active');}
       else{vpnFavorites[k.raw]=1;btn.classList.add('active');}
-      saveVpnFavorites();vibrate('tap');
+      saveVpnFavorites();
+      vibrate('tap');
     };
   });
 }
@@ -1740,7 +1701,8 @@ function appendVpnBatch(){
   var start=vpnRenderedUpTo,end=Math.min(vpnFiltered.length,start+VPN_BATCH_SIZE);
   var html='';
   for(var i=start;i<end;i++)html+=vpnKeyItemHtml(vpnFiltered[i]);
-  var tmp=document.createElement('div');tmp.innerHTML=html;
+  var tmp=document.createElement('div');
+  tmp.innerHTML=html;
   var frag=document.createDocumentFragment();
   while(tmp.firstChild)frag.appendChild(tmp.firstChild);
   list.appendChild(frag);
@@ -1753,7 +1715,9 @@ function onVpnScroll(){if(vpnRenderedUpTo<vpnFiltered.length&&isVpnItemVisible()
 function showVpnSkeletons(count){
   var list=$('vpn-key-list');if(!list)return;
   var html='';
-  for(var i=0;i<(count||5);i++)html+='<div class="vpn-key-skeleton"><div class="vks-flag"></div><div class="vks-body"><div class="vks-line w70"></div><div class="vks-line w40"></div><div class="vks-line w90"></div></div><div class="vks-actions"><div class="vks-circle"></div><div class="vks-circle"></div></div></div>';
+  for(var i=0;i<(count||5);i++){
+    html+='<div class="vpn-key-skeleton"><div class="vks-flag"></div><div class="vks-body"><div class="vks-line w70"></div><div class="vks-line w40"></div><div class="vks-line w90"></div></div><div class="vks-actions"><div class="vks-circle"></div><div class="vks-circle"></div></div></div>';
+  }
   list.innerHTML=html;
 }
 function renderVpnKeys(){
@@ -1773,7 +1737,8 @@ function renderVpnKeys(){
     if(count._lastTotal!==vpnFiltered.length){
       count._lastTotal=vpnFiltered.length;
       count.dataset.num=count.dataset.num||0;
-      var prefix='Показано: ',suffix=' из '+vpnKeys.length;
+      var prefix='Показано: ';
+      var suffix=' из '+vpnKeys.length;
       if(!count._labelSet){count._labelSet=true;count.innerHTML='<span class="vc-prefix">'+prefix+'</span><span id="vpn-count-num">0</span><span class="vc-suffix">'+suffix+'</span>';}
       animateNumber(document.getElementById('vpn-count-num'),vpnFiltered.length,500);
     }
@@ -1783,6 +1748,7 @@ function renderVpnKeys(){
   if(c&&!c._vpnScrollBound){c._vpnScrollBound=true;c.addEventListener('scroll',onVpnScroll,{passive:true});}
   setTimeout(function(){if(vpnRenderedUpTo<vpnFiltered.length&&isVpnItemVisible())scheduleVpnAppend();},60);
 }
+
 async function loadVpnKeys(){
   var loadBtn=$('vpn-load-btn'),refreshBtn=$('vpn-refresh-btn'),list=$('vpn-key-list');
   if(loadBtn)loadBtn.disabled=true;if(refreshBtn)refreshBtn.disabled=true;
@@ -1792,7 +1758,8 @@ async function loadVpnKeys(){
     if(list)list.innerHTML='<div class="vpn-empty">👑 Premium VPN доступен только Premium пользователям</div>';
     if(loadBtn){loadBtn.style.display='flex';loadBtn.disabled=false;}
     if(refreshBtn){refreshBtn.style.display='none';refreshBtn.disabled=false;}
-    toast('Premium VPN доступен только Premium');return;
+    toast('Premium VPN доступен только Premium');
+    return;
   }
   var text=null,lastErr=null;
   try{var sourceMeta=await fetchGithubSource(source);text=sourceMeta.text;if(!text||text.length<20)throw new Error('Пустой ответ');}catch(err){lastErr=err;}
@@ -1815,14 +1782,35 @@ async function loadVpnKeys(){
 $('vpn-load-btn').onclick=loadVpnKeys;
 $('vpn-refresh-btn').onclick=loadVpnKeys;
 
+/* #51 Pull-to-refresh на VPN (оптимизировано: rAF-троттлинг) */
 (function initVpnPTR(){
-  var c=document.getElementById('vpn-container');if(!c)return;
+  var c=document.getElementById('vpn-container');
+  if(!c)return;
   var startY=0,pulling=false,dist=0,ptrEl=null,pendingY=0,rafScheduled=false;
   function ensurePtr(){if(ptrEl)return ptrEl;ptrEl=document.createElement('div');ptrEl.className='vpn-ptr';ptrEl.innerHTML='<div class="ptr-spinner"></div>';c.appendChild(ptrEl);return ptrEl;}
-  function applyTransform(){rafScheduled=false;if(!ptrEl)return;var t=Math.min(pendingY,80);ptrEl.style.transform='translateX(-50%) translateY('+(t-40)+'px)';ptrEl.style.opacity=Math.min(pendingY/70,1);}
-  c.addEventListener('touchstart',function(e){if(c.scrollTop<=0){startY=e.touches[0].clientY;pulling=true;dist=0;ensurePtr();}},{passive:true});
-  c.addEventListener('touchmove',function(e){if(!pulling||!ptrEl)return;var y=e.touches[0].clientY-startY;if(y>0){dist=y;pendingY=y;if(!rafScheduled){rafScheduled=true;requestAnimationFrame(applyTransform);}}},{passive:true});
-  c.addEventListener('touchend',function(){if(!pulling)return;pulling=false;var shouldRefresh=dist>70;if(ptrEl){ptrEl.style.transform='';ptrEl.style.opacity=0;}dist=0;pendingY=0;if(shouldRefresh){vibrate('tap');loadVpnKeys();}},{passive:true});
+  function applyTransform(){
+    rafScheduled=false;
+    if(!ptrEl)return;
+    var t=Math.min(pendingY,80);
+    ptrEl.style.transform='translateX(-50%) translateY('+(t-40)+'px)';
+    ptrEl.style.opacity=Math.min(pendingY/70,1);
+  }
+  c.addEventListener('touchstart',function(e){
+    if(c.scrollTop<=0){startY=e.touches[0].clientY;pulling=true;dist=0;ensurePtr();}
+  },{passive:true});
+  c.addEventListener('touchmove',function(e){
+    if(!pulling||!ptrEl)return;
+    var y=e.touches[0].clientY-startY;
+    if(y>0){dist=y;pendingY=y;if(!rafScheduled){rafScheduled=true;requestAnimationFrame(applyTransform);}}
+  },{passive:true});
+  c.addEventListener('touchend',function(){
+    if(!pulling)return;
+    pulling=false;
+    var shouldRefresh=dist>70;
+    if(ptrEl){ptrEl.style.transform='';ptrEl.style.opacity=0;}
+    dist=0;pendingY=0;
+    if(shouldRefresh){vibrate('tap');loadVpnKeys();}
+  },{passive:true});
 })();
 
 var vpnAutoRefreshTimer=null;
@@ -1835,7 +1823,9 @@ function startVpnAutoRefresh(){
 }
 startVpnAutoRefresh();
 
-/* PROMO */
+/* ============================================================
+   PROMO CODES
+   ============================================================ */
 async function openPromoSheet(){
   var sheet=document.getElementById('promo-sheet'),body=document.getElementById('promo-body');sheet.classList.add('show');
   body.innerHTML='<div class="profile-sheet-title">🎁 Промокод</div><div class="modal-text">Введите код и активируйте его, если он активен.</div><input class="sheet-input" id="promo-input" maxlength="32" autocomplete="off" placeholder="Например: WELCOME"><button class="sheet-btn primary" id="promo-redeem" style="margin-top:10px">Активировать</button><button class="sheet-btn secondary" id="promo-close">Закрыть</button><div id="promo-result" style="margin-top:10px"></div>';
@@ -1860,7 +1850,9 @@ async function openPromoSheet(){
 }
 document.getElementById('promo-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
 
-/* ADMIN */
+/* ============================================================
+   ADMIN PANEL
+   ============================================================ */
 async function openAdminPanel(){
   if(!isFluxAdmin()){toast('Нет доступа');return;}
   var sheet=document.getElementById('admin-sheet'),body=document.getElementById('admin-body');sheet.classList.add('show');
@@ -1870,7 +1862,8 @@ async function openAdminPanel(){
   if(globalPremiumToggle){
     globalPremiumToggle.classList.toggle('on',isGlobalPremiumEnabled());
     globalPremiumToggle.onclick=async function(){
-      var next=!isGlobalPremiumEnabled();this.disabled=true;
+      var next=!isGlobalPremiumEnabled();
+      this.disabled=true;
       try{
         await db.ref('settings/globalPremium').set({active:next,updatedAt:Date.now(),updatedBy:currentUser.uid});
         window.__fluxGlobalPremiumState={active:next,updatedAt:Date.now(),updatedBy:currentUser.uid};
@@ -1878,7 +1871,10 @@ async function openAdminPanel(){
         document.body.classList.toggle('flux-premium',next||isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{})));
         try{renderVpnCategoryTabs();renderVpnSources();}catch(e){}
         toast(next?'👑 Premium включён для всех пользователей':'Premium для всех выключен');
-      }catch(e){toast('Не удалось изменить глобальный Premium');console.warn('global premium toggle',e);}finally{this.disabled=false;}
+      }catch(e){
+        toast('Не удалось изменить глобальный Premium');
+        console.warn('global premium toggle',e);
+      }finally{this.disabled=false;}
     };
   }
   try{
@@ -1909,24 +1905,37 @@ async function openAdminUserActions(u){
   });
 }
 
+/* ============================================================
+   HANDLERS WIRE-UP
+   ============================================================ */
 var promoBtn=document.getElementById('btn-promo-code');if(promoBtn)promoBtn.onclick=openPromoSheet;
 var adminBtn=document.getElementById('btn-admin-panel');if(adminBtn)adminBtn.onclick=openAdminPanel;
 updateAdminVisibility();
 
+/* ============================================================
+   NETWORK
+   ============================================================ */
 window.addEventListener('online',function(){$('net-banner').classList.remove('show');});
 window.addEventListener('offline',function(){$('net-banner').classList.add('show');});
 if(!navigator.onLine)$('net-banner').classList.add('show');
 
+/* ============================================================
+   #47 Ripple с точкой клика — DELEGATED (работает на динамике, оптимизировано)
+   ============================================================ */
 (function initRipple(){
   if(prefersReducedMotion)return;
   var lastRippleTs=0;
   document.addEventListener('pointerdown',function(e){
     if(e.pointerType==='mouse'&&e.button!==0)return;
-    var el=e.target.closest('.ripple');if(!el)return;
-    var now=performance.now();if(now-lastRippleTs<50)return;lastRippleTs=now;
+    var el=e.target.closest('.ripple');
+    if(!el)return;
+    var now=performance.now();
+    if(now-lastRippleTs<50)return; // throttle: не более одного ripple в 50мс
+    lastRippleTs=now;
     var rect=el.getBoundingClientRect();
     var size=Math.max(rect.width,rect.height)*1.8;
-    var ink=document.createElement('span');ink.className='ripple-ink';
+    var ink=document.createElement('span');
+    ink.className='ripple-ink';
     ink.style.width=ink.style.height=size+'px';
     ink.style.left=(e.clientX-rect.left-size/2)+'px';
     ink.style.top=(e.clientY-rect.top-size/2)+'px';
@@ -1935,11 +1944,20 @@ if(!navigator.onLine)$('net-banner').classList.add('show');
   },{passive:true});
 })();
 
-document.addEventListener('visibilitychange',function(){document.body.classList.toggle('page-hidden',document.hidden);});
+/* ============================================================
+   PERF: pause heavy listeners when tab hidden
+   ============================================================ */
+document.addEventListener('visibilitychange',function(){
+  document.body.classList.toggle('page-hidden',document.hidden);
+});
 
+/* ============================================================
+   INIT
+   ============================================================ */
 updateTogglesUI();renderVpnCategoryTabs();renderVpnSources();
 requestAnimationFrame(positionNavIndicator);
 window.addEventListener('load',function(){requestAnimationFrame(positionNavIndicator);},{passive:true,once:true});
+
 if(!firebaseReady){setTimeout(function(){toast('Проверьте интернет');},500);}
 </script>
 </body>
