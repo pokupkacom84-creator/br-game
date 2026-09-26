@@ -113,7 +113,6 @@ button:disabled{transform:none}
   z-index:10;
 }
 #splash-screen.active{display:flex}
-/* КРИТИЧЕСКИЙ ФИКС: перебивает #splash-screen{display:flex} когда снят .active */
 #splash-screen:not(.active){display:none!important}
 #splash-screen::before{
   content:'';position:absolute;inset:-30%;pointer-events:none;z-index:0;
@@ -519,6 +518,8 @@ body.flux-premium .premium-status-orb{animation:premiumOrbPulse 3s ease-in-out i
 .premium-days-circle .track{fill:none;stroke:rgba(168,85,247,.15);stroke-width:3}
 .premium-days-circle .bar{fill:none;stroke:#a855f7;stroke-width:3;stroke-linecap:round;transition:stroke-dasharray .8s var(--ease-out)}
 .premium-days-circle .days-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#a855f7;line-height:1}
+.premium-global-badge{display:inline-flex;align-items:center;gap:5px;margin-left:auto;padding:5px 10px;border-radius:99px;background:linear-gradient(135deg,#8b5cf6,#f59e0b);color:#fff;font-size:10px;font-weight:900;letter-spacing:.3px;box-shadow:0 3px 12px rgba(124,58,237,.3)}
+.premium-global-badge svg{filter:drop-shadow(0 1px 2px rgba(0,0,0,.2))}
 
 body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22), 0 0 40px rgba(168,85,247,.32)}
 body.dark.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.3), 0 0 52px rgba(168,85,247,.5)}
@@ -606,6 +607,10 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 .session-current-badge{display:inline-block;background:var(--success);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;margin-left:6px;text-transform:uppercase}
 .session-kill{background:none;color:var(--danger);font-size:13px;font-weight:600;padding:6px 10px;border-radius:8px}
 .admin-stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.admin-stat-card{padding:12px;border-radius:15px;background:var(--bg-2);border:1px solid var(--border)}.admin-stat-card b{display:block;font-size:18px}.admin-stat-card span{font-size:11px;color:var(--text-2)}
+.admin-global-banner{padding:14px;border-radius:16px;background:linear-gradient(135deg,rgba(168,85,247,.16),rgba(245,158,11,.14));border:1px solid rgba(168,85,247,.3);margin-bottom:12px;display:flex;align-items:center;gap:12px}
+.admin-global-banner .info{flex:1;min-width:0}
+.admin-global-banner b{font-size:14px;display:flex;align-items:center;gap:6px}
+.admin-global-banner small{display:block;font-size:11px;color:var(--text-2);margin-top:3px;line-height:1.4}
 .shop-tabs{display:flex;gap:6px;padding:10px var(--s-4) 6px;overflow-x:auto;scrollbar-width:none}
 .shop-tabs::-webkit-scrollbar{display:none}
 .shop-tab{flex:1;min-width:0;padding:11px 10px;border-radius:14px;background:var(--bg-2);font-size:13px;font-weight:700;color:var(--text-2);white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .3s var(--ease-out),color .3s var(--ease-out),box-shadow .3s var(--ease-out),transform .25s var(--ease-spring)}
@@ -649,7 +654,6 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 <div id="net-banner" class="net-banner">Нет подключения к интернету</div>
 <div id="success-overlay" class="success-overlay"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45"/><path d="M30 52 L45 66 L72 38"/></svg></div>
 
-<!-- ============ SPLASH SCREEN ============ -->
 <div id="splash-screen" class="screen active">
   <div class="splash-wrap">
     <div class="splash-logo-wrap">
@@ -880,11 +884,14 @@ const TS=Date.now();
     db=firebase.database();
     try{INCR=firebase.database.ServerValue.increment(1);}catch(e){INCR=null;}
     firebaseReady=true;
+    // Глобальный слушатель Premium запускается СРАЗУ после инициализации Firebase,
+    // чтобы ВСЕ пользователи (включая тех, кто ещё не вошёл и только что зарегался) видели Premium
+    startGlobalPremiumListener();
   }catch(e){console.error('Firebase init failed:',e);firebaseReady=false;}
 })();
 
 /* ============================================================
-   SPLASH GUARD — скрываем сплеш только когда загрузка реально завершена
+   SPLASH GUARD
    ============================================================ */
 const splashState={hidden:false,statusEl:null,startedAt:Date.now(),minMs:900};
 
@@ -894,19 +901,16 @@ function setSplashStatus(text,isErr){
   el.textContent=text||'Загрузка…';
   el.classList.toggle('err',!!isErr);
 }
-
 function whenMinSplashElapsed(){
   var wait=Math.max(0,splashState.minMs-(Date.now()-splashState.startedAt));
   return wait?new Promise(function(r){setTimeout(r,wait);}):Promise.resolve();
 }
-
 function hideSplashIfVisible(){
   if(splashState.hidden)return;
   if(currentScreenId!=='splash-screen')return;
   splashState.hidden=true;
   try{goScreen('auth-screen',true);}catch(e){console.warn(e);}
 }
-
 setTimeout(function(){
   if(currentScreenId==='splash-screen'){
     if(!firebaseReady)setSplashStatus('Не удалось подключиться к серверу',true);
@@ -945,6 +949,7 @@ function ic(name,size){
     case 'tag':return '<svg '+s+' '+st+'><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><circle cx="7" cy="7" r="1.2"/></svg>';
     case 'globe':return '<svg '+s+' '+st+'><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>';
     case 'star':return '<svg '+s+' '+fl+'><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>';
+    case 'users':return '<svg '+s+' '+st+'><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20v-1.5A4.5 4.5 0 017 14h4a4.5 4.5 0 014.5 4.5V20"/><path d="M17 11a3 3 0 100-6"/><path d="M21.5 20v-1.5a4.5 4.5 0 00-3.5-4.36"/></svg>';
   }
   return '';
 }
@@ -955,15 +960,6 @@ function _benefit(iconName,name,desc){
 /* ============================================================
    PERF helpers
    ============================================================ */
-function rafThrottle(fn){
-  var scheduled=false,lastArgs=null;
-  return function(){
-    lastArgs=arguments;
-    if(scheduled)return;
-    scheduled=true;
-    requestAnimationFrame(function(){scheduled=false;fn.apply(null,lastArgs);});
-  };
-}
 function debounce(fn,wait){
   var t=null;
   return function(){
@@ -1023,10 +1019,17 @@ async function fetchGithubSource(source){
 }
 
 function isPremiumVpnSource(id){return String(id||'').charAt(0)==='p';}
+
+/* ============================================================
+   PREMIUM (GLOBAL + INDIVIDUAL)
+   ============================================================ */
 function isGlobalPremiumEnabled(){
   var g=window.__fluxGlobalPremiumState||{};
   return g.active===true;
 }
+/* Возвращает true, если пользователь имеет Premium:
+   - либо глобально (админ включил для всех),
+   - либо индивидуально (активен и не истёк срок). */
 function isPremiumActive(v){
   if(isGlobalPremiumEnabled())return true;
   v=v||{};
@@ -1036,6 +1039,11 @@ function isPremiumUserNow(){
   if(isGlobalPremiumEnabled())return true;
   return isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{}));
 }
+
+/* Глобальный слушатель Premium. Запускается СРАЗУ после инициализации Firebase,
+   поэтому работает и до логина, и в момент регистрации нового аккаунта.
+   При включении admin-кнопкой "Premium для всех" — Premium получают АБСОЛЮТНО ВСЕ:
+   существующие пользователи, новые, только что зарегистрированные. */
 function startGlobalPremiumListener(){
   if(!db)return;
   try{
@@ -1044,10 +1052,12 @@ function startGlobalPremiumListener(){
     window.__globalPremiumListenerRef=ref;
     ref.on('value',function(snap){
       window.__fluxGlobalPremiumState=snap.val()||{active:false};
-      var active=isGlobalPremiumEnabled();
-      document.body.classList.toggle('flux-premium',active||isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{})));
+      var g=isGlobalPremiumEnabled();
+      var personal=isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{}));
+      document.body.classList.toggle('flux-premium',g||personal);
       try{renderVpnCategoryTabs();renderVpnSources();}catch(e){}
       try{updateSettingsUI();}catch(e){}
+      try{updateTogglesUI();}catch(e){}
       var list=document.getElementById('shop-list');if(list)renderPremiumTab(list);
     });
   }catch(e){console.warn('global premium listener',e);}
@@ -1106,7 +1116,6 @@ function formatDateLong(ms){if(!ms)return '—';var d=new Date(Number(ms));retur
 function truncate(s,n){s=String(s==null?'':s);return s.length>n?s.slice(0,n-1)+'…':s;}
 function toast(msg){var t=$('toast');if(!t)return;t.textContent=msg;t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(function(){t.classList.remove('show');},3500);}
 function hexToRgb(hex){hex=hex.replace('#','');if(hex.length===3)hex=hex.split('').map(function(c){return c+c;}).join('');var v=parseInt(hex,16);return{r:(v>>16)&255,g:(v>>8)&255,b:v&255};}
-function rgbToHex(r,g,b){return '#'+[r,g,b].map(function(x){return Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0');}).join('');}
 function hexToRgba(hex,a){var c=hexToRgb(hex);return 'rgba('+c.r+','+c.g+','+c.b+','+a+')';}
 function copyText(text){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){toast('Скопировано');}).catch(function(){fallbackCopy(text);});}else fallbackCopy(text);}
 function fallbackCopy(text){var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Скопировано');}catch(e){toast('Не удалось');}document.body.removeChild(ta);}
@@ -1344,7 +1353,7 @@ if(firebaseReady&&auth){
           if(pinLockEnabled&&pinLockCode){showPinLock();}
           await whenMinSplashElapsed();
           goScreen('main-screen',true);
-          startSelfListener();startSessionTracking();updateSettingsUI();updateTogglesUI();startGlobalPremiumListener();startPremiumListener();
+          startSelfListener();startSessionTracking();updateSettingsUI();updateTogglesUI();startPremiumListener();
           try{db.ref('users/'+user.uid).update({online:true,lastSeen:TS});}catch(e){}
           requestAnimationFrame(positionNavIndicator);
         }
@@ -1418,9 +1427,10 @@ $('onb-continue').onclick=async function(){
     await db.ref().update(updates);
     currentUserData={uid:currentUser.uid,name:name,username:username,avatarId:onbAvatarId};
     goScreen('main-screen',true);
-    startSelfListener();startSessionTracking();
-    startPremiumListener();
+    startSelfListener();startSessionTracking();startPremiumListener();
     updateSettingsUI();updateTogglesUI();
+    // Глобальный Premium уже слушается сразу с init — новому пользователю он достанется автоматически
+    if(isGlobalPremiumEnabled()){document.body.classList.add('flux-premium');toast('Premium уже активен для всех!');}
     requestAnimationFrame(positionNavIndicator);
   }catch(e){toast('Ошибка: '+(e.message||e.code));}
   this.disabled=false;
@@ -1524,20 +1534,33 @@ function premiumDaysCircleHtml(expiresAt){
 
 function updateSettingsUI(){
   if(!currentUserData)return;
-  var pn=$('profile-display-name');if(pn)pn.innerHTML=esc(currentUserData.name||'')+(document.body.classList.contains('flux-premium')?'<span class="premium-badge">Premium</span>':'');
+  var globalOn=isGlobalPremiumEnabled();
+  var pv=window.__fluxPremiumState||currentUserData.premium||{};
+  var personalActive=isPremiumActive(pv)&&!globalOn;
+  var active=globalOn||personalActive;
+  var pn=$('profile-display-name');
+  if(pn)pn.innerHTML=esc(currentUserData.name||'')+(active?'<span class="premium-badge">Premium</span>':'');
   var pcs=$('profile-premium-status');
   if(pcs){
-    var pv=window.__fluxPremiumState||currentUserData.premium||{};
-    var pa=isPremiumActive(pv);var exp=Number(pv.expiresAt||0);
-    if(pa){
+    if(active){
+      var subLine='';
+      var rightBadge='';
+      if(globalOn){
+        subLine='Premium активен для всех';
+        rightBadge='<span class="premium-global-badge">'+ic('users',12)+'<span>ALL</span></span>';
+      }else{
+        var exp=Number(pv.expiresAt||0);
+        subLine='Активен · до '+esc(formatDateLong(exp));
+        rightBadge='<div class="premium-days-badge">'+premiumDaysCircleHtml(exp)+'</div>';
+      }
       pcs.innerHTML='<div class="premium-status-card premium-shimmer" id="profile-premium-card">'+
         '<div class="premium-status-row">'+
           '<div class="premium-status-orb" id="premium-orb">'+ic('crown',22)+'</div>'+
           '<div style="min-width:0;flex:1">'+
             '<div class="premium-status-title">Flux Premium</div>'+
-            '<div class="premium-status-sub">Активен · до '+esc(formatDateLong(exp))+'</div>'+
+            '<div class="premium-status-sub">'+subLine+'</div>'+
           '</div>'+
-          '<div class="premium-days-badge">'+premiumDaysCircleHtml(exp)+'</div>'+
+          rightBadge+
         '</div>'+
       '</div>';
     }else{
@@ -1713,11 +1736,21 @@ function renderShop(){
   renderPremiumTab(list);loadPremiumState();
 }
 function renderPremiumTab(list){
-  var prem=(window.__fluxPremiumState||{});var active=isPremiumActive(prem);var exp=Number(prem.expiresAt||0);
+  var globalOn=isGlobalPremiumEnabled();
+  var prem=(window.__fluxPremiumState||{});
+  var personalActive=isPremiumActive(prem)&&!globalOn;
+  var active=globalOn||personalActive;
+  var exp=Number(prem.expiresAt||0);
   var until=exp?new Date(exp).toLocaleDateString('ru-RU',{day:'2-digit',month:'long',year:'numeric'}):'';
   var html='';
   html+='<div class="premium-hero shimmer"><div class="premium-hero-deco">'+ic('burst',190)+'</div><div class="premium-kicker">Flux</div><div class="premium-title">'+ic('crown',26)+'<span>Flux Premium</span></div><div class="premium-sub">Премиум-статус Flux с расширенными возможностями, особым оформлением и приоритетом новых функций.</div>';
-  if(active&&exp>Date.now())html+='<div class="premium-active"><strong>'+ic('crown',16)+'<span>Premium активен</span></strong><span>до '+until+'</span></div>';
+  if(active){
+    if(globalOn){
+      html+='<div class="premium-active"><strong>'+ic('users',16)+'<span>Premium для всех</span></strong><span>включён администратором</span></div>';
+    }else if(exp>Date.now()){
+      html+='<div class="premium-active"><strong>'+ic('crown',16)+'<span>Premium активен</span></strong><span>до '+until+'</span></div>';
+    }
+  }
   html+='</div>';
   html+='<div class="premium-benefits">'+
     _benefit('crown','Premium-бейдж','Особый значок Premium рядом с именем и в профиле.')+
@@ -1756,8 +1789,11 @@ function buyPremium(plan){
 }
 async function openPremiumManager(){
   if(!currentUser||!db)return;
+  var globalOn=isGlobalPremiumEnabled();
   var pv=window.__fluxPremiumState||currentUserData.premium||{};
-  var active=isPremiumActive(pv),exp=Number(pv.expiresAt||0);
+  var personalActive=isPremiumActive(pv)&&!globalOn;
+  var active=globalOn||personalActive;
+  var exp=Number(pv.expiresAt||0);
   var history=[];
   try{
     var snap=await db.ref('payments/'+currentUser.uid).once('value');
@@ -1766,8 +1802,15 @@ async function openPremiumManager(){
     history.sort(function(a,b){return Number(b.confirmedAt||b.createdAt||0)-Number(a.confirmedAt||a.createdAt||0);});
   }catch(e){}
   var hist=history.length?history.slice(0,8).map(function(x){return '<div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--divider)"><div><b>'+esc(x.itemLabel||premiumPlanTitle(x.plan))+'</b><div style="font-size:11px;color:var(--text-2);margin-top:2px">'+esc(formatDateLong(Number(x.confirmedAt||x.createdAt||0)))+'</div></div><b style="color:#a855f7">'+Number(x.rub||0).toLocaleString('ru-RU')+' ₽</b></div>';}).join(''):'<div style="color:var(--text-2);font-size:13px;padding:8px 0">Покупок Premium пока нет</div>';
-  showModal('<div class="premium-modal-icon">'+ic('crown',58)+'</div><div class="modal-title" style="text-align:center">Flux Premium</div><div class="premium-modal-price">'+(active?'Активен':'Не активен')+'</div><div class="premium-feature-list">'+
-    (active?'<div class="premium-feature-row"><b>Срок</b><span>до '+esc(formatDateLong(exp))+'</span></div><div class="premium-feature-row"><b>Тариф</b><span>'+esc(premiumPlanTitle(pv.plan))+'</span></div>':'<div class="premium-feature-row"><b>Статус</b><span>Premium ещё не активирован</span></div>')+
+  var statusRow='';
+  if(globalOn){
+    statusRow='<div class="premium-feature-row"><b>Статус</b><span>Premium включён для ВСЕХ пользователей администратором</span></div>';
+  }else if(personalActive){
+    statusRow='<div class="premium-feature-row"><b>Срок</b><span>до '+esc(formatDateLong(exp))+'</span></div><div class="premium-feature-row"><b>Тариф</b><span>'+esc(premiumPlanTitle(pv.plan))+'</span></div>';
+  }else{
+    statusRow='<div class="premium-feature-row"><b>Статус</b><span>Premium ещё не активирован</span></div>';
+  }
+  showModal('<div class="premium-modal-icon">'+ic('crown',58)+'</div><div class="modal-title" style="text-align:center">Flux Premium</div><div class="premium-modal-price">'+(active?'Активен':'Не активен')+'</div><div class="premium-feature-list">'+statusRow+
     '<div class="premium-feature-row"><b>Возможности</b><span>Premium VPN, безлимитные закрепления, Premium-бейдж, оформление и анимации</span></div></div><div style="font-size:14px;font-weight:850;margin:8px 0">История покупок</div><div style="max-height:190px;overflow:auto">'+hist+'</div><div class="modal-actions" style="margin-top:16px"><button class="modal-btn primary" id="pm-renew">'+(active?'Продлить Premium':'Купить Premium')+'</button><button class="modal-btn" id="pm-close">Закрыть</button></div>',function(m,close){m.querySelector('#pm-close').onclick=close;m.querySelector('#pm-renew').onclick=function(){close();switchTab('shop');};});
 }
 async function loadPremiumState(){
@@ -1776,8 +1819,9 @@ async function loadPremiumState(){
     var snap=await db.ref('users/'+currentUser.uid+'/premium').once('value');
     var v=snap.val()||{};window.__fluxPremiumState=v;
     try{renderVpnCategoryTabs();renderVpnSources();}catch(e){}
+    var globalOn=isGlobalPremiumEnabled();
     var active=isPremiumActive(v);
-    if(v.active&&!active){try{await db.ref('users/'+currentUser.uid+'/premium/active').set(false);}catch(e){}}
+    if(v.active&&!active&&!globalOn){try{await db.ref('users/'+currentUser.uid+'/premium/active').set(false);}catch(e){}}
     document.body.classList.toggle('flux-premium',active);
     var list=document.getElementById('shop-list');
     if(list)renderPremiumTab(list);
@@ -1796,7 +1840,8 @@ function startPremiumListener(){
       var v=snap.val()||{};window.__fluxPremiumState=v;
       var active=isPremiumActive(v);
       var wasActive=prevPremiumActive;
-      document.body.classList.toggle('flux-premium',active);
+      var globalOn=isGlobalPremiumEnabled();
+      document.body.classList.toggle('flux-premium',active||globalOn);
       if(active&&!wasActive){
         spawnConfetti();
         playSound('premium');
@@ -2069,14 +2114,41 @@ async function openPromoSheet(){
 }
 document.getElementById('promo-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
 
+/* ============================================================
+   ADMIN PANEL — с глобальным Premium для ВСЕХ
+   ============================================================ */
 async function openAdminPanel(){
   if(!isFluxAdmin()){toast('Нет доступа');return;}
   var sheet=document.getElementById('admin-sheet'),body=document.getElementById('admin-body');sheet.classList.add('show');
-  body.innerHTML='<div class="profile-sheet-title">'+ic('shield',24)+'<span>Админ-панель</span></div><div class="profile-info-card" style="margin-bottom:12px"><div class="settings-item" style="border-radius:16px;cursor:default"><span style="display:flex;align-items:center;gap:8px"><b style="display:inline-flex;align-items:center;gap:6px">'+ic('crown',16)+'<span>Premium для всех</span></b><small style="display:block;color:var(--text-2);font-size:11px;margin-top:2px">Включено — Premium сразу у всех пользователей</small></span><button id="admin-global-premium-toggle" class="toggle" aria-label="Глобальный Premium"></button></div></div><div id="admin-stats" class="profile-info-card"><div class="spinner" style="margin:20px auto"></div></div><div class="profile-sheet-subtitle">Последние платежи</div><div id="admin-payments" style="max-height:220px;overflow:auto"><div class="spinner" style="margin:20px auto"></div></div><div class="profile-sheet-subtitle">Пользователи</div><input class="sheet-input" id="admin-user-search" placeholder="Имя, @username или UID" autocomplete="off"><div id="admin-users" style="max-height:38vh;overflow:auto;margin-top:8px"></div><div class="profile-sheet-subtitle">Промокоды</div><div class="profile-info-card" style="padding:12px"><input class="sheet-input" id="admin-promo-code" placeholder="Код, например WELCOME" maxlength="32"><input class="sheet-input" id="admin-promo-max" type="number" min="0" step="1" placeholder="Лимит использований (0 = без лимита)" style="margin-top:8px"><input class="sheet-input" id="admin-promo-exp" type="datetime-local" style="margin-top:8px"><button class="sheet-btn primary" id="admin-promo-create" style="margin-top:8px">Создать промокод</button></div><button class="sheet-btn secondary" id="admin-close">Закрыть</button>';
+  var globalOn=isGlobalPremiumEnabled();
+  body.innerHTML='<div class="profile-sheet-title">'+ic('shield',24)+'<span>Админ-панель</span></div>'+
+    '<div class="admin-global-banner">'+
+      '<div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#8b5cf6,#f59e0b);display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;box-shadow:0 7px 18px rgba(124,58,237,.35)">'+ic('users',22)+'</div>'+
+      '<div class="info">'+
+        '<b>'+ic('crown',14)+'<span>Premium для ВСЕХ</span></b>'+
+        '<small>Включено — Premium получают АБСОЛЮТНО ВСЕ пользователи: существующие, только что зарегистрированные и будущие.</small>'+
+      '</div>'+
+      '<button id="admin-global-premium-toggle" class="toggle'+(globalOn?' on':'')+'" aria-label="Глобальный Premium"></button>'+
+    '</div>'+
+    '<div id="admin-stats" class="profile-info-card"><div class="spinner" style="margin:20px auto"></div></div>'+
+    '<div class="profile-sheet-subtitle">Последние платежи</div>'+
+    '<div id="admin-payments" style="max-height:220px;overflow:auto"><div class="spinner" style="margin:20px auto"></div></div>'+
+    '<div class="profile-sheet-subtitle">Пользователи</div>'+
+    '<input class="sheet-input" id="admin-user-search" placeholder="Имя, @username или UID" autocomplete="off">'+
+    '<div id="admin-users" style="max-height:38vh;overflow:auto;margin-top:8px"></div>'+
+    '<div class="profile-sheet-subtitle">Промокоды</div>'+
+    '<div class="profile-info-card" style="padding:12px">'+
+      '<input class="sheet-input" id="admin-promo-code" placeholder="Код, например WELCOME" maxlength="32">'+
+      '<input class="sheet-input" id="admin-promo-max" type="number" min="0" step="1" placeholder="Лимит использований (0 = без лимита)" style="margin-top:8px">'+
+      '<input class="sheet-input" id="admin-promo-exp" type="datetime-local" style="margin-top:8px">'+
+      '<button class="sheet-btn primary" id="admin-promo-create" style="margin-top:8px">Создать промокод</button>'+
+    '</div>'+
+    '<button class="sheet-btn secondary" id="admin-close">Закрыть</button>';
+
   document.getElementById('admin-close').onclick=function(){sheet.classList.remove('show');};
+
   var globalPremiumToggle=document.getElementById('admin-global-premium-toggle');
   if(globalPremiumToggle){
-    globalPremiumToggle.classList.toggle('on',isGlobalPremiumEnabled());
     globalPremiumToggle.onclick=async function(){
       var next=!isGlobalPremiumEnabled();
       this.disabled=true;
@@ -2086,13 +2158,22 @@ async function openAdminPanel(){
         this.classList.toggle('on',next);
         document.body.classList.toggle('flux-premium',next||isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{})));
         try{renderVpnCategoryTabs();renderVpnSources();}catch(e){}
-        toast(next?'Premium включён для всех пользователей':'Premium для всех выключен');
+        try{updateSettingsUI();}catch(e){}
+        try{updateTogglesUI();}catch(e){}
+        var list=document.getElementById('shop-list');if(list)renderPremiumTab(list);
+        if(next){
+          spawnConfetti();playSound('premium');vibrate('success');
+          toast('Premium включён для ВСЕХ пользователей');
+        }else{
+          toast('Premium для всех выключен');
+        }
       }catch(e){
         toast('Не удалось изменить глобальный Premium');
         console.warn('global premium toggle',e);
       }finally{this.disabled=false;}
     };
   }
+
   try{
     var us=await db.ref('users').once('value'),users=us.val()||{},arr=Object.keys(users).map(function(uid){return Object.assign({uid:uid},users[uid]||{});});
     var ps=await db.ref('payments').once('value'),payments=ps.val()||{},payCount=0,rub=0;
