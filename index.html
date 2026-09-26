@@ -15,6 +15,16 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
+/* ============================================================
+   #6 SMOOTH ACCENT TRANSITION (@property Houdini)
+   ============================================================ */
+@property --accent{syntax:'<color>';inherits:true;initial-value:#8774e1}
+@property --accent-2{syntax:'<color>';inherits:true;initial-value:#a291f0}
+@property --accent-soft{syntax:'<color>';inherits:true;initial-value:rgba(135,116,225,.14)}
+:root{
+  transition:--accent .6s cubic-bezier(.22,1,.36,1),--accent-2 .6s cubic-bezier(.22,1,.36,1),--accent-soft .6s cubic-bezier(.22,1,.36,1);
+}
+
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
   --ease-spring:cubic-bezier(.32,1.6,.4,1);--ease-out:cubic-bezier(.22,1,.36,1);
@@ -25,7 +35,7 @@
   --text:#0e1621;--text-2:#707579;--text-3:#a2acb4;
   --border:rgba(15,23,42,.06);--border-2:rgba(15,23,42,.1);--divider:rgba(15,23,42,.055);
   --accent:#8774e1;--accent-2:#a291f0;
-  --accent-grad:linear-gradient(135deg,#8774e1 0%,#a291f0 100%);
+  --accent-grad:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);
   --accent-soft:rgba(135,116,225,.14);--accent-softer:rgba(135,116,225,.07);
   --accent-glow:0 8px 24px rgba(135,116,225,.32);
   --danger:#e53935;--danger-2:#c62828;--danger-soft:rgba(229,57,53,.1);
@@ -64,6 +74,33 @@ button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;backgrou
 button:active{transform:scale(.94)}
 button:disabled{transform:none}
 
+/* ============ AMBIENT BACKGROUND (auth-flow only) ============ */
+#auth-screen,#splash-screen,#onboarding-screen,#twofa-screen{position:relative;overflow:hidden}
+#auth-screen::before,#splash-screen::before,#onboarding-screen::before,#twofa-screen::before{
+  content:'';position:absolute;inset:-30%;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(38% 38% at 22% 28%,var(--accent-soft) 0%,transparent 62%),
+    radial-gradient(42% 42% at 78% 72%,var(--accent-softer) 0%,transparent 66%);
+  opacity:.7;will-change:transform;
+  animation:ambientFloat 32s ease-in-out infinite;
+  transform:translate3d(0,0,0);
+}
+@keyframes ambientFloat{
+  0%,100%{transform:translate3d(0,0,0) scale(1)}
+  50%{transform:translate3d(2.5%,-3%,0) scale(1.08)}
+}
+#auth-screen .auth-container,#splash-screen .auth-container,#onboarding-screen .auth-container,#twofa-screen .auth-container{position:relative;z-index:1}
+
+/* ============ LOGO ASSEMBLE ============ */
+.auth-logo svg path{opacity:0;transform-origin:center;animation:logoPathIn .9s var(--ease-bounce) forwards;will-change:transform,opacity}
+.auth-logo svg path:nth-of-type(1){animation-delay:.08s}
+.auth-logo svg path:nth-of-type(2){animation-delay:.32s}
+@keyframes logoPathIn{
+  0%{opacity:0;transform:translateY(28px) scale(.82)}
+  55%{opacity:1;transform:translateY(-3px) scale(1.04)}
+  100%{opacity:1;transform:translateY(0) scale(1)}
+}
+
 /* #47 Ripple от точки клика */
 .ripple{position:relative;overflow:hidden;isolation:isolate}
 .ripple:active::before{content:'';position:absolute;inset:0;background:currentColor;opacity:.12;pointer-events:none}
@@ -75,21 +112,19 @@ button:disabled{transform:none}
 .hidden{display:none!important}
 .auth-container{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--s-6) var(--s-5);gap:var(--s-3);max-width:420px;margin:0 auto;width:100%;position:relative}
 .auth-logo{margin-bottom:var(--s-2)}
-.auth-logo svg{width:88px;height:88px;display:block;filter:drop-shadow(0 12px 32px rgba(139,92,246,.35));animation:logoFloat 3.4s var(--ease-in-out) infinite}
-@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.auth-logo svg{width:88px;height:88px;display:block;filter:drop-shadow(0 12px 32px rgba(139,92,246,.35))}
 .auth-title{font-size:28px;font-weight:700;letter-spacing:-.03em}
 .auth-subtitle{color:var(--text-2);font-size:14px;margin-bottom:var(--s-5)}
 .auth-form{width:100%;display:flex;flex-direction:column;gap:var(--s-3)}
-.auth-form input{width:100%;padding:15px 18px;border:1.5px solid var(--border);border-radius:var(--r-md);background:var(--bg-2);color:var(--text);font-size:16px;outline:none}
+.auth-form input{width:100%;padding:15px 18px;border:1.5px solid var(--border);border-radius:var(--r-md);background:var(--bg-2);color:var(--text);font-size:16px;outline:none;transition:border-color .25s var(--ease-out),background .25s var(--ease-out),box-shadow .3s var(--ease-out)}
 .auth-form input:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 4px var(--accent-soft)}
 
-/* #2 Neumorphism для кнопок */
 .btn-primary{width:100%;padding:15px;border-radius:var(--r-md);background:var(--accent-grad);color:#fff;font-size:16px;font-weight:600;box-shadow:var(--neu-shadow);border:1px solid rgba(255,255,255,.15)}
 .btn-primary:active{transform:scale(.96) translateY(1px);filter:brightness(.95);box-shadow:var(--neu-pressed)}
 .btn-primary:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
 .btn-link{color:var(--accent);font-size:14px;padding:var(--s-3);font-weight:500}
 .onb-title{font-size:20px;font-weight:700;margin-bottom:var(--s-4)}
-.onb-input{width:100%;padding:15px 18px;border:1.5px solid var(--border);border-radius:var(--r-md);background:var(--bg-2);color:var(--text);font-size:16px;outline:none;margin-bottom:var(--s-3)}
+.onb-input{width:100%;padding:15px 18px;border:1.5px solid var(--border);border-radius:var(--r-md);background:var(--bg-2);color:var(--text);font-size:16px;outline:none;margin-bottom:var(--s-3);transition:border-color .25s var(--ease-out),box-shadow .3s var(--ease-out)}
 .onb-input:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
 .username-status{font-size:var(--fs-sm);margin-top:-6px;margin-bottom:var(--s-2);min-height:16px;padding-left:var(--s-1);color:var(--text-2)}
 .username-status.ok{color:var(--success)}
@@ -111,50 +146,32 @@ button:disabled{transform:none}
 .fab{position:absolute!important;bottom:calc(var(--s-5) + env(safe-area-inset-bottom))!important;right:calc(var(--s-4) + env(safe-area-inset-right))!important;width:60px;height:60px;border-radius:20px;background:var(--accent-grad);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--neu-shadow);z-index:100}
 .fab:active{transform:scale(.88) rotate(90deg);box-shadow:var(--neu-pressed)}
 
-/* #19 Плавающий bottom-nav */
 .bottom-nav{
-  display:flex;
-  padding:6px;
-  margin:6px 12px calc(12px + env(safe-area-inset-bottom));
-  border-radius:26px;
+  display:flex;padding:6px;margin:6px 12px calc(12px + env(safe-area-inset-bottom));border-radius:26px;
   background:var(--surface-glass);
-  backdrop-filter:blur(28px) saturate(200%);
-  -webkit-backdrop-filter:blur(28px) saturate(200%);
+  backdrop-filter:blur(28px) saturate(200%);-webkit-backdrop-filter:blur(28px) saturate(200%);
   border:1px solid var(--border-2);
   box-shadow:0 12px 32px rgba(15,23,42,.12), 0 4px 10px rgba(15,23,42,.06), inset 0 1px 0 rgba(255,255,255,.5);
-  z-index:50;
-  flex-shrink:0;
-  position:relative;
-  overflow:hidden;
+  z-index:50;flex-shrink:0;position:relative;overflow:hidden;
 }
-body.dark .bottom-nav{
-  box-shadow:0 16px 40px rgba(0,0,0,.55), 0 4px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
-}
+body.dark .bottom-nav{box-shadow:0 16px 40px rgba(0,0,0,.55), 0 4px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06)}
 .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 0 6px;color:var(--text-3);font-size:11px;font-weight:600;cursor:pointer;position:relative;letter-spacing:-.01em;min-width:0;-webkit-user-select:none;user-select:none;z-index:1}
 .nav-item svg{position:relative;z-index:1;display:block;width:24px;height:24px;transition:transform .5s var(--ease-bounce),color var(--dur),filter .35s var(--ease-out)}
 .nav-item.active svg{transform:translateY(-2px) scale(1.1);color:#fff;filter:drop-shadow(0 3px 8px rgba(0,0,0,.35))}
 .nav-item span{position:relative;z-index:1;color:var(--text-3);white-space:nowrap;line-height:1.1;transition:color .3s var(--ease-out),transform .35s var(--ease-spring)}
 .nav-item.active span{color:var(--accent);font-weight:700;transform:translateY(-1px)}
 .nav-item svg,.nav-item span{pointer-events:none}
-
-/* #20 Анимированный индикатор вкладки (переезжающая капсула) */
 .nav-indicator{
-  position:absolute;
-  top:6px;
-  left:0;
-  width:52px;
-  height:34px;
-  background:var(--accent-grad);
-  border-radius:17px;
-  transition:transform .55s cubic-bezier(.34,1.56,.64,1), width .35s var(--ease-out);
+  position:absolute;top:6px;left:0;width:52px;height:34px;
+  background:var(--accent-grad);border-radius:17px;
+  transition:transform .55s cubic-bezier(.34,1.56,.64,1),width .35s var(--ease-out);
   pointer-events:none;
   box-shadow:0 6px 18px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.35);
-  z-index:0;
-  will-change:transform;
+  z-index:0;will-change:transform;
 }
 
 .settings-section-title{font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.8px;padding:var(--s-3) var(--s-4) var(--s-2)}
-.settings-item{display:flex;align-items:center;gap:var(--s-3);padding:14px var(--s-4);cursor:pointer;font-size:15px;position:relative;min-height:54px;font-weight:500;background:var(--surface)}
+.settings-item{display:flex;align-items:center;gap:var(--s-3);padding:14px var(--s-4);cursor:pointer;font-size:15px;position:relative;min-height:54px;font-weight:500;background:var(--surface);content-visibility:auto;contain:content}
 .settings-item:active{background:var(--bg-2)}
 .settings-item svg{width:22px;height:22px;color:var(--text-2);flex-shrink:0}
 .settings-item span{flex:1}
@@ -165,35 +182,19 @@ body.dark .bottom-nav{
 .profile-page::-webkit-scrollbar{display:none}
 .profile-topbar{display:flex;justify-content:space-between;align-items:center;padding:calc(8px + env(safe-area-inset-top)) 8px 0}
 .profile-avatar-wrap{display:flex;justify-content:center;padding:22px 0 14px;position:relative}
-
-/* #43 Shared element transition при открытии профиля */
-.profile-avatar-big{width:112px;height:112px;border-radius:50%;background:var(--accent-grad);display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:600;color:#fff;background-size:cover;background-position:center;box-shadow:0 10px 30px rgba(0,0,0,.24);cursor:pointer;overflow:hidden;transition:transform .6s var(--ease-bounce), box-shadow .5s var(--ease-out);transform-origin:center}
+.profile-avatar-big{width:112px;height:112px;border-radius:50%;background:var(--accent-grad);display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:600;color:#fff;background-size:cover;background-position:center;box-shadow:0 10px 30px rgba(0,0,0,.24);cursor:pointer;overflow:hidden;transition:transform .6s var(--ease-bounce), box-shadow .5s var(--ease-out),background .5s var(--ease-out);transform-origin:center}
 .profile-avatar-big.avatar-flyin{animation:avatarFlyIn .8s var(--ease-bounce) both}
 @keyframes avatarFlyIn{0%{transform:scale(.4) translateY(-40px);opacity:0}60%{transform:scale(1.08) translateY(0);opacity:1}100%{transform:scale(1) translateY(0);opacity:1}}
 .profile-avatar-big:hover{transform:scale(1.04)}
-
-/* #82 Badge (корона) на аватаре при Premium */
 .profile-premium-crown{
-  position:absolute;
-  bottom:14px;
-  left:calc(50% + 30px);
-  font-size:26px;
+  position:absolute;bottom:14px;left:calc(50% + 30px);font-size:26px;
   filter:drop-shadow(0 3px 8px rgba(245,158,11,.65));
-  opacity:0;
-  transform:scale(0) rotate(-25deg);
+  opacity:0;transform:scale(0) rotate(-25deg);
   transition:opacity .5s var(--ease-out), transform .6s var(--ease-bounce);
-  pointer-events:none;
-  z-index:2;
+  pointer-events:none;z-index:2;
 }
-body.flux-premium .profile-premium-crown{
-  opacity:1;
-  transform:scale(1) rotate(-15deg);
-  animation:crownBadgePulse 2.4s ease-in-out infinite 1s;
-}
-@keyframes crownBadgePulse{
-  0%,100%{transform:scale(1) rotate(-15deg);filter:drop-shadow(0 3px 8px rgba(245,158,11,.65))}
-  50%{transform:scale(1.15) rotate(-5deg);filter:drop-shadow(0 5px 16px rgba(245,158,11,.95))}
-}
+body.flux-premium .profile-premium-crown{opacity:1;transform:scale(1) rotate(-15deg);animation:crownBadgePulse 2.4s ease-in-out infinite 1s}
+@keyframes crownBadgePulse{0%,100%{transform:scale(1) rotate(-15deg);filter:drop-shadow(0 3px 8px rgba(245,158,11,.65))}50%{transform:scale(1.15) rotate(-5deg);filter:drop-shadow(0 5px 16px rgba(245,158,11,.95))}}
 
 .profile-display-name{text-align:center;font-size:24px;font-weight:700;letter-spacing:-.025em;padding:0 24px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2}
 .profile-display-status{text-align:center;color:var(--text-2);font-size:13.5px;margin-top:6px;min-height:20px;padding:0 24px;font-weight:500}
@@ -215,6 +216,16 @@ body.flux-premium .profile-premium-crown{
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
 .spinner{width:30px;height:30px;border:3px solid var(--accent-soft);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-top:var(--s-4)}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ============ SUCCESS CHECKMARK OVERLAY ============ */
+.success-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:99998;opacity:0;transition:opacity .2s}
+.success-overlay.show{opacity:1}
+.success-overlay svg{width:120px;height:120px;filter:drop-shadow(0 12px 32px rgba(74,222,128,.5))}
+.success-overlay svg circle{fill:none;stroke:#4ade80;stroke-width:3;stroke-dasharray:283;stroke-dashoffset:283;animation:soCircle .55s var(--ease-out) forwards}
+.success-overlay svg path{fill:none;stroke:#4ade80;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:60;stroke-dashoffset:60;animation:soCheck .4s var(--ease-out) .35s forwards}
+@keyframes soCircle{to{stroke-dashoffset:0}}
+@keyframes soCheck{to{stroke-dashoffset:0}}
+
 .avatar.color-0{background:linear-gradient(135deg,#fb7185,#e11d48)}
 .avatar.color-1{background:linear-gradient(135deg,#4ade80,#16a34a)}
 .avatar.color-2{background:linear-gradient(135deg,#facc15,#d97706)}
@@ -224,14 +235,12 @@ body.flux-premium .profile-premium-crown{
 .avatar.color-6{background:linear-gradient(135deg,#5eead4,#0d9488)}
 .avatar.color-7{background:linear-gradient(135deg,#fb923c,#ea580c)}
 
-.vpn-container{flex:1;overflow-y:auto;padding:var(--s-3);display:flex;flex-direction:column;gap:var(--s-3);position:relative}
+.vpn-container{flex:1;overflow-y:auto;padding:var(--s-3);display:flex;flex-direction:column;gap:var(--s-3);position:relative;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .vpn-card{background:var(--surface);border-radius:var(--r-lg);padding:var(--s-4);display:flex;flex-direction:column;gap:var(--s-3);box-shadow:var(--shadow-1);border:1px solid var(--border);flex-shrink:0}
 .vpn-card-title{font-size:16px;font-weight:700}
 .vpn-card-desc{font-size:var(--fs-sm);color:var(--text-2);line-height:1.5}
 .vpn-btn{width:100%;padding:14px;border-radius:var(--r-md);background:var(--accent-grad);color:#fff;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:var(--s-2);min-height:48px;box-shadow:var(--neu-shadow);border:1px solid rgba(255,255,255,.15)}
 .vpn-btn:active{transform:scale(.97);box-shadow:var(--neu-pressed)}
-
-/* #45 Pulse на главной кнопке "Загрузить ключи" */
 #vpn-load-btn{animation:loadBtnPulse 2.6s ease-in-out infinite}
 #vpn-load-btn:active{animation:none;transform:scale(.96)}
 @keyframes loadBtnPulse{
@@ -246,28 +255,17 @@ body.flux-premium .profile-premium-crown{
 .vpn-chip.active{background:var(--accent-grad);color:#fff;border-color:transparent;box-shadow:var(--accent-glow)}
 .vpn-key-list{display:flex;flex-direction:column;gap:var(--s-2);flex:1 0 auto}
 
-/* #1 Glassmorphism в карточках ключей */
 .vpn-key-item{
-  position:relative;
-  overflow:hidden;
+  position:relative;overflow:hidden;
   background:rgba(255,255,255,.55);
-  backdrop-filter:blur(20px) saturate(180%);
-  -webkit-backdrop-filter:blur(20px) saturate(180%);
-  border:1px solid rgba(255,255,255,.65);
-  border-radius:var(--r-lg);
-  padding:14px;
-  display:flex;
-  align-items:flex-start;
-  gap:var(--s-3);
-  min-height:82px;
+  backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
+  border:1px solid rgba(255,255,255,.65);border-radius:var(--r-lg);
+  padding:14px;display:flex;align-items:flex-start;gap:var(--s-3);min-height:82px;
   box-shadow:0 6px 20px rgba(15,23,42,.06), inset 0 1px 0 rgba(255,255,255,.6);
   transition:transform .4s var(--ease-bounce), box-shadow .4s var(--ease-out), background .5s var(--ease-out);
+  content-visibility:auto;contain:content layout style;
 }
-body.dark .vpn-key-item{
-  background:rgba(30,42,54,.55);
-  border:1px solid rgba(255,255,255,.08);
-  box-shadow:0 8px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
-}
+body.dark .vpn-key-item{background:rgba(30,42,54,.55);border:1px solid rgba(255,255,255,.08);box-shadow:0 8px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05)}
 .vpn-key-item:active{transform:scale(.985)}
 .vpn-key-info{flex:1;min-width:0;position:relative;z-index:1}
 .vpn-key-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;min-width:0}
@@ -277,22 +275,33 @@ body.dark .vpn-key-item{
 .vpn-key-proto::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent-grad);box-shadow:0 0 6px var(--accent-glow)}
 .vpn-key-text{font-size:11.5px;color:var(--text-3);word-break:break-all;line-height:1.4;max-height:36px;overflow:hidden;font-family:ui-monospace,Menlo,monospace;opacity:.75}
 .vpn-key-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
-.vpn-icon-btn{width:40px;height:40px;border-radius:50%;background:var(--accent-grad);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.25)}
+.vpn-icon-btn{width:40px;height:40px;border-radius:50%;background:var(--accent-grad);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.25);transition:transform .3s var(--ease-bounce),background .3s var(--ease-out),box-shadow .3s var(--ease-out)}
 .vpn-icon-btn:active{transform:scale(.9);box-shadow:var(--neu-pressed)}
 .vpn-icon-btn.star{background:transparent;color:var(--text-2);border:1.5px solid var(--border);box-shadow:none}
 .vpn-icon-btn.star.active{color:var(--warning);border-color:var(--warning);box-shadow:0 0 12px rgba(255,152,0,.35)}
+.vpn-icon-btn.copied{background:linear-gradient(135deg,#4ade80,#16a34a);box-shadow:0 4px 12px rgba(74,222,128,.5)}
+.vpn-icon-btn.copied svg{animation:checkPop .5s var(--ease-spring)}
+@keyframes checkPop{0%{transform:scale(0) rotate(-30deg)}60%{transform:scale(1.25) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
 .vpn-empty{text-align:center;color:var(--text-2);font-size:14px;padding:var(--s-5)}
 .vpn-count{font-size:var(--fs-xs);color:var(--text-2);text-align:center;font-weight:500}
+
+/* ============ VPN SKELETON ============ */
+.vpn-key-skeleton{display:flex;align-items:flex-start;gap:12px;padding:14px;border-radius:var(--r-lg);background:var(--bg-2);border:1px solid var(--border);min-height:82px;contain:content}
+.vks-flag{width:32px;height:32px;border-radius:50%;background:linear-gradient(90deg,var(--bg-2) 25%,var(--bg-3) 50%,var(--bg-2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;flex-shrink:0}
+.vks-body{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0}
+.vks-line{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--bg-2) 25%,var(--bg-3) 50%,var(--bg-2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
+.vks-line.w40{width:40%}.vks-line.w70{width:70%}.vks-line.w90{width:90%}
+.vks-actions{display:flex;flex-direction:column;gap:6px}
+.vks-circle{width:40px;height:40px;border-radius:50%;background:linear-gradient(90deg,var(--bg-2) 25%,var(--bg-3) 50%,var(--bg-2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
+
 .vpn-category-tabs{display:flex;gap:8px;padding:2px 0 6px;flex-shrink:0}
 .vpn-cat-tab{flex:1;padding:12px 10px;border-radius:14px;background:var(--surface);font-weight:800;font-size:14px;color:var(--text-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:6px;transition:all .3s var(--ease-out)}
 .vpn-cat-tab.active{background:var(--accent-grad);color:#fff;border-color:transparent;box-shadow:var(--accent-glow)}
 .vpn-cat-tab:disabled{opacity:.55;cursor:not-allowed}
 
-/* #51 Pull-to-refresh на VPN */
 .vpn-ptr{position:absolute;top:0;left:50%;transform:translateX(-50%) translateY(-80px);width:40px;height:40px;border-radius:50%;background:var(--surface-glass);backdrop-filter:blur(16px);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;z-index:5;transition:transform .25s var(--ease-out),opacity .25s var(--ease-out);pointer-events:none;opacity:0;box-shadow:var(--shadow-2)}
 .vpn-ptr .ptr-spinner{width:20px;height:20px;border:2.5px solid var(--accent-soft);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 
-/* #73/#50 Premium glassmorphism + shimmer */
 .premium-hero{
   margin:12px;padding:20px;border-radius:24px;
   background:linear-gradient(135deg,#7c3aed 0%,#a855f7 48%,#f59e0b 130%);
@@ -300,13 +309,7 @@ body.dark .vpn-key-item{
   box-shadow:0 16px 40px rgba(124,58,237,.32), inset 0 1px 0 rgba(255,255,255,.2);
 }
 .premium-hero::after{content:'✦';position:absolute;right:-6px;top:-28px;font-size:150px;line-height:1;color:rgba(255,255,255,.13);transform:rotate(15deg)}
-.premium-hero.shimmer::before{
-  content:'';position:absolute;inset:0;
-  background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.28) 48%,transparent 66%);
-  transform:translateX(-120%);
-  animation:premiumShimmerHero 4.2s ease-in-out infinite;
-  pointer-events:none;
-}
+.premium-hero.shimmer::before{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.28) 48%,transparent 66%);transform:translateX(-120%);animation:premiumShimmerHero 4.2s ease-in-out infinite;pointer-events:none}
 @keyframes premiumShimmerHero{0%,55%{transform:translateX(-120%)}80%,100%{transform:translateX(120%)}}
 .premium-kicker{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1.2px;opacity:.86}
 .premium-title{font-size:27px;font-weight:900;letter-spacing:-.04em;margin-top:4px;position:relative;z-index:1}
@@ -325,40 +328,22 @@ body.dark .vpn-key-item{
 .premium-modal-icon{font-size:58px;text-align:center;line-height:1;margin-bottom:8px}.premium-modal-price{text-align:center;color:#a855f7;font-size:18px;font-weight:900;margin:5px 0 12px}.premium-feature-list{display:flex;flex-direction:column;gap:8px;margin:12px 0 16px}.premium-feature-row{display:flex;gap:9px;align-items:flex-start;font-size:13px}.premium-feature-row b{color:#a855f7}
 .premium-badge{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:3px 7px;border-radius:99px;background:linear-gradient(135deg,#8b5cf6,#f59e0b);color:#fff;font-size:10px;font-weight:900;vertical-align:middle;box-shadow:0 3px 9px rgba(124,58,237,.22)}
 
-/* Premium status card + #81 счётчик дней + #50 shimmer + #78 вращающаяся корона */
 .premium-status-card{
   margin:10px 12px 16px;padding:14px 15px;border-radius:20px;
   background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(245,158,11,.10));
-  backdrop-filter:blur(20px) saturate(180%);
-  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
   border:1px solid rgba(168,85,247,.28);cursor:pointer;
   box-shadow:0 8px 28px rgba(124,58,237,.14), inset 0 1px 0 rgba(255,255,255,.4);
   position:relative;overflow:hidden;
 }
-body.dark .premium-status-card{
-  background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(245,158,11,.14));
-  box-shadow:0 12px 32px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
-}
+body.dark .premium-status-card{background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(245,158,11,.14));box-shadow:0 12px 32px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06)}
 .premium-status-row{display:flex;align-items:center;gap:11px}
 .premium-status-orb{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#8b5cf6,#f59e0b);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:20px;box-shadow:0 7px 18px rgba(124,58,237,.35), inset 0 1px 0 rgba(255,255,255,.3);transform-style:preserve-3d}
-
-/* #78 Анимированная корона — вращается по Y при активном Premium */
-body.flux-premium .premium-status-orb{
-  animation:premiumOrbPulse 3s ease-in-out infinite, crownSpin 9s linear infinite;
-}
-@keyframes premiumOrbPulse{
-  0%,100%{box-shadow:0 3px 9px rgba(124,58,237,.22), inset 0 1px 0 rgba(255,255,255,.3)}
-  50%{box-shadow:0 8px 22px rgba(168,85,247,.5), inset 0 1px 0 rgba(255,255,255,.3)}
-}
-@keyframes crownSpin{
-  0%{transform:rotateY(0deg)}
-  100%{transform:rotateY(360deg)}
-}
-
+body.flux-premium .premium-status-orb{animation:premiumOrbPulse 3s ease-in-out infinite, crownSpin 9s linear infinite}
+@keyframes premiumOrbPulse{0%,100%{box-shadow:0 3px 9px rgba(124,58,237,.22), inset 0 1px 0 rgba(255,255,255,.3)}50%{box-shadow:0 8px 22px rgba(168,85,247,.5), inset 0 1px 0 rgba(255,255,255,.3)}}
+@keyframes crownSpin{0%{transform:rotateY(0deg)}100%{transform:rotateY(360deg)}}
 .premium-status-title{font-size:14px;font-weight:900}.premium-status-sub{font-size:11px;color:var(--text-2);margin-top:2px}
 .premium-status-action{margin-left:auto;font-size:11px;font-weight:800;color:#a855f7}
-
-/* #81 Кружок дней до конца Premium */
 .premium-days-badge{margin-left:auto;display:flex;align-items:center;gap:6px}
 .premium-days-circle{position:relative;width:44px;height:44px;flex-shrink:0}
 .premium-days-circle svg{display:block;width:100%;height:100%;transform:rotate(-90deg)}
@@ -366,7 +351,6 @@ body.flux-premium .premium-status-orb{
 .premium-days-circle .bar{fill:none;stroke:#a855f7;stroke-width:3;stroke-linecap:round;transition:stroke-dasharray .8s var(--ease-out)}
 .premium-days-circle .days-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#a855f7;line-height:1}
 
-/* #91/#92 Плавный переход темы + глубокие тени в тёмной уже в переменных */
 body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22), 0 0 40px rgba(168,85,247,.32)}
 body.dark.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.3), 0 0 52px rgba(168,85,247,.5)}
 body.flux-premium .premium-badge{animation:premiumBadgePulse 2.8s ease-in-out infinite}
@@ -374,17 +358,13 @@ body.flux-premium .premium-badge{animation:premiumBadgePulse 2.8s ease-in-out in
 
 .profile-sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9996;display:none;align-items:flex-end;justify-content:center;animation:fadeIn var(--dur)}
 .profile-sheet.show{display:flex}
-
-/* #1 Glassmorphism в модалках */
 .profile-sheet-body{
   background:var(--surface-glass);
-  backdrop-filter:blur(30px) saturate(200%);
-  -webkit-backdrop-filter:blur(30px) saturate(200%);
+  backdrop-filter:blur(30px) saturate(200%);-webkit-backdrop-filter:blur(30px) saturate(200%);
   width:100%;max-width:500px;border-radius:32px 32px 0 0;padding:var(--s-5);
   padding-bottom:calc(var(--s-5) + env(safe-area-inset-bottom));
   max-height:88vh;overflow-y:auto;animation:slideUp var(--dur-slower) var(--ease-spring);
-  position:relative;
-  box-shadow:0 -24px 64px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.4);
+  position:relative;box-shadow:0 -24px 64px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.4);
   border-top:1px solid rgba(255,255,255,.5);
 }
 body.dark .profile-sheet-body{box-shadow:0 -24px 64px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06);border-top:1px solid rgba(255,255,255,.08)}
@@ -393,7 +373,7 @@ body.dark .profile-sheet-body{box-shadow:0 -24px 64px rgba(0,0,0,.7), inset 0 1p
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .profile-sheet-title{font-size:22px;font-weight:700;margin-bottom:var(--s-4);letter-spacing:-.03em;padding-top:var(--s-3)}
 .profile-sheet-subtitle{font-size:14px;font-weight:700;color:var(--text-2);letter-spacing:.4px;text-transform:uppercase;margin:var(--s-4) 0 var(--s-2)}
-.sheet-input{width:100%;padding:14px 16px;border:1.5px solid var(--border);border-radius:var(--r-md);background:var(--bg-2);color:var(--text);font-size:15px;outline:none;margin-bottom:var(--s-3)}
+.sheet-input{width:100%;padding:14px 16px;border:1.5px solid var(--border);border-radius:var(--r-md);background:var(--bg-2);color:var(--text);font-size:15px;outline:none;margin-bottom:var(--s-3);transition:border-color .25s var(--ease-out),box-shadow .3s var(--ease-out)}
 .sheet-input:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
 .sheet-btn{width:100%;padding:14px;border-radius:var(--r-md);background:var(--accent-grad);color:#fff;font-size:15px;font-weight:600;margin-top:8px;min-height:50px;box-shadow:var(--neu-shadow);border:1px solid rgba(255,255,255,.15)}
 .sheet-btn:active{transform:scale(.97);box-shadow:var(--neu-pressed)}
@@ -403,12 +383,9 @@ body.dark .profile-sheet-body{box-shadow:0 -24px 64px rgba(0,0,0,.7), inset 0 1p
 .fs-label{display:flex;justify-content:space-between;font-size:var(--fs-sm);color:var(--text-2);margin-bottom:8px;font-weight:500}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9997;display:none;align-items:center;justify-content:center;padding:var(--s-5);animation:fadeIn var(--dur)}
 .modal-backdrop.show{display:flex}
-
-/* #1 Glassmorphism модального окна */
 .modal{
   background:var(--surface-glass);
-  backdrop-filter:blur(32px) saturate(200%);
-  -webkit-backdrop-filter:blur(32px) saturate(200%);
+  backdrop-filter:blur(32px) saturate(200%);-webkit-backdrop-filter:blur(32px) saturate(200%);
   border-radius:28px;max-width:420px;width:100%;padding:var(--s-5);
   box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.5);
   animation:modalIn var(--dur-slower) var(--ease-spring);
@@ -432,7 +409,7 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 .avatar-option:active{transform:scale(.95)}
 .theme-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-3);padding:var(--s-2) 0}
 .theme-item{cursor:pointer;text-align:center}
-.theme-preview{width:100%;aspect-ratio:1;border-radius:var(--r-lg);position:relative;overflow:hidden;border:3px solid transparent;box-shadow:var(--shadow-2);background:var(--bg-2)}
+.theme-preview{width:100%;aspect-ratio:1;border-radius:var(--r-lg);position:relative;overflow:hidden;border:3px solid transparent;box-shadow:var(--shadow-2);background:var(--bg-2);transition:transform .4s var(--ease-bounce),border-color .3s var(--ease-out),box-shadow .3s var(--ease-out)}
 .tp-header{position:absolute;top:0;left:0;right:0;height:38%;background:linear-gradient(135deg,var(--preview1),var(--preview2))}
 .tp-bubble-in{position:absolute;top:48%;left:12%;width:52%;height:13%;background:rgba(128,128,128,.28);border-radius:8px}
 .tp-bubble-out{position:absolute;top:66%;right:12%;width:60%;height:18%;background:linear-gradient(135deg,var(--preview1),var(--preview2));opacity:.92;border-radius:9px 9px 3px 9px}
@@ -445,7 +422,7 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 .pin-dot{width:15px;height:15px;border-radius:50%;border:2.5px solid var(--accent);transition:background var(--dur),transform var(--dur) var(--ease-spring)}
 .pin-dot.filled{background:var(--accent);transform:scale(1.2)}
 .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-3);max-width:290px;width:100%}
-.pin-key{aspect-ratio:1;border-radius:50%;background:var(--bg-2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;cursor:pointer}
+.pin-key{aspect-ratio:1;border-radius:50%;background:var(--bg-2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;cursor:pointer;transition:transform .25s var(--ease-bounce),background .2s var(--ease-out)}
 .pin-key:active{background:var(--bg-3);transform:scale(.88)}
 .pin-key.blank{background:transparent;cursor:default}
 .pin-title{font-size:22px;font-weight:700}
@@ -472,7 +449,18 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 .skeleton .sk-line{height:13px;border-radius:7px;background:linear-gradient(90deg,var(--bg-2) 25%,var(--bg-3) 50%,var(--bg-2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
 .skeleton .sk-line.short{width:45%}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ============ PERF: preconnect to reduce jank ============ */
+.vpn-key-item,.settings-item,.premium-benefit,.premium-plan{transform:translateZ(0)}
+
+/* ============ ACCESSIBILITY: reduce motion ============ */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+  body::before{animation:none!important}
+  .auth-logo svg path{opacity:1!important;transform:none!important;animation:none!important}
+  .success-overlay svg circle,.success-overlay svg path{stroke-dashoffset:0!important;animation:none!important}
+  #vpn-load-btn{animation:none!important}
+}
 </style>
 </head>
 <body>
@@ -486,6 +474,7 @@ body.dark .modal{box-shadow:var(--shadow-4), inset 0 1px 0 rgba(255,255,255,.06)
 
 <div id="toast" class="toast"></div>
 <div id="net-banner" class="net-banner">Нет подключения к интернету</div>
+<div id="success-overlay" class="success-overlay"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45"/><path d="M30 52 L45 66 L72 38"/></svg></div>
 
 <div id="splash-screen" class="screen active">
 <div class="auth-container">
@@ -715,6 +704,28 @@ const FLUX_PREMIUM_PLANS = [
 const FLUX_ADMIN_UIDS = ['7rxpLXFm32c2IhJc5vop8sDEo0T2'];
 
 /* ============================================================
+   PERF: debounce / throttle / rAF helpers
+   ============================================================ */
+function rafThrottle(fn){
+  var scheduled=false,lastArgs=null;
+  return function(){
+    lastArgs=arguments;
+    if(scheduled)return;
+    scheduled=true;
+    requestAnimationFrame(function(){scheduled=false;fn.apply(null,lastArgs);});
+  };
+}
+function debounce(fn,wait){
+  var t=null;
+  return function(){
+    var args=arguments,ctx=this;
+    if(t)clearTimeout(t);
+    t=setTimeout(function(){t=null;fn.apply(ctx,args);},wait||150);
+  };
+}
+const prefersReducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ============================================================
    VPN SOURCES
    ============================================================ */
 const VPN_FREE_SOURCES = [
@@ -763,8 +774,6 @@ async function fetchGithubSource(source){
 }
 
 function isPremiumVpnSource(id){return String(id||'').charAt(0)==='p';}
-/* Глобальный Premium: состояние хранится в /settings/globalPremium и имеет приоритет
-   над индивидуальным Premium. При выключении доступ пропадает у всех сразу. */
 function isGlobalPremiumEnabled(){
   var g=window.__fluxGlobalPremiumState||{};
   return g.active===true;
@@ -854,13 +863,48 @@ function copyText(text){if(navigator.clipboard&&navigator.clipboard.writeText){n
 function fallbackCopy(text){var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Скопировано');}catch(e){toast('Не удалось');}document.body.removeChild(ta);}
 
 /* ============================================================
+   PERF: animated number counter
+   ============================================================ */
+function animateNumber(el,to,duration){
+  if(!el)return;
+  duration=duration||600;
+  var from=Number(el.dataset.num||0);
+  to=Number(to)||0;
+  if(from===to){el.textContent=to;return;}
+  el.dataset.num=to;
+  if(prefersReducedMotion){el.textContent=to;return;}
+  var start=performance.now();
+  function tick(now){
+    var t=Math.min(1,(now-start)/duration);
+    var eased=1-Math.pow(1-t,3);
+    el.textContent=Math.round(from+(to-from)*eased);
+    if(t<1)requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+/* ============================================================
+   SUCCESS OVERLAY (checkmark draw)
+   ============================================================ */
+let _soTimer=null;
+function showSuccessOverlay(){
+  if(prefersReducedMotion)return;
+  var el=$('success-overlay');if(!el)return;
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  if(_soTimer)clearTimeout(_soTimer);
+  _soTimer=setTimeout(function(){el.classList.remove('show');},900);
+}
+
+/* ============================================================
    SOUND / VIBRATION
    ============================================================ */
 let _audioCtx=null;
 function getAudioCtx(){if(_audioCtx)return _audioCtx;try{_audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){return null;}return _audioCtx;}
 const SOUND_PREFS={enabled:localStorage.getItem('flux_sound')!=='0'};
 function playSound(type){
-  if(!SOUND_PREFS.enabled)return;
+  if(!SOUND_PREFS.enabled||prefersReducedMotion)return;
   var ctx=getAudioCtx();if(!ctx)return;
   if(ctx.state==='suspended')ctx.resume().catch(function(){});
   var now=ctx.currentTime;
@@ -882,36 +926,37 @@ function playSound(type){
 }
 const VIB_PREFS={enabled:localStorage.getItem('flux_vibration')!=='0'};
 const VIB={tap:8,success:20,error:[50,30,50]};
-function vibrate(type){if(!VIB_PREFS.enabled)return;if(!navigator.vibrate)return;try{navigator.vibrate(typeof type==='number'?type:(VIB[type]||10));}catch(e){}}
+function vibrate(type){if(!VIB_PREFS.enabled||prefersReducedMotion)return;if(!navigator.vibrate)return;try{navigator.vibrate(typeof type==='number'?type:(VIB[type]||10));}catch(e){}}
 
 /* ============================================================
    #44 Confetti при активации Premium
    ============================================================ */
 function spawnConfetti(){
+  if(prefersReducedMotion)return;
   var colors=['#8b5cf6','#a855f7','#f59e0b','#ec4899','#06b6d4','#10b981','#facc15','#fb7185'];
   var cx=window.innerWidth/2, cy=window.innerHeight*0.4;
+  var frag=document.createDocumentFragment();
   for(var i=0;i<50;i++){
-    (function(i){
-      var el=document.createElement('div');
-      var size=6+Math.random()*10;
-      var color=colors[i%colors.length];
-      var isRect=Math.random()>0.5;
-      el.style.cssText='position:fixed;left:'+cx+'px;top:'+cy+'px;width:'+size+'px;height:'+(isRect?size*0.4:size)+'px;background:'+color+';border-radius:'+(isRect?'2px':'50%')+';pointer-events:none;z-index:99999;transform:translate(-50%,-50%);box-shadow:0 0 12px '+color+'80;';
-      document.body.appendChild(el);
-      var angle=Math.random()*Math.PI*2;
-      var dist=120+Math.random()*320;
-      var dx=Math.cos(angle)*dist;
-      var dy=Math.sin(angle)*dist-120;
-      var rot=Math.random()*720-360;
-      try{
-        el.animate([
-          {transform:'translate(-50%,-50%) scale(0.6) rotate(0)',opacity:1},
-          {transform:'translate(calc(-50% + '+dx+'px), calc(-50% + '+dy+'px)) scale('+(0.5+Math.random()*0.7)+') rotate('+rot+'deg)',opacity:0}
-        ],{duration:1400+Math.random()*800,easing:'cubic-bezier(.15,.6,.35,1)',fill:'forwards'});
-      }catch(e){}
-      setTimeout(function(){try{el.remove();}catch(e){}},2400);
-    })(i);
+    var el=document.createElement('div');
+    var size=6+Math.random()*10;
+    var color=colors[i%colors.length];
+    var isRect=Math.random()>0.5;
+    el.style.cssText='position:fixed;left:'+cx+'px;top:'+cy+'px;width:'+size+'px;height:'+(isRect?size*0.4:size)+'px;background:'+color+';border-radius:'+(isRect?'2px':'50%')+';pointer-events:none;z-index:99999;transform:translate(-50%,-50%);box-shadow:0 0 12px '+color+'80;will-change:transform,opacity;';
+    frag.appendChild(el);
+    var angle=Math.random()*Math.PI*2;
+    var dist=120+Math.random()*320;
+    var dx=Math.cos(angle)*dist;
+    var dy=Math.sin(angle)*dist-120;
+    var rot=Math.random()*720-360;
+    try{
+      el.animate([
+        {transform:'translate(-50%,-50%) scale(0.6) rotate(0)',opacity:1},
+        {transform:'translate(calc(-50% + '+dx+'px), calc(-50% + '+dy+'px)) scale('+(0.5+Math.random()*0.7)+') rotate('+rot+'deg)',opacity:0}
+      ],{duration:1400+Math.random()*800,easing:'cubic-bezier(.15,.6,.35,1)',fill:'forwards'});
+    }catch(e){}
+    setTimeout(function(el){return function(){try{el.remove();}catch(e){}};}(el),2400);
   }
+  document.body.appendChild(frag);
 }
 
 /* ============================================================
@@ -940,14 +985,14 @@ function goScreen(id,replace){
   if(replace||currentScreenId===null||currentScreenId==='splash-screen'){screenHistory.length=0;screenHistory.push(id);try{history.replaceState({s:id},'');}catch(e){}}
   else{screenHistory.push(id);try{history.pushState({s:id},'');}catch(e){}}
   currentScreenId=id;showScreen(id);
-  if(id==='main-screen')setTimeout(positionNavIndicator,60);
+  if(id==='main-screen')requestAnimationFrame(positionNavIndicator);
 }
 window.addEventListener('popstate',function(){
   if(screenHistory.length>1){
     screenHistory.pop();var prev=screenHistory[screenHistory.length-1];
     if(prev==='splash-screen'){try{history.pushState({s:currentScreenId},'');}catch(e){}return;}
     currentScreenId=prev;showScreen(prev);
-    if(prev==='main-screen')setTimeout(positionNavIndicator,60);
+    if(prev==='main-screen')requestAnimationFrame(positionNavIndicator);
     try{history.pushState({s:prev},'');}catch(e){}
   }else{try{history.pushState({s:currentScreenId},'');}catch(e){}}
 });
@@ -966,8 +1011,8 @@ function positionNavIndicator(){
   ind.style.width=indWidth+'px';
   ind.style.transform='translateX('+x+'px)';
 }
-window.addEventListener('resize',function(){positionNavIndicator();});
-window.addEventListener('orientationchange',function(){setTimeout(positionNavIndicator,200);});
+window.addEventListener('resize',debounce(positionNavIndicator,120),{passive:true});
+window.addEventListener('orientationchange',function(){setTimeout(positionNavIndicator,200);},{passive:true});
 
 /* ============================================================
    THEME
@@ -1014,8 +1059,8 @@ $('login-btn').onclick=async function(){
     if(snap.exists()&&snap.val().enabled){
       var deviceKey='flux_2fa_device_'+cred.user.uid;var trusted=localStorage.getItem(deviceKey);
       if(!trusted){await auth.signOut();$('twofa-input').value='';goScreen('twofa-screen',true);toast('Введите код 2FA');}
-      else toast('Вход выполнен');
-    }else toast('Вход выполнен');
+      else{toast('Вход выполнен');showSuccessOverlay();}
+    }else{toast('Вход выполнен');showSuccessOverlay();}
   }catch(e){toast(authError(e.code));}
   this.disabled=false;this.textContent=old;
 };
@@ -1024,7 +1069,7 @@ $('twofa-verify-btn').onclick=async function(){
   if(!/^\d{6}$/.test(code)){toast('Код из 6 цифр');return;}
   var email=$('login-email').value.trim(),pass=$('login-password').value;
   this.disabled=true;
-  try{var cred=await auth.signInWithEmailAndPassword(email,pass);var snap=await db.ref('users/'+cred.user.uid+'/twofa').once('value');var t=snap.val()||{};if(t.code===code){localStorage.setItem('flux_2fa_device_'+cred.user.uid,'1');toast('Успешно');}else{await auth.signOut();toast('Неверный код');}}catch(e){toast(authError(e.code));}
+  try{var cred=await auth.signInWithEmailAndPassword(email,pass);var snap=await db.ref('users/'+cred.user.uid+'/twofa').once('value');var t=snap.val()||{};if(t.code===code){localStorage.setItem('flux_2fa_device_'+cred.user.uid,'1');toast('Успешно');showSuccessOverlay();}else{await auth.signOut();toast('Неверный код');}}catch(e){toast(authError(e.code));}
   this.disabled=false;
 };
 $('twofa-cancel-btn').onclick=async function(){try{await auth.signOut();}catch(e){}goScreen('auth-screen',true);};
@@ -1035,7 +1080,7 @@ $('register-btn').onclick=async function(){
   if(p1.length<6){toast('Пароль минимум 6 символов');return;}
   if(p1!==p2){toast('Пароли не совпадают');return;}
   this.disabled=true;var old=this.textContent;this.textContent='Регистрация...';
-  try{await auth.createUserWithEmailAndPassword(email,p1);toast('Аккаунт создан');}catch(e){toast(authError(e.code));}
+  try{await auth.createUserWithEmailAndPassword(email,p1);toast('Аккаунт создан');showSuccessOverlay();}catch(e){toast(authError(e.code));}
   this.disabled=false;this.textContent=old;
 };
 
@@ -1066,7 +1111,7 @@ if(firebaseReady&&auth){
       goScreen('main-screen',true);
       startSelfListener();startSessionTracking();updateSettingsUI();updateTogglesUI();startGlobalPremiumListener();startPremiumListener();
       try{db.ref('users/'+user.uid).update({online:true,lastSeen:TS});}catch(e){}
-      setTimeout(positionNavIndicator,200);
+      requestAnimationFrame(positionNavIndicator);
     }
     authProcessing=false;
   });
@@ -1097,7 +1142,7 @@ function buildOnbAvatarGrid(){
   var g=$('onb-avatar-grid');if(!g)return;
   var html='';PRESET_AVATARS.forEach(function(a){html+='<div class="avatar-option'+(onbAvatarId===a.id?' selected':'')+'" data-id="'+a.id+'" style="background:'+a.bg+'">'+a.emoji+'</div>';});
   g.innerHTML=html;
-  g.querySelectorAll('.avatar-option').forEach(function(el){el.onclick=function(){onbAvatarId=el.dataset.id;g.querySelectorAll('.avatar-option').forEach(function(x){x.classList.remove('selected');});el.classList.add('selected');};});
+  g.querySelectorAll('.avatar-option').forEach(function(el){el.onclick=function(){onbAvatarId=el.dataset.id;g.querySelectorAll('.avatar-option').forEach(function(x){x.classList.remove('selected');});el.classList.add('selected');vibrate('tap');};});
 }
 $('onb-username').addEventListener('input',function(){
   var raw=this.value.trim().replace(/^@/,'').toLowerCase();
@@ -1130,7 +1175,7 @@ $('onb-continue').onclick=async function(){
     startSelfListener();startSessionTracking();
     startPremiumListener();
     updateSettingsUI();updateTogglesUI();
-    setTimeout(positionNavIndicator,200);
+    requestAnimationFrame(positionNavIndicator);
   }catch(e){toast('Ошибка: '+(e.message||e.code));}
   this.disabled=false;
 };
@@ -1165,7 +1210,7 @@ $('btn-edit-profile').onclick=function(){
   var g=$('edit-avatar-grid');var html='';
   PRESET_AVATARS.forEach(function(a){html+='<div class="avatar-option'+(editAvatarId===a.id?' selected':'')+'" data-id="'+a.id+'" style="background:'+a.bg+'">'+a.emoji+'</div>';});
   g.innerHTML=html;
-  g.querySelectorAll('.avatar-option').forEach(function(el){el.onclick=function(){editAvatarId=el.dataset.id;g.querySelectorAll('.avatar-option').forEach(function(x){x.classList.remove('selected');});el.classList.add('selected');};});
+  g.querySelectorAll('.avatar-option').forEach(function(el){el.onclick=function(){editAvatarId=el.dataset.id;g.querySelectorAll('.avatar-option').forEach(function(x){x.classList.remove('selected');});el.classList.add('selected');vibrate('tap');};});
 };
 $('edit-cancel').onclick=function(){$('edit-profile-sheet').classList.remove('show');};
 $('edit-save').onclick=async function(){
@@ -1191,12 +1236,10 @@ $('edit-save').onclick=async function(){
     }else{await db.ref('users/'+currentUser.uid).update({name:name,bio:bio,avatarId:editAvatarId,birthday:birthday});}
     Object.assign(currentUserData,{name:name,username:newUsername,bio:bio,avatarId:editAvatarId,birthday:birthday});
     updateSettingsUI();
-    $('edit-profile-sheet').classList.remove('show');toast('Сохранено');
+    $('edit-profile-sheet').classList.remove('show');toast('Сохранено');showSuccessOverlay();
   }catch(e){toast('Ошибка: '+(e.message||e.code));}
   btn.disabled=false;
 };
-
-/* #43 Shared element transition — аватар "прилетает" при открытии профиля */
 $('profile-avatar-big').onclick=function(){
   var el=this;
   el.classList.remove('avatar-flyin');
@@ -1225,12 +1268,10 @@ $('btn-open-premium').onclick=function(){switchTab('shop');};
    ============================================================ */
 function autoDeleteLabel(m){if(!m)return 'Никогда';if(m===12)return '1 год';if(m===1)return '1 месяц';return m+' мес.';}
 
-/* #81 Кружок дней до конца Premium */
 function premiumDaysCircleHtml(expiresAt){
   var now=Date.now();
   var left=Math.max(0,Number(expiresAt||0)-now);
   var days=Math.ceil(left/86400000);
-  // Прогресс считаем от 30 дней (для визуала)
   var base=Math.max(days,30)*86400000;
   var progress=Math.max(0,Math.min(1,left/base));
   var C=2*Math.PI*15;
@@ -1314,7 +1355,7 @@ $('btn-theme').onclick=function(){setTheme(!document.body.classList.contains('da
 $('btn-theme-color').onclick=function(){
   var sheet=$('theme-sheet');sheet.classList.add('show');var g=$('theme-grid');
   g.innerHTML=THEMES.map(function(t){return '<div class="theme-item'+(t.id===currentTheme?' selected':'')+'" data-id="'+t.id+'"><div class="theme-preview" style="--preview1:'+t.c1+';--preview2:'+t.c2+'"><div class="tp-header"></div><div class="tp-bubble-in"></div><div class="tp-bubble-out"></div></div><span>'+esc(t.name)+'</span></div>';}).join('');
-  g.querySelectorAll('.theme-item').forEach(function(el){el.onclick=function(){applyTheme(el.dataset.id);updateTogglesUI();sheet.classList.remove('show');};});
+  g.querySelectorAll('.theme-item').forEach(function(el){el.onclick=function(){applyTheme(el.dataset.id);updateTogglesUI();sheet.classList.remove('show');vibrate('tap');};});
 };
 $('theme-cancel').onclick=function(){$('theme-sheet').classList.remove('show');};
 $('theme-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
@@ -1374,7 +1415,7 @@ $('btn-fontsize').onclick=function(){
   $('fs-close').onclick=function(){$('profile-sheet').classList.remove('show');};
 };
 $('btn-logout').onclick=function(){showModal('<div class="modal-title">Выйти?</div><div class="modal-actions"><button class="modal-btn" id="m-cancel">Отмена</button><button class="modal-btn danger primary-danger" id="m-ok">Выйти</button></div>',function(m,close){m.querySelector('#m-cancel').onclick=close;m.querySelector('#m-ok').onclick=async function(){close();try{await db.ref('users/'+currentUser.uid).update({online:false,lastSeen:TS});}catch(e){}try{await auth.signOut();}catch(e){}};});};
-$('profile-btn-settings').onclick=function(){var wrap=$('profile-page');if(wrap)wrap.scrollTo({top:300,behavior:'smooth'});};
+$('profile-btn-settings').onclick=function(){var wrap=$('profile-page');if(wrap)wrap.scrollTo({top:300,behavior:prefersReducedMotion?'auto':'smooth'});};
 $('profile-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
 $('edit-profile-sheet').onclick=function(e){if(e.target===this)this.classList.remove('show');};
 
@@ -1403,7 +1444,6 @@ function switchTab(tab){
     if(tab==='shop'){renderShop();loadPremiumState();}
     if(tab==='vpn'){renderVpnCategoryTabs();renderVpnSources();}
     vibrate('tap');
-    // #20 обновляем положение индикатора
     positionNavIndicator();
   }catch(e){}
 }
@@ -1421,7 +1461,6 @@ document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=
   body.addEventListener('touchstart',function(e){
     if(e.touches.length!==1){tracking=false;return;}
     var t=e.target;
-    // Игнорируем если старт на интерактивных/скроллируемых элементах
     if(t.closest('input, textarea, button, .vpn-key-item, .vpn-key-list, .premium-plan, .premium-plan-crown, .shop-tab, .vpn-chip, .vpn-cat-tab, .profile-info-card, .settings-item, .profile-sheet, .modal-backdrop, .toast, .profile-page, .list, .shop-tabs, .vpn-filters, .vpn-container, .premium-benefits, .premium-hero, .premium-plans')){ignored=true;tracking=false;return;}
     startX=e.touches[0].clientX;
     startY=e.touches[0].clientY;
@@ -1524,7 +1563,6 @@ async function loadPremiumState(){
   }catch(e){return false;}
 }
 
-/* #44 + #78 — слушатель Premium с confetti при активации */
 var prevPremiumActive=false;
 function startPremiumListener(){
   if(!currentUser||!db)return;
@@ -1537,7 +1575,6 @@ function startPremiumListener(){
       var active=isPremiumActive(v);
       var wasActive=prevPremiumActive;
       document.body.classList.toggle('flux-premium',active);
-      // #44 Confetti при переходе inactive -> active
       if(active&&!wasActive){
         spawnConfetti();
         playSound('premium');
@@ -1632,17 +1669,90 @@ function vpnKeyItemHtml(k){
   var host=getVpnHost(k.raw);var title=meta.name?meta.name:(k.proto.toUpperCase()+' · '+(host||'server'));
   return '<div class="vpn-key-item"><div class="vpn-key-info"><div class="vpn-key-header"><span class="vpn-key-flag">'+meta.flag+'</span><span class="vpn-key-title">'+esc(truncate(title,48))+'</span></div><div class="vpn-key-proto">'+esc(k.proto)+'</div><div class="vpn-key-text">'+esc(truncate(k.raw,140))+'</div></div><div class="vpn-key-actions"><button class="vpn-icon-btn star'+(isFav?' active':'')+'" data-star="'+idx+'"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></button><button class="vpn-icon-btn" data-copy="'+idx+'"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button></div></div>';
 }
-function bindVpnActions(root){root.querySelectorAll('.vpn-icon-btn[data-copy]').forEach(function(btn){if(btn._bound)return;btn._bound=true;btn.onclick=function(){var k=vpnKeys[+btn.dataset.copy];if(!k)return;copyText(k.raw);vibrate('tap');};});root.querySelectorAll('.vpn-icon-btn[data-star]').forEach(function(btn){if(btn._bound)return;btn._bound=true;btn.onclick=function(){var k=vpnKeys[+btn.dataset.star];if(!k)return;if(vpnFavorites[k.raw]){delete vpnFavorites[k.raw];btn.classList.remove('active');}else{vpnFavorites[k.raw]=1;btn.classList.add('active');}saveVpnFavorites();vibrate('tap');};});}
-function appendVpnBatch(){var list=$('vpn-key-list');if(!list)return;if(vpnRenderedUpTo>=vpnFiltered.length)return;var start=vpnRenderedUpTo,end=Math.min(vpnFiltered.length,start+VPN_BATCH_SIZE);var html='';for(var i=start;i<end;i++)html+=vpnKeyItemHtml(vpnFiltered[i]);var tmp=document.createElement('div');tmp.innerHTML=html;while(tmp.firstChild)list.appendChild(tmp.firstChild);vpnRenderedUpTo=end;bindVpnActions(list);}
+const COPY_CHECK_SVG='<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+function bindVpnActions(root){
+  root.querySelectorAll('.vpn-icon-btn[data-copy]').forEach(function(btn){
+    if(btn._bound)return;btn._bound=true;
+    btn.onclick=function(){
+      var k=vpnKeys[+btn.dataset.copy];if(!k)return;
+      copyText(k.raw);
+      vibrate('tap');
+      if(btn._orig===undefined)btn._orig=btn.innerHTML;
+      btn.innerHTML=COPY_CHECK_SVG;
+      btn.classList.add('copied');
+      if(btn._timer)clearTimeout(btn._timer);
+      btn._timer=setTimeout(function(){btn.innerHTML=btn._orig;btn.classList.remove('copied');},1200);
+    };
+  });
+  root.querySelectorAll('.vpn-icon-btn[data-star]').forEach(function(btn){
+    if(btn._bound)return;btn._bound=true;
+    btn.onclick=function(){
+      var k=vpnKeys[+btn.dataset.star];if(!k)return;
+      if(vpnFavorites[k.raw]){delete vpnFavorites[k.raw];btn.classList.remove('active');}
+      else{vpnFavorites[k.raw]=1;btn.classList.add('active');}
+      saveVpnFavorites();
+      vibrate('tap');
+    };
+  });
+}
+function appendVpnBatch(){
+  var list=$('vpn-key-list');if(!list)return;
+  if(vpnRenderedUpTo>=vpnFiltered.length)return;
+  var start=vpnRenderedUpTo,end=Math.min(vpnFiltered.length,start+VPN_BATCH_SIZE);
+  var html='';
+  for(var i=start;i<end;i++)html+=vpnKeyItemHtml(vpnFiltered[i]);
+  var tmp=document.createElement('div');
+  tmp.innerHTML=html;
+  var frag=document.createDocumentFragment();
+  while(tmp.firstChild)frag.appendChild(tmp.firstChild);
+  list.appendChild(frag);
+  vpnRenderedUpTo=end;
+  bindVpnActions(list);
+}
 function scheduleVpnAppend(){if(vpnRafId)return;vpnRafId=requestAnimationFrame(function(){vpnRafId=0;appendVpnBatch();});}
 function isVpnItemVisible(){var c=$('vpn-container'),list=$('vpn-key-list');if(!c||!list)return false;var last=list.lastElementChild;if(!last)return true;var cR=c.getBoundingClientRect(),lR=last.getBoundingClientRect();return lR.top<cR.bottom+400;}
 function onVpnScroll(){if(vpnRenderedUpTo<vpnFiltered.length&&isVpnItemVisible())scheduleVpnAppend();}
-function renderVpnKeys(){var list=$('vpn-key-list'),count=$('vpn-count'),refreshBtn=$('vpn-refresh-btn'),loadBtn=$('vpn-load-btn');if(!list)return;list.innerHTML='';vpnRenderedUpTo=0;if(!vpnFiltered.length){list.innerHTML='<div class="vpn-empty">Нет ключей</div>';if(count)count.textContent='';if(refreshBtn)refreshBtn.style.display='none';if(loadBtn)loadBtn.style.display='flex';return;}if(loadBtn)loadBtn.style.display='none';if(refreshBtn)refreshBtn.style.display='flex';if(count)count.textContent='Показано: '+vpnFiltered.length+' из '+vpnKeys.length;appendVpnBatch();var c=$('vpn-container');if(c&&!c._vpnScrollBound){c._vpnScrollBound=true;c.addEventListener('scroll',onVpnScroll,{passive:true});}setTimeout(function(){if(vpnRenderedUpTo<vpnFiltered.length&&isVpnItemVisible())scheduleVpnAppend();},60);}
+function showVpnSkeletons(count){
+  var list=$('vpn-key-list');if(!list)return;
+  var html='';
+  for(var i=0;i<(count||5);i++){
+    html+='<div class="vpn-key-skeleton"><div class="vks-flag"></div><div class="vks-body"><div class="vks-line w70"></div><div class="vks-line w40"></div><div class="vks-line w90"></div></div><div class="vks-actions"><div class="vks-circle"></div><div class="vks-circle"></div></div></div>';
+  }
+  list.innerHTML=html;
+}
+function renderVpnKeys(){
+  var list=$('vpn-key-list'),count=$('vpn-count'),refreshBtn=$('vpn-refresh-btn'),loadBtn=$('vpn-load-btn');
+  if(!list)return;
+  list.innerHTML='';vpnRenderedUpTo=0;
+  if(!vpnFiltered.length){
+    list.innerHTML='<div class="vpn-empty">Нет ключей</div>';
+    if(count){count.textContent='';count.dataset.num=0;}
+    if(refreshBtn)refreshBtn.style.display='none';
+    if(loadBtn)loadBtn.style.display='flex';
+    return;
+  }
+  if(loadBtn)loadBtn.style.display='none';
+  if(refreshBtn)refreshBtn.style.display='flex';
+  if(count){
+    if(count._lastTotal!==vpnFiltered.length){
+      count._lastTotal=vpnFiltered.length;
+      count.dataset.num=count.dataset.num||0;
+      var prefix='Показано: ';
+      var suffix=' из '+vpnKeys.length;
+      if(!count._labelSet){count._labelSet=true;count.innerHTML='<span class="vc-prefix">'+prefix+'</span><span id="vpn-count-num">0</span><span class="vc-suffix">'+suffix+'</span>';}
+      animateNumber(document.getElementById('vpn-count-num'),vpnFiltered.length,500);
+    }
+  }
+  appendVpnBatch();
+  var c=$('vpn-container');
+  if(c&&!c._vpnScrollBound){c._vpnScrollBound=true;c.addEventListener('scroll',onVpnScroll,{passive:true});}
+  setTimeout(function(){if(vpnRenderedUpTo<vpnFiltered.length&&isVpnItemVisible())scheduleVpnAppend();},60);
+}
 
 async function loadVpnKeys(){
   var loadBtn=$('vpn-load-btn'),refreshBtn=$('vpn-refresh-btn'),list=$('vpn-key-list');
   if(loadBtn)loadBtn.disabled=true;if(refreshBtn)refreshBtn.disabled=true;
-  if(list)list.innerHTML='<div class="spinner" style="margin:20px auto"></div>';
+  showVpnSkeletons(5);
   var source=getActiveVpnSource();
   if(source.kind==='premium'&&!isPremiumUserNow()){
     if(list)list.innerHTML='<div class="vpn-empty">👑 Premium VPN доступен только Premium пользователям</div>';
@@ -1672,26 +1782,33 @@ async function loadVpnKeys(){
 $('vpn-load-btn').onclick=loadVpnKeys;
 $('vpn-refresh-btn').onclick=loadVpnKeys;
 
-/* #51 Pull-to-refresh на VPN */
+/* #51 Pull-to-refresh на VPN (оптимизировано: rAF-троттлинг) */
 (function initVpnPTR(){
   var c=document.getElementById('vpn-container');
   if(!c)return;
-  var startY=0,pulling=false,dist=0,ptrEl=null;
+  var startY=0,pulling=false,dist=0,ptrEl=null,pendingY=0,rafScheduled=false;
   function ensurePtr(){if(ptrEl)return ptrEl;ptrEl=document.createElement('div');ptrEl.className='vpn-ptr';ptrEl.innerHTML='<div class="ptr-spinner"></div>';c.appendChild(ptrEl);return ptrEl;}
+  function applyTransform(){
+    rafScheduled=false;
+    if(!ptrEl)return;
+    var t=Math.min(pendingY,80);
+    ptrEl.style.transform='translateX(-50%) translateY('+(t-40)+'px)';
+    ptrEl.style.opacity=Math.min(pendingY/70,1);
+  }
   c.addEventListener('touchstart',function(e){
     if(c.scrollTop<=0){startY=e.touches[0].clientY;pulling=true;dist=0;ensurePtr();}
   },{passive:true});
   c.addEventListener('touchmove',function(e){
     if(!pulling||!ptrEl)return;
     var y=e.touches[0].clientY-startY;
-    if(y>0){dist=y;var t=Math.min(y,80);ptrEl.style.transform='translateX(-50%) translateY('+(t-40)+'px)';ptrEl.style.opacity=Math.min(y/70,1);}
+    if(y>0){dist=y;pendingY=y;if(!rafScheduled){rafScheduled=true;requestAnimationFrame(applyTransform);}}
   },{passive:true});
   c.addEventListener('touchend',function(){
     if(!pulling)return;
     pulling=false;
     var shouldRefresh=dist>70;
     if(ptrEl){ptrEl.style.transform='';ptrEl.style.opacity=0;}
-    dist=0;
+    dist=0;pendingY=0;
     if(shouldRefresh){vibrate('tap');loadVpnKeys();}
   },{passive:true});
 })();
@@ -1700,6 +1817,7 @@ var vpnAutoRefreshTimer=null;
 function startVpnAutoRefresh(){
   if(vpnAutoRefreshTimer)clearInterval(vpnAutoRefreshTimer);
   vpnAutoRefreshTimer=setInterval(function(){
+    if(document.hidden)return;
     try{var tab=document.getElementById('tab-vpn');if(tab&&tab.classList.contains('active')&&vpnKeys.length)loadVpnKeys();}catch(e){}
   },10*60*1000);
 }
@@ -1726,7 +1844,7 @@ async function openPromoSheet(){
         var next=Object.assign({},cur);next.usedBy=Object.assign({},used);next.usedBy[currentUser.uid]=now;next.uses=uses+1;return next;
       });
       if(!tx.committed){result.textContent='Промокод недействителен, закончился или уже использован.';btn.disabled=false;return;}
-      result.textContent='Промокод активирован.';toast('Промокод активирован');playSound('success');
+      result.textContent='Промокод активирован.';toast('Промокод активирован');playSound('success');showSuccessOverlay();
     }catch(e){result.textContent='Ошибка активации.';console.warn('promo',e);}finally{btn.disabled=false;}
   };
 }
@@ -1769,7 +1887,7 @@ async function openAdminPanel(){
     document.getElementById('admin-stats').innerHTML='<div class="info-row"><div class="info-value">'+arr.length.toLocaleString('ru-RU')+'</div><div class="info-label">Пользователи</div></div><div class="info-row"><div class="info-value">'+premium.toLocaleString('ru-RU')+'</div><div class="info-label">Активный Premium</div></div><div class="info-row"><div class="info-value">'+rub.toLocaleString('ru-RU')+' ₽</div><div class="info-label">Подтверждённые платежи · '+payCount+'</div></div>';
     var payBox=document.getElementById('admin-payments');var recent=paymentRows.slice(0,20);payBox.innerHTML=recent.length?recent.map(function(p){var u=users[p.uid]||{};return '<div class="chat-item" style="padding:8px 4px"><div class="chat-item-info"><div class="chat-item-top"><div class="chat-item-name">'+esc(u.name||p.uid.slice(0,10))+'</div><div class="chat-item-time">'+Number(p.rub||0).toLocaleString('ru-RU')+' ₽</div></div><div class="chat-item-bottom"><div class="chat-item-msg">'+esc(p.itemLabel||p.itemId||p.type||'Платёж')+'</div><div class="chat-item-time">'+esc(formatDateLong(Number(p.confirmedAt||p.createdAt||0)))+'</div></div></div></div>';}).join(''):'<div class="empty">Подтверждённых платежей пока нет</div>';
     function renderUsers(q){q=String(q||'').trim().toLowerCase();var filtered=arr.filter(function(u){return !q||String(u.uid).toLowerCase().indexOf(q)!==-1||String(u.name||'').toLowerCase().indexOf(q)!==-1||String(u.username||'').toLowerCase().indexOf(q.replace(/^@/,''))!==-1;}).slice(0,100);var box=document.getElementById('admin-users');if(!filtered.length){box.innerHTML='<div class="empty">Пользователи не найдены</div>';return;}box.innerHTML=filtered.map(function(u){return '<div class="chat-item" data-admin-user="'+escAttr(u.uid)+'" style="padding:10px 6px;cursor:pointer">'+avatarHtml(u)+'<div class="chat-item-info"><div class="chat-item-top"><div class="chat-item-name">'+esc(u.name||'Без имени')+(isPremiumActive(u.premium||{})?'<span class="premium-badge">Premium</span>':'')+'</div></div><div class="chat-item-bottom"><div class="chat-item-msg">'+esc(u.username?'@'+u.username:u.uid)+'</div></div></div></div>';}).join('');applyAvatarUrls(box);box.querySelectorAll('[data-admin-user]').forEach(function(el){el.onclick=function(){openAdminUserActions(arr.find(function(x){return x.uid===el.dataset.adminUser;}));};});}
-    renderUsers('');var inp=document.getElementById('admin-user-search');inp.oninput=function(){renderUsers(this.value);};
+    renderUsers('');var inp=document.getElementById('admin-user-search');inp.oninput=debounce(function(){renderUsers(inp.value);},180);
     document.getElementById('admin-promo-create').onclick=async function(){
       var code=String(document.getElementById('admin-promo-code').value||'').trim().toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,32),max=Math.max(0,Math.floor(Number(document.getElementById('admin-promo-max').value||0))),exp=document.getElementById('admin-promo-exp').value;
       if(!code){toast('Укажи код');return;}var existing=await db.ref('promoCodes/'+code).once('value');if(existing.exists()){toast('Такой код уже существует');return;}
@@ -1802,31 +1920,43 @@ window.addEventListener('offline',function(){$('net-banner').classList.add('show
 if(!navigator.onLine)$('net-banner').classList.add('show');
 
 /* ============================================================
-   #47 Ripple с точкой клика
+   #47 Ripple с точкой клика — DELEGATED (работает на динамике, оптимизировано)
    ============================================================ */
 (function initRipple(){
-  function attach(el){
-    if(el._ripple)return;el._ripple=true;
-    el.addEventListener('click',function(e){
-      var rect=el.getBoundingClientRect();
-      var size=Math.max(rect.width,rect.height)*1.8;
-      var ink=document.createElement('span');ink.className='ripple-ink';
-      ink.style.width=ink.style.height=size+'px';
-      ink.style.left=(e.clientX-rect.left-size/2)+'px';
-      ink.style.top=(e.clientY-rect.top-size/2)+'px';
-      el.appendChild(ink);
-      setTimeout(function(){try{ink.remove();}catch(e){}},680);
-    });
-  }
-  document.querySelectorAll('.ripple').forEach(attach);
+  if(prefersReducedMotion)return;
+  var lastRippleTs=0;
+  document.addEventListener('pointerdown',function(e){
+    if(e.pointerType==='mouse'&&e.button!==0)return;
+    var el=e.target.closest('.ripple');
+    if(!el)return;
+    var now=performance.now();
+    if(now-lastRippleTs<50)return; // throttle: не более одного ripple в 50мс
+    lastRippleTs=now;
+    var rect=el.getBoundingClientRect();
+    var size=Math.max(rect.width,rect.height)*1.8;
+    var ink=document.createElement('span');
+    ink.className='ripple-ink';
+    ink.style.width=ink.style.height=size+'px';
+    ink.style.left=(e.clientX-rect.left-size/2)+'px';
+    ink.style.top=(e.clientY-rect.top-size/2)+'px';
+    el.appendChild(ink);
+    setTimeout(function(){try{ink.remove();}catch(e){}},680);
+  },{passive:true});
 })();
+
+/* ============================================================
+   PERF: pause heavy listeners when tab hidden
+   ============================================================ */
+document.addEventListener('visibilitychange',function(){
+  document.body.classList.toggle('page-hidden',document.hidden);
+});
 
 /* ============================================================
    INIT
    ============================================================ */
 updateTogglesUI();renderVpnCategoryTabs();renderVpnSources();
-setTimeout(positionNavIndicator,300);
-window.addEventListener('load',function(){setTimeout(positionNavIndicator,200);});
+requestAnimationFrame(positionNavIndicator);
+window.addEventListener('load',function(){requestAnimationFrame(positionNavIndicator);},{passive:true,once:true});
 
 if(!firebaseReady){setTimeout(function(){toast('Проверьте интернет');},500);}
 </script>
