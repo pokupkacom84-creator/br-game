@@ -893,30 +893,40 @@ const TS=Date.now();
 })();
 
 /* ============================================================
-   SPLASH GUARD — never let splash get stuck
+   SPLASH GUARD — скрываем сплеш только когда загрузка реально завершена
    ============================================================ */
-const splashState={hidden:false,statusEl:null};
+const splashState={hidden:false,statusEl:null,startedAt:Date.now(),minMs:900};
+
 function setSplashStatus(text,isErr){
   var el=splashState.statusEl||(splashState.statusEl=document.getElementById('splash-status'));
   if(!el)return;
   el.textContent=text||'Загрузка…';
   el.classList.toggle('err',!!isErr);
 }
+
+/* Ждём, пока сплеш показывался хотя бы minMs (сглаживает мгновенные ответы) */
+function whenMinSplashElapsed(){
+  var wait=Math.max(0,splashState.minMs-(Date.now()-splashState.startedAt));
+  return wait?new Promise(function(r){setTimeout(r,wait);}):Promise.resolve();
+}
+
+/* Аварийный выход: сплеш не должен висеть вечно */
 function hideSplashIfVisible(){
   if(splashState.hidden)return;
   if(currentScreenId!=='splash-screen')return;
   splashState.hidden=true;
   try{goScreen('auth-screen',true);}catch(e){console.warn(e);}
 }
-// Жёсткий fallback: если Firebase молчит — уводим со splash через 2.5с
+
+/* Авария №1: если Firebase молчит 8 секунд */
 setTimeout(function(){
   if(currentScreenId==='splash-screen'){
     if(!firebaseReady)setSplashStatus('Не удалось подключиться к серверу',true);
     hideSplashIfVisible();
   }
-},2500);
-// Дополнительный страховочный таймер
-setTimeout(function(){hideSplashIfVisible();},6000);
+},8000);
+/* Авария №2: окончательная страховка */
+setTimeout(function(){hideSplashIfVisible();},12000);
 
 const TELEGRAM_BOT_USERNAME = 'FluxPremPay_bot';
 const FLUX_PREMIUM_PLANS = [
@@ -1347,6 +1357,7 @@ if(firebaseReady&&auth){
       try{
         if(!user){
           currentUser=null;currentUserData=null;
+          await whenMinSplashElapsed();
           goScreen('auth-screen',true);
           return;
         }
@@ -1355,15 +1366,20 @@ if(firebaseReady&&auth){
         authProcessing=true;setTimeout(function(){authProcessing=false;},1000);
         currentUser=user;
         setSplashStatus('Проверка сессии…');
-        var snap;try{snap=await db.ref('users/'+user.uid).once('value');}catch(e){toast('Ошибка соединения');goScreen('auth-screen',true);return;}
+        var snap;try{snap=await db.ref('users/'+user.uid).once('value');}catch(e){toast('Ошибка соединения');await whenMinSplashElapsed();goScreen('auth-screen',true);return;}
         var data=snap.val();
-        if(data&&data.adminBlocked===true){toast('Аккаунт заблокирован администратором');try{await auth.signOut();}catch(e){}return;}
-        if(!data||!data.name){buildOnbAvatarGrid();goScreen('onboarding-screen',true);}
+        if(data&&data.adminBlocked===true){toast('Аккаунт заблокирован администратором');try{await auth.signOut();}catch(e){}await whenMinSplashElapsed();goScreen('auth-screen',true);return;}
+        if(!data||!data.name){
+          buildOnbAvatarGrid();
+          await whenMinSplashElapsed();
+          goScreen('onboarding-screen',true);
+        }
         else{
           currentUserData=Object.assign({uid:user.uid},data);
           if(data.autoDeleteMonths){autoDeleteMonths=parseInt(data.autoDeleteMonths,10)||0;try{localStorage.setItem('flux_auto_delete',String(autoDeleteMonths));}catch(e){}}
           if(data.twofa&&data.twofa.enabled){twoFAEnabled=true;try{localStorage.setItem('flux_2fa','1');}catch(e){}}
           if(pinLockEnabled&&pinLockCode){showPinLock();}
+          await whenMinSplashElapsed();
           goScreen('main-screen',true);
           startSelfListener();startSessionTracking();updateSettingsUI();updateTogglesUI();startGlobalPremiumListener();startPremiumListener();
           try{db.ref('users/'+user.uid).update({online:true,lastSeen:TS});}catch(e){}
@@ -1381,16 +1397,16 @@ if(firebaseReady&&auth){
     setTimeout(hideSplashIfVisible,600);
   }
 }else{
-  setTimeout(function(){if(currentScreenId==='splash-screen')goScreen('auth-screen',true);},700);
+  setTimeout(async function(){if(currentScreenId==='splash-screen'){await whenMinSplashElapsed();goScreen('auth-screen',true);}},700);
   setTimeout(function(){toast('Firebase не загружен. Проверьте интернет.');},1400);
 }
-// Финальный гарантированный выход со сплеша
+/* Финальный гарантированный выход со сплеша */
 setTimeout(function(){
   if(currentScreenId==='splash-screen'){
     hideSplashIfVisible();
     if(!firebaseReady)toast('Не удалось подключиться к серверу');
   }
-},9000);
+},10000);
 
 function startSelfListener(){
   if(!currentUser)return;
