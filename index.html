@@ -1782,16 +1782,75 @@ function parseVpnKeys(text){
   return keys;
 }
 function getVpnHost(raw){try{var after=raw.split('://')[1]||'';after=after.split('@').pop();var host=after.split(/[:/?#]/)[0];return host||'';}catch(e){return '';}}
-const COUNTRY_FLAGS={'nl':'🇳🇱','netherlands':'🇳🇱','de':'🇩🇪','germany':'🇩🇪','us':'🇺🇸','usa':'🇺🇸','uk':'🇬🇧','gb':'🇬🇧','fr':'🇫🇷','france':'🇫🇷','ru':'🇷🇺','russia':'🇷🇺','fi':'🇫🇮','se':'🇸🇪','pl':'🇵🇱','tr':'🇹🇷','jp':'🇯🇵','sg':'🇸🇬','hk':'🇭🇰','kr':'🇰🇷','in':'🇮🇳','ca':'🇨🇦','au':'🇦🇺','br':'🇧🇷','it':'🇮🇹','es':'🇪🇸','ch':'🇨🇭','at':'🇦🇹','cz':'🇨🇿','ro':'🇷🇴','ua':'🇺🇦','kz':'🇰🇿','ae':'🇦🇪','il':'🇮🇱','ir':'🇮🇷','cn':'🇨🇳','th':'🇹🇭','vn':'🇻🇳','id':'🇮🇩','ph':'🇵🇭','mx':'🇲🇽','ar':'🇦🇷','no':'🇳🇴','dk':'🇩🇰','be':'🇧🇪','ie':'🇮🇪','pt':'🇵🇹','gr':'🇬🇷','hu':'🇭🇺','bg':'🇧🇬','lt':'🇱🇹','lv':'🇱🇻','ee':'🇪🇪','md':'🇲🇩','by':'🇧🇾','rs':'🇷🇸','hr':'🇭🇷','sk':'🇸🇰','si':'🇸🇮'};
-const COUNTRY_KEYS_LONG=Object.keys(COUNTRY_FLAGS).filter(function(k){return k.length>3;});
+const COUNTRY_FLAGS={'nl':'🇳🇱','netherlands':'🇳🇱','de':'🇩🇪','germany':'🇩🇪','us':'🇺🇸','usa':'🇺🇸','united states':'🇺🇸','uk':'🇬🇧','gb':'🇬🇧','united kingdom':'🇬🇧','fr':'🇫🇷','france':'🇫🇷','ru':'🇷🇺','russia':'🇷🇺','fi':'🇫🇮','finland':'🇫🇮','se':'🇸🇪','sweden':'🇸🇪','pl':'🇵🇱','poland':'🇵🇱','tr':'🇹🇷','turkey':'🇹🇷','jp':'🇯🇵','japan':'🇯🇵','sg':'🇸🇬','singapore':'🇸🇬','hk':'🇭🇰','hong kong':'🇭🇰','kr':'🇰🇷','south korea':'🇰🇷','korea':'🇰🇷','in':'🇮🇳','india':'🇮🇳','ca':'🇨🇦','canada':'🇨🇦','au':'🇦🇺','australia':'🇦🇺','br':'🇧🇷','brazil':'🇧🇷','it':'🇮🇹','italy':'🇮🇹','es':'🇪🇸','spain':'🇪🇸','ch':'🇨🇭','switzerland':'🇨🇭','at':'🇦🇹','austria':'🇦🇹','cz':'🇨🇿','czech republic':'🇨🇿','ro':'🇷🇴','romania':'🇷🇴','ua':'🇺🇦','ukraine':'🇺🇦','kz':'🇰🇿','kazakhstan':'🇰🇿','ae':'🇦🇪','uae':'🇦🇪','united arab emirates':'🇦🇪','il':'🇮🇱','israel':'🇮🇱','ir':'🇮🇷','iran':'🇮🇷','cn':'🇨🇳','china':'🇨🇳','th':'🇹🇭','thailand':'🇹🇭','vn':'🇻🇳','vietnam':'🇻🇳','id':'🇮🇩','indonesia':'🇮🇩','ph':'🇵🇭','philippines':'🇵🇭','mx':'🇲🇽','mexico':'🇲🇽','ar':'🇦🇷','argentina':'🇦🇷','no':'🇳🇴','norway':'🇳🇴','dk':'🇩🇰','denmark':'🇩🇰','be':'🇧🇪','belgium':'🇧🇪','ie':'🇮🇪','ireland':'🇮🇪','pt':'🇵🇹','portugal':'🇵🇹','gr':'🇬🇷','greece':'🇬🇷','hu':'🇭🇺','hungary':'🇭🇺','bg':'🇧🇬','bulgaria':'🇧🇬','lt':'🇱🇹','lithuania':'🇱🇹','lv':'🇱🇻','latvia':'🇱🇻','ee':'🇪🇪','estonia':'🇪🇪','md':'🇲🇩','moldova':'🇲🇩','by':'🇧🇾','belarus':'🇧🇾','rs':'🇷🇸','serbia':'🇷🇸','hr':'🇭🇷','croatia':'🇭🇷','sk':'🇸🇰','slovakia':'🇸🇰','si':'🇸🇮','slovenia':'🇸🇮','lu':'🇱🇺','luxembourg':'🇱🇺','cy':'🇨🇾','cyprus':'🇨🇾','is':'🇮🇸','iceland':'🇮🇸','al':'🇦🇱','albania':'🇦🇱','ba':'🇧🇦','bosnia':'🇧🇦','mk':'🇲🇰','north macedonia':'🇲🇰','me':'🇲🇪','montenegro':'🇲🇪','ge':'🇬🇪','georgia':'🇬🇪','am':'🇦🇲','armenia':'🇦🇲','az':'🇦🇿','azerbaijan':'🇦🇿','uz':'🇺🇿','uzbekistan':'🇺🇿','kg':'🇰🇬','kyrgyzstan':'🇰🇬','tj':'🇹🇯','tajikistan':'🇹🇯','mn':'🇲🇳','mongolia':'🇲🇳','my':'🇲🇾','malaysia':'🇲🇾','nz':'🇳🇿','new zealand':'🇳🇿','za':'🇿🇦','south africa':'🇿🇦','eg':'🇪🇬','egypt':'🇪🇬','ng':'🇳🇬','nigeria':'🇳🇬','ke':'🇰🇪','kenya':'🇰🇪','cl':'🇨🇱','chile':'🇨🇱','co':'🇨🇴','colombia':'🇨🇴','pe':'🇵🇪','peru':'🇵🇪'};
+const COUNTRY_NAMES={'🇳🇱':'Netherlands','🇩🇪':'Germany','🇺🇸':'United States','🇬🇧':'United Kingdom','🇫🇷':'France','🇷🇺':'Russia','🇫🇮':'Finland','🇸🇪':'Sweden','🇵🇱':'Poland','🇹🇷':'Turkey','🇯🇵':'Japan','🇸🇬':'Singapore','🇭🇰':'Hong Kong','🇰🇷':'South Korea','🇮🇳':'India','🇨🇦':'Canada','🇦🇺':'Australia','🇧🇷':'Brazil','🇮🇹':'Italy','🇪🇸':'Spain','🇨🇭':'Switzerland','🇦🇹':'Austria','🇨🇿':'Czech Republic','🇷🇴':'Romania','🇺🇦':'Ukraine','🇰🇿':'Kazakhstan','🇦🇪':'United Arab Emirates','🇮🇱':'Israel','🇮🇷':'Iran','🇨🇳':'China','🇹🇭':'Thailand','🇻🇳':'Vietnam','🇮🇩':'Indonesia','🇵🇭':'Philippines','🇲🇽':'Mexico','🇦🇷':'Argentina','🇳🇴':'Norway','🇩🇰':'Denmark','🇧🇪':'Belgium','🇮🇪':'Ireland','🇵🇹':'Portugal','🇬🇷':'Greece','🇭🇺':'Hungary','🇧🇬':'Bulgaria','🇱🇹':'Lithuania','🇱🇻':'Latvia','🇪🇪':'Estonia','🇲🇩':'Moldova','🇧🇾':'Belarus','🇷🇸':'Serbia','🇭🇷':'Croatia','🇸🇰':'Slovakia','🇸🇮':'Slovenia','🇱🇺':'Luxembourg','🇨🇾':'Cyprus','🇮🇸':'Iceland','🇦🇱':'Albania','🇧🇦':'Bosnia and Herzegovina','🇲🇰':'North Macedonia','🇲🇪':'Montenegro','🇬🇪':'Georgia','🇦🇲':'Armenia','🇦🇿':'Azerbaijan','🇺🇿':'Uzbekistan','🇰🇬':'Kyrgyzstan','🇹🇯':'Tajikistan','🇲🇳':'Mongolia','🇲🇾':'Malaysia','🇳🇿':'New Zealand','🇿🇦':'South Africa','🇪🇬':'Egypt','🇳🇬':'Nigeria','🇰🇪':'Kenya','🇨🇱':'Chile','🇨🇴':'Colombia','🇵🇪':'Peru'};
+const COUNTRY_KEYS_LONG=Object.keys(COUNTRY_FLAGS).filter(function(k){return k.length>3;}).sort(function(a,b){return b.length-a.length;});
 const COUNTRY_KEYS_SHORT=Object.keys(COUNTRY_FLAGS).filter(function(k){return k.length<=3;});
 function extractVpnMeta(raw){
   var name='',flag='';
   var hashIdx=raw.indexOf('#');
-  if(hashIdx!==-1){try{name=decodeURIComponent(raw.slice(hashIdx+1));}catch(e){name=raw.slice(hashIdx+1);}}
+  if(hashIdx!==-1){try{name=decodeURIComponent(raw.slice(hashIdx+1).split('?')[0]);}catch(e){name=raw.slice(hashIdx+1).split('?')[0];}}
   if(!name&&/^vmess:\/\//i.test(raw)){try{var vm=raw.match(/vmess:\/\/([A-Za-z0-9+/=]+)/);if(vm){var cfg=JSON.parse(atob(vm[1]));if(cfg.ps)name=cfg.ps;}}catch(e){}}
-  if(name){var lower=name.toLowerCase();for(var i=0;i<COUNTRY_KEYS_LONG.length;i++){if(lower.indexOf(COUNTRY_KEYS_LONG[i])!==-1){flag=COUNTRY_FLAGS[COUNTRY_KEYS_LONG[i]];break;}}if(!flag){for(var j=0;j<COUNTRY_KEYS_SHORT.length;j++){var k=COUNTRY_KEYS_SHORT[j];var re=new RegExp('(^|[^a-z])'+k+'([^a-z]|$)','i');if(re.test(lower)){flag=COUNTRY_FLAGS[k];break;}}}}
-  return {name:name,flag:flag};
+  var searchText=String(name||'');
+  if(searchText){
+    var flagMatch=searchText.match(/[\u{1F1E6}-\u{1F1FF}]{2}/u);
+    if(flagMatch && COUNTRY_NAMES[flagMatch[0]]) flag=flagMatch[0];
+    var lower=searchText.toLowerCase();
+    if(!flag){
+      for(var i=0;i<COUNTRY_KEYS_LONG.length;i++){if(lower.indexOf(COUNTRY_KEYS_LONG[i])!==-1){flag=COUNTRY_FLAGS[COUNTRY_KEYS_LONG[i]];break;}}
+    }
+    if(!flag){
+      for(var j=0;j<COUNTRY_KEYS_SHORT.length;j++){var kk=COUNTRY_KEYS_SHORT[j];var re=new RegExp('(^|[^a-z])'+kk+'([^a-z]|$)','i');if(re.test(lower)){flag=COUNTRY_FLAGS[kk];break;}}
+    }
+  }
+  return {name:name,flag:flag,country:flag?(COUNTRY_NAMES[flag]||''):''};
+}
+function getVpnCountryMeta(k){
+  var meta={name:'',flag:'',country:''};
+  try{meta=extractVpnMeta(k&&k.raw?k.raw:'');}catch(e){}
+  if(!meta.flag && k && k.country){
+    meta.flag=k.country.flag||'';meta.country=k.country.name||'';
+  }
+  if(!meta.country && meta.flag) meta.country=COUNTRY_NAMES[meta.flag]||'';
+  return meta;
+}
+function getHappServerTitle(k){
+  var meta=getVpnCountryMeta(k);
+  if(meta.flag && meta.country) return meta.flag+' '+meta.country+' @FluxVpnClient';
+  if(meta.country) return meta.country+' @FluxVpnClient';
+  if(meta.flag) return meta.flag+' @FluxVpnClient';
+  return '@FluxVpnClient';
+}
+
+/* If the GitHub key itself does not contain a country, resolve the selected
+   server's public IP/host before importing it. The result is cached locally. */
+async function resolveVpnCountry(k){
+  var meta=getVpnCountryMeta(k);
+  if(meta.flag && meta.country) return meta;
+  var host=getVpnHost(k&&k.raw?k.raw:'');
+  if(!host) return meta;
+  try{
+    var cacheKey='flux_vpn_geo_'+host.toLowerCase();
+    var cached=localStorage.getItem(cacheKey);
+    if(cached){
+      var c=JSON.parse(cached);
+      if(c&&c.country){return {name:meta.name,flag:c.flag||'',country:c.country||''};}
+    }
+  }catch(e){}
+  try{
+    var resp=await fetch('https://ipwho.is/'+encodeURIComponent(host),{cache:'no-store'});
+    if(resp.ok){
+      var data=await resp.json();
+      var iso=String((data&&data.country_code)||'').toLowerCase();
+      var flag=iso.length===2?String.fromCodePoint(127397+iso.charCodeAt(0))+String.fromCodePoint(127397+iso.charCodeAt(1)):'';
+      var country=String((data&&data.country)||'');
+      if(flag && country){
+        try{localStorage.setItem('flux_vpn_geo_'+host.toLowerCase(),JSON.stringify({flag:flag,country:country}));}catch(e){}
+        return {name:meta.name,flag:flag,country:country};
+      }
+    }
+  }catch(e){}
+  return meta;
 }
 function renderVpnCategoryTabs(){
   var wrap=$('vpn-category-tabs');if(!wrap)return;
@@ -1865,11 +1924,10 @@ function isFluxGithubHost(host){
 }
 function getServerDisplay(k){
   if(!k) return '';
-  var meta = {name:'', flag:''};
-  try{ meta = extractVpnMeta(k.raw); }catch(e){}
-  var host = getVpnHost(k.raw);
-  var name = isFluxGithubHost(host) || /raw\.githubusercontent\.com/i.test(String(meta.name||'')) ? '@FluxVpnClient' : (meta.name || host || (k.proto.toUpperCase()+' server'));
-  return (meta.flag ? meta.flag+' ' : '') + truncate(name, 40);
+  var title=getHappServerTitle(k);
+  if(title!=='@FluxVpnClient') return truncate(title, 40);
+  var host=getVpnHost(k.raw);
+  return isFluxGithubHost(host) || /raw\.githubusercontent\.com/i.test(String((extractVpnMeta(k.raw)||{}).name||'')) ? '@FluxVpnClient' : truncate(host || (k.proto.toUpperCase()+' server'),40);
 }
 
 function bindVpnActions(list){
@@ -1929,7 +1987,8 @@ function renderHomeServers(){
     var flagHtml = meta.flag ? meta.flag : ic('globe',20);
     var host = getVpnHost(k.raw);
     var isGithubHost = isFluxGithubHost(host) || /raw\.githubusercontent\.com/i.test(String(meta.name||''));
-    var title = isGithubHost ? '@FluxVpnClient' : (meta.name ? meta.name : (host || k.proto.toUpperCase()+' сервер'));
+    var title = getHappServerTitle(k);
+    if(title==='@FluxVpnClient' && !isGithubHost) title = meta.name ? meta.name : (host || k.proto.toUpperCase()+' сервер');
     html += '<div class="vpn-key-item'+(isSel?' selected':'')+'" data-idx="'+i+'">'
       + '<div class="vpn-key-info">'
       +   '<div class="vpn-key-header">'
@@ -2027,26 +2086,16 @@ function buildHappDeepLink(rawKey){
  * The key itself stays unchanged; when it has no #title we add the server
  * display name (and country flag) as Happ metadata.
  */
-function buildHappSelectedKey(k){
+async function buildHappSelectedKey(k){
   if(!k || !k.raw) return '';
   var raw=String(k.raw).trim().replace(/[\r\n]+/g,'');
   if(!raw) return '';
 
-  /* Keep an existing Happ title/description untouched. */
-  if(raw.indexOf('#') !== -1) return raw;
-
-  var meta={name:'',flag:''};
-  try{ meta=extractVpnMeta(raw); }catch(e){}
-
-  var title='';
-  try{
-    title=String(meta.flag||'').trim();
-    if(meta.name) title+=(title?' ':'')+String(meta.name).trim();
-    title=title.replace(/[\r\n]+/g,'').trim();
-  }catch(e){title='';}
-
-  if(!title) return raw;
-  return raw+'#'+encodeURIComponent(title);
+  /* Always replace the source's old #name with the Flux country title. */
+  var base=raw.split('#')[0];
+  var geo=await resolveVpnCountry(k);
+  var title=(geo.flag&&geo.country ? geo.flag+' '+geo.country+' @FluxVpnClient' : '@FluxVpnClient').replace(/[\r\n]+/g,'').trim();
+  return base+'#'+encodeURIComponent(title);
 }
 
 function openInHapp(rawKey, serverName){
@@ -2114,20 +2163,22 @@ function doConnect(){
   playSound('connect');
 
   /* One selected server only — never send the GitHub subscription URL. */
-  var selectedKey = buildHappSelectedKey(vpnSelectedKey);
-  if(!selectedKey){
-    vpnConnecting=false;
-    updateConnectUI();
-    toast('Не удалось подготовить выбранный ключ');
-    return;
-  }
-
-  setTimeout(function(){
+  setTimeout(async function(){
     var status = $('vpn-status');
     if(status){
-      status.textContent = 'Открываем Happ…';
+      status.textContent = 'Определяем страну сервера…';
       status.className = 'vpn-status opening';
     }
+
+    var selectedKey = await buildHappSelectedKey(vpnSelectedKey);
+    if(!selectedKey){
+      vpnConnecting=false;
+      updateConnectUI();
+      toast('Не удалось подготовить выбранный ключ');
+      return;
+    }
+
+    if(status) status.textContent = 'Открываем Happ…';
 
     /* Android bridge launches Happ with ACTION_VIEW. WebView never sees happ://. */
     var happOpened = openInHapp(selectedKey, getServerDisplay(vpnSelectedKey));
