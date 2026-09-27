@@ -2021,9 +2021,53 @@ function buildHappDeepLink(rawKey){
   try{payload=encodeURI(payload).replace(/#/g,'%23');}catch(e){}
   return 'happ://add/'+payload;
 }
-function openInHapp(rawKey){
+
+/*
+ * Build the exact single configuration that should be imported into Happ.
+ * The key itself stays unchanged; when it has no #title we add the server
+ * display name (and country flag) as Happ metadata.
+ */
+function buildHappSelectedKey(k){
+  if(!k || !k.raw) return '';
+  var raw=String(k.raw).trim().replace(/[\r\n]+/g,'');
+  if(!raw) return '';
+
+  /* Keep an existing Happ title/description untouched. */
+  if(raw.indexOf('#') !== -1) return raw;
+
+  var meta={name:'',flag:''};
+  try{ meta=extractVpnMeta(raw); }catch(e){}
+
+  var title='';
+  try{
+    title=String(meta.flag||'').trim();
+    if(meta.name) title+=(title?' ':'')+String(meta.name).trim();
+    title=title.replace(/[\r\n]+/g,'').trim();
+  }catch(e){title='';}
+
+  if(!title) return raw;
+  return raw+'#'+encodeURIComponent(title);
+}
+
+function openInHapp(rawKey, serverName){
   if(!rawKey)return false;
-  var url=buildHappDeepLink(rawKey);
+  var selected=String(rawKey).trim().replace(/[\r\n]+/g,'');
+  if(!selected)return false;
+
+  /* IMPORTANT: do not let WebView navigate to happ:// itself.
+     The Android bridge launches the external Happ application. */
+  try{
+    if(window.Android && typeof window.Android.openExternalBrowser === 'function'){
+      var bridgeUrl=buildHappDeepLink(selected);
+      if(bridgeUrl){
+        window.Android.openExternalBrowser(bridgeUrl);
+        return true;
+      }
+    }
+  }catch(e){ console.warn('Android.openHappKey failed',e); }
+
+  /* Fallback for a normal Android browser / WebView implementation. */
+  var url=buildHappDeepLink(selected);
   if(!url)return false;
   try{
     var a=document.createElement('a');
@@ -2062,40 +2106,44 @@ function openVpnSubscriptionInHapp(){
 
 function doConnect(){
   if(vpnConnecting) return;
-  if(!vpnSelectedKey){ toast('Сначала выберите сервер'); return; }
+  if(!vpnSelectedKey || !vpnSelectedKey.raw){ toast('Сначала выберите сервер'); return; }
+
   vpnConnecting = true;
   updateConnectUI();
   vibrate('success');
   playSound('connect');
 
-  /* Step 1 — копируем ключ ещё раз для гарантии */
-  try{ copyText(vpnSelectedKey.raw); }catch(e){}
+  /* One selected server only — never send the GitHub subscription URL. */
+  var selectedKey = buildHappSelectedKey(vpnSelectedKey);
+  if(!selectedKey){
+    vpnConnecting=false;
+    updateConnectUI();
+    toast('Не удалось подготовить выбранный ключ');
+    return;
+  }
 
-  /* Step 2 — анимация ~1.4s, потом открываем Happ */
   setTimeout(function(){
     var status = $('vpn-status');
     if(status){
       status.textContent = 'Открываем Happ…';
       status.className = 'vpn-status opening';
     }
-    /* Happ imports a real subscription URL more reliably than a single URI in the
-       subscription field. The selected key is still copied as a direct fallback. */
-    var happOpened=openVpnSubscriptionInHapp();
+
+    /* Android bridge launches Happ with ACTION_VIEW. WebView never sees happ://. */
+    var happOpened = openInHapp(selectedKey, getServerDisplay(vpnSelectedKey));
+
     if(!happOpened){
-      happOpened=openInHapp(vpnSelectedKey.raw);
+      try{ copyText(vpnSelectedKey.raw); }catch(e){}
+      toast('Не удалось открыть Happ. Ключ скопирован.');
     }
-    if(!happOpened){
-      try{copyText(vpnSelectedKey.raw);}catch(e){}
-      toast('Ключ скопирован. Откройте Happ и вставьте его.');
-    }
-    /* Step 3 — финализация */
+
     setTimeout(function(){
       var btn = $('vpn-connect-btn');
       if(btn) btn.classList.add('connected');
       var lbl = $('vpn-connect-label');
       if(lbl) lbl.textContent = 'Подключено';
       if(status){
-        status.textContent = 'Ссылка передана в Happ';
+        status.textContent = happOpened ? 'Выбранный сервер передан в Happ' : 'Ключ скопирован в буфер';
         status.className = 'vpn-status connected';
       }
       playSound('success');
@@ -2106,7 +2154,7 @@ function doConnect(){
         try{ updateConnectUI(); }catch(e){}
       }, 2600);
     }, 900);
-  }, 1500);
+  }, 900);
 }
 var _connectBtn = $('vpn-connect-btn');
 if(_connectBtn) _connectBtn.onclick = doConnect;
