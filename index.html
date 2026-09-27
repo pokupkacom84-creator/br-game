@@ -1921,18 +1921,31 @@ try{
 function isFluxGithubHost(host){
   return /(?:^|\.)raw\.githubusercontent\.com$/i.test(String(host||''));
 }
+function stripLeadingCountryFlags(text){
+  text=String(text||'').trim();
+  /* Remove ALL leading regional-indicator flag pairs, not just one.
+     This also fixes titles such as "🇫🇷🇫🇷427Mb | YottaSrc". */
+  try{
+    text=text.replace(/^(?:[\uD83C][\uDDE6-\uDDFF])+(?:\s*)/u, '').trim();
+  }catch(e){
+    text=text.replace(/^(?:[\uD83C][\uDDE6-\uDDFF])+(?:\s*)/, '').trim();
+  }
+  return text;
+}
+
 function getServerDisplay(k){
   if(!k) return '';
 
   /*
      The selected-server label uses exactly the same renamed title as the
-     card and the title sent to Happ, but without the flag.
+     card and the title sent to Happ, but WITHOUT any flag.
      Example:
        🇺🇸60Mb | Hetzner -> 60Mb | @FluxVpnClient
+       🇫🇷🇫🇷427Mb | YottaSrc -> 427Mb | @FluxVpnClient
   */
   try{
     var renamed = String(buildFluxHappTitle(k.raw)||'').trim();
-    renamed = renamed.replace(/^[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]\s*/, '').trim();
+    renamed = stripLeadingCountryFlags(renamed);
     if(renamed) return truncate(renamed, 40);
   }catch(e){}
 
@@ -2010,12 +2023,12 @@ function renderHomeServers(){
     var title = '';
     try {
       var happTitle = buildFluxHappTitle(k.raw);
-      title = String(happTitle||'').replace(/^[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]\s*/, '').trim();
+      title = stripLeadingCountryFlags(String(happTitle||''));
     } catch(e) {}
     if(!title || title === '@FluxVpnClient'){
       if(!isGithubHost && meta.name){
         var originalName = String(meta.name||'').trim();
-        originalName = originalName.replace(/^[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]\s*/, '').trim();
+        originalName = stripLeadingCountryFlags(originalName);
         if(originalName){
           title = originalName.indexOf('|') >= 0
             ? originalName.split('|')[0].trim()+' | @FluxVpnClient'
