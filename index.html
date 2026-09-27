@@ -1860,12 +1860,15 @@ try{
   if(savedRaw) vpnSelectedKey = {raw:savedRaw, proto:(savedRaw.split('://')[0]||'').toLowerCase()};
 }catch(e){}
 
+function isFluxGithubHost(host){
+  return /(?:^|\.)raw\.githubusercontent\.com$/i.test(String(host||''));
+}
 function getServerDisplay(k){
   if(!k) return '';
   var meta = {name:'', flag:''};
   try{ meta = extractVpnMeta(k.raw); }catch(e){}
   var host = getVpnHost(k.raw);
-  var name = meta.name || host || (k.proto.toUpperCase()+' server');
+  var name = isFluxGithubHost(host) || /raw\.githubusercontent\.com/i.test(String(meta.name||'')) ? '@FluxVpnClient' : (meta.name || host || (k.proto.toUpperCase()+' server'));
   return (meta.flag ? meta.flag+' ' : '') + truncate(name, 40);
 }
 
@@ -1925,7 +1928,7 @@ function renderHomeServers(){
     try{ meta = extractVpnMeta(k.raw); }catch(e){}
     var flagHtml = meta.flag ? meta.flag : ic('globe',20);
     var host = getVpnHost(k.raw);
-    var isGithubHost = /(?:^|\.)raw\.githubusercontent\.com$/i.test(String(host||''));
+    var isGithubHost = isFluxGithubHost(host) || /raw\.githubusercontent\.com/i.test(String(meta.name||''));
     var title = isGithubHost ? '@FluxVpnClient' : (meta.name ? meta.name : (host || k.proto.toUpperCase()+' сервер'));
     html += '<div class="vpn-key-item'+(isSel?' selected':'')+'" data-idx="'+i+'">'
       + '<div class="vpn-key-info">'
@@ -2035,11 +2038,19 @@ function openInHapp(rawKey){
 function getVpnSubscriptionUrl(){
   try{
     var source=getActiveVpnSource();
+    var url='';
     if(source&&source.github){
       var g=source.github;
-      return buildRawUrl(g.owner,g.repo,g.branch||'main',g.path);
+      url=buildRawUrl(g.owner,g.repo,g.branch||'main',g.path);
+    }else if(source&&source.url){
+      url=String(source.url).trim();
     }
-    if(source&&source.url)return String(source.url).trim();
+    // Happ supports a #title fragment for the subscription name.
+    // The fragment is not sent to GitHub, but Happ uses it as the display name.
+    if(url && /raw\.githubusercontent\.com/i.test(url) && !/[#]/.test(url)){
+      url += '#@FluxVpnClient';
+    }
+    return url;
   }catch(e){}
   return '';
 }
