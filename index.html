@@ -2131,15 +2131,51 @@ function openVpnSubscriptionInHapp(){
   return openInHapp(subUrl);
 }
 
+function buildFluxHappTitle(raw){
+  raw=String(raw||'').trim().replace(/[\r\n]+/g,'');
+  var hash=raw.indexOf('#');
+  if(hash<0) return '@FluxVpnClient';
+
+  var oldTitle=raw.slice(hash+1);
+  try{ oldTitle=decodeURIComponent(oldTitle); }catch(e){}
+  oldTitle=String(oldTitle||'').replace(/[\r\n]+/g,'').trim();
+
+  /*
+     Берём именно исходное название из GitHub. Например:
+       🇺🇸60Mb | Hetzner
+     превращаем в:
+       🇺🇸60Mb | @FluxVpnClient
+
+     IP, UUID, Reality и остальные параметры вообще не трогаем.
+     Никакая геолокация/IP-база здесь не нужна.
+  */
+  if(!oldTitle) return '@FluxVpnClient';
+
+  var parts=oldTitle.split('|');
+  var prefix=String(parts[0]||'').trim();
+  if(prefix){
+    return prefix+' | @FluxVpnClient';
+  }
+
+  return '@FluxVpnClient';
+}
+
 function buildHappSelectedKey(k){
-  return resolveVpnCountry(k).then(function(geo){
-    if(!k||!k.raw)return '';
-    var raw=String(k.raw).trim().replace(/[\r\n]+/g,'');
-    if(!raw)return '';
-    var base=raw.split('#')[0];
-    var title=(geo.flag&&geo.country?geo.flag+' '+geo.country+' @FluxVpnClient':'@FluxVpnClient').replace(/[\r\n]+/g,'').trim();
-    return base+'#'+encodeURIComponent(title);
-  });
+  if(!k||!k.raw) return Promise.resolve('');
+
+  var raw=String(k.raw).trim().replace(/[\r\n]+/g,'');
+  if(!raw) return Promise.resolve('');
+
+  var hash=raw.indexOf('#');
+  var base=hash>=0 ? raw.slice(0,hash) : raw;
+  var title=buildFluxHappTitle(raw);
+
+  /*
+     Название кодируем как fragment самого VLESS/VMess URL.
+     Затем buildHappDeepLink() кодирует ВЕСЬ внутренний URL,
+     поэтому # не теряется внутри happ://add/.
+  */
+  return Promise.resolve(base+'#'+encodeURIComponent(title));
 }
 
 function doConnect(){
