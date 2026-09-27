@@ -1854,6 +1854,43 @@ function getServerDisplay(k){
   return (meta.flag ? meta.flag+' ' : '') + truncate(name, 40);
 }
 
+function bindVpnActions(list){
+  if(!list) return;
+  list.querySelectorAll('[data-copy]').forEach(function(btn){
+    btn.onclick = function(event){
+      if(event) event.stopPropagation();
+      var idx = Number(btn.getAttribute('data-copy'));
+      var key = vpnFiltered[idx];
+      if(!key) return;
+      copyText(key.raw);
+      btn.classList.add('copied');
+      setTimeout(function(){ btn.classList.remove('copied'); }, 900);
+      toast('Скопировано · ' + getServerDisplay(key));
+      vibrate('tap');
+    };
+  });
+  list.querySelectorAll('[data-star]').forEach(function(btn){
+    btn.onclick = function(event){
+      if(event) event.stopPropagation();
+      var idx = Number(btn.getAttribute('data-star'));
+      var key = vpnFiltered[idx];
+      if(!key) return;
+      var raw = key.raw;
+      if(vpnFavorites[raw]){
+        delete vpnFavorites[raw];
+        btn.classList.remove('active');
+        toast('Удалено из избранного');
+      }else{
+        vpnFavorites[raw] = true;
+        btn.classList.add('active');
+        toast('Добавлено в избранное');
+      }
+      saveVpnFavorites();
+      vibrate('tap');
+    };
+  });
+}
+
 function renderHomeServers(){
   var list = $('vpn-key-list'); if(!list) return;
   var countEl = $('vpn-servers-count');
