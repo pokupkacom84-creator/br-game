@@ -1812,6 +1812,21 @@ async function resolveVpnCountry(k){
   if(meta.flag&&meta.country)return meta;
   var host=getVpnHost(k&&k.raw?k.raw:'');
   if(!host)return meta;
+
+  /* First try the server hostname itself. Many of the GitHub keys use
+     prefixes such as nl-, de-, us-, etc., so this works even when the
+     WebView cannot reach the external geo service. */
+  try{
+    var hostLower=host.toLowerCase();
+    var hostParts=hostLower.split(/[.\-_]+/);
+    for(var hi=0;hi<hostParts.length;hi++){
+      var hp=hostParts[hi];
+      if(COUNTRY_FLAGS[hp] && hp.length===2){
+        return {name:meta.name,flag:COUNTRY_FLAGS[hp],country:COUNTRY_NAMES[COUNTRY_FLAGS[hp]]||''};
+      }
+    }
+  }catch(e){}
+
   try{
     var cacheKey='flux_vpn_geo_'+host.toLowerCase();
     var cached=localStorage.getItem(cacheKey);
@@ -2060,9 +2075,14 @@ function updateConnectUI(){
 function buildHappDeepLink(rawKey){
   rawKey=String(rawKey||'').trim().replace(/[\r\n]+/g,'');
   if(!rawKey)return '';
-  var payload=rawKey;
-  try{payload=encodeURI(payload).replace(/#/g,'%23');}catch(e){}
-  return 'happ://add/'+payload;
+  /*
+     Happ expects happ://add/<inner-link>.  The inner link may itself contain
+     #title.  Encode the WHOLE inner link so Android does not treat its # as
+     the fragment of the outer happ:// URI. Happ decodes the wrapper back to
+     the original VLESS/VMess/etc. link before importing it.
+  */
+  try{return 'happ://add/'+encodeURIComponent(rawKey);}catch(e){}
+  return 'happ://add/'+rawKey;
 }
 function openInHapp(rawKey){
   if(!rawKey)return false;
