@@ -1923,11 +1923,24 @@ function isFluxGithubHost(host){
 }
 function getServerDisplay(k){
   if(!k) return '';
+
+  /*
+     The selected-server label uses exactly the same renamed title as the
+     card and the title sent to Happ, but without the flag.
+     Example:
+       🇺🇸60Mb | Hetzner -> 60Mb | @FluxVpnClient
+  */
+  try{
+    var renamed = String(buildFluxHappTitle(k.raw)||'').trim();
+    renamed = renamed.replace(/^[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]\s*/, '').trim();
+    if(renamed) return truncate(renamed, 40);
+  }catch(e){}
+
   var meta = {name:'', flag:''};
   try{ meta = extractVpnMeta(k.raw); }catch(e){}
   var host = getVpnHost(k.raw);
   var name = isFluxGithubHost(host) || /raw\.githubusercontent\.com/i.test(String(meta.name||'')) ? '@FluxVpnClient' : (meta.name || host || (k.proto.toUpperCase()+' server'));
-  return (meta.flag ? meta.flag+' ' : '') + truncate(name, 40);
+  return String(name).replace(/^[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]\s*/, '').trim();
 }
 
 function bindVpnActions(list){
