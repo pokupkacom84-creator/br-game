@@ -1098,12 +1098,6 @@ function truncate(s,n){s=String(s==null?'':s);return s.length>n?s.slice(0,n-1)+'
 function toast(msg){var t=$('toast');if(!t)return;t.textContent=msg;t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(function(){t.classList.remove('show');},2800);}
 function hexToRgb(hex){hex=hex.replace('#','');if(hex.length===3)hex=hex.split('').map(function(c){return c+c;}).join('');var v=parseInt(hex,16);return{r:(v>>16)&255,g:(v>>8)&255,b:v&255};}
 function hexToRgba(hex,a){var c=hexToRgb(hex);return 'rgba('+c.r+','+c.g+','+c.b+','+a+')';}
-function copyText(text){
-  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){toast('Скопировано');}).catch(function(){fallbackCopy(text);});}
-  else fallbackCopy(text);
-}
-function fallbackCopy(text){var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Скопировано');}catch(e){toast('Не удалось');}document.body.removeChild(ta);}
-
 function animateNumber(el,to,duration){
   if(!el)return;
   duration=duration||600;
@@ -1998,19 +1992,6 @@ function getServerDisplay(k){
 
 function bindVpnActions(list){
   if(!list) return;
-  list.querySelectorAll('[data-copy]').forEach(function(btn){
-    btn.onclick = function(event){
-      if(event) event.stopPropagation();
-      var idx = Number(btn.getAttribute('data-copy'));
-      var key = vpnFiltered[idx];
-      if(!key) return;
-      copyText(key.raw);
-      btn.classList.add('copied');
-      setTimeout(function(){ btn.classList.remove('copied'); }, 900);
-      toast('Скопировано · ' + getServerDisplay(key));
-      vibrate('tap');
-    };
-  });
   list.querySelectorAll('[data-star]').forEach(function(btn){
     btn.onclick = function(event){
       if(event) event.stopPropagation();
@@ -2088,13 +2069,12 @@ function renderHomeServers(){
       + '</div>'
       + '<div class="vpn-key-actions">'
       +   '<button class="vpn-icon-btn star'+(isFav?' active':'')+'" data-star="'+i+'" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></button>'
-      +   '<button class="vpn-icon-btn" data-copy="'+i+'" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button>'
       + '</div>'
       + (isSel ? '<div class="vpn-key-check">✓</div>' : '')
       + '</div>';
   }
   list.innerHTML = html;
-  /* Click → select + copy */
+  /* Click → select only */
   list.querySelectorAll('.vpn-key-item').forEach(function(el){
     el.onclick = function(){ selectServer(vpnFiltered[+el.dataset.idx]); };
   });
@@ -2107,7 +2087,6 @@ function selectServer(k){
   k.raw=String(k.raw||'').trim().replace(/[\r\n]+/g,'');
   vpnSelectedKey = k;
   try{ localStorage.setItem('flux_selected_vpn_key', k.raw); }catch(e){}
-  copyText(k.raw);
   vibrate('tap');
   playSound('tap');
   /* update selection visually */
@@ -2126,7 +2105,6 @@ function selectServer(k){
     }
   });
   updateConnectUI();
-  toast('Скопировано · ' + getServerDisplay(k));
 }
 
 function updateConnectUI(){
@@ -2294,11 +2272,11 @@ function doConnect(){
     if(!selectedKey){vpnConnecting=false;updateConnectUI();toast('Не удалось подготовить выбранный ключ');return;}
     if(status)status.textContent='Открываем Happ…';
     var happOpened=openInHapp(selectedKey);
-    if(!happOpened){try{copyText(vpnSelectedKey.raw);}catch(e){}toast('Не удалось открыть Happ. Ключ скопирован.');}
+    if(!happOpened){toast('Не удалось открыть Happ');}
     setTimeout(function(){
       var btn=$('vpn-connect-btn');if(btn)btn.classList.add('connected');
       var lbl=$('vpn-connect-label');if(lbl)lbl.textContent='Подключено';
-      if(status){status.textContent=happOpened?'Выбранный сервер передан в Happ':'Ключ скопирован в буфер';status.className='vpn-status connected';}
+      if(status){status.textContent=happOpened?'Выбранный сервер передан в Happ':'Не удалось открыть Happ';status.className='vpn-status connected';}
       playSound('success');showSuccessOverlay();vibrate('success');vpnConnecting=false;
       setTimeout(function(){try{updateConnectUI();}catch(e){}},2600);
     },900);
