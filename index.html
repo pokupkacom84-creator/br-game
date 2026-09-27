@@ -1924,10 +1924,13 @@ function isFluxGithubHost(host){
 }
 function getServerDisplay(k){
   if(!k) return '';
-  var title=getHappServerTitle(k);
-  if(title!=='@FluxVpnClient') return truncate(title, 40);
-  var host=getVpnHost(k.raw);
-  return isFluxGithubHost(host) || /raw\.githubusercontent\.com/i.test(String((extractVpnMeta(k.raw)||{}).name||'')) ? '@FluxVpnClient' : truncate(host || (k.proto.toUpperCase()+' server'),40);
+  /* App card display stays exactly like before: show the key/server name,
+     or the actual server host when the key has no readable name.
+     Country + flag are added ONLY to the configuration imported into Happ. */
+  var meta=extractVpnMeta(k.raw||'');
+  if(meta && meta.name) return truncate(meta.name,40);
+  var host=getVpnHost(k.raw||'');
+  return truncate(host || ((k.proto||'').toUpperCase()+' server'),40);
 }
 
 function bindVpnActions(list){
