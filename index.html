@@ -2075,13 +2075,26 @@ function updateConnectUI(){
 function buildHappDeepLink(rawKey){
   rawKey=String(rawKey||'').trim().replace(/[\r\n]+/g,'');
   if(!rawKey)return '';
+
   /*
-     Happ expects happ://add/<inner-link>.  The inner link may itself contain
-     #title.  Encode the WHOLE inner link so Android does not treat its # as
-     the fragment of the outer happ:// URI. Happ decodes the wrapper back to
-     the original VLESS/VMess/etc. link before importing it.
+     IMPORTANT: happ://add/ must receive the actual vless:// / vmess://
+     link, not encodeURIComponent() of the whole link. Encoding the whole
+     link makes Happ see an invalid/subscription URL.
+
+     We leave the protocol + connection parameters untouched and encode only
+     the title after the #. Happ officially supports #title and percent-
+     encoded titles.
   */
-  try{return 'happ://add/'+encodeURIComponent(rawKey);}catch(e){}
+  try{
+    var hash=rawKey.indexOf('#');
+    if(hash>=0){
+      var base=rawKey.slice(0,hash);
+      var title=rawKey.slice(hash+1);
+      try{title=decodeURIComponent(title);}catch(e){}
+      return 'happ://add/'+base+'#'+encodeURIComponent(title);
+    }
+  }catch(e){}
+
   return 'happ://add/'+rawKey;
 }
 function openInHapp(rawKey){
@@ -2187,7 +2200,7 @@ function doConnect(){
   playSound('connect');
   setTimeout(async function(){
     var status=$('vpn-status');
-    if(status){status.textContent='Определяем страну сервера…';status.className='vpn-status opening';}
+    if(status){status.textContent='Подготавливаем ключ…';status.className='vpn-status opening';}
     var selectedKey=await buildHappSelectedKey(vpnSelectedKey);
     if(!selectedKey){vpnConnecting=false;updateConnectUI();toast('Не удалось подготовить выбранный ключ');return;}
     if(status)status.textContent='Открываем Happ…';
