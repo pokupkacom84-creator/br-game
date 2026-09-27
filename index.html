@@ -2062,40 +2062,43 @@ function openVpnSubscriptionInHapp(){
 
 function doConnect(){
   if(vpnConnecting) return;
-  if(!vpnSelectedKey){ toast('Сначала выберите сервер'); return; }
+  if(!vpnSelectedKey || !vpnSelectedKey.raw){ toast('Сначала выберите сервер'); return; }
+
   vpnConnecting = true;
   updateConnectUI();
   vibrate('success');
   playSound('connect');
 
-  /* Step 1 — копируем ключ ещё раз для гарантии */
-  try{ copyText(vpnSelectedKey.raw); }catch(e){}
+  /*
+   * IMPORTANT:
+   * Do NOT open the GitHub subscription here.
+   * Happ receives ONLY the exact key selected by the user.
+   * Example: vless://... or vmess://...
+   */
+  var selectedKey = String(vpnSelectedKey.raw).trim().replace(/[\r\n]+/g,'');
 
-  /* Step 2 — анимация ~1.4s, потом открываем Happ */
   setTimeout(function(){
     var status = $('vpn-status');
     if(status){
-      status.textContent = 'Открываем Happ…';
+      status.textContent = 'Передаём выбранный ключ в Happ…';
       status.className = 'vpn-status opening';
     }
-    /* Happ imports a real subscription URL more reliably than a single URI in the
-       subscription field. The selected key is still copied as a direct fallback. */
-    var happOpened=openVpnSubscriptionInHapp();
+
+    /* Send the selected server itself, never the source/subscription URL. */
+    var happOpened = openInHapp(selectedKey);
+
     if(!happOpened){
-      happOpened=openInHapp(vpnSelectedKey.raw);
+      try{ copyText(selectedKey); }catch(e){}
+      toast('Не удалось открыть Happ. Ключ скопирован.');
     }
-    if(!happOpened){
-      try{copyText(vpnSelectedKey.raw);}catch(e){}
-      toast('Ключ скопирован. Откройте Happ и вставьте его.');
-    }
-    /* Step 3 — финализация */
+
     setTimeout(function(){
       var btn = $('vpn-connect-btn');
       if(btn) btn.classList.add('connected');
       var lbl = $('vpn-connect-label');
       if(lbl) lbl.textContent = 'Подключено';
       if(status){
-        status.textContent = 'Ссылка передана в Happ';
+        status.textContent = happOpened ? 'Выбранный ключ передан в Happ' : 'Ключ скопирован в буфер';
         status.className = 'vpn-status connected';
       }
       playSound('success');
