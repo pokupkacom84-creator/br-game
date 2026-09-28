@@ -464,29 +464,6 @@ body.flux-premium .profile-premium-crown{opacity:1;transform:scale(1) rotate(-15
 .vpn-cat-tab.active{background:var(--accent-grad);color:#fff;border-color:transparent;box-shadow:0 3px 10px var(--accent-glow)}
 .vpn-cat-tab:disabled{opacity:.55;cursor:not-allowed}
 
-/* Premium whitelist */
-.vpn-whitelist-card{
-  margin:4px 16px 12px;padding:18px;border-radius:20px;
-  background:linear-gradient(135deg,var(--surface),var(--accent-softer));
-  border:1px solid rgba(168,85,247,.28);box-shadow:var(--shadow-2);
-  position:relative;overflow:hidden;
-}
-.vpn-whitelist-card::before{
-  content:'';position:absolute;width:130px;height:130px;right:-55px;top:-60px;
-  border-radius:50%;background:radial-gradient(circle,rgba(168,85,247,.18),transparent 70%);
-  pointer-events:none;
-}
-.vpn-whitelist-title{display:flex;align-items:center;gap:9px;font-size:17px;font-weight:850;position:relative;z-index:1}
-.vpn-whitelist-title svg{color:#a855f7;flex-shrink:0}
-.vpn-whitelist-text{font-size:12px;color:var(--text-2);line-height:1.45;margin-top:7px;position:relative;z-index:1}
-.vpn-whitelist-btn{
-  width:100%;margin-top:13px;padding:12px 14px;border-radius:13px;
-  background:linear-gradient(135deg,#8b5cf6,#a855f7);color:#fff;font-weight:800;
-  display:flex;align-items:center;justify-content:center;gap:7px;position:relative;z-index:1;
-  box-shadow:0 4px 12px rgba(124,58,237,.22);
-}
-.vpn-whitelist-url{font-size:10px;color:var(--text-3);margin-top:8px;word-break:break-all;position:relative;z-index:1}
-
 /* Premium */
 .premium-hero{margin:12px;padding:20px;border-radius:24px;background:linear-gradient(135deg,#7c3aed 0%,#a855f7 48%,#f59e0b 130%);color:#fff;position:relative;overflow:hidden;box-shadow:0 8px 22px rgba(124,58,237,.28)}
 .premium-hero-deco{position:absolute;right:-30px;top:-45px;width:190px;height:190px;color:rgba(255,255,255,.13);transform:rotate(15deg);pointer-events:none;z-index:0;line-height:0}
@@ -1030,8 +1007,8 @@ const VPN_FREE_SOURCES = [
   {id:'v3',name:'Бесплатный VPN 3',kind:'free',github:{owner:'AvenCores',repo:'goida-vpn-configs',branch:'main',path:'githubmirror/24.txt'}}
 ];
 const VPN_PREMIUM_SOURCES = [
-  {id:'p1',name:'Premium VPN',kind:'premium',github:{owner:'luxxuria',repo:'harvester',branch:'main',path:'top_600.txt'}},
-  {id:'p2',name:'Белые списки',kind:'premium',external:true,url:'https://github.com/igareck/vpn-configs-for-russia/blob/main/WHITE-CIDR-RU-all.txt'}
+  {id:'p1',name:'Premium VPN',kind:'premium',type:'vpn',github:{owner:'luxxuria',repo:'harvester',branch:'main',path:'top_600.txt'}},
+  {id:'p2',name:'Белые списки',kind:'premium',type:'vpn',github:{owner:'igareck',repo:'vpn-configs-for-russia',branch:'main',path:'WHITE-CIDR-RU-all.txt'}}
 ];
 
 function buildRawUrl(owner,repo,ref,path){return 'https://raw.githubusercontent.com/'+encodeURIComponent(owner)+'/'+encodeURIComponent(repo)+'/'+encodeURIComponent(ref)+'/'+path.split('/').map(encodeURIComponent).join('/');}
@@ -1953,7 +1930,7 @@ function renderVpnCategoryTabs(){
       if(btn.disabled)return;
       var wantPremium=btn.dataset.cat==='premium';
       if(wantPremium&&!isPremiumUserNow()){toast('Premium VPN доступен только Premium');return;}
-      var id=wantPremium?'p1':'v1';
+      var id=wantPremium?(isPremiumVpnSource(vpnActiveSourceId)?vpnActiveSourceId:'p1'):'v1';
       if(vpnActiveSourceId===id)return;
       vpnActiveSourceId=id;
       vpnActiveCategory=wantPremium?'premium':'free';
@@ -1981,29 +1958,6 @@ function renderVpnSources(){
     ch.onclick=function(){
       var id=ch.dataset.src;
       if(isPremiumVpnSource(id)&&!isPremiumUserNow()){toast('Premium VPN доступен только Premium');return;}
-      var source=(VPN_FREE_SOURCES.concat(VPN_PREMIUM_SOURCES)).find(function(x){return x.id===id;});
-      if(source&&source.external){
-        vpnActiveSourceId=id;
-        vpnActiveCategory='premium';
-        try{localStorage.setItem('flux_vpn_source',vpnActiveSourceId);localStorage.setItem('flux_vpn_category',vpnActiveCategory);}catch(e){}
-        vpnKeys=[];vpnFiltered=[];vpnRenderedUpTo=0;vpnProtoFilter='all';
-        renderVpnCategoryTabs();renderVpnSources();renderVpnFilters();
-        var list=$('vpn-key-list');
-        var count=$('vpn-servers-count');
-        if(count)count.textContent='—';
-        if(list){
-          list.innerHTML='<div class="vpn-whitelist-card">'+
-            '<div class="vpn-whitelist-title">'+ic('shield',22)+'<span>Белые списки</span></div>'+
-            '<div class="vpn-whitelist-text">Список CIDR-адресов для белых списков. Источник размещён в репозитории GitHub.</div>'+
-            '<button class="vpn-whitelist-btn" type="button" id="vpn-whitelist-open">'+ic('globe',16)+'<span>Открыть на GitHub</span></button>'+
-            '<div class="vpn-whitelist-url">'+esc(source.url)+'</div>'+
-            '</div>';
-          var openBtn=$('vpn-whitelist-open');
-          if(openBtn)openBtn.onclick=function(){openPaymentInExternalBrowser(source.url);};
-        }
-        updateConnectUI();
-        return;
-      }
       if(vpnActiveSourceId===id)return;
       vpnActiveSourceId=id;
       vpnActiveCategory=isPremiumVpnSource(id)?'premium':'free';
