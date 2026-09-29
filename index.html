@@ -514,14 +514,18 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 
 .profile-sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9996;display:none;align-items:flex-end;justify-content:center;animation:fadeIn .18s}
 .profile-sheet.show{display:flex}
-.profile-sheet-body{
+ .profile-sheet-body{
   background:var(--surface);
   width:100%;max-width:500px;border-radius:32px 32px 0 0;padding:var(--s-5);
   padding-bottom:calc(var(--s-5) + env(safe-area-inset-bottom));
-  max-height:88vh;overflow-y:auto;animation:slideUp .28s var(--ease-out);
+  height:min(88dvh,760px);max-height:88dvh;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior-y:contain;
+  scrollbar-width:none;flex-shrink:0;
+  animation:slideUp .28s var(--ease-out);
   position:relative;box-shadow:0 -12px 32px rgba(0,0,0,.2);
   border-top:1px solid var(--border);
 }
+.profile-sheet-body::-webkit-scrollbar{display:none}
 .profile-sheet-body::before{content:'';position:absolute;top:10px;left:50%;transform:translateX(-50%);width:40px;height:5px;border-radius:3px;background:var(--border-2)}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
@@ -862,8 +866,8 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 
 <div id="profile-sheet" class="profile-sheet"><div class="profile-sheet-body" id="profile-sheet-body"></div></div>
 
-<div id="edit-profile-sheet" class="profile-sheet">
-<div class="profile-sheet-body">
+<div id="edit-profile-sheet" class="profile-sheet edit-profile-sheet">
+<div class="profile-sheet-body edit-profile-sheet-body">
 <div class="profile-sheet-title">Аватар</div>
 <div class="avatar-grid" id="edit-avatar-grid"></div>
 <div class="profile-sheet-subtitle">Имя</div>
@@ -1516,6 +1520,8 @@ function startSessionTracking(){
 
 $('btn-edit-profile').onclick=function(){
   var sheet=$('edit-profile-sheet');sheet.classList.add('show');
+  var editBody=sheet.querySelector('.profile-sheet-body');
+  if(editBody){editBody.scrollTop=0;editBody.style.overflowY='auto';}
   editAvatarId=currentUserData.avatarId||'a1';
   $('edit-name').value=currentUserData.name||'';
   $('edit-username').value=currentUserData.username||'';
