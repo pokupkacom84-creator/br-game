@@ -526,6 +526,19 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
   border-top:1px solid var(--border);
 }
 .profile-sheet-body::-webkit-scrollbar{display:none}
+/* EDIT PROFILE: keep the sheet compact so the form always has a real scroll area on mobile */
+#edit-profile-sheet .edit-profile-sheet-body{
+  height:70dvh !important;
+  max-height:70dvh !important;
+  min-height:0 !important;
+  overflow-y:scroll !important;
+  overflow-x:hidden !important;
+  -webkit-overflow-scrolling:touch !important;
+  touch-action:pan-y !important;
+  overscroll-behavior:contain;
+  scrollbar-width:none;
+}
+#edit-profile-sheet .edit-profile-sheet-body::-webkit-scrollbar{display:none}
 .profile-sheet-body::before{content:'';position:absolute;top:10px;left:50%;transform:translateX(-50%);width:40px;height:5px;border-radius:3px;background:var(--border-2)}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
@@ -1521,7 +1534,13 @@ function startSessionTracking(){
 $('btn-edit-profile').onclick=function(){
   var sheet=$('edit-profile-sheet');sheet.classList.add('show');
   var editBody=sheet.querySelector('.profile-sheet-body');
-  if(editBody){editBody.scrollTop=0;editBody.style.overflowY='auto';}
+  if(editBody){
+    editBody.style.overflowY='scroll';
+    editBody.style.overflowX='hidden';
+    editBody.style.webkitOverflowScrolling='touch';
+    editBody.style.touchAction='pan-y';
+    editBody.scrollTop=0;
+  }
   editAvatarId=currentUserData.avatarId||'a1';
   $('edit-name').value=currentUserData.name||'';
   $('edit-username').value=currentUserData.username||'';
