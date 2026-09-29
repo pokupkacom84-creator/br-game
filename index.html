@@ -621,6 +621,7 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
   .vpn-connect-btn.connecting{animation:none!important}
   .vpn-connect-btn.connecting .vpn-connect-logo,.vpn-connect-btn.connecting .vpn-connect-logo svg,.vpn-connect-btn.connecting .vpn-connect-orbit{animation:none!important}
 }
+.avatar-grid,.avatar-option,#onb-avatar-grid,#edit-avatar-grid{display:none!important;}
 </style>
 </head>
 <body>
@@ -713,8 +714,6 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 <path fill="url(#fluxLogoGradientOnb)" d="M 511 183 L 384 184 L 368 208 L 365 210 L 366 211 L 282 336 L 234 261 L 231 261 L 203 301 L 200 302 L 201 304 L 198 305 L 199 307 L 195 312 L 193 312 L 194 314 L 171 347 L 168 349 L 187 380 L 195 390 L 194 393 L 195 392 L 198 395 L 214 422 L 218 426 L 217 428 L 219 428 L 233 445 L 245 453 L 259 460 L 274 464 L 291 465 L 313 461 L 328 454 L 341 445 L 354 429 L 366 409 L 369 407 L 368 406 L 422 322 L 433 308 L 443 291 L 444 292 L 443 290 L 471 247 L 473 247 L 472 245 L 481 231 L 484 229 L 489 218 L 491 216 L 492 217 L 492 214 L 509 189 Z"/>
 </svg></div>
 <h1 class="auth-title" style="margin-bottom:var(--s-4)">Flux Client</h1>
-<h2 class="onb-title">Выберите аватар</h2>
-<div class="avatar-grid" id="onb-avatar-grid"></div>
 <h2 class="onb-title" style="margin-top:var(--s-5)">Ваш профиль</h2>
 <input id="onb-name" class="onb-input" placeholder="Имя" maxlength="32">
 <input id="onb-username" class="onb-input" placeholder="@username" maxlength="32" autocomplete="off">
@@ -881,8 +880,6 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 
 <div id="edit-profile-sheet" class="profile-sheet edit-profile-sheet">
 <div class="profile-sheet-body edit-profile-sheet-body">
-<div class="profile-sheet-title">Аватар</div>
-<div class="avatar-grid" id="edit-avatar-grid"></div>
 <div class="profile-sheet-subtitle">Имя</div>
 <input class="sheet-input" id="edit-name" placeholder="Имя" maxlength="32">
 <div class="profile-sheet-subtitle">@username</div>
@@ -1477,7 +1474,8 @@ function startSelfListener(){
   },function(err){console.warn('users listener:',err);});
 }
 
-function buildOnbAvatarGrid(){
+function buildOnbAvatarGrid(){return;
+  
   var g=$('onb-avatar-grid');if(!g)return;
   var html='';PRESET_AVATARS.forEach(function(a){html+='<div class="avatar-option'+(onbAvatarId===a.id?' selected':'')+'" data-id="'+a.id+'" style="background:'+a.bg+'">'+a.emoji+'</div>';});
   g.innerHTML=html;
@@ -1549,7 +1547,7 @@ $('btn-edit-profile').onclick=function(){
   $('edit-username-status').className='username-status';
   $('edit-bio').value=currentUserData.bio||'';
   var bdInput=$('edit-birthday');if(bdInput)bdInput.value=currentUserData.birthday||'';
-  var g=$('edit-avatar-grid');var html='';
+  var g=null;var html='';
   PRESET_AVATARS.forEach(function(a){html+='<div class="avatar-option'+(editAvatarId===a.id?' selected':'')+'" data-id="'+a.id+'" style="background:'+a.bg+'">'+a.emoji+'</div>';});
   g.innerHTML=html;
   g.querySelectorAll('.avatar-option').forEach(function(el){el.onclick=function(){editAvatarId=el.dataset.id;g.querySelectorAll('.avatar-option').forEach(function(x){x.classList.remove('selected');});el.classList.add('selected');vibrate('tap');};});
