@@ -1849,7 +1849,23 @@ async function fluxPublishPost(){
     }
     await ref.set(base);localStorage.removeItem('flux_feed_draft');
     $('feed-post-text').value='';$('feed-post-sound').value='';vf.value='';imf.value='';$('feed-selected-media').innerHTML='';feedCloseModal('feed-composer-modal');toast('Видео опубликовано');
-  }catch(e){console.error(e);toast(e.message&&/200 МБ/.test(e.message)?e.message:'Не удалось загрузить. Проверь Firebase Storage и правила доступа.');}
+  }catch(e){
+    console.error('FLUX FEED UPLOAD ERROR:', e);
+    var code=e&&e.code?String(e.code):'';
+    var msg=e&&e.message?String(e.message):'';
+    var lower=(code+' '+msg).toLowerCase();
+    var userMsg='Не удалось загрузить файл.';
+    if(/200 мб/.test(lower)) userMsg=msg;
+    else if(code==='storage/unauthorized' || /permission[_ -]?denied|unauthorized/.test(lower)) userMsg='Firebase Storage: нет доступа. Проверь Storage Rules.';
+    else if(code==='storage/unauthenticated' || /unauthenticated|user is not authenticated/.test(lower)) userMsg='Firebase: пользователь не авторизован. Войдите в аккаунт и попробуйте снова.';
+    else if(code==='storage/bucket-not-found' || /bucket.*not found|no default bucket/.test(lower)) userMsg='Firebase Storage: bucket не найден. Создай/включи Storage в Firebase Console.';
+    else if(code==='storage/quota-exceeded' || /quota/.test(lower)) userMsg='Firebase Storage: превышена квота проекта.';
+    else if(code==='storage/canceled') userMsg='Загрузка отменена.';
+    else if(/storage sdk|firebase storage sdk/.test(lower)) userMsg='Firebase Storage SDK не загружен.';
+    else if(/network|failed to fetch|offline/.test(lower)) userMsg='Нет соединения с Firebase. Проверь интернет и настройки Firebase.';
+    else if(msg) userMsg='Ошибка Firebase: '+msg;
+    toast(userMsg);
+  }
   finally{if(btn){btn.disabled=false;btn.textContent='Опубликовать';}if(prog){prog.hidden=true;prog.querySelector('div').style.width='0';}}
 }
 function fluxSaveDraft(){var d={text:$('feed-post-text').value||'',sound:$('feed-post-sound').value||'',privacy:$('feed-post-privacy').value||'public',comments:$('feed-post-comments').checked,download:$('feed-post-download').checked,createdAt:Date.now()};localStorage.setItem('flux_feed_draft',JSON.stringify(d));toast('Черновик сохранён');feedCloseModal('feed-composer-modal');}
