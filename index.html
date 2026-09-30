@@ -15,6 +15,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+
 <style>
 /* ============================================================
    LITE MODE DETECTION
@@ -650,6 +651,8 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 @keyframes feedSheet{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
 .feed-modal-title{font-size:20px;font-weight:850;margin-bottom:14px}.feed-modal textarea,.feed-modal input{width:100%;box-sizing:border-box;border:1px solid var(--border-2);background:var(--bg-2);color:var(--text);border-radius:14px;padding:12px;font:inherit;outline:none}.feed-modal textarea{min-height:120px;resize:vertical}.feed-modal textarea:focus,.feed-modal input:focus{border-color:var(--accent)}.feed-modal-row{display:flex;gap:8px;margin-top:10px}.feed-modal-btn{flex:1;border:0;border-radius:13px;padding:12px;font-weight:800;background:var(--accent-grad);color:#fff}.feed-modal-btn.secondary{background:var(--bg-2);color:var(--text)}.feed-file{font-size:12px;margin-top:10px}.feed-comment{display:flex;gap:9px;padding:10px 0;border-bottom:1px solid var(--divider)}.feed-comment-body{flex:1}.feed-comment-name{font-size:12px;font-weight:800}.feed-comment-text{font-size:13px;line-height:1.4;margin-top:2px}.feed-comment-time{font-size:10px;color:var(--text-3);margin-top:3px}
 @media(max-width:380px){.feed-filter{padding:8px 10px}.feed-card{margin-left:8px;margin-right:8px}}
+
+.flux-create-choice{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.feed-upload-card{min-height:105px;border:1px dashed var(--border-2);border-radius:16px;background:var(--bg-2);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}.feed-upload-icon{font-size:28px}.feed-upload-card b{margin-top:5px}.feed-upload-card small{color:var(--text-3);margin-top:3px}.feed-selected-media{display:flex;gap:7px;overflow:auto;margin:8px 0}.feed-selected-media img,.feed-selected-media video{width:70px;height:90px;object-fit:cover;border-radius:10px;flex:none}.feed-check{display:flex;align-items:center;gap:8px;font-size:13px;margin-top:10px}.feed-check input{accent-color:var(--accent)}.feed-upload-progress{margin-top:10px}.feed-upload-progress>div{height:5px;background:var(--accent);border-radius:99px;width:0;transition:width .2s}.feed-upload-progress span{display:block;font-size:11px;color:var(--text-3);margin-top:5px}.feed-draft-badge{font-size:10px;color:var(--text-3)}
 </style>
 </head>
 <body>
@@ -861,10 +864,19 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 <div id="feed-composer-modal" class="feed-modal-overlay">
   <div class="feed-modal">
     <div class="feed-modal-title">Новая публикация</div>
-    <textarea id="feed-post-text" maxlength="2000" placeholder="Поделись чем-нибудь с Flux…"></textarea>
-    <input id="feed-post-image-url" class="feed-file" maxlength="1000" placeholder="Ссылка на изображение — необязательно">
-    <input id="feed-post-video-url" class="feed-file" maxlength="1000" placeholder="Ссылка на видео (MP4/WebM) — необязательно">
-    <div class="feed-modal-row"><button class="feed-modal-btn secondary" id="feed-post-cancel">Отмена</button><button class="feed-modal-btn" id="feed-post-publish">Опубликовать</button></div>
+    <div class="flux-create-choice">
+      <label class="feed-upload-card ripple"><span class="feed-upload-icon">🎬</span><b>Видео</b><small>Выбрать из галереи</small><input id="feed-post-video-file" type="file" accept="video/*" hidden></label>
+      <label class="feed-upload-card ripple"><span class="feed-upload-icon">🖼️</span><b>Фото</b><small>Одно или несколько</small><input id="feed-post-image-file" type="file" accept="image/*" multiple hidden></label>
+    </div>
+    <div id="feed-selected-media" class="feed-selected-media"></div>
+    <input id="feed-post-cover-file" class="feed-file" type="file" accept="image/*" style="display:none">
+    <input id="feed-post-text" class="feed-file" maxlength="2200" placeholder="Описание и #хэштеги">
+    <input id="feed-post-sound" class="feed-file" maxlength="120" placeholder="Название звука — необязательно">
+    <select id="feed-post-privacy" class="feed-file" style="width:100%;padding:12px;border-radius:14px;border:1px solid var(--border-2);background:var(--bg-2);color:var(--text)"><option value="public">🌎 Все</option><option value="followers">👥 Подписчики</option><option value="private">🔒 Только я</option></select>
+    <label class="feed-check"><input id="feed-post-comments" type="checkbox" checked> Разрешить комментарии</label>
+    <label class="feed-check"><input id="feed-post-download" type="checkbox" checked> Разрешить скачивание</label>
+    <div id="feed-upload-progress" class="feed-upload-progress" hidden><div></div><span>Загрузка…</span></div>
+    <div class="feed-modal-row"><button class="feed-modal-btn secondary" id="feed-post-draft">Черновик</button><button class="feed-modal-btn secondary" id="feed-post-cancel">Отмена</button><button class="feed-modal-btn" id="feed-post-publish">Опубликовать</button></div>
   </div>
 </div>
 <div id="feed-comments-modal" class="feed-modal-overlay">
@@ -1812,17 +1824,38 @@ function feedCloseModal(id){var x=$(id);if(x)x.classList.remove('show');}
 function openFluxComposer(){feedOpenModal('feed-composer-modal');setTimeout(function(){var x=$('feed-post-text');if(x)x.focus();},100);}
 async function fluxPublishPost(){
   if(!currentUser||!db){toast('Войдите в аккаунт');return;}
-  var text=String($('feed-post-text').value||'').trim(),image=String($('feed-post-image-url').value||'').trim(),video=String($('feed-post-video-url').value||'').trim();
-  if(!text&&!image&&!video){toast('Добавь текст, изображение или видео');return;}
-  var btn=$('feed-post-publish');if(btn){btn.disabled=true;btn.textContent='Публикация…';}
+  var text=String($('feed-post-text').value||'').trim(),sound=String($('feed-post-sound').value||'').trim();
+  var vf=$('feed-post-video-file'),imf=$('feed-post-image-file'),privacy=$('feed-post-privacy').value;
+  var videoFile=vf&&vf.files&&vf.files[0],imageFiles=imf&&imf.files?Array.from(imf.files):[];
+  var draft=localStorage.getItem('flux_feed_draft');
+  if(!videoFile&&!imageFiles.length&&!text){toast('Выбери видео/фото или добавь описание');return;}
+  var btn=$('feed-post-publish');if(btn){btn.disabled=true;btn.textContent='Загрузка…';}
+  var prog=$('feed-upload-progress');if(prog){prog.hidden=false;prog.querySelector('div').style.width='2%';}
   try{
-    var ref=db.ref('feedPosts').push();
-    var p=feedProfile();
-    await ref.set({uid:currentUser.uid,name:p.name||currentUser.displayName||'Пользователь Flux',username:p.username||'',avatarUrl:p.avatarUrl||'',premium:isPremiumActive(p.premium||{}),text:text,imageUrl:image,videoUrl:video,createdAt:firebase.database.ServerValue.TIMESTAMP,likes:{},saved:{},reactions:{},commentsCount:0});
-    $('feed-post-text').value='';$('feed-post-image-url').value='';$('feed-post-video-url').value='';feedCloseModal('feed-composer-modal');toast('Публикация создана');
-  }catch(e){console.error(e);toast('Не удалось опубликовать');}
-  finally{if(btn){btn.disabled=false;btn.textContent='Опубликовать';}}
+    if(!firebase.storage){throw new Error('Firebase Storage SDK не загружен');}
+    var p=feedProfile(),ref=db.ref('feedPosts').push(),postId=ref.key;
+    var base={uid:currentUser.uid,name:p.name||currentUser.displayName||'Пользователь Flux',username:p.username||'',avatarUrl:p.avatarUrl||'',premium:isPremiumActive(p.premium||{}),text:text,soundTitle:sound,privacy:privacy,allowComments:$('feed-post-comments').checked,allowDownload:$('feed-post-download').checked,createdAt:firebase.database.ServerValue.TIMESTAMP,likes:{},saved:{},reactions:{},commentsCount:0};
+    if(videoFile){
+      if(videoFile.size>200*1024*1024)throw new Error('Видео больше 200 МБ');
+      var vr=firebase.storage().ref('fluxFeed/'+currentUser.uid+'/'+postId+'/video_'+Date.now()+'_'+videoFile.name.replace(/[^a-zA-Z0-9._-]/g,'_'));
+      var task=vr.put(videoFile,{contentType:videoFile.type});
+      await new Promise(function(resolve,reject){task.on('state_changed',function(s){if(prog)prog.querySelector('div').style.width=Math.max(3,Math.round(s.bytesTransferred/s.totalBytes*85))+'%';},reject,resolve);});
+      base.videoUrl=await vr.getDownloadURL();base.mediaType='video';base.originalName=videoFile.name;
+      var cover=$('feed-post-cover-file');if(cover&&cover.files&&cover.files[0]){var cf=cover.files[0],cr=firebase.storage().ref('fluxFeed/'+currentUser.uid+'/'+postId+'/cover_'+Date.now());await cr.put(cf,{contentType:cf.type});base.coverUrl=await cr.getDownloadURL();}
+    }else if(imageFiles.length){
+      base.mediaType=imageFiles.length>1?'photos':'image';base.imageUrls=[];
+      for(var i=0;i<Math.min(imageFiles.length,10);i++){var f=imageFiles[i];if(f.size>15*1024*1024)continue;var ir=firebase.storage().ref('fluxFeed/'+currentUser.uid+'/'+postId+'/image_'+i+'_'+Date.now());await ir.put(f,{contentType:f.type});base.imageUrls.push(await ir.getDownloadURL());if(prog)prog.querySelector('div').style.width=Math.min(90,10+(i+1)/Math.min(imageFiles.length,10)*80)+'%';}
+      if(!base.imageUrls.length)throw new Error('Не удалось загрузить изображения');base.imageUrl=base.imageUrls[0];
+    }
+    await ref.set(base);localStorage.removeItem('flux_feed_draft');
+    $('feed-post-text').value='';$('feed-post-sound').value='';vf.value='';imf.value='';$('feed-selected-media').innerHTML='';feedCloseModal('feed-composer-modal');toast('Видео опубликовано');
+  }catch(e){console.error(e);toast(e.message&&/200 МБ/.test(e.message)?e.message:'Не удалось загрузить. Проверь Firebase Storage и правила доступа.');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Опубликовать';}if(prog){prog.hidden=true;prog.querySelector('div').style.width='0';}}
 }
+function fluxSaveDraft(){var d={text:$('feed-post-text').value||'',sound:$('feed-post-sound').value||'',privacy:$('feed-post-privacy').value||'public',comments:$('feed-post-comments').checked,download:$('feed-post-download').checked,createdAt:Date.now()};localStorage.setItem('flux_feed_draft',JSON.stringify(d));toast('Черновик сохранён');feedCloseModal('feed-composer-modal');}
+function fluxLoadDraft(){try{var d=JSON.parse(localStorage.getItem('flux_feed_draft')||'null');if(!d)return;$('feed-post-text').value=d.text||'';$('feed-post-sound').value=d.sound||'';$('feed-post-privacy').value=d.privacy||'public';$('feed-post-comments').checked=d.comments!==false;$('feed-post-download').checked=d.download!==false;}catch(e){}}
+function fluxPreviewSelected(){var box=$('feed-selected-media');if(!box)return;box.innerHTML='';var vf=$('feed-post-video-file'),imf=$('feed-post-image-file');if(vf&&vf.files[0]){var u=URL.createObjectURL(vf.files[0]);box.innerHTML='<video src="'+u+'" muted></video><label class="feed-upload-card" style="min-width:70px;min-height:90px"><span>🖼️</span><small>Обложка</small><input id="feed-post-cover-file" type="file" accept="image/*" hidden></label>';return;}if(imf&&imf.files){Array.from(imf.files).slice(0,10).forEach(function(f){var u=URL.createObjectURL(f);box.insertAdjacentHTML('beforeend','<img src="'+u+'" alt="">');});}}
+
 function feedSort(posts){
   var a=posts.slice();
   if(fluxFeedFilter==='popular')a.sort(function(x,y){return (Object.keys(y.likes||{}).length+Number(y.commentsCount||0)*2)-(Object.keys(x.likes||{}).length+Number(x.commentsCount||0)*2);});
@@ -1836,7 +1869,7 @@ function renderFluxFeed(){
   list.innerHTML=posts.map(function(p){
     var liked=!!(p.likes&&currentUser&&p.likes[currentUser.uid]),saved=!!(p.saved&&currentUser&&p.saved[currentUser.uid]);
     var likes=Object.keys(p.likes||{}).length, comments=Number(p.commentsCount||0), premium=p.premium?' <span class="feed-premium-dot">✦</span>':'';
-    var media=p.videoUrl?'<video class="feed-video" src="'+feedEsc(p.videoUrl)+'" playsinline muted loop preload="metadata"></video><div class="feed-video-pause"><span>▶</span></div>':(p.imageUrl?'<img class="feed-media" src="'+feedEsc(p.imageUrl)+'" alt="" loading="lazy">':'<div class="feed-media"></div>');
+    var media=p.videoUrl?'<video class="feed-video" src="'+feedEsc(p.videoUrl)+'" '+(p.coverUrl?'poster="'+feedEsc(p.coverUrl)+'" ':'')+'playsinline muted loop preload="metadata"></video><div class="feed-video-pause"><span>▶</span></div>':(p.imageUrls&&p.imageUrls.length?'<div class="feed-photo-strip">'+p.imageUrls.map(function(u){return '<img class="feed-media" src="'+feedEsc(u)+'" alt="" loading="lazy">';}).join('')+'</div>':(p.imageUrl?'<img class="feed-media" src="'+feedEsc(p.imageUrl)+'" alt="" loading="lazy">':'<div class="feed-media"></div>'));
     return '<article class="feed-card" data-post-id="'+feedEsc(p.id)+'">'+media+
       '<div class="feed-card-head">'+feedAvatarHTML(p,'feed-avatar')+'<div class="feed-author"><div class="feed-author-name">'+feedEsc(feedUserName(p))+premium+'</div><div class="feed-author-meta">'+(p.username?'@'+feedEsc(p.username)+' · ':'')+feedTime(p.createdAt)+'</div></div></div>'+
       (p.text?'<div class="feed-text">'+feedEsc(p.text)+'</div>':'')+
@@ -1874,7 +1907,7 @@ function initFluxFeed(){
   if(fluxFeedInitialized){renderFluxFeed();return;}fluxFeedInitialized=true;
   var av=$('feed-my-avatar'),p=feedProfile();if(av){if(p.avatarUrl)av.innerHTML='<img src="'+feedEsc(p.avatarUrl)+'" alt="">';else av.textContent=(feedUserName(p)[0]||'F').toUpperCase();}
   document.querySelectorAll('[data-feed-filter]').forEach(function(b){b.onclick=function(){document.querySelectorAll('[data-feed-filter]').forEach(function(x){x.classList.remove('active')});b.classList.add('active');fluxFeedFilter=b.dataset.feedFilter;renderFluxFeed();};});
-  $('feed-open-composer').onclick=openFluxComposer;$('feed-open-composer-plus').onclick=openFluxComposer;$('feed-post-cancel').onclick=function(){feedCloseModal('feed-composer-modal');};$('feed-post-publish').onclick=fluxPublishPost;$('feed-comment-send').onclick=fluxSendComment;
+  $('feed-open-composer').onclick=openFluxComposer;$('feed-open-composer-plus').onclick=openFluxComposer;$('feed-post-cancel').onclick=function(){feedCloseModal('feed-composer-modal');};$('feed-post-publish').onclick=fluxPublishPost;$('feed-comment-send').onclick=fluxSendComment;$('feed-post-video-file').onchange=fluxPreviewSelected;$('feed-post-image-file').onchange=fluxPreviewSelected;$('feed-post-draft').onclick=fluxSaveDraft;fluxLoadDraft();
   $('feed-refresh').onclick=function(){if(db)db.ref('feedPosts').limitToLast(100).once('value').then(function(s){fluxFeedPosts=[];s.forEach(function(x){fluxFeedPosts.push(Object.assign({id:x.key},x.val()));});renderFluxFeed();toast('Лента обновлена');});};
   ['feed-composer-modal','feed-comments-modal'].forEach(function(id){$(id).onclick=function(e){if(e.target===this)feedCloseModal(id);};});
   if(!db){renderFluxFeed();return;}
