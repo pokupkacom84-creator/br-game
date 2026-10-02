@@ -16,9 +16,11 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <!--
   ============================================================
-  FIREBASE REALTIME DATABASE SECURITY RULES
+  FIREBASE REALTIME DATABASE SECURITY RULES  (ОБНОВЛЕНО)
   ============================================================
   Пропиши эти правила в Firebase Console → Realtime Database → Rules.
+  Ключевое изменение: chatIndex теперь разрешает участнику чата
+  писать в индекс собеседника (иначе сообщения не отправляются).
   ============================================================
   {
     "rules": {
@@ -103,7 +105,7 @@
         "$uid": {
           ".read": "auth != null && auth.uid === $uid",
           "$chatId": {
-            ".write": "auth != null && auth.uid === $uid && (root.child('chatMeta').child($chatId).child('a').val() === auth.uid || root.child('chatMeta').child($chatId).child('b').val() === auth.uid)"
+            ".write": "auth != null && (auth.uid === $uid || root.child('chatMeta').child($chatId).child('a').val() === auth.uid || root.child('chatMeta').child($chatId).child('b').val() === auth.uid)"
           }
         }
       },
@@ -223,7 +225,7 @@ button:active{transform:scale(.95)}
 button:disabled{transform:none}
 
 /* ============================================================
-   FLUX MESSENGER / ANTI-SPAM UI
+   FLUX MESSENGER UI
    ============================================================ */
 .social-page{height:100%;overflow-y:auto;padding:calc(10px + env(safe-area-inset-top)) 14px 120px;overscroll-behavior:contain}
 .social-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px 14px}
@@ -239,14 +241,14 @@ button:disabled{transform:none}
 .social-empty{padding:25px 18px;text-align:center;color:var(--text-2);font-size:13px}
 .social-user{display:flex;align-items:center;gap:11px;padding:11px 14px;border-top:1px solid var(--divider);min-height:67px}
 .social-user:first-child{border-top:0}
-.social-avatar{width:43px;height:43px;border-radius:14px;display:grid;place-items:center;flex:0 0 auto;font-weight:850;color:#fff;box-shadow:0 5px 14px rgba(0,0,0,.15);position:relative;overflow:hidden}
+.social-avatar{width:43px;height:43px;border-radius:14px;display:grid;place-items:center;flex:0 0 auto;font-weight:850;color:#fff;box-shadow:0 5px 14px rgba(0,0,0,.15);position:relative;overflow:hidden;font-size:18px}
 .social-avatar img{width:100%;height:100%;object-fit:cover}
 .social-online{position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2px solid var(--surface)}
 .social-user-main{min-width:0;flex:1}
 .social-user-name{font-weight:780;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .social-user-meta{font-size:11px;color:var(--text-2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .social-user-actions{display:flex;gap:6px;align-items:center}
-.social-mini-btn{padding:8px 10px;border-radius:12px;background:var(--surface-2);color:var(--accent);font-size:11px;font-weight:800}
+.social-mini-btn{padding:8px 10px;border-radius:12px;background:var(--bg-2);color:var(--accent);font-size:11px;font-weight:800}
 .social-mini-btn.danger{color:var(--danger)}
 .social-mini-btn.primary{background:var(--accent);color:#fff}
 .chat-row{cursor:pointer}
@@ -254,22 +256,29 @@ button:disabled{transform:none}
 .chat-window{position:fixed;inset:0;z-index:9000;background:var(--bg);display:none;flex-direction:column;padding-top:env(safe-area-inset-top)}
 .chat-window.show{display:flex}
 .chat-header{height:62px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--divider);background:var(--surface);box-shadow:0 2px 12px rgba(0,0,0,.12)}
-.chat-back,.chat-more{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:var(--surface-2)}
-.chat-head-info{min-width:0;flex:1}.chat-head-name{font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.chat-head-status{font-size:11px;color:var(--text-2);margin-top:1px}
+.chat-back,.chat-more{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:var(--bg-2)}
+.chat-head-info{min-width:0;flex:1}
+.chat-head-name{font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-head-status{font-size:11px;color:var(--text-2);margin-top:1px}
 .chat-messages{flex:1;overflow-y:auto;padding:14px 12px 10px;display:flex;flex-direction:column;gap:7px;overscroll-behavior:contain}
 .chat-date{text-align:center;color:var(--text-2);font-size:10px;margin:7px 0}
-.msg-row{display:flex;max-width:88%}.msg-row.mine{align-self:flex-end;justify-content:flex-end}.msg-bubble{padding:9px 11px;border-radius:17px;background:var(--surface);border:1px solid var(--divider);font-size:14px;line-height:1.4;box-shadow:0 2px 7px rgba(0,0,0,.08);word-break:break-word}.msg-row.mine .msg-bubble{background:var(--accent);color:#fff;border-color:transparent;border-bottom-right-radius:6px}.msg-row:not(.mine) .msg-bubble{border-bottom-left-radius:6px}.msg-time{display:block;font-size:9px;opacity:.65;text-align:right;margin-top:3px}.msg-link-warning{font-size:10px;margin-top:5px;opacity:.78}
+.msg-row{display:flex;max-width:88%}
+.msg-row.mine{align-self:flex-end;justify-content:flex-end}
+.msg-bubble{padding:9px 11px;border-radius:17px;background:var(--surface);border:1px solid var(--divider);font-size:14px;line-height:1.4;box-shadow:0 2px 7px rgba(0,0,0,.08);word-break:break-word}
+.msg-row.mine .msg-bubble{background:var(--accent);color:#fff;border-color:transparent;border-bottom-right-radius:6px}
+.msg-row:not(.mine) .msg-bubble{border-bottom-left-radius:6px}
+.msg-time{display:block;font-size:9px;opacity:.65;text-align:right;margin-top:3px}
+.msg-link-warning{font-size:10px;margin-top:5px;opacity:.78}
 .chat-compose{display:flex;align-items:flex-end;gap:7px;padding:8px 10px calc(9px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--divider)}
-.chat-compose textarea{flex:1;min-height:42px;max-height:110px;resize:none;border:1px solid var(--divider);border-radius:16px;background:var(--surface-2);padding:10px 12px;outline:0;color:var(--text);font-size:15px}
+.chat-compose textarea{flex:1;min-height:42px;max-height:110px;resize:none;border:1px solid var(--divider);border-radius:16px;background:var(--bg-2);padding:10px 12px;outline:0;color:var(--text);font-size:15px}
 .chat-send{width:43px;height:43px;border-radius:14px;background:var(--accent);color:#fff;display:grid;place-items:center;flex:0 0 auto}
 .social-modal-note{font-size:12px;color:var(--text-2);line-height:1.5;margin:4px 0 12px}
-.social-report-option{display:block;width:100%;text-align:left;padding:12px 13px;border:1px solid var(--divider);border-radius:14px;margin-top:7px;background:var(--surface-2);font-weight:700}
+.social-report-option{display:block;width:100%;text-align:left;padding:12px 13px;border:1px solid var(--divider);border-radius:14px;margin-top:7px;background:var(--bg-2);font-weight:700}
 .social-report-option:active{transform:scale(.98)}
 .social-safety{display:flex;gap:10px;align-items:flex-start;padding:12px 13px;background:var(--accent-soft);border-radius:16px;margin-bottom:12px;font-size:12px;color:var(--text-2);line-height:1.45}
 .social-safety b{color:var(--text)}
 @media (max-width:420px){.social-page{padding-left:11px;padding-right:11px}.msg-row{max-width:92%}}
 
-/* Flux Messenger */
 .messenger-page{height:100%;overflow-y:auto;padding:calc(7px + env(safe-area-inset-top)) 0 calc(112px + env(safe-area-inset-bottom));background:var(--bg)}
 .messenger-head{display:flex;align-items:center;justify-content:space-between;padding:10px 15px 12px}
 .messenger-title{font-size:28px;font-weight:850;letter-spacing:-.04em}
@@ -283,7 +292,7 @@ button:disabled{transform:none}
 .messenger-chat{display:flex;align-items:center;gap:12px;padding:10px 15px;min-height:73px;cursor:pointer;transition:background .12s}
 .messenger-chat:active{background:var(--bg-2)}
 .messenger-chat.unread{background:var(--accent-softer)}
-.messenger-avatar{width:52px;height:52px;border-radius:17px;overflow:hidden;display:grid;place-items:center;flex:0 0 auto;color:#fff;font-weight:850;font-size:17px;position:relative}
+.messenger-avatar{width:52px;height:52px;border-radius:17px;overflow:hidden;display:grid;place-items:center;flex:0 0 auto;color:#fff;font-weight:850;font-size:19px;position:relative}
 .messenger-avatar img{width:100%;height:100%;object-fit:cover}
 .messenger-avatar .social-online{width:13px;height:13px;right:0;bottom:0}
 .messenger-main{min-width:0;flex:1}
@@ -576,10 +585,6 @@ body.flux-premium .profile-premium-crown{opacity:1;transform:scale(1) rotate(-15
 .vpn-icon-btn.star.active{color:var(--warning);border-color:var(--warning)}
 .vpn-key-check{position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;z-index:3;box-shadow:0 3px 10px var(--accent-glow);}
 
-/* ============================================================
-   TELEGRAM-STYLE REACTIONS
-   Pills с иконкой и счётчиком, real-time counts для всех юзеров.
-   ============================================================ */
 .vpn-key-reactions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
 .vpn-reaction{
   display:inline-flex;align-items:center;justify-content:center;gap:4px;
@@ -787,35 +792,25 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 </head>
 <body>
 
-<!-- ============================================================
-     GLOBAL SVG DEFS: gradients for reaction icons
-     ============================================================ -->
 <svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false">
   <defs>
     <linearGradient id="fluxHeartGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ff7b93"/>
-      <stop offset="45%" stop-color="#f43f5e"/>
-      <stop offset="100%" stop-color="#be123c"/>
+      <stop offset="0%" stop-color="#ff7b93"/><stop offset="45%" stop-color="#f43f5e"/><stop offset="100%" stop-color="#be123c"/>
     </linearGradient>
     <linearGradient id="fluxCrystalTop" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#f0e5ff"/>
-      <stop offset="100%" stop-color="#c4b5fd"/>
+      <stop offset="0%" stop-color="#f0e5ff"/><stop offset="100%" stop-color="#c4b5fd"/>
     </linearGradient>
     <linearGradient id="fluxCrystalLeft" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#c4b5fd"/>
-      <stop offset="100%" stop-color="#7c3aed"/>
+      <stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#7c3aed"/>
     </linearGradient>
     <linearGradient id="fluxCrystalRight" x1="1" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#a78bfa"/>
-      <stop offset="100%" stop-color="#5b21b6"/>
+      <stop offset="0%" stop-color="#a78bfa"/><stop offset="100%" stop-color="#5b21b6"/>
     </linearGradient>
     <linearGradient id="fluxLikeGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#60a5fa"/>
-      <stop offset="100%" stop-color="#2563eb"/>
+      <stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#2563eb"/>
     </linearGradient>
     <linearGradient id="fluxDislikeGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#fca5a5"/>
-      <stop offset="100%" stop-color="#dc2626"/>
+      <stop offset="0%" stop-color="#fca5a5"/><stop offset="100%" stop-color="#dc2626"/>
     </linearGradient>
   </defs>
 </svg>
@@ -839,13 +834,7 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
       <div class="splash-logo-ring"></div>
       <div class="splash-logo">
         <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="fluxLogoGradientSplash" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#c084fc"/>
-              <stop offset="52%" stop-color="#a855f7"/>
-              <stop offset="100%" stop-color="#7c3aed"/>
-            </linearGradient>
-          </defs>
+          <defs><linearGradient id="fluxLogoGradientSplash" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#c084fc"/><stop offset="52%" stop-color="#a855f7"/><stop offset="100%" stop-color="#7c3aed"/></linearGradient></defs>
           <path fill="url(#fluxLogoGradientSplash)" d="M 354 162 L 297 77 L 282 62 L 260 50 L 244 46 L 224 46 L 196 54 L 177 66 L 164 81 L 122 146 L 119 148 L 120 149 L 67 228 L 41 269 L 40 268 L 41 270 L 20 299 L 17 306 L 14 308 L 0 334 L 124 334 L 129 329 L 128 328 L 135 319 L 138 311 L 147 300 L 147 297 L 168 266 L 170 260 L 229 166 L 286 260 L 289 261 L 291 257 L 293 257 L 292 256 L 305 237 L 307 237 L 306 235 L 331 198 L 336 193 L 353 167 Z"/>
           <path fill="url(#fluxLogoGradientSplash)" d="M 511 183 L 384 184 L 368 208 L 365 210 L 366 211 L 282 336 L 234 261 L 231 261 L 203 301 L 200 302 L 201 304 L 198 305 L 199 307 L 195 312 L 193 312 L 194 314 L 171 347 L 168 349 L 187 380 L 195 390 L 194 393 L 195 392 L 198 395 L 214 422 L 218 426 L 217 428 L 219 428 L 233 445 L 245 453 L 259 460 L 274 464 L 291 465 L 313 461 L 328 454 L 341 445 L 354 429 L 366 409 L 369 407 L 368 406 L 422 322 L 433 308 L 443 291 L 444 292 L 443 290 L 471 247 L 473 247 L 472 245 L 481 231 L 484 229 L 489 218 L 491 216 L 492 217 L 492 214 L 509 189 Z"/>
         </svg>
@@ -923,39 +912,21 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
   <div class="vpn-home" id="vpn-home">
     <div class="vpn-home-header">
       <div class="vpn-home-brand">
-        <div class="vpn-home-mark">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9.2 12.2l1.8 1.8 3.8-4"/></svg>
-        </div>
-        <div>
-          <div class="vpn-home-title">Flux VPN</div>
-          <div class="vpn-home-subtitle">PRIVATE CONNECTION</div>
-        </div>
+        <div class="vpn-home-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9.2 12.2l1.8 1.8 3.8-4"/></svg></div>
+        <div><div class="vpn-home-title">Flux VPN</div><div class="vpn-home-subtitle">PRIVATE CONNECTION</div></div>
       </div>
-      <button class="vpn-home-refresh ripple" id="vpn-home-refresh" aria-label="Обновить">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14"/></svg>
-      </button>
+      <button class="vpn-home-refresh ripple" id="vpn-home-refresh" aria-label="Обновить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14"/></svg></button>
     </div>
-
     <div class="vpn-dashboard-card">
-      <div class="vpn-dashboard-top">
-        <span class="vpn-dashboard-kicker">FLUX TUNNEL</span>
-        <span class="vpn-dashboard-state"><span class="vpn-dashboard-state-dot"></span>Защита</span>
-      </div>
+      <div class="vpn-dashboard-top"><span class="vpn-dashboard-kicker">FLUX TUNNEL</span><span class="vpn-dashboard-state"><span class="vpn-dashboard-state-dot"></span>Защита</span></div>
       <div class="vpn-dashboard-title">Безопасное подключение</div>
       <div class="vpn-dashboard-desc">Выбери сервер и передай готовую конфигурацию напрямую в Happ.</div>
     </div>
-
     <div class="vpn-connect-wrap">
       <button class="vpn-connect-btn" id="vpn-connect-btn" aria-label="Подключиться">
         <span class="vpn-connect-logo" id="vpn-connect-logo" aria-hidden="true">
           <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="fluxLogoGradientConnect" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#c084fc"/>
-                <stop offset="52%" stop-color="#a855f7"/>
-                <stop offset="100%" stop-color="#7c3aed"/>
-              </linearGradient>
-            </defs>
+            <defs><linearGradient id="fluxLogoGradientConnect" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#c084fc"/><stop offset="52%" stop-color="#a855f7"/><stop offset="100%" stop-color="#7c3aed"/></linearGradient></defs>
             <path fill="url(#fluxLogoGradientConnect)" d="M 354 162 L 297 77 L 282 62 L 260 50 L 244 46 L 224 46 L 196 54 L 177 66 L 164 81 L 122 146 L 119 148 L 120 149 L 67 228 L 41 269 L 40 268 L 41 270 L 20 299 L 17 306 L 14 308 L 0 334 L 124 334 L 129 329 L 128 328 L 135 319 L 138 311 L 147 300 L 147 297 L 168 266 L 170 260 L 229 166 L 286 260 L 289 261 L 291 257 L 293 257 L 292 256 L 305 237 L 307 237 L 306 235 L 331 198 L 336 193 L 353 167 Z"/>
             <path fill="url(#fluxLogoGradientConnect)" d="M 511 183 L 384 184 L 368 208 L 365 210 L 366 211 L 282 336 L 234 261 L 231 261 L 203 301 L 200 302 L 201 304 L 198 305 L 199 307 L 195 312 L 193 312 L 194 314 L 171 347 L 168 349 L 187 380 L 195 390 L 194 393 L 195 392 L 198 395 L 214 422 L 218 426 L 217 428 L 219 428 L 233 445 L 245 453 L 259 460 L 274 464 L 291 465 L 313 461 L 328 454 L 341 445 L 354 429 L 366 409 L 369 407 L 368 406 L 422 322 L 433 308 L 443 291 L 444 292 L 443 290 L 471 247 L 473 247 L 472 245 L 481 231 L 484 229 L 489 218 L 491 216 L 492 217 L 492 214 L 509 189 Z"/>
           </svg>
@@ -963,39 +934,18 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
         <span class="vpn-connect-btn-label" id="vpn-connect-label">Подключиться</span>
         <span class="vpn-connect-orbit" aria-hidden="true"></span>
       </button>
-      <div class="vpn-connect-rings">
-        <div class="ring ring-1"></div>
-        <div class="ring ring-2"></div>
-        <div class="ring ring-3"></div>
-      </div>
+      <div class="vpn-connect-rings"><div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div></div>
       <div class="vpn-status" id="vpn-status">Выберите сервер ниже</div>
       <div class="vpn-selected" id="vpn-selected"></div>
     </div>
-
-    <div class="vpn-cat-tabs" id="vpn-category-tabs">
-      <button class="vpn-cat-tab active" data-cat="free">Бесплатные</button>
-      <button class="vpn-cat-tab" data-cat="premium">Premium VPN</button>
-    </div>
-
+    <div class="vpn-cat-tabs" id="vpn-category-tabs"></div>
     <div class="vpn-filters-row" id="vpn-sources"></div>
-
-    <div class="vpn-servers-header">
-      <span>Серверы</span>
-      <span class="vpn-servers-count" id="vpn-servers-count">0</span>
-    </div>
-
+    <div class="vpn-servers-header"><span>Серверы</span><span class="vpn-servers-count" id="vpn-servers-count">0</span></div>
     <div class="vpn-filters-row" id="vpn-filters"></div>
-
-    <div class="vpn-key-list" id="vpn-key-list">
-      <div class="vpn-empty">Нажмите <b>«Обновить»</b> вверху, чтобы загрузить серверы</div>
-    </div>
+    <div class="vpn-key-list" id="vpn-key-list"><div class="vpn-empty">Нажмите <b>«Обновить»</b> вверху, чтобы загрузить серверы</div></div>
     <div class="vpn-count" id="vpn-count"></div>
-
     <div class="vpn-load-wrap">
-      <button class="vpn-btn ripple" id="vpn-load-btn" style="max-width:260px">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-        Загрузить серверы
-      </button>
+      <button class="vpn-btn ripple" id="vpn-load-btn" style="max-width:260px"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Загрузить серверы</button>
       <button class="vpn-btn outline ripple" id="vpn-refresh-btn" style="display:none;max-width:260px">Обновить</button>
     </div>
   </div>
@@ -1008,7 +958,6 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 </div>
 <div class="list" id="shop-list"></div>
 </div>
-
 
 <div id="tab-social" class="tab-content">
   <div class="messenger-page" id="social-page">
@@ -1057,7 +1006,7 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
   <div class="profile-info-card" style="margin-top:0">
     <div class="settings-item" id="btn-theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><span>Тёмная тема</span><div class="toggle" id="theme-toggle"></div></div>
     <div class="settings-item" id="btn-theme-color"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2a10 10 0 100 20c1.38 0 2.5-1.12 2.5-2.5 0-.66-.26-1.26-.68-1.7a2.5 2.5 0 011.82-4.3H18a4 4 0 004-4 10 10 0 00-10-7.5z"/></svg><span>Цветовая тема</span><div class="settings-value" id="theme-color-value">Violet</div></div>
-<div class="settings-item" id="btn-promo-code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 12a2 2 0 000-4 2 2 0 010-4H5a2 2 0 000 4 2 2 0 010 4 2 2 0 000 4h15a2 2 0 010-4 2 2 0 000-4z"/><path d="M9 8h.01M15 16h.01M9 16l6-8"/></svg><span>Промокод</span><div class="settings-value"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v9H5v-9"/><path d="M7.5 8a2.5 2.5 0 010-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 010 5"/></svg></div></div>
+    <div class="settings-item" id="btn-promo-code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 12a2 2 0 000-4 2 2 0 010-4H5a2 2 0 000 4 2 2 0 010 4 2 2 0 000 4h15a2 2 0 010-4 2 2 0 000-4z"/><path d="M9 8h.01M15 16h.01M9 16l6-8"/></svg><span>Промокод</span><div class="settings-value"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v9H5v-9"/><path d="M7.5 8a2.5 2.5 0 010-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 010 5"/></svg></div></div>
     <div class="settings-item" id="btn-admin-panel" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6l7-4z"/><path d="M8 12l2.5 2.5L16 9"/></svg><span>Админ-панель</span><div class="settings-value">ADMIN</div></div>
   </div>
   <div class="settings-section-title">Приватность</div>
@@ -1088,7 +1037,6 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 <div class="nav-item" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1"/></svg><span>Профиль</span></div>
 </div>
 </div>
-
 
 <div class="chat-window" id="chat-window">
   <div class="chat-header">
@@ -1168,9 +1116,6 @@ let auth=null,db=null;
   }catch(e){console.error('Firebase init failed:',e);firebaseReady=false;}
 })();
 
-/* ============================================================
-   CRYPTO: PIN hashing (SHA-256 + salt) and TOTP (RFC 6238)
-   ============================================================ */
 function genSalt(){
   var arr=new Uint8Array(16);
   crypto.getRandomValues(arr);
@@ -1299,32 +1244,11 @@ const VPN_PREMIUM_SOURCES = [
 function buildRawUrl(owner,repo,ref,path){return 'https://raw.githubusercontent.com/'+encodeURIComponent(owner)+'/'+encodeURIComponent(repo)+'/'+encodeURIComponent(ref)+'/'+path.split('/').map(encodeURIComponent).join('/');}
 function cacheBust(url){return url+(url.indexOf('?')===-1?'?':'&')+'t='+now()+'_'+Math.random().toString(36).slice(2,8);}
 
-/* ============================================================
-   FIX: get rid of api.github.com calls that hit 60 req/hour
-   rate limit and return HTTP 403.
-   Strategy:
-     1. localStorage cache (10 min TTL)
-     2. Direct raw CDN chain: jsDelivr → statically → raw.githack → raw.githubusercontent
-        across branches main/master/branch.
-     3. Stale cache fallback if all sources fail.
-   ============================================================ */
-const VPN_FETCH_CACHE_TTL = 10 * 60 * 1000; // 10 min
-
+const VPN_FETCH_CACHE_TTL = 10 * 60 * 1000;
 function readVpnCache(sourceId){
-  try{
-    var raw = localStorage.getItem('flux_vpn_cache_' + sourceId);
-    if(!raw) return null;
-    var c = JSON.parse(raw);
-    if(!c || !c.text) return null;
-    return c;
-  }catch(e){ return null; }
+  try{var raw = localStorage.getItem('flux_vpn_cache_' + sourceId);if(!raw) return null;var c = JSON.parse(raw);if(!c || !c.text) return null;return c;}catch(e){ return null; }
 }
-function writeVpnCache(sourceId, text, url){
-  try{
-    localStorage.setItem('flux_vpn_cache_' + sourceId, JSON.stringify({ text: text, ts: now(), url: url }));
-  }catch(e){ /* quota */ }
-}
-
+function writeVpnCache(sourceId, text, url){try{localStorage.setItem('flux_vpn_cache_' + sourceId, JSON.stringify({ text: text, ts: now(), url: url }));}catch(e){}}
 function buildVpnFetchUrls(source){
   var g = source.github;
   if(!g) return [];
@@ -1333,10 +1257,8 @@ function buildVpnFetchUrls(source){
   if(g.branch) branches.push(g.branch);
   if(branches.indexOf('main') === -1) branches.push('main');
   if(branches.indexOf('master') === -1) branches.push('master');
-
   var urls = [];
   branches.forEach(function(br){
-    // Prefer the canonical raw GitHub path, then CDN mirrors.
     urls.push('https://raw.githubusercontent.com/' + owner + '/' + repo + '/' + br + '/' + path);
     urls.push('https://cdn.jsdelivr.net/gh/' + owner + '/' + repo + '@' + br + '/' + path);
     urls.push('https://cdn.statically.io/gh/' + owner + '/' + repo + '/' + br + '/' + path);
@@ -1344,19 +1266,11 @@ function buildVpnFetchUrls(source){
   });
   return urls;
 }
-
 async function fetchGithubSource(source){
   if(!source) throw new Error('Источник не настроен');
-
   var cache = readVpnCache(source.id);
   var fresh = cache && (now() - cache.ts < VPN_FETCH_CACHE_TTL);
-
-  /* 1. Fresh cache — instant */
-  if(fresh && cache.text && cache.text.length > 20){
-    return { text: cache.text, sha: null, url: cache.url, fromCache: true };
-  }
-
-  /* 2. Try direct CDN chain */
+  if(fresh && cache.text && cache.text.length > 20)return { text: cache.text, sha: null, url: cache.url, fromCache: true };
   if(source.github){
     var urls = buildVpnFetchUrls(source);
     var lastErr = null;
@@ -1365,51 +1279,27 @@ async function fetchGithubSource(source){
         var resp = await fetch(cacheBust(urls[i]), { cache: 'no-store' });
         if(resp.ok){
           var text = await resp.text();
-          if(text && text.length > 20){
-            writeVpnCache(source.id, text, urls[i]);
-            return { text: text, sha: null, url: urls[i] };
-          }
-        } else {
-          lastErr = new Error('HTTP ' + resp.status);
-        }
+          if(text && text.length > 20){writeVpnCache(source.id, text, urls[i]);return { text: text, sha: null, url: urls[i] };}
+        } else { lastErr = new Error('HTTP ' + resp.status); }
       }catch(e){ lastErr = lastErr || e; }
     }
-    if(cache && cache.text && cache.text.length > 20){
-      return { text: cache.text, sha: null, url: cache.url, fromCache: true, stale: true };
-    }
+    if(cache && cache.text && cache.text.length > 20)return { text: cache.text, sha: null, url: cache.url, fromCache: true, stale: true };
     throw lastErr || new Error('Все зеркала недоступны');
   }
-
-  /* Direct URL source */
   var direct = source.url;
   if(!direct) throw new Error('Источник не настроен');
   try{
     var r = await fetch(cacheBust(direct), { cache: 'no-store' });
-    if(r.ok){
-      var t = await r.text();
-      if(t && t.length > 20){
-        writeVpnCache(source.id, t, direct);
-        return { text: t, sha: null, url: direct };
-      }
-    }
+    if(r.ok){var t = await r.text();if(t && t.length > 20){writeVpnCache(source.id, t, direct);return { text: t, sha: null, url: direct };}}
   }catch(e){}
-  if(cache && cache.text && cache.text.length > 20){
-    return { text: cache.text, sha: null, url: cache.url, fromCache: true, stale: true };
-  }
+  if(cache && cache.text && cache.text.length > 20)return { text: cache.text, sha: null, url: cache.url, fromCache: true, stale: true };
   throw new Error('Не удалось загрузить файл');
 }
 
 function isPremiumVpnSource(id){return String(id||'').charAt(0)==='p';}
 function isGlobalPremiumEnabled(){var g=window.__fluxGlobalPremiumState||{};return g.active===true;}
-function isPremiumActive(v){
-  if(isGlobalPremiumEnabled())return true;
-  v=v||{};
-  return !!v.active && Number(v.expiresAt||0)>now();
-}
-function isPremiumUserNow(){
-  if(isGlobalPremiumEnabled())return true;
-  return isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{}));
-}
+function isPremiumActive(v){if(isGlobalPremiumEnabled())return true;v=v||{};return !!v.active && Number(v.expiresAt||0)>now();}
+function isPremiumUserNow(){if(isGlobalPremiumEnabled())return true;return isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{}));}
 
 function startGlobalPremiumListener(){
   if(!db)return;
@@ -1483,9 +1373,7 @@ let _soTimer=null;
 function showSuccessOverlay(){
   if(prefersReducedMotion||window.__fluxLite)return;
   var el=$('success-overlay');if(!el)return;
-  el.classList.remove('show');
-  void el.offsetWidth;
-  el.classList.add('show');
+  el.classList.remove('show');void el.offsetWidth;el.classList.add('show');
   if(_soTimer)clearTimeout(_soTimer);
   _soTimer=setTimeout(function(){el.classList.remove('show');},900);
 }
@@ -1494,12 +1382,7 @@ let _audioCtx=null;
 let _audioMaster=null;
 function getAudioCtx(){
   if(_audioCtx)return _audioCtx;
-  try{
-    _audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-    _audioMaster=_audioCtx.createGain();
-    _audioMaster.gain.value=0.72;
-    _audioMaster.connect(_audioCtx.destination);
-  }catch(e){return null;}
+  try{_audioCtx=new (window.AudioContext||window.webkitAudioContext)();_audioMaster=_audioCtx.createGain();_audioMaster.gain.value=0.72;_audioMaster.connect(_audioCtx.destination);}catch(e){return null;}
   return _audioCtx;
 }
 const SOUND_PREFS={enabled:localStorage.getItem('flux_sound')!=='0'};
@@ -1510,13 +1393,10 @@ function playSound(type){
   var t0=ctx.currentTime;
   function note(freq,start,dur,vol,wave){
     var o=ctx.createOscillator(),g=ctx.createGain();
-    o.type=wave||'sine';
-    o.frequency.setValueAtTime(freq,t0+start);
-    g.gain.setValueAtTime(0,t0+start);
-    g.gain.linearRampToValueAtTime(vol||.16,t0+start+.008);
+    o.type=wave||'sine';o.frequency.setValueAtTime(freq,t0+start);
+    g.gain.setValueAtTime(0,t0+start);g.gain.linearRampToValueAtTime(vol||.16,t0+start+.008);
     g.gain.exponentialRampToValueAtTime(.0001,t0+start+dur);
-    o.connect(g);g.connect(_audioMaster||ctx.destination);
-    o.start(t0+start);o.stop(t0+start+dur+.04);
+    o.connect(g);g.connect(_audioMaster||ctx.destination);o.start(t0+start);o.stop(t0+start+dur+.04);
   }
   switch(type){
     case 'tap': note(1150,0,.065,.12,'sine');note(1750,.012,.045,.055,'triangle');break;
@@ -1538,8 +1418,7 @@ function playSound(type){
     if(!SOUND_PREFS.enabled||window.__fluxLite)return;
     var el=e.target&&e.target.closest?e.target.closest('button,.nav-item,.vpn-chip,.shop-tab,.settings-item,.theme-item,.pin-key,.vpn-reaction'):null;
     if(!el||el.disabled)return;
-    var id=String(el.id||'');
-    var cls=String(el.className||'');
+    var id=String(el.id||'');var cls=String(el.className||'');
     if(id==='vpn-connect-btn')return;
     if(id==='btn-sound'||id==='btn-vibration')return;
     if(cls.indexOf('vpn-reaction')>=0){playSound('reaction');return;}
@@ -1565,16 +1444,11 @@ function spawnConfetti(){
   var count=20;
   for(var i=0;i<count;i++){
     var el=document.createElement('div');
-    var size=6+Math.random()*10;
-    var color=colors[i%colors.length];
-    var isRect=Math.random()>0.5;
+    var size=6+Math.random()*10;var color=colors[i%colors.length];var isRect=Math.random()>0.5;
     el.style.cssText='position:fixed;left:'+cx+'px;top:'+cy+'px;width:'+size+'px;height:'+(isRect?size*0.4:size)+'px;background:'+color+';border-radius:'+(isRect?'2px':'50%')+';pointer-events:none;z-index:99999;transform:translate(-50%,-50%);will-change:transform,opacity;';
     frag.appendChild(el);
-    var angle=Math.random()*Math.PI*2;
-    var dist=120+Math.random()*320;
-    var dx=Math.cos(angle)*dist;
-    var dy=Math.sin(angle)*dist-120;
-    var rot=Math.random()*720-360;
+    var angle=Math.random()*Math.PI*2;var dist=120+Math.random()*320;
+    var dx=Math.cos(angle)*dist;var dy=Math.sin(angle)*dist-120;var rot=Math.random()*720-360;
     try{el.animate([{transform:'translate(-50%,-50%) scale(0.6) rotate(0)',opacity:1},{transform:'translate(calc(-50% + '+dx+'px), calc(-50% + '+dy+'px)) scale('+(0.5+Math.random()*0.7)+') rotate('+rot+'deg)',opacity:0}],{duration:1400+Math.random()*800,easing:'cubic-bezier(.15,.6,.35,1)',fill:'forwards'});}catch(e){}
     setTimeout(function(el){return function(){try{el.remove();}catch(e){}};}(el),2400);
   }
@@ -1596,11 +1470,7 @@ let twoFAEnabled=localStorage.getItem('flux_2fa')==='1';
 let autoDeleteMonths=parseInt(localStorage.getItem('flux_auto_delete')||'0',10);
 let mySessionId=null;
 
-function showScreen(id){
-  var screens=document.querySelectorAll('.screen');
-  for(var i=0;i<screens.length;i++)screens[i].classList.remove('active');
-  var el=$(id);if(el)el.classList.add('active');
-}
+function showScreen(id){var screens=document.querySelectorAll('.screen');for(var i=0;i<screens.length;i++)screens[i].classList.remove('active');var el=$(id);if(el)el.classList.add('active');}
 function goScreen(id,replace){
   if(currentScreenId===id)return;
   if(replace||currentScreenId===null||currentScreenId==='splash-screen'){screenHistory.length=0;screenHistory.push(id);try{history.replaceState({s:id},'');}catch(e){}}
@@ -1690,10 +1560,8 @@ $('twofa-verify-btn').onclick=async function(){
     var cred=await auth.signInWithEmailAndPassword(email,pass);
     var snap=await db.ref('users/'+cred.user.uid+'/twofa').once('value');
     var t=snap.val()||{};
-    if(t.secret&&await verifyTOTP(t.secret,code)){
-      localStorage.setItem('flux_2fa_device_'+cred.user.uid,'1');
-      toast('Успешно');showSuccessOverlay();
-    }else{await auth.signOut();toast('Неверный код');}
+    if(t.secret&&await verifyTOTP(t.secret,code)){localStorage.setItem('flux_2fa_device_'+cred.user.uid,'1');toast('Успешно');showSuccessOverlay();}
+    else{await auth.signOut();toast('Неверный код');}
   }catch(e){toast(authError(e.code));}
   this.disabled=false;
 };
@@ -1715,12 +1583,7 @@ if(firebaseReady&&auth){
   try{
     auth.onAuthStateChanged(async function(user){
       try{
-        if(!user){
-          currentUser=null;currentUserData=null;
-          await whenMinSplashElapsed();
-          goScreen('auth-screen',true);
-          return;
-        }
+        if(!user){currentUser=null;currentUserData=null;await whenMinSplashElapsed();goScreen('auth-screen',true);return;}
         if(currentUser&&currentUser.uid===user.uid)return;
         if(authProcessing)return;
         authProcessing=true;setTimeout(function(){authProcessing=false;},1000);
@@ -1729,10 +1592,8 @@ if(firebaseReady&&auth){
         var snap;try{snap=await db.ref('users/'+user.uid).once('value');}catch(e){toast('Ошибка соединения');await whenMinSplashElapsed();goScreen('auth-screen',true);return;}
         var data=snap.val();
         if(data&&data.adminBlocked===true){toast('Аккаунт заблокирован');try{await auth.signOut();}catch(e){}await whenMinSplashElapsed();goScreen('auth-screen',true);return;}
-        if(!data||!data.name){
-          await whenMinSplashElapsed();
-          goScreen('onboarding-screen',true);
-        }else{
+        if(!data||!data.name){await whenMinSplashElapsed();goScreen('onboarding-screen',true);}
+        else{
           currentUserData=Object.assign({uid:user.uid},data);
           if(data.autoDeleteMonths){autoDeleteMonths=parseInt(data.autoDeleteMonths,10)||0;try{localStorage.setItem('flux_auto_delete',String(autoDeleteMonths));}catch(e){}}
           if(data.twofa&&data.twofa.enabled){twoFAEnabled=true;try{localStorage.setItem('flux_2fa','1');}catch(e){}}
@@ -1745,11 +1606,7 @@ if(firebaseReady&&auth){
           setTimeout(function(){ try{ autoLoadVpnOnStart(); }catch(e){} }, 400);
         }
         authProcessing=false;
-      }catch(innerErr){
-        console.error('Auth handler error:',innerErr);
-        authProcessing=false;
-        hideSplashIfVisible();
-      }
+      }catch(innerErr){console.error('Auth handler error:',innerErr);authProcessing=false;hideSplashIfVisible();}
     });
   }catch(e){console.error('onAuthStateChanged setup failed:',e);setTimeout(hideSplashIfVisible,600);}
 }else{
@@ -1761,7 +1618,8 @@ setTimeout(function(){if(currentScreenId==='splash-screen'){hideSplashIfVisible(
 function startSelfListener(){
   if(!currentUser)return;
   var uid=currentUser.uid;
-  db.ref('users/'+uid).update({online:true,lastSeen:now()}).catch(function(){});db.ref('publicProfiles/'+uid).update({name:String((currentUserData&&currentUserData.name)||'Пользователь').slice(0,32),username:String((currentUserData&&currentUserData.username)||'').slice(0,32),avatarId:(currentUserData&&currentUserData.avatarId)||'',photoURL:(currentUserData&&currentUserData.photoURL)||'',online:true,lastSeen:now(),updatedAt:now()}).catch(function(){});
+  db.ref('users/'+uid).update({online:true,lastSeen:now()}).catch(function(){});
+  db.ref('publicProfiles/'+uid).update({name:String((currentUserData&&currentUserData.name)||'Пользователь').slice(0,32),username:String((currentUserData&&currentUserData.username)||'').slice(0,32),avatarId:(currentUserData&&currentUserData.avatarId)||'',photoURL:(currentUserData&&currentUserData.photoURL)||'',online:true,lastSeen:now(),updatedAt:now()}).catch(function(){});
   try{db.ref('users/'+uid).child('online').onDisconnect().set(false);db.ref('users/'+uid).child('lastSeen').onDisconnect().set(now());db.ref('publicProfiles/'+uid).child('online').onDisconnect().set(false);db.ref('publicProfiles/'+uid).child('lastSeen').onDisconnect().set(now());}catch(e){}
   db.ref('users/'+uid).on('value',function(s){
     var v=s.val();if(!v)return;
@@ -1883,13 +1741,9 @@ $('btn-open-premium').onclick=function(){switchTab('shop');};
 function autoDeleteLabel(m){if(!m)return 'Никогда';if(m===12)return '1 год';if(m===1)return '1 месяц';return m+' мес.';}
 
 function premiumDaysCircleHtml(expiresAt){
-  var n=now();
-  var left=Math.max(0,Number(expiresAt||0)-n);
-  var days=Math.ceil(left/86400000);
-  var base=Math.max(days,30)*86400000;
-  var progress=Math.max(0,Math.min(1,left/base));
-  var C=2*Math.PI*15;
-  var dash=(progress*C).toFixed(2);
+  var n=now();var left=Math.max(0,Number(expiresAt||0)-n);var days=Math.ceil(left/86400000);
+  var base=Math.max(days,30)*86400000;var progress=Math.max(0,Math.min(1,left/base));
+  var C=2*Math.PI*15;var dash=(progress*C).toFixed(2);
   return '<div class="premium-days-circle"><svg viewBox="0 0 36 36"><circle class="track" cx="18" cy="18" r="15"/><circle class="bar" cx="18" cy="18" r="15" stroke-dasharray="'+dash+' '+C.toFixed(2)+'" stroke-dashoffset="0"/></svg><span class="days-num">'+days+'</span></div>';
 }
 
@@ -1942,8 +1796,7 @@ function updateTogglesUI(){
 function isFluxAdmin(){
   if(!currentUser)return false;
   if(FLUX_ADMIN_UIDS.indexOf(currentUser.uid)!==-1)return true;
-  var d=currentUserData||{};
-  return d.isAdmin===true||d.role==='admin'||d.admin===true;
+  var d=currentUserData||{};return d.isAdmin===true||d.role==='admin'||d.admin===true;
 }
 function updateAdminVisibility(){var b=document.getElementById('btn-admin-panel');if(b)b.style.display=isFluxAdmin()?'flex':'none';}
 
@@ -1988,8 +1841,7 @@ $('btn-2fa').onclick=function(){
       updateTogglesUI();toast('2FA отключена');sheet.classList.remove('show');
     };
   }else{
-    var secret=genTOTPSecret();
-    var issuer='Flux%20Client';
+    var secret=genTOTPSecret();var issuer='Flux%20Client';
     var label=encodeURIComponent((currentUser.email||currentUser.uid)+'@Flux');
     var otpauth='otpauth://totp/Flux:'+label+'?secret='+secret+'&issuer='+issuer+'&algorithm=SHA1&digits=6&period=30';
     body.innerHTML='<div class="profile-sheet-title">Включить 2FA</div><div class="modal-text">Отсканируйте QR-код в Google Authenticator, Authy, 1Password или введите секрет вручную.</div><div style="display:flex;justify-content:center;padding:12px 0"><div id="tfa-qr" style="background:#fff;padding:12px;border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.15)"></div></div><div class="profile-sheet-subtitle">Секрет (base32)</div><div style="text-align:center;font-size:15px;font-weight:700;letter-spacing:2px;color:var(--accent);padding:8px 0;word-break:break-all;font-family:ui-monospace,Menlo,monospace">'+esc(secret)+'</div><button class="sheet-btn ripple" id="tfa-copy">Скопировать секрет</button><div class="profile-sheet-subtitle">Код подтверждения</div><input class="sheet-input" id="tfa-confirm" type="text" inputmode="numeric" maxlength="6" placeholder="000000"><button class="sheet-btn ripple" id="tfa-enable">Включить</button><button class="sheet-btn secondary ripple" id="tfa-cancel">Отмена</button>';
@@ -2086,12 +1938,8 @@ function showPinSetup(cb){
         if(step===1){code1=pinInput;pinInput='';step=2;modal.querySelector('#setup-title').textContent='Повторите PIN';updateDots();}
         else{
           code2=pinInput;
-          if(code1===code2){
-            modal.remove();
-            var salt=genSalt();
-            var hash=await hashPin(code1,salt);
-            cb({hash:hash,salt:salt});
-          }else{modal.querySelector('#setup-title').textContent='Не совпадают';code1='';code2='';step=1;pinInput='';updateDots();}
+          if(code1===code2){modal.remove();var salt=genSalt();var hash=await hashPin(code1,salt);cb({hash:hash,salt:salt});}
+          else{modal.querySelector('#setup-title').textContent='Не совпадают';code1='';code2='';step=1;pinInput='';updateDots();}
         }
       },140);
     }
@@ -2101,23 +1949,32 @@ function showPinSetup(cb){
 
 
 /* ============================================================
-   FLUX MESSENGER + ANTI-SPAM / ANTI-SCAM
+   FLUX MESSENGER (ПЕРЕПИСАНО — РАБОЧАЯ ВЕРСИЯ)
    ============================================================ */
 var socialChatListeners={};
 var socialCurrentChat=null;
 var socialCurrentPeer=null;
 var socialChatIndexRef=null;
+var socialNotificationsRef=null;
+var socialMessagesRef=null;
 var socialSearchTimer=null;
 var socialSendTimes=[];
 var SOCIAL_MAX_NEW_PER_HOUR=8;
 var SOCIAL_MAX_MESSAGES_PER_MINUTE=20;
 
 function socialChatId(a,b){return [String(a),String(b)].sort().join('_');}
-function socialInitials(name){var p=String(name||'?').trim().split(/\s+/).filter(Boolean);return ((p[0]||'?')[0]+(p[1]||'')[0]).toUpperCase().slice(0,2);}
+function socialInitials(name){var p=String(name||'?').trim().split(/\s+/).filter(Boolean);return (((p[0]||'?')[0]||'')+((p[1]||'')[0]||'')).toUpperCase().slice(0,2);}
 function socialEscape(s){return esc(String(s==null?'':s));}
-function socialAvatarHtml(u,cls){
-  var bg=(getAvatarColorClass?getAvatarColorClass(u.name||''):''), photo=u.photoURL?'<img src="'+socialEscape(u.photoURL)+'" alt="">':'';
-  return '<div class="social-avatar '+bg+'" style="background:linear-gradient(135deg,#8b5cf6,#4f46e5)">'+photo+(photo?'':socialEscape(socialInitials(u.name)))+'<span class="social-online" style="display:'+(u.online?'block':'none')+'"></span></div>';
+
+function socialAvatarHtml(u,extraCls){
+  u=u||{};
+  var preset=u.avatarId?getPresetAvatar(u.avatarId):null;
+  var bg=preset?preset.bg:'linear-gradient(135deg,#8b5cf6,#4f46e5)';
+  var inner;
+  if(preset){inner=preset.emoji;}
+  else if(u.photoURL){inner='<img src="'+socialEscape(u.photoURL)+'" alt="" onerror="this.remove()">';}
+  else{inner=socialEscape(socialInitials(u.name||u.username||'?'));}
+  return '<div class="social-avatar '+(extraCls||'')+'" style="background:'+bg+'">'+inner+'<span class="social-online" style="display:'+(u.online?'block':'none')+'"></span></div>';
 }
 function socialFormatLastSeen(ts,online){
   if(online)return 'в сети';
@@ -2128,29 +1985,71 @@ function socialFormatLastSeen(ts,online){
   if(d<86400000)return 'был(а) '+Math.floor(d/3600000)+' ч. назад';
   return 'был(а) '+new Date(ts).toLocaleDateString('ru-RU');
 }
-function socialIsBlocked(uid){
-  return db.ref('blocks/'+currentUser.uid+'/'+uid).once('value').then(function(s){return s.exists();});
-}
+
 async function socialGetUser(uid){
   if(!uid||!db)return null;
-  var s=await db.ref('publicProfiles/'+uid).once('value');var v=s.val();return v?Object.assign({uid:uid},v):null;
+  try{
+    var s=await db.ref('publicProfiles/'+uid).once('value');
+    var v=s.val();
+    if(!v)return null;
+    return Object.assign({uid:uid},v);
+  }catch(e){return null;}
 }
-async function syncPublicProfile(){
-  if(!currentUser||!db)return;
+function syncPublicProfile(){
+  if(!currentUser||!db)return Promise.resolve();
   var d=currentUserData||{};
-  var username=String(d.username||'').trim().replace(/^@/,'').toLowerCase().replace(/[^a-z0-9_]/g,'').slice(0,32);var publicData={uid:currentUser.uid,name:String(d.name||currentUser.displayName||'Пользователь').slice(0,32),username:username,bio:String(d.bio||'').slice(0,160),avatarId:d.avatarId||'',photoURL:d.photoURL||'',online:!!d.online,lastSeen:Number(d.lastSeen||now()),updatedAt:now()};
-  try{await db.ref('publicProfiles/'+currentUser.uid).update(publicData);if(username){var ur=db.ref('usernames/'+username),us=await ur.once('value');if(!us.exists()||us.val()===currentUser.uid)await ur.set(currentUser.uid);}}catch(e){console.warn('public profile sync',e);}
+  var username=String(d.username||'').trim().replace(/^@/,'').toLowerCase().replace(/[^a-z0-9_]/g,'').slice(0,32);
+  var publicData={
+    name:String(d.name||currentUser.displayName||'Пользователь').slice(0,32),
+    username:username,
+    bio:String(d.bio||'').slice(0,160),
+    avatarId:d.avatarId||'',
+    photoURL:d.photoURL||'',
+    online:true,
+    lastSeen:now(),
+    updatedAt:now()
+  };
+  return db.ref('publicProfiles/'+currentUser.uid).update(publicData).catch(function(e){console.warn('syncPublicProfile',e);});
 }
 function socialCleanupListeners(){
-  Object.keys(socialChatListeners).forEach(function(k){try{socialChatListeners[k].off();}catch(e){}});socialChatListeners={};
+  Object.keys(socialChatListeners).forEach(function(k){try{socialChatListeners[k].off();}catch(e){}});
+  socialChatListeners={};
   if(socialChatIndexRef){try{socialChatIndexRef.off();}catch(e){}socialChatIndexRef=null;}
+  if(socialNotificationsRef){try{socialNotificationsRef.off();}catch(e){}socialNotificationsRef=null;}
+  if(socialMessagesRef){try{socialMessagesRef.off();}catch(e){}socialMessagesRef=null;}
 }
 async function socialHydrateNotifications(){
   if(!currentUser||!db)return;
   try{
-    var s=await db.ref('notifications/'+currentUser.uid).limitToLast(100).once('value');var n=s.val()||{};var grouped={};
-    Object.keys(n).forEach(function(k){var x=n[k]||{};if(x.type==='message'&&x.chatId&&x.fromId)grouped[x.chatId]=x;});
-    for(var chatId in grouped){var x=grouped[chatId];var peer=await socialGetUser(x.fromId);if(peer)await socialNewChatIndex(currentUser.uid,chatId,peer,{unread:1,lastText:x.text||'',updatedAt:Number(x.createdAt||now())});}
+    var s=await db.ref('notifications/'+currentUser.uid).limitToLast(50).once('value');
+    var n=s.val()||{};
+    var grouped={};
+    Object.keys(n).forEach(function(k){
+      var x=n[k]||{};
+      if(x.type==='message'&&x.chatId&&x.fromId){
+        if(!grouped[x.chatId]||Number(x.createdAt||0)>Number(grouped[x.chatId].createdAt||0)){
+          grouped[x.chatId]=x;
+        }
+      }
+    });
+    for(var chatId in grouped){
+      var x=grouped[chatId];
+      var peer=await socialGetUser(x.fromId);
+      if(!peer)continue;
+      var cur=(await db.ref('chatIndex/'+currentUser.uid+'/'+chatId).once('value')).val()||{};
+      if(Number(cur.updatedAt||0) < Number(x.createdAt||0)){
+        await db.ref('chatIndex/'+currentUser.uid+'/'+chatId).update({
+          peerId:x.fromId,
+          name:peer.name||'Пользователь',
+          username:peer.username||'',
+          avatarId:peer.avatarId||'',
+          photoURL:peer.photoURL||'',
+          lastText:x.text||'',
+          updatedAt:Number(x.createdAt||now()),
+          unread:Number(cur.unread||0)+(cur.updatedAt?0:1)
+        }).catch(function(){});
+      }
+    }
   }catch(e){console.warn('notification hydration',e);}
 }
 function socialLoad(){
@@ -2158,8 +2057,40 @@ function socialLoad(){
   socialCleanupListeners();
   socialRenderChats();
   socialHydrateNotifications();
-  var ref=db.ref('chatIndex/'+currentUser.uid);socialChatIndexRef=ref;
-  ref.on('value',function(){socialRenderChats();},function(){socialRenderChats();});
+
+  socialChatIndexRef=db.ref('chatIndex/'+currentUser.uid);
+  socialChatIndexRef.on('value',function(){socialRenderChats();},function(){socialRenderChats();});
+
+  var startedAt=now();
+  socialNotificationsRef=db.ref('notifications/'+currentUser.uid).limitToLast(40);
+  socialNotificationsRef.on('child_added',async function(snap){
+    var n=snap.val();
+    if(!n||n.type!=='message'||!n.chatId||!n.fromId)return;
+    var created=Number(n.createdAt||0);
+    if(created<startedAt-2000)return;
+    try{
+      var peer=await socialGetUser(n.fromId);
+      if(!peer)return;
+      var chatRef=db.ref('chatIndex/'+currentUser.uid+'/'+n.chatId);
+      var cur=(await chatRef.once('value')).val()||{};
+      if(Number(cur.updatedAt||0)<created){
+        await chatRef.update({
+          peerId:n.fromId,
+          name:peer.name||'Пользователь',
+          username:peer.username||'',
+          avatarId:peer.avatarId||'',
+          photoURL:peer.photoURL||'',
+          lastText:n.text||'',
+          updatedAt:created,
+          unread:Number(cur.unread||0)+1
+        });
+      }
+      if(socialCurrentChat===n.chatId){
+        await chatRef.child('unread').set(0);
+      }
+      if(SOUND_PREFS.enabled&&socialCurrentChat!==n.chatId)playSound('tap');
+    }catch(e){console.warn('notification handle',e);}
+  });
 }
 async function socialRenderChats(filter){
   var list=document.getElementById('social-chat-list');if(!list||!currentUser||!db)return;
@@ -2170,17 +2101,28 @@ async function socialRenderChats(filter){
     var arr=Object.keys(idx).map(function(k){return Object.assign({chatId:k},idx[k]);});
     if(filter)arr=arr.filter(function(c){return [c.name,c.username,c.lastText].join(' ').toLowerCase().indexOf(filter)!==-1;});
     arr.sort(function(a,b){return Number(b.updatedAt||0)-Number(a.updatedAt||0);});
-    var summary=document.getElementById('social-chat-summary');if(summary)summary.textContent=arr.length?(arr.length+(arr.length===1?' чат':' чатов')):'Личные сообщения';
-    if(!arr.length){list.innerHTML=filter?'<div class="messenger-empty" style="padding-top:48px"><div class="messenger-empty-title">Ничего не найдено</div><div class="messenger-empty-text">Попробуйте другой запрос.</div></div>':'<div class="messenger-empty"><div class="messenger-empty-icon">✈</div><div class="messenger-empty-title">Нет сообщений</div><div class="messenger-empty-text">Найдите пользователя по @username и начните разговор.</div></div>';return;}
+    var summary=document.getElementById('social-chat-summary');
+    if(summary)summary.textContent=arr.length?(arr.length+(arr.length===1?' чат':' чатов')):'Личные сообщения';
+    if(!arr.length){
+      list.innerHTML=filter
+        ?'<div class="messenger-empty" style="padding-top:48px"><div class="messenger-empty-title">Ничего не найдено</div><div class="messenger-empty-text">Попробуйте другой запрос.</div></div>'
+        :'<div class="messenger-empty"><div class="messenger-empty-icon">✈</div><div class="messenger-empty-title">Нет сообщений</div><div class="messenger-empty-text">Найдите пользователя по @username и начните разговор.</div></div>';
+      return;
+    }
     list.innerHTML=arr.slice(0,100).map(function(c){
       var u={name:c.name||c.username||'Пользователь',username:c.username||'',avatarId:c.avatarId||'',photoURL:c.photoURL||'',online:!!c.online};
       var unread=Number(c.unread||0);
       var time=formatTime(Number(c.updatedAt||0));
       return '<div class="messenger-chat chat-row '+(unread?'unread':'')+'" data-chat="'+socialEscape(c.chatId)+'" data-peer="'+socialEscape(c.peerId||'')+'">'+
-        '<div class="messenger-avatar" style="background:linear-gradient(135deg,#8b5cf6,#4f46e5)">'+(u.photoURL?'<img src="'+socialEscape(u.photoURL)+'" alt="">':socialEscape(socialInitials(u.name)))+'<span class="social-online" style="display:'+(u.online?'block':'none')+'"></span></div>'+
+        '<div class="messenger-avatar" style="background:'+(u.avatarId?getPresetAvatar(u.avatarId).bg:'linear-gradient(135deg,#8b5cf6,#4f46e5)')+'">'+
+          (u.avatarId?getPresetAvatar(u.avatarId).emoji:(u.photoURL?'<img src="'+socialEscape(u.photoURL)+'" alt="">':socialEscape(socialInitials(u.name))))+
+          '<span class="social-online" style="display:'+(u.online?'block':'none')+'"></span>'+
+        '</div>'+
         '<div class="messenger-main"><div class="messenger-top"><div class="messenger-name">'+socialEscape(u.name)+'</div><div class="messenger-time">'+socialEscape(time)+'</div></div><div class="messenger-bottom"><div class="messenger-preview">'+socialEscape(c.lastText||'Новый чат')+'</div>'+(u.username?'<div class="messenger-username">@'+socialEscape(u.username)+'</div>':'')+(unread?'<div class="messenger-unread">'+Math.min(99,unread)+'</div>':'')+'</div></div></div>';
     }).join('');
-    list.querySelectorAll('.chat-row').forEach(function(el){el.onclick=function(){openSocialChat(el.dataset.peer,el.dataset.chat);};});
+    list.querySelectorAll('.chat-row').forEach(function(el){
+      el.onclick=function(){openSocialChat(el.dataset.peer,el.dataset.chat);};
+    });
   }catch(e){console.warn('socialRenderChats',e);list.innerHTML='<div class="messenger-empty"><div class="messenger-empty-title">Не удалось загрузить чаты</div><div class="messenger-empty-text">Проверьте Firebase и правила базы.</div></div>';}
 }
 function socialSearchUsers(q){
@@ -2205,26 +2147,30 @@ function socialSearchUsers(q){
       if(uid===currentUser.uid){if(out)out.innerHTML='<div class="social-empty" style="padding:12px 18px">Это ваш собственный профиль</div>';return;}
       var u=await socialGetUser(uid);
       if(!u){if(out)out.innerHTML='<div class="social-empty" style="padding:12px 18px">Профиль недоступен</div>';return;}
-      var blocked=await socialIsBlocked(uid);
-      if(out)out.innerHTML='<div class="messenger-result"><div class="social-user">'+socialAvatarHtml(u)+'<div class="social-user-main"><div class="social-user-name">'+socialEscape(u.name||'Пользователь')+'</div><div class="social-user-meta">@'+socialEscape(u.username||username)+' · '+socialEscape(socialFormatLastSeen(u.lastSeen,u.online))+'</div></div><div class="social-user-actions">'+(blocked?'<button class="social-mini-btn" id="social-unblock-search">Разблокировать</button>':'<button class="social-mini-btn primary" id="social-open-search">Написать</button>')+'</div></div></div>';
-      var open=document.getElementById('social-open-search');if(open)open.onclick=function(){openSocialChat(uid,socialChatId(currentUser.uid,uid));};
-      var ub=document.getElementById('social-unblock-search');if(ub)ub.onclick=async function(){await db.ref('blocks/'+currentUser.uid+'/'+uid).remove();socialSearchUsers(q);toast('Пользователь разблокирован');};
-    }catch(e){console.warn('social search',e);if(out)out.innerHTML='<div class="social-empty" style="padding:12px 18px">Ошибка поиска. Проверьте правила Firebase.</div>'; }
+      var blocked=await db.ref('blocks/'+currentUser.uid+'/'+uid).once('value');
+      var isBlocked=blocked.exists();
+      if(out)out.innerHTML='<div class="messenger-result"><div class="social-user">'+socialAvatarHtml(u)+'<div class="social-user-main"><div class="social-user-name">'+socialEscape(u.name||'Пользователь')+'</div><div class="social-user-meta">@'+socialEscape(u.username||username)+' · '+socialEscape(socialFormatLastSeen(u.lastSeen,u.online))+'</div></div><div class="social-user-actions">'+(isBlocked?'<button class="social-mini-btn" id="social-unblock-search">Разблокировать</button>':'<button class="social-mini-btn primary" id="social-open-search">Написать</button>')+'</div></div></div>';
+      var open=document.getElementById('social-open-search');
+      if(open)open.onclick=function(){openSocialChat(uid,socialChatId(currentUser.uid,uid));};
+      var ub=document.getElementById('social-unblock-search');
+      if(ub)ub.onclick=async function(){await db.ref('blocks/'+currentUser.uid+'/'+uid).remove();socialSearchUsers(q);toast('Пользователь разблокирован');};
+    }catch(e){console.warn('social search',e);if(out)out.innerHTML='<div class="social-empty" style="padding:12px 18px">Ошибка поиска. Проверьте правила Firebase.</div>';}
   },280);
 }
-function socialNewChatIndex(uid,chatId,peer,extra){
+async function socialNewChatIndex(uid,chatId,peer,extra){
   var data={peerId:peer.uid,name:peer.name||'Пользователь',username:peer.username||'',avatarId:peer.avatarId||'',photoURL:peer.photoURL||'',online:!!peer.online,lastSeen:Number(peer.lastSeen||0),updatedAt:now()};
   if(extra)Object.assign(data,extra);
-  return db.ref('chatIndex/'+uid+'/'+chatId).set(data);
+  return db.ref('chatIndex/'+uid+'/'+chatId).update(data);
 }
 async function openSocialChat(peerId,chatId){
   if(!currentUser||!db||peerId===currentUser.uid)return;
   try{
     var peer=await socialGetUser(peerId);
     if(!peer){toast('Пользователь не найден');return;}
-    if(await socialIsBlocked(peerId)){toast('Сначала разблокируйте пользователя');return;}
-    var otherBlocked=await db.ref('blocks/'+peerId+'/'+currentUser.uid).once('value');
-    if(otherBlocked.exists()){toast('Пользователь ограничил сообщения');return;}
+    var myBlock=await db.ref('blocks/'+currentUser.uid+'/'+peerId).once('value');
+    if(myBlock.exists()){toast('Сначала разблокируйте пользователя');return;}
+    var otherBlock=await db.ref('blocks/'+peerId+'/'+currentUser.uid).once('value');
+    if(otherBlock.exists()){toast('Пользователь ограничил сообщения');return;}
 
     chatId=chatId||socialChatId(currentUser.uid,peerId);
     var metaRef=db.ref('chatMeta/'+chatId);
@@ -2234,11 +2180,19 @@ async function openSocialChat(peerId,chatId){
       await metaRef.set({a:a[0],b:a[1],createdAt:now()});
     }
 
-    var me={uid:currentUser.uid,name:currentUserData&&currentUserData.name||currentUser.displayName||'Пользователь',username:currentUserData&&currentUserData.username||'',avatarId:currentUserData&&currentUserData.avatarId||'',photoURL:currentUserData&&currentUserData.photoURL||'',online:true,lastSeen:now()};
-    // Собственный индекс обязателен для списка чатов.
-    await socialNewChatIndex(currentUser.uid,chatId,peer,{unread:0});
-    // Индекс собеседника не должен мешать открытию чата. Если Rules его разрешают — создаём; иначе чат всё равно открывается.
-    try{await socialNewChatIndex(peer.uid,chatId,me,{unread:0});}catch(indexErr){console.warn('peer chatIndex write denied',indexErr);}
+    var me={
+      uid:currentUser.uid,
+      name:(currentUserData&&currentUserData.name)||currentUser.displayName||'Пользователь',
+      username:(currentUserData&&currentUserData.username)||'',
+      avatarId:(currentUserData&&currentUserData.avatarId)||'',
+      photoURL:(currentUserData&&currentUserData.photoURL)||'',
+      online:true,
+      lastSeen:now()
+    };
+    // Свой индекс — всегда
+    try{ await socialNewChatIndex(currentUser.uid,chatId,peer,{unread:0}); }catch(e){ console.warn('own index',e); }
+    // Индекс собеседника (разрешён обновлёнными правилами)
+    try{ await socialNewChatIndex(peer.uid,chatId,me,{unread:0}); }catch(e){ console.warn('peer index',e); }
 
     socialCurrentChat=chatId;
     socialCurrentPeer=peer;
@@ -2250,20 +2204,34 @@ async function openSocialChat(peerId,chatId){
     var avatar=document.getElementById('chat-avatar');
     if(headName)headName.textContent=peer.name||'Пользователь';
     if(headStatus)headStatus.textContent='@'+(peer.username||'user')+' · '+socialFormatLastSeen(peer.lastSeen,peer.online);
-    if(avatar)avatar.innerHTML=peer.photoURL?'<img src="'+socialEscape(peer.photoURL)+'" alt="">':socialEscape(socialInitials(peer.name));
+    if(avatar){
+      var preset=peer.avatarId?getPresetAvatar(peer.avatarId):null;
+      if(preset){avatar.style.background=preset.bg;avatar.innerHTML=preset.emoji;}
+      else if(peer.photoURL){avatar.style.background='#000';avatar.innerHTML='<img src="'+socialEscape(peer.photoURL)+'" alt="">';}
+      else{avatar.style.background='linear-gradient(135deg,#8b5cf6,#4f46e5)';avatar.textContent=socialInitials(peer.name);}
+    }
+    // Обнуляем непрочитанное
+    try{ await db.ref('chatIndex/'+currentUser.uid+'/'+chatId+'/unread').set(0); }catch(e){}
     socialListenMessages(chatId);
   }catch(e){
     console.error('openSocialChat failed:',e);
-    toast('Не удалось открыть чат: '+(e&&e.message?e.message:'проверьте Firebase Rules'));
+    toast('Не удалось открыть чат: '+(e&&e.message?e.message:'проверьте правила Firebase'));
   }
 }
 function socialListenMessages(chatId){
   var box=document.getElementById('chat-messages');if(!box)return;
-  Object.keys(socialChatListeners).forEach(function(k){try{socialChatListeners[k].off();}catch(e){}});socialChatListeners={};
-  var ref=db.ref('chats/'+chatId+'/messages').limitToLast(150);socialChatListeners[chatId]=ref;
+  if(socialMessagesRef){try{socialMessagesRef.off();}catch(e){}socialMessagesRef=null;}
+  var ref=db.ref('chats/'+chatId+'/messages').limitToLast(200);
+  socialMessagesRef=ref;
   ref.on('value',function(s){
-    var data=s.val()||{};var arr=Object.keys(data).map(function(k){return Object.assign({id:k},data[k]);});arr.sort(function(a,b){return Number(a.createdAt||0)-Number(b.createdAt||0);});
-    box.innerHTML=arr.map(function(m){var mine=m.senderId===currentUser.uid;var hasLink=/https?:\/\//i.test(m.text||'');return '<div class="msg-row '+(mine?'mine':'')+'"><div class="msg-bubble">'+socialEscape(m.text).replace(/\n/g,'<br>')+'<span class="msg-time">'+new Date(Number(m.createdAt||now())).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})+'</span>'+(hasLink?'<div class="msg-link-warning">🔗 Проверьте ссылку перед переходом</div>':'')+'</div></div>';}).join('')||'<div class="social-empty" style="margin:auto">Начните разговор.<br>Не отправляйте пароли, коды и платёжные данные.</div>';
+    var data=s.val()||{};
+    var arr=Object.keys(data).map(function(k){return Object.assign({id:k},data[k]);});
+    arr.sort(function(a,b){return Number(a.createdAt||0)-Number(b.createdAt||0);});
+    box.innerHTML=arr.map(function(m){
+      var mine=m.senderId===currentUser.uid;
+      var hasLink=/https?:\/\//i.test(m.text||'');
+      return '<div class="msg-row '+(mine?'mine':'')+'"><div class="msg-bubble">'+socialEscape(m.text).replace(/\n/g,'<br>')+'<span class="msg-time">'+new Date(Number(m.createdAt||now())).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})+'</span>'+(hasLink?'<div class="msg-link-warning">🔗 Проверьте ссылку перед переходом</div>':'')+'</div></div>';
+    }).join('')||'<div class="social-empty" style="margin:auto">Начните разговор.<br>Не отправляйте пароли, коды и платёжные данные.</div>';
     box.scrollTop=box.scrollHeight;
   });
 }
@@ -2274,62 +2242,144 @@ function socialCanSend(){
 }
 async function socialSendMessage(){
   if(!socialCurrentChat||!socialCurrentPeer||!currentUser)return;
-  var input=document.getElementById('chat-input');var text=String(input.value||'').trim();if(!text)return;if(text.length>2000){toast('Сообщение слишком длинное');return;}
+  var input=document.getElementById('chat-input');
+  var text=String(input.value||'').trim();
+  if(!text)return;
+  if(text.length>2000){toast('Сообщение слишком длинное');return;}
   if(!socialCanSend())return;
   if(/^(?:пароль|password|код|code)\s*[:=]/i.test(text)){toast('Не отправляйте пароли или коды в чат');return;}
+
+  var peer=socialCurrentPeer;
+  var chatId=socialCurrentChat;
+  var chatIsNew=false;
   try{
-    var blocked=await socialIsBlocked(socialCurrentPeer.uid);if(blocked){toast('Пользователь заблокирован');return;}
-    var other=await db.ref('blocks/'+socialCurrentPeer.uid+'/'+currentUser.uid).once('value');if(other.exists()){toast('Вам нельзя отправлять сообщения этому пользователю');return;}
-    var hourSnap=await db.ref('chatIndex/'+currentUser.uid+'/'+socialCurrentChat+'/createdAt').once('value');
-    var isNewConversation=!hourSnap.exists();
-    if(isNewConversation){
-      var cutoff=now()-3600000;
-      var log=JSON.parse(localStorage.getItem('flux_social_newchat_log')||'[]').filter(function(x){return x>cutoff;});
-      if(log.length>=SOCIAL_MAX_NEW_PER_HOUR){toast('Лимит новых диалогов на час достигнут');return;}
-      log.push(now());try{localStorage.setItem('flux_social_newchat_log',JSON.stringify(log));}catch(e){}
-    }
-    var msgRef=db.ref('chats/'+socialCurrentChat+'/messages').push();
-    var msg={senderId:currentUser.uid,receiverId:socialCurrentPeer.uid,text:text,createdAt:now()};
-    var updates={};updates['chats/'+socialCurrentChat+'/messages/'+msgRef.key]=msg;
-    updates['chatIndex/'+currentUser.uid+'/'+socialCurrentChat+'/lastText']=text;updates['chatIndex/'+currentUser.uid+'/'+socialCurrentChat+'/updatedAt']=msg.createdAt;
-    updates['chatIndex/'+socialCurrentPeer.uid+'/'+socialCurrentChat+'/lastText']=text;updates['chatIndex/'+socialCurrentPeer.uid+'/'+socialCurrentChat+'/updatedAt']=msg.createdAt;
-    updates['chatIndex/'+socialCurrentPeer.uid+'/'+socialCurrentChat+'/unread']=firebase.database.ServerValue.increment(1);
-    updates['notifications/'+socialCurrentPeer.uid+'/n_'+msgRef.key]={type:'message',fromId:currentUser.uid,chatId:socialCurrentChat,text:text.slice(0,100),createdAt:msg.createdAt,read:false};
-    await db.ref().update(updates);input.value='';input.style.height='42px';
-  }catch(e){console.warn('send',e);toast('Не удалось отправить сообщение');}
+    var existing=await db.ref('chatIndex/'+currentUser.uid+'/'+chatId).once('value');
+    chatIsNew=!existing.exists()||!existing.val().updatedAt;
+  }catch(e){}
+
+  if(chatIsNew){
+    var cutoff=now()-3600000;
+    var log=JSON.parse(localStorage.getItem('flux_social_newchat_log')||'[]').filter(function(x){return x>cutoff;});
+    if(log.length>=SOCIAL_MAX_NEW_PER_HOUR){toast('Лимит новых диалогов на час достигнут');return;}
+    log.push(now());try{localStorage.setItem('flux_social_newchat_log',JSON.stringify(log));}catch(e){}
+  }
+
+  try{
+    var blocked=await db.ref('blocks/'+currentUser.uid+'/'+peer.uid).once('value');
+    if(blocked.exists()){toast('Пользователь заблокирован');return;}
+    var other=await db.ref('blocks/'+peer.uid+'/'+currentUser.uid).once('value');
+    if(other.exists()){toast('Вам нельзя отправлять сообщения этому пользователю');return;}
+
+    var msgRef=db.ref('chats/'+chatId+'/messages').push();
+    var ts=now();
+    var msg={senderId:currentUser.uid,receiverId:peer.uid,text:text,createdAt:ts};
+    var myName=(currentUserData&&currentUserData.name)||'Пользователь';
+    var myUsername=(currentUserData&&currentUserData.username)||'';
+    var myAvatarId=(currentUserData&&currentUserData.avatarId)||'';
+    var myPhotoURL=(currentUserData&&currentUserData.photoURL)||'';
+
+    var updates={};
+    updates['chats/'+chatId+'/messages/'+msgRef.key]=msg;
+    // Мой индекс
+    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/peerId']=peer.uid;
+    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/name']=peer.name||'Пользователь';
+    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/username']=peer.username||'';
+    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/avatarId']=peer.avatarId||'';
+    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/photoURL']=peer.photoURL||'';
+    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/lastText']=text;
+    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/updatedAt']=ts;
+    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/unread']=0;
+    // Индекс собеседника
+    updates['chatIndex/'+peer.uid+'/'+chatId+'/peerId']=currentUser.uid;
+    updates['chatIndex/'+peer.uid+'/'+chatId+'/name']=myName;
+    updates['chatIndex/'+peer.uid+'/'+chatId+'/username']=myUsername;
+    updates['chatIndex/'+peer.uid+'/'+chatId+'/avatarId']=myAvatarId;
+    updates['chatIndex/'+peer.uid+'/'+chatId+'/photoURL']=myPhotoURL;
+    updates['chatIndex/'+peer.uid+'/'+chatId+'/lastText']=text;
+    updates['chatIndex/'+peer.uid+'/'+chatId+'/updatedAt']=ts;
+    // Уведомление
+    updates['notifications/'+peer.uid+'/n_'+msgRef.key]={type:'message',fromId:currentUser.uid,chatId:chatId,text:text.slice(0,100),createdAt:ts,read:false};
+
+    await db.ref().update(updates);
+
+    // Инкремент непрочитанного у собеседника (если чат не открыт у него — он сам обнулит)
+    try{ await db.ref('chatIndex/'+peer.uid+'/'+chatId+'/unread').transaction(function(c){return (Number(c)||0)+1;}); }catch(e){}
+
+    input.value='';input.style.height='42px';
+  }catch(e){
+    console.warn('send',e);
+    var msg=String(e&&(e.message||e.code)||'');
+    if(/permission/i.test(msg))toast('Не удалось отправить: проверьте правила Firebase');
+    else toast('Не удалось отправить сообщение');
+  }
 }
-async function socialBlockCurrent(){
+function socialBlockCurrent(){
   if(!socialCurrentPeer)return;
   var uid=socialCurrentPeer.uid;
   showModal('<div class="modal-title">Заблокировать пользователя?</div><div class="modal-text">Он не сможет отправлять вам сообщения через Flux.</div><div class="modal-actions"><button class="modal-btn" id="sb-cancel">Отмена</button><button class="modal-btn danger" id="sb-ok">Заблокировать</button></div>',function(m,close){
-    m.querySelector('#sb-cancel').onclick=close;m.querySelector('#sb-ok').onclick=async function(){try{await db.ref('blocks/'+currentUser.uid+'/'+uid).set(true);toast('Пользователь заблокирован');close();document.getElementById('chat-window').classList.remove('show');}catch(e){toast('Ошибка');}};
+    m.querySelector('#sb-cancel').onclick=close;
+    m.querySelector('#sb-ok').onclick=async function(){
+      try{await db.ref('blocks/'+currentUser.uid+'/'+uid).set(true);toast('Пользователь заблокирован');close();document.getElementById('chat-window').classList.remove('show');}catch(e){toast('Ошибка');}
+    };
   });
 }
 function socialReportCurrent(){
-  if(!socialCurrentPeer)return;var uid=socialCurrentPeer.uid;
+  if(!socialCurrentPeer)return;
+  var uid=socialCurrentPeer.uid;
   showModal('<div class="modal-title">Пожаловаться</div><div class="social-modal-note">Выберите причину. Жалоба попадёт в очередь модерации.</div><button class="social-report-option" data-reason="spam">📢 Спам / массовая реклама</button><button class="social-report-option" data-reason="scam">⚠️ Мошенничество</button><button class="social-report-option" data-reason="abuse">🚫 Оскорбления / нарушение правил</button><button class="social-report-option" data-reason="other">Другое</button>',function(m,close){
-    m.querySelectorAll('.social-report-option').forEach(function(b){b.onclick=async function(){try{var id='r_'+currentUser.uid+'_'+now();await db.ref('reports/'+id).set({reporterId:currentUser.uid,targetId:uid,chatId:socialCurrentChat,reason:b.dataset.reason,createdAt:now(),status:'open'});toast('Жалоба отправлена');close();}catch(e){toast('Не удалось отправить жалобу');}};});
+    m.querySelectorAll('.social-report-option').forEach(function(b){
+      b.onclick=async function(){
+        try{
+          var id='r_'+currentUser.uid+'_'+now();
+          await db.ref('reports/'+id).set({reporterId:currentUser.uid,targetId:uid,chatId:socialCurrentChat,reason:b.dataset.reason,createdAt:now(),status:'open'});
+          toast('Жалоба отправлена');close();
+        }catch(e){toast('Не удалось отправить жалобу');}
+      };
+    });
   });
 }
 function socialShowBlocks(){
   var body='<div class="modal-title">Заблокированные</div><div id="social-block-list"><div class="social-empty">Загрузка…</div></div><div class="modal-actions"><button class="modal-btn" id="social-block-close">Закрыть</button></div>';
-  showModal(body,function(m,close){m.querySelector('#social-block-close').onclick=close;(async function(){try{var s=await db.ref('blocks/'+currentUser.uid).once('value');var ids=Object.keys(s.val()||{});if(!ids.length){m.querySelector('#social-block-list').innerHTML='<div class="social-empty">Заблокированных нет</div>';return;}var users=await Promise.all(ids.map(socialGetUser));m.querySelector('#social-block-list').innerHTML=users.filter(Boolean).map(function(u){return '<div class="social-user"><div class="social-user-main"><div class="social-user-name">'+socialEscape(u.name||'Пользователь')+'</div><div class="social-user-meta">@'+socialEscape(u.username||'user')+'</div></div><button class="social-mini-btn" data-uid="'+socialEscape(u.uid)+'">Разблокировать</button></div>';}).join('');m.querySelectorAll('[data-uid]').forEach(function(b){b.onclick=async function(){await db.ref('blocks/'+currentUser.uid+'/'+b.dataset.uid).remove();b.closest('.social-user').remove();toast('Разблокировано');};});}catch(e){m.querySelector('#social-block-list').innerHTML='<div class="social-empty">Ошибка</div>';}})();});
+  showModal(body,function(m,close){
+    m.querySelector('#social-block-close').onclick=close;
+    (async function(){
+      try{
+        var s=await db.ref('blocks/'+currentUser.uid).once('value');
+        var ids=Object.keys(s.val()||{});
+        if(!ids.length){m.querySelector('#social-block-list').innerHTML='<div class="social-empty">Заблокированных нет</div>';return;}
+        var users=await Promise.all(ids.map(socialGetUser));
+        m.querySelector('#social-block-list').innerHTML=users.filter(Boolean).map(function(u){
+          return '<div class="social-user"><div class="social-user-main"><div class="social-user-name">'+socialEscape(u.name||'Пользователь')+'</div><div class="social-user-meta">@'+socialEscape(u.username||'user')+'</div></div><button class="social-mini-btn" data-uid="'+socialEscape(u.uid)+'">Разблокировать</button></div>';
+        }).join('');
+        m.querySelectorAll('[data-uid]').forEach(function(b){
+          b.onclick=async function(){await db.ref('blocks/'+currentUser.uid+'/'+b.dataset.uid).remove();b.closest('.social-user').remove();toast('Разблокировано');};
+        });
+      }catch(e){m.querySelector('#social-block-list').innerHTML='<div class="social-empty">Ошибка</div>';}
+    })();
+  });
 }
-function socialHelp(){showModal('<div class="modal-title">Защита Flux</div><div class="modal-text"><b>Антиспам:</b> ограничение частоты сообщений и новых диалогов.<br><br><b>Блокировка:</b> запрещает сообщения между пользователями.<br><br><b>Жалобы:</b> сохраняются отдельно для модерации.<br><br><b>Важно:</b> не отправляйте в чаты пароли, коды 2FA, данные карты или другие секреты.</div><div class="modal-actions"><button class="modal-btn primary" id="shelp-close">Понятно</button></div>',function(m,close){m.querySelector('#shelp-close').onclick=close;});}
 
 $('social-user-search').addEventListener('input',function(){socialSearchUsers(this.value);});
 $('social-search-clear').onclick=function(){$('social-user-search').value='';socialSearchUsers('');$('social-user-search').focus();};
 $('social-refresh').onclick=function(){socialLoad();toast('Чаты обновлены');};
 $('social-new-chat').onclick=function(){$('social-user-search').value='@';$('social-user-search').focus();socialSearchUsers('@');};
-if($('social-report-help'))$('social-report-help').onclick=socialHelp;
-if($('social-blocks'))$('social-blocks').onclick=socialShowBlocks;
-$('chat-back').onclick=function(){document.getElementById('chat-window').classList.remove('show');socialCurrentChat=null;socialCurrentPeer=null;socialRenderChats();};
+$('chat-back').onclick=function(){
+  document.getElementById('chat-window').classList.remove('show');
+  if(socialMessagesRef){try{socialMessagesRef.off();}catch(e){}socialMessagesRef=null;}
+  socialCurrentChat=null;socialCurrentPeer=null;
+  socialRenderChats();
+};
 $('chat-send').onclick=socialSendMessage;
 $('chat-input').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();socialSendMessage();}});
 $('chat-input').addEventListener('input',function(){this.style.height='42px';this.style.height=Math.min(110,this.scrollHeight)+'px';});
 $('chat-more').onclick=function(){
   if(!socialCurrentPeer)return;
-  showModal('<div class="modal-title">'+socialEscape(socialCurrentPeer.name||'Пользователь')+'</div><div class="modal-text">@'+socialEscape(socialCurrentPeer.username||'user')+'<br>'+socialEscape(socialFormatLastSeen(socialCurrentPeer.lastSeen,socialCurrentPeer.online))+'</div><div class="modal-actions stack"><button class="modal-btn" id="chat-report">Пожаловаться</button><button class="modal-btn danger" id="chat-block">Заблокировать</button><button class="modal-btn" id="chat-close-menu">Закрыть</button></div>',function(m,close){m.querySelector('#chat-report').onclick=function(){close();socialReportCurrent();};m.querySelector('#chat-block').onclick=function(){close();socialBlockCurrent();};m.querySelector('#chat-close-menu').onclick=close;});
+  showModal('<div class="modal-title">'+socialEscape(socialCurrentPeer.name||'Пользователь')+'</div><div class="modal-text">@'+socialEscape(socialCurrentPeer.username||'user')+'<br>'+socialEscape(socialFormatLastSeen(socialCurrentPeer.lastSeen,socialCurrentPeer.online))+'</div><div class="modal-actions stack"><button class="modal-btn" id="chat-report">Пожаловаться</button><button class="modal-btn danger" id="chat-block">Заблокировать</button><button class="modal-btn" id="chat-blocks-list">Заблокированные</button><button class="modal-btn" id="chat-close-menu">Закрыть</button></div>',function(m,close){
+    m.querySelector('#chat-report').onclick=function(){close();socialReportCurrent();};
+    m.querySelector('#chat-block').onclick=function(){close();socialBlockCurrent();};
+    m.querySelector('#chat-blocks-list').onclick=function(){close();socialShowBlocks();};
+    m.querySelector('#chat-close-menu').onclick=close;
+  });
 };
 
 function switchTab(tab){
@@ -2478,25 +2528,16 @@ let vpnKeys=[],vpnFiltered=[],vpnProtoFilter='all';
 let vpnFavorites={};try{vpnFavorites=JSON.parse(localStorage.getItem('flux_vpn_fav')||'{}');}catch(e){vpnFavorites={};}
 function saveVpnFavorites(){try{localStorage.setItem('flux_vpn_fav',JSON.stringify(vpnFavorites));}catch(e){}}
 
-/* ============================================================
-   REACTIONS SYSTEM (Telegram-style)
-   Storage layout in Firebase:
-     reactions/{sourceId}/{serverHash}/{uid} = 'heart' | 'crystal' | 'like' | 'dislike'
-   One listener per source gives us counts for all servers in that source.
-   ============================================================ */
-let reactionsData = {};      // { serverHash: { uid: reactionKey } }
+let reactionsData = {};
 let reactionsRef = null;
 let reactionsSourceId = null;
 
 function hashServerKey(raw){
   var s = String(raw || '').trim().replace(/[\r\n]+/g, '');
   var h = 5381;
-  for(var i = 0; i < s.length; i++){
-    h = (((h << 5) + h) + s.charCodeAt(i)) >>> 0;
-  }
+  for(var i = 0; i < s.length; i++){h = (((h << 5) + h) + s.charCodeAt(i)) >>> 0;}
   return h.toString(36) + '_' + s.length.toString(36);
 }
-
 function subscribeReactions(sourceId){
   if(reactionsRef){ try{ reactionsRef.off(); }catch(e){} reactionsRef = null; }
   reactionsSourceId = sourceId || null;
@@ -2504,91 +2545,46 @@ function subscribeReactions(sourceId){
   if(!db || !currentUser || !sourceId) return;
   try{
     reactionsRef = db.ref('reactions/' + sourceId);
-    reactionsRef.on('value', function(snap){
-      reactionsData = snap.val() || {};
-      updateVisibleReactions();
-    }, function(err){
-      console.warn('reactions listener:', err && err.code);
-    });
+    reactionsRef.on('value', function(snap){ reactionsData = snap.val() || {}; updateVisibleReactions(); }, function(err){ console.warn('reactions listener:', err && err.code); });
   }catch(e){ console.warn('subscribeReactions failed', e); }
 }
-function unsubscribeReactions(){
-  if(reactionsRef){ try{ reactionsRef.off(); }catch(e){} reactionsRef = null; }
-  reactionsSourceId = null;
-}
-
-function getReactionBucket(raw){
-  var h = hashServerKey(raw);
-  return reactionsData[h] || {};
-}
+function getReactionBucket(raw){var h = hashServerKey(raw);return reactionsData[h] || {};}
 function getReactionCounts(raw){
   var bucket = getReactionBucket(raw);
   var counts = { heart:0, crystal:0, like:0, dislike:0 };
-  for(var uid in bucket){
-    if(!Object.prototype.hasOwnProperty.call(bucket, uid)) continue;
-    var r = bucket[uid];
-    if(counts[r] !== undefined) counts[r]++;
-  }
+  for(var uid in bucket){if(!Object.prototype.hasOwnProperty.call(bucket, uid)) continue;var r = bucket[uid];if(counts[r] !== undefined) counts[r]++;}
   return counts;
 }
-function getMyReaction(raw){
-  if(!currentUser) return '';
-  var bucket = getReactionBucket(raw);
-  return bucket[currentUser.uid] || '';
-}
-
+function getMyReaction(raw){if(!currentUser) return '';var bucket = getReactionBucket(raw);return bucket[currentUser.uid] || '';}
 async function toggleReaction(raw, kind){
   if(!currentUser || !db){ toast('Войдите в аккаунт'); return; }
   if(!reactionsSourceId){ toast('Обновите список серверов'); return; }
   var h = hashServerKey(raw);
   var ref = db.ref('reactions/' + reactionsSourceId + '/' + h + '/' + currentUser.uid);
   var current = getMyReaction(raw);
-
-  /* Optimistic UI: update local map so the button responds instantly */
   var bucket = reactionsData[h];
   if(!bucket){ bucket = {}; reactionsData[h] = bucket; }
-  var rollback = { uid: current, had: !!current, existedBucket: !!reactionsData[h] };
-  if(current === kind){
-    delete bucket[currentUser.uid];
-    if(!Object.keys(bucket).length) delete reactionsData[h];
-  } else {
-    bucket[currentUser.uid] = kind;
-  }
+  if(current === kind){delete bucket[currentUser.uid];if(!Object.keys(bucket).length) delete reactionsData[h];}
+  else {bucket[currentUser.uid] = kind;}
   updateVisibleReactions();
-
   try{
-    if(current === kind){
-      await ref.remove();
-    } else {
-      await ref.set(kind);
-    }
+    if(current === kind){await ref.remove();} else {await ref.set(kind);}
   }catch(e){
-    /* Revert optimistic change */
-    if(rollback.had){ if(!reactionsData[h]) reactionsData[h] = {}; reactionsData[h][currentUser.uid] = rollback.uid; }
+    if(current){ if(!reactionsData[h]) reactionsData[h] = {}; reactionsData[h][currentUser.uid] = current; }
     else { if(reactionsData[h]){ delete reactionsData[h][currentUser.uid]; if(!Object.keys(reactionsData[h]).length) delete reactionsData[h]; } }
     updateVisibleReactions();
     toast('Не удалось поставить реакцию');
-    console.warn('toggleReaction failed', e);
   }
 }
-
 function updateVisibleReactions(){
-  var list = document.getElementById('vpn-key-list');
-  if(!list) return;
+  var list = document.getElementById('vpn-key-list');if(!list) return;
   var items = list.querySelectorAll('.vpn-key-item');
   for(var i = 0; i < items.length; i++){
-    var el = items[i];
-    var idx = +el.dataset.idx;
-    var k = vpnFiltered[idx];
-    if(!k) continue;
-    var raw = k.raw;
-    var counts = getReactionCounts(raw);
-    var mine = getMyReaction(raw);
+    var el = items[i];var idx = +el.dataset.idx;var k = vpnFiltered[idx];if(!k) continue;
+    var raw = k.raw;var counts = getReactionCounts(raw);var mine = getMyReaction(raw);
     var btns = el.querySelectorAll('.vpn-reaction');
     for(var j = 0; j < btns.length; j++){
-      var btn = btns[j];
-      var kind = btn.dataset.reaction;
-      var c = counts[kind] || 0;
+      var btn = btns[j];var kind = btn.dataset.reaction;var c = counts[kind] || 0;
       var countEl = btn.querySelector('.rx-count');
       if(countEl) countEl.textContent = c > 0 ? String(c) : '';
       btn.classList.toggle('has-count', c > 0);
@@ -2597,9 +2593,6 @@ function updateVisibleReactions(){
   }
 }
 
-/* ============================================================
-   VPN: parsing, sources, rendering
-   ============================================================ */
 function parseVpnKeys(text){
   var lines=String(text||'').replace(/\r/g,'\n').split(/\n+/);
   var keys=[];
@@ -2608,11 +2601,7 @@ function parseVpnKeys(text){
     var line=String(lines[i]||'').replace(/^\uFEFF/,'').trim();
     if(!line||line.charAt(0)==='#')continue;
     var m=line.match(protoRegex);
-    if(m){
-      var proto=(m[1]||'').toLowerCase();
-      if(proto==='socks5'||proto==='socks4')proto='socks';
-      keys.push({proto:proto,raw:line});
-    }
+    if(m){var proto=(m[1]||'').toLowerCase();if(proto==='socks5'||proto==='socks4')proto='socks';keys.push({proto:proto,raw:line});}
   }
   return keys;
 }
@@ -2649,15 +2638,11 @@ function renderVpnCategoryTabs(){
       if(wantPremium&&!isPremiumUserNow()){toast('Premium VPN доступен только Premium');return;}
       var id=wantPremium?(isPremiumVpnSource(vpnActiveSourceId)?vpnActiveSourceId:'p1'):'v1';
       if(vpnActiveSourceId===id)return;
-      vpnActiveSourceId=id;
-      vpnActiveCategory=wantPremium?'premium':'free';
+      vpnActiveSourceId=id;vpnActiveCategory=wantPremium?'premium':'free';
       try{localStorage.setItem('flux_vpn_source',vpnActiveSourceId);localStorage.setItem('flux_vpn_category',vpnActiveCategory);}catch(e){}
-      ++vpnLoadRequestId;
-      vpnKeys=[];vpnFiltered=[];vpnProtoFilter='all';
+      ++vpnLoadRequestId;vpnKeys=[];vpnFiltered=[];vpnProtoFilter='all';
       if(vpnSelectedKey){clearVpnConnected();vpnSelectedKey=null;try{localStorage.removeItem('flux_selected_vpn_key');}catch(e){}}
-      renderVpnCategoryTabs();renderVpnSources();renderVpnFilters();
-      renderHomeServers();
-      updateConnectUI();
+      renderVpnCategoryTabs();renderVpnSources();renderVpnFilters();renderHomeServers();updateConnectUI();
       toast('Загружаем '+ (wantPremium?'Premium':'бесплатные') +' ключи…');
       loadVpnKeys();
     };
@@ -2675,15 +2660,11 @@ function renderVpnSources(){
       var id=ch.dataset.src;
       if(isPremiumVpnSource(id)&&!isPremiumUserNow()){toast('Premium VPN доступен только Premium');return;}
       if(vpnActiveSourceId===id)return;
-      vpnActiveSourceId=id;
-      vpnActiveCategory=isPremiumVpnSource(id)?'premium':'free';
+      vpnActiveSourceId=id;vpnActiveCategory=isPremiumVpnSource(id)?'premium':'free';
       try{localStorage.setItem('flux_vpn_source',vpnActiveSourceId);localStorage.setItem('flux_vpn_category',vpnActiveCategory);}catch(e){}
-      ++vpnLoadRequestId;
-      vpnKeys=[];vpnFiltered=[];vpnProtoFilter='all';
+      ++vpnLoadRequestId;vpnKeys=[];vpnFiltered=[];vpnProtoFilter='all';
       if(vpnSelectedKey){clearVpnConnected();vpnSelectedKey=null;try{localStorage.removeItem('flux_selected_vpn_key');}catch(e){}}
-      renderVpnCategoryTabs();renderVpnSources();renderVpnFilters();
-      renderHomeServers();
-      updateConnectUI();
+      renderVpnCategoryTabs();renderVpnSources();renderVpnFilters();renderHomeServers();updateConnectUI();
       loadVpnKeys();
     };
   });
@@ -2704,14 +2685,12 @@ function stripLeadingCountryFlags(text){
 function getServerDisplay(k){
   if(!k) return '';
   try{var renamed = String(buildFluxHappTitle(k.raw)||'').trim();renamed = stripLeadingCountryFlags(renamed);if(renamed) return truncate(renamed, 40);}catch(e){}
-  var meta = {name:'', flag:''};
-  try{ meta = extractVpnMeta(k.raw); }catch(e){}
+  var meta = {name:'', flag:''};try{ meta = extractVpnMeta(k.raw); }catch(e){}
   var host = getVpnHost(k.raw);
   var name = isFluxGithubHost(host) || /raw\.githubusercontent\.com/i.test(String(meta.name||'')) ? '@FluxVpnClient' : (meta.name || host || (k.proto.toUpperCase()+' server'));
   return String(name).replace(/^[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]\s*/, '').trim();
 }
 
-/* FIX #43: render reaction pill with count (Telegram style) */
 function reactionButtonHtml(idx, kind, active, count){
   var hasCount = count > 0;
   var label = REACTION_LABELS[kind] + (hasCount ? ' · ' + count : '');
@@ -2723,59 +2702,35 @@ function reactionButtonHtml(idx, kind, active, count){
     + '<span class="rx-count">' + (hasCount ? count : '') + '</span>'
     + '</button>';
 }
-
 function bindVpnActions(list){
   if(!list) return;
-
-  /* Favorite star */
   list.querySelectorAll('[data-star]').forEach(function(btn){
     btn.onclick = function(event){
       if(event) event.stopPropagation();
-      var idx = Number(btn.getAttribute('data-star'));
-      var key = vpnFiltered[idx];
-      if(!key) return;
+      var idx = Number(btn.getAttribute('data-star'));var key = vpnFiltered[idx];if(!key) return;
       var raw = key.raw;
       if(vpnFavorites[raw]){delete vpnFavorites[raw];btn.classList.remove('active');toast('Удалено из избранного');}
       else{vpnFavorites[raw] = true;btn.classList.add('active');toast('Добавлено в избранное');}
-      saveVpnFavorites();
-      vibrate('tap');
+      saveVpnFavorites();vibrate('tap');
     };
   });
-
-  /* Reactions — full Telegram-style with counts */
   list.querySelectorAll('.vpn-reaction').forEach(function(btn){
     btn.onclick = function(event){
       if(event) event.preventDefault();
       if(event) event.stopPropagation();
-      var idx = Number(btn.getAttribute('data-idx'));
-      var key = vpnFiltered[idx];
-      if(!key) return;
-      var kind = btn.getAttribute('data-reaction');
-      var raw = key.raw;
-      var mine = getMyReaction(raw);
-
-      /* Animate only when adding/changing, not when removing */
-      if(mine !== kind){
-        btn.classList.remove('pop');
-        void btn.offsetWidth;
-        btn.classList.add('pop');
-        setTimeout(function(){btn.classList.remove('pop');},560);
-      }
-
-      vibrate('tap');
-      playSound('reaction');
-      toggleReaction(raw, kind);
+      var idx = Number(btn.getAttribute('data-idx'));var key = vpnFiltered[idx];if(!key) return;
+      var kind = btn.getAttribute('data-reaction');var raw = key.raw;var mine = getMyReaction(raw);
+      if(mine !== kind){btn.classList.remove('pop');void btn.offsetWidth;btn.classList.add('pop');setTimeout(function(){btn.classList.remove('pop');},560);}
+      vibrate('tap');playSound('reaction');toggleReaction(raw, kind);
     };
   });
 }
-
 function renderHomeServers(){
   var list = $('vpn-key-list'); if(!list) return;
   var countEl = $('vpn-servers-count');
   if(!vpnFiltered.length){
     list.innerHTML = '<div class="vpn-empty">Нажмите <b>«Обновить»</b> вверху, чтобы загрузить серверы</div>';
-    if(countEl) countEl.textContent = '0';
-    return;
+    if(countEl) countEl.textContent = '0';return;
   }
   if(countEl) countEl.textContent = String(vpnFiltered.length);
   var limit = Math.min(vpnFiltered.length, window.__fluxLite ? 80 : 200);
@@ -2786,8 +2741,7 @@ function renderHomeServers(){
     var isSel = vpnSelectedKey && vpnSelectedKey.raw === k.raw;
     var counts = getReactionCounts(k.raw);
     var mine = getMyReaction(k.raw);
-    var meta = {name:'', flag:''};
-    try{ meta = extractVpnMeta(k.raw); }catch(e){}
+    var meta = {name:'', flag:''};try{ meta = extractVpnMeta(k.raw); }catch(e){}
     var flagHtml = meta.flag ? meta.flag : ic('globe',20);
     var host = getVpnHost(k.raw);
     var isGithubHost = isFluxGithubHost(host) || /raw\.githubusercontent\.com/i.test(String(meta.name||''));
@@ -2802,10 +2756,7 @@ function renderHomeServers(){
     if(!title) title = host || k.proto.toUpperCase()+' сервер';
     html += '<div class="vpn-key-item'+(isSel?' selected':'')+'" data-idx="'+i+'">'
       + '<div class="vpn-key-info">'
-      +   '<div class="vpn-key-header">'
-      +     '<span class="vpn-key-flag">'+flagHtml+'</span>'
-      +     '<span class="vpn-key-title">'+esc(truncate(title,42))+'</span>'
-      +   '</div>'
+      +   '<div class="vpn-key-header"><span class="vpn-key-flag">'+flagHtml+'</span><span class="vpn-key-title">'+esc(truncate(title,42))+'</span></div>'
       +   '<div class="vpn-key-proto">'+esc(k.proto)+'</div>'
       +   '<div class="vpn-key-reactions">'
       +     reactionButtonHtml(i,'heart',mine==='heart',counts.heart)
@@ -2825,7 +2776,6 @@ function renderHomeServers(){
   bindVpnActions(list);
   updateConnectUI();
 }
-
 function selectServer(k){
   if(!k || vpnConnecting) return;
   k.raw=String(k.raw||'').trim().replace(/[\r\n]+/g,'');
@@ -2844,12 +2794,10 @@ function selectServer(k){
   });
   updateConnectUI();
 }
-
 function getSavedVpnConnection(){try{var raw=localStorage.getItem('flux_vpn_connected_key');if(!raw)return null;return {raw:String(raw),connectedAt:parseInt(localStorage.getItem('flux_vpn_connected_at')||'0',10)||0};}catch(e){return null;}}
 function isVpnMarkedConnected(){if(!vpnSelectedKey)return false;var st=getSavedVpnConnection();return !!(st&&st.raw&&st.raw===vpnSelectedKey.raw);}
 function markVpnConnected(k){if(!k||!k.raw)return;try{localStorage.setItem('flux_vpn_connected_key',String(k.raw));localStorage.setItem('flux_vpn_connected_at',String(now()));}catch(e){}}
 function clearVpnConnected(){try{localStorage.removeItem('flux_vpn_connected_key');localStorage.removeItem('flux_vpn_connected_at');}catch(e){}}
-
 function restoreVpnConnectionUI(){
   try{
     var savedRaw=localStorage.getItem('flux_selected_vpn_key');
@@ -2863,7 +2811,6 @@ function restoreVpnConnectionUI(){
   }catch(e){}
   updateConnectUI();
 }
-
 function updateConnectUI(){
   var btn = $('vpn-connect-btn');
   var lbl = $('vpn-connect-label');
@@ -2905,18 +2852,12 @@ function updateConnectUI(){
     if(dashState){dashState.classList.remove('connected');dashState.innerHTML='<span class="vpn-dashboard-state-dot"></span>Защита';}
   }
 }
-
 function buildHappDeepLink(rawKey){
   rawKey=String(rawKey||'').trim().replace(/[\r\n]+/g,'');
   if(!rawKey)return '';
   try{
     var hash=rawKey.indexOf('#');
-    if(hash>=0){
-      var base=rawKey.slice(0,hash);
-      var title=rawKey.slice(hash+1);
-      try{title=decodeURIComponent(title);}catch(e){}
-      return 'happ://add/'+base+'#'+encodeURIComponent(title);
-    }
+    if(hash>=0){var base=rawKey.slice(0,hash);var title=rawKey.slice(hash+1);try{title=decodeURIComponent(title);}catch(e){}return 'happ://add/'+base+'#'+encodeURIComponent(title);}
   }catch(e){}
   return 'happ://add/'+rawKey;
 }
@@ -2925,8 +2866,7 @@ function openInHapp(rawKey){
   var selected=String(rawKey).trim().replace(/[\r\n]+/g,'');
   if(!selected)return false;
   try{if(window.Android && typeof window.Android.openExternalBrowser === 'function'){var bridgeUrl=buildHappDeepLink(selected);if(bridgeUrl){ window.Android.openExternalBrowser(bridgeUrl); return true; }}}catch(e){ console.warn('Android.openHappKey failed',e); }
-  var url=buildHappDeepLink(selected);
-  if(!url)return false;
+  var url=buildHappDeepLink(selected);if(!url)return false;
   try{var a=document.createElement('a');a.href=url;a.style.display='none';a.rel='noopener';document.body.appendChild(a);a.click();setTimeout(function(){try{a.remove();}catch(e){}},1000);return true;}catch(e){}
   try{window.location.href=url;return true;}catch(e2){}
   return false;
@@ -2949,8 +2889,7 @@ function buildFluxHappTitle(raw){
   try{ oldTitle=decodeURIComponent(oldTitle); }catch(e){}
   oldTitle=String(oldTitle||'').replace(/[\r\n]+/g,'').trim();
   if(!oldTitle) return '@FluxVpnClient';
-  var parts=oldTitle.split('|');
-  var prefix=String(parts[0]||'').trim();
+  var parts=oldTitle.split('|');var prefix=String(parts[0]||'').trim();
   if(prefix){return prefix+' | @FluxVpnClient';}
   return '@FluxVpnClient';
 }
@@ -2963,7 +2902,6 @@ function buildHappSelectedKey(k){
   var title=buildFluxHappTitle(raw);
   return Promise.resolve(base+'#'+encodeURIComponent(title));
 }
-
 function doConnect(){
   if(vpnConnecting) return;
   if(!vpnSelectedKey){ toast('Сначала выберите сервер'); return; }
@@ -2992,8 +2930,7 @@ var _connectBtn = $('vpn-connect-btn');
 if(_connectBtn) _connectBtn.onclick = doConnect;
 
 function showVpnSkeletons(count){
-  var list=$('vpn-key-list');if(!list)return;
-  var html='';
+  var list=$('vpn-key-list');if(!list)return;var html='';
   for(var i=0;i<(count||4);i++){html+='<div class="vpn-key-skeleton"><div class="vks-flag"></div><div class="vks-body"><div class="vks-line w70"></div><div class="vks-line w40"></div><div class="vks-line w90"></div></div><div class="vks-actions"><div class="vks-circle"></div><div class="vks-circle"></div></div></div>';}
   list.innerHTML=html;
 }
@@ -3012,13 +2949,7 @@ function renderVpnKeys(){
     if(refreshBtn)refreshBtn.style.display='flex';
     if(count){count.innerHTML='Показано: <span id="vpn-count-num">'+vpnFiltered.length+'</span> из '+vpnKeys.length;count._lastTotal=vpnFiltered.length;count.dataset.num=String(vpnFiltered.length);}
     renderHomeServers();
-  }catch(err){
-    console.error('VPN render error:',err);
-    try{renderHomeServers();}catch(fallbackErr){
-      console.error('VPN fallback render error:',fallbackErr);
-      list.innerHTML='<div class="vpn-empty">Серверы загружены: '+vpnFiltered.length+'<br><button class="btn-link" type="button" onclick="applyVpnFilter()">Показать серверы</button></div>';
-    }
-  }
+  }catch(err){console.error('VPN render error:',err);try{renderHomeServers();}catch(fallbackErr){list.innerHTML='<div class="vpn-empty">Серверы загружены: '+vpnFiltered.length+'<br><button class="btn-link" type="button" onclick="applyVpnFilter()">Показать серверы</button></div>';}}
 }
 let vpnLoadRequestId = 0;
 
@@ -3034,16 +2965,12 @@ async function loadVpnKeys(silent){
   if(!silent) showVpnSkeletons(4);
 
   var source=getActiveVpnSource();
-
-  // If the user changed tabs while an old request was still running,
-  // do not let that old request touch the new screen.
   if(!source || source.id !== requestedSourceId){
     if(refreshIcon) refreshIcon.classList.remove('loading');
     if(loadBtn)loadBtn.disabled=false;
     if(refreshBtn)refreshBtn.disabled=false;
     return;
   }
-
   if(source.kind==='premium'&&!isPremiumUserNow()){
     if(requestId !== vpnLoadRequestId || requestedSourceId !== vpnActiveSourceId) return;
     if(list)list.innerHTML='<div class="vpn-empty">Premium VPN доступен только Premium пользователям</div>';
@@ -3053,30 +2980,17 @@ async function loadVpnKeys(silent){
     toast('Premium VPN доступен только Premium');
     return;
   }
-
-  var text=null,lastErr=null;
-  var fromCache=false;
-
+  var text=null,lastErr=null;var fromCache=false;
   try{
     var sourceMeta=await fetchGithubSource(source);
-
-    // Critical race check: selection may have changed during fetch().
-    if(requestId !== vpnLoadRequestId || requestedSourceId !== vpnActiveSourceId){
-      return;
-    }
-
-    text=sourceMeta.text;
-    fromCache=!!sourceMeta.fromCache;
+    if(requestId !== vpnLoadRequestId || requestedSourceId !== vpnActiveSourceId){return;}
+    text=sourceMeta.text;fromCache=!!sourceMeta.fromCache;
     if(!text||text.length<20)throw new Error('Пустой ответ');
   }catch(err){
-    if(requestId !== vpnLoadRequestId || requestedSourceId !== vpnActiveSourceId){
-      return;
-    }
+    if(requestId !== vpnLoadRequestId || requestedSourceId !== vpnActiveSourceId){return;}
     lastErr=err;
   }
-
   if(refreshIcon) refreshIcon.classList.remove('loading');
-
   if(!text){
     if(list)list.innerHTML='<div class="vpn-empty">Не удалось загрузить «'+esc(source.name)+'»<br>'+esc((lastErr&&lastErr.message)||'файл не найден')+'<br><button class="btn-link" type="button" onclick="loadVpnKeys(false)">Попробовать снова</button></div>';
     if(loadBtn){loadBtn.style.display='flex';loadBtn.disabled=false;}
@@ -3084,30 +2998,14 @@ async function loadVpnKeys(silent){
     if(!silent) toast('Ошибка загрузки');
     return;
   }
-
   try{
     vpnKeys=parseVpnKeys(text);
     var seen=Object.create(null);
-    vpnKeys=vpnKeys.filter(function(k){
-      if(seen[k.raw])return false;
-      seen[k.raw]=1;
-      return true;
-    });
-  }catch(parseErr){
-    console.error('VPN parse error:',parseErr);
-    vpnKeys=[];
-  }
-
-  // Never apply data from a request that is no longer current.
-  if(requestId !== vpnLoadRequestId || requestedSourceId !== vpnActiveSourceId){
-    return;
-  }
-
+    vpnKeys=vpnKeys.filter(function(k){if(seen[k.raw])return false;seen[k.raw]=1;return true;});
+  }catch(parseErr){console.error('VPN parse error:',parseErr);vpnKeys=[];}
+  if(requestId !== vpnLoadRequestId || requestedSourceId !== vpnActiveSourceId){return;}
   subscribeReactions(vpnActiveSourceId);
-
-  vpnProtoFilter='all';
-  vpnFiltered=vpnKeys.slice();
-
+  vpnProtoFilter='all';vpnFiltered=vpnKeys.slice();
   if(vpnKeys.length===0){
     if(list)list.innerHTML='<div class="vpn-empty">Ключи не найдены</div>';
     if(loadBtn)loadBtn.style.display='flex';
@@ -3117,19 +3015,11 @@ async function loadVpnKeys(silent){
     renderVpnKeys();
     if(!silent)toast(source.name+': '+vpnKeys.length+' ключей'+(fromCache?' (кэш)':''));
   }
-
   if(vpnSelectedKey && vpnKeys.length){
     var found=false;
-    for(var vi=0;vi<vpnKeys.length;vi++){
-      if(vpnKeys[vi].raw===vpnSelectedKey.raw){found=true;break;}
-    }
-    if(!found){
-      vpnSelectedKey=null;
-      clearVpnConnected();
-      try{localStorage.removeItem('flux_selected_vpn_key');}catch(e){}
-    }
+    for(var vi=0;vi<vpnKeys.length;vi++){if(vpnKeys[vi].raw===vpnSelectedKey.raw){found=true;break;}}
+    if(!found){vpnSelectedKey=null;clearVpnConnected();try{localStorage.removeItem('flux_selected_vpn_key');}catch(e){}}
   }
-
   updateConnectUI();
   if(loadBtn)loadBtn.disabled=false;
   if(refreshBtn)refreshBtn.disabled=false;
@@ -3141,7 +3031,6 @@ if(_refreshIcon) _refreshIcon.onclick = function(){ loadVpnKeys(false); };
 
 function autoLoadVpnOnStart(){
   if(vpnKeys.length) { renderHomeServers(); return; }
-  try{ sessionStorage.setItem('flux_vpn_autoloaded', String(now())); }catch(e){}
   loadVpnKeys(true).then(function(){ updateConnectUI(); }).catch(function(){});
 }
 
@@ -3202,8 +3091,7 @@ async function openAdminPanel(){
   var globalPremiumToggle=document.getElementById('admin-global-premium-toggle');
   if(globalPremiumToggle){
     globalPremiumToggle.onclick=async function(){
-      var next=!isGlobalPremiumEnabled();
-      this.disabled=true;
+      var next=!isGlobalPremiumEnabled();this.disabled=true;
       try{
         await db.ref('settings/globalPremium').set({active:next,updatedAt:now(),updatedBy:currentUser.uid});
         window.__fluxGlobalPremiumState={active:next,updatedAt:now(),updatedBy:currentUser.uid};
@@ -3268,15 +3156,10 @@ if(!navigator.onLine)$('net-banner').classList.add('show');
   var lastRippleTs=0;
   document.addEventListener('pointerdown',function(e){
     if(e.pointerType==='mouse'&&e.button!==0)return;
-    var el=e.target.closest('.ripple');
-    if(!el)return;
-    var t=performance.now();
-    if(t-lastRippleTs<50)return;
-    lastRippleTs=t;
-    var rect=el.getBoundingClientRect();
-    var size=Math.max(rect.width,rect.height)*1.8;
-    var ink=document.createElement('span');
-    ink.className='ripple-ink';
+    var el=e.target.closest('.ripple');if(!el)return;
+    var t=performance.now();if(t-lastRippleTs<50)return;lastRippleTs=t;
+    var rect=el.getBoundingClientRect();var size=Math.max(rect.width,rect.height)*1.8;
+    var ink=document.createElement('span');ink.className='ripple-ink';
     ink.style.width=ink.style.height=size+'px';
     ink.style.left=(e.clientX-rect.left-size/2)+'px';
     ink.style.top=(e.clientY-rect.top-size/2)+'px';
