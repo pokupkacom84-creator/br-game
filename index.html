@@ -10,10 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Flux">
 <meta name="color-scheme" content="dark light">
 <link rel="manifest" href='data:application/manifest+json,{%22name%22:%22Flux%20Client%22,%22short_name%22:%22Flux%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#17212b%22,%22theme_color%22:%22#17212b%22}'>
-<title>Flux Client</title>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<title>Flux Client — Offline</title>
 <style>
 
 :root{
@@ -714,7 +711,8 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 
 <div id="tab-vpn" class="tab-content active">
   <div class="vpn-home" id="vpn-home">
-    <div class="vpn-home-header">
+    <div id="offline-mode-badge" style="margin:0 18px 8px;padding:9px 12px;border-radius:14px;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:800;text-align:center">ОФЛАЙН-РЕЖИМ • ключи хранятся на устройстве</div>
+<div class="vpn-home-header">
       <div class="vpn-home-brand">
         <div class="vpn-home-mark">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9.2 12.2l1.8 1.8 3.8-4"/></svg>
@@ -790,6 +788,14 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
         Загрузить серверы
       </button>
       <button class="vpn-btn outline ripple" id="vpn-refresh-btn" style="display:none;max-width:260px">Обновить</button>
+      <button class="vpn-btn outline ripple" id="vpn-import-btn" style="max-width:260px">
+        Добавить VPN-ключи
+      </button>
+      <input id="vpn-file-input" type="file" accept=".txt,.conf,.json,.csv,text/plain,application/octet-stream" multiple style="display:none">
+      <button class="vpn-btn outline ripple" id="vpn-clear-local-btn" style="max-width:260px">
+        Очистить локальные ключи
+      </button>
+
     </div>
   </div>
 </div>
@@ -1078,7 +1084,8 @@ function startGlobalPremiumListener(){
 
 let vpnActiveCategory = (function(){try{return localStorage.getItem('flux_vpn_category')||'free';}catch(e){return 'free';}})();
 let vpnActiveSourceId = (function(){try{return localStorage.getItem('flux_vpn_source')||'v1';}catch(e){return 'v1';}})();
-function getActiveVpnSource(){var sources=isPremiumUserNow()?VPN_FREE_SOURCES.concat(VPN_PREMIUM_SOURCES):VPN_FREE_SOURCES;return sources.find(function(s){return s.id===vpnActiveSourceId;})||VPN_FREE_SOURCES[0];}
+function getActiveVpnSource(){ return {id:'local',name:'Локальные ключи',kind:'free',local:true}; }
+
 
 const THEMES=[
   {id:'violet',name:'Violet',c1:'#8774e1',c2:'#a291f0'},{id:'ocean',name:'Ocean',c1:'#3390ec',c2:'#57a9f5'},
@@ -2410,61 +2417,114 @@ function renderVpnKeys(){
     }
   }
 }
-async function loadVpnKeys(silent){
-  var loadBtn=$('vpn-load-btn'),refreshBtn=$('vpn-refresh-btn'),list=$('vpn-key-list');
-  var refreshIcon = $('vpn-home-refresh');
-  if(loadBtn)loadBtn.disabled=true;
-  if(refreshBtn)refreshBtn.disabled=true;
-  if(refreshIcon) refreshIcon.classList.add('loading');
-  if(!silent) showVpnSkeletons(4);
-  var source=getActiveVpnSource();
-  if(source.kind==='premium'&&!isPremiumUserNow()){
-    if(list)list.innerHTML='<div class="vpn-empty">Premium VPN доступен только Premium пользователям</div>';
-    if(loadBtn){loadBtn.style.display='flex';loadBtn.disabled=false;}
-    if(refreshBtn){refreshBtn.style.display='none';refreshBtn.disabled=false;}
-    if(refreshIcon) refreshIcon.classList.remove('loading');
-    toast('Premium VPN доступен только Premium');
-    return;
-  }
-  var text=null,lastErr=null;
+function getOfflineVpnKeys(){
   try{
-    var sourceMeta=await fetchGithubSource(source);
-    text=sourceMeta.text;
-    if(!text||text.length<20)throw new Error('Пустой ответ');
-  }catch(err){lastErr=err;}
-  if(refreshIcon) refreshIcon.classList.remove('loading');
-  if(!text){
-    if(list)list.innerHTML='<div class="vpn-empty">Не удалось загрузить «'+esc(source.name)+'»<br>'+esc((lastErr&&lastErr.message)||'файл не найден')+'</div>';
-    if(loadBtn){loadBtn.style.display='flex';loadBtn.disabled=false;}
-    if(refreshBtn){refreshBtn.style.display='none';refreshBtn.disabled=false;}
-    if(!silent) toast('Ошибка загрузки');
-    return;
+    var raw=localStorage.getItem('flux_offline_vpn_keys')||'';
+    if(!raw)return [];
+    var parsed=parseVpnKeys(raw);
+    var seen=Object.create(null), out=[];
+    for(var i=0;i<parsed.length;i++){
+      if(!seen[parsed[i].raw]){
+        seen[parsed[i].raw]=1;
+        out.push(parsed[i]);
+      }
+    }
+    return out;
+  }catch(e){return [];}
+}
+function saveOfflineVpnKeys(text, append){
+  var old=append?(localStorage.getItem('flux_offline_vpn_keys')||''):'';
+  var merged=(old?old+'\n':'')+String(text||'');
+  var parsed=parseVpnKeys(merged),seen=Object.create(null),out=[];
+  for(var i=0;i<parsed.length;i++){
+    if(!seen[parsed[i].raw]){seen[parsed[i].raw]=1;out.push(parsed[i].raw);}
   }
   try{
-    vpnKeys=parseVpnKeys(text);
-    var seen=Object.create(null);
-    vpnKeys=vpnKeys.filter(function(k){if(seen[k.raw])return false;seen[k.raw]=1;return true;});
-  }catch(parseErr){
-    console.error('VPN parse error:',parseErr);
-    vpnKeys=[];
+    localStorage.setItem('flux_offline_vpn_keys',out.join('\n'));
+    return out.length;
+  }catch(e){
+    toast('Не удалось сохранить ключи: память устройства заполнена');
+    return 0;
   }
+}
+function renderOfflineVpnKeys(silent){
+  vpnKeys=getOfflineVpnKeys();
   vpnProtoFilter='all';
   vpnFiltered=vpnKeys.slice();
-  if(vpnKeys.length===0){
-    if(list)list.innerHTML='<div class="vpn-empty">Ключи не найдены</div>';
-    if(loadBtn)loadBtn.style.display='flex';
-    if(refreshBtn)refreshBtn.style.display='none';
-  }else{
-    try{renderVpnFilters();}catch(filterErr){console.error('VPN filter render error:',filterErr);}
+  if(vpnKeys.length){
+    try{renderVpnFilters();}catch(e){}
     renderVpnKeys();
-    if(!silent)toast(source.name+': '+vpnKeys.length+' ключей');
+    if(!silent)toast('Локальные ключи: '+vpnKeys.length);
+  }else{
+    var list=$('vpn-key-list');
+    if(list)list.innerHTML='<div class="vpn-empty">Локальных ключей пока нет.<br>Нажмите «Добавить VPN-ключи» и выберите .txt/.conf файл или вставьте ключи из буфера.</div>';
+    if($('vpn-count'))$('vpn-count').textContent='';
+    if($('vpn-load-btn'))$('vpn-load-btn').style.display='flex';
+    if($('vpn-refresh-btn'))$('vpn-refresh-btn').style.display='none';
   }
-  if(loadBtn)loadBtn.disabled=false;if(refreshBtn)refreshBtn.disabled=false;
 }
-$('vpn-load-btn').onclick=function(){ loadVpnKeys(false); };
-$('vpn-refresh-btn').onclick=function(){ loadVpnKeys(false); };
-var _refreshIcon = $('vpn-home-refresh');
-if(_refreshIcon) _refreshIcon.onclick = function(){ loadVpnKeys(false); };
+async function importVpnText(text){
+  text=String(text||'');
+  if(!text.trim()){toast('Файл пуст');return;}
+  var before=getOfflineVpnKeys().length;
+  var after=saveOfflineVpnKeys(text,true);
+  if(after<=before){toast('Новых VPN-ключей не найдено');return;}
+  renderOfflineVpnKeys(true);
+  toast('Добавлено ключей: '+(after-before));
+}
+async function importVpnFile(file){
+  try{
+    var text=await file.text();
+    await importVpnText(text);
+  }catch(e){toast('Не удалось прочитать файл');}
+}
+function openOfflineKeyInput(){
+  var raw=prompt('Вставьте VPN-ключи (по одному на строку):\nVLESS, VMess, Trojan, Shadowsocks, Hysteria2, SOCKS');
+  if(raw!==null)importVpnText(raw);
+}
+function loadVpnKeys(silent){
+  var loadBtn=$('vpn-load-btn'),refreshBtn=$('vpn-refresh-btn'),refreshIcon=$('vpn-home-refresh');
+  if(loadBtn)loadBtn.disabled=true;
+  if(refreshBtn)refreshBtn.disabled=true;
+  if(refreshIcon)refreshIcon.classList.add('loading');
+  setTimeout(function(){
+    renderOfflineVpnKeys(!!silent);
+    if(refreshIcon)refreshIcon.classList.remove('loading');
+    if(loadBtn)loadBtn.disabled=false;
+    if(refreshBtn)refreshBtn.disabled=false;
+  },120);
+}
+if($('vpn-load-btn'))$('vpn-load-btn').onclick=function(){renderOfflineVpnKeys(false);};
+if($('vpn-refresh-btn'))$('vpn-refresh-btn').onclick=function(){renderOfflineVpnKeys(false);};
+var _refreshIcon=$('vpn-home-refresh');
+if(_refreshIcon)_refreshIcon.onclick=function(){renderOfflineVpnKeys(false);};
+
+var _vpnImportBtn=$('vpn-import-btn');
+var _vpnFileInput=$('vpn-file-input');
+if(_vpnImportBtn)_vpnImportBtn.onclick=function(){
+  if(_vpnFileInput)_vpnFileInput.click();
+  else openOfflineKeyInput();
+};
+if(_vpnFileInput)_vpnFileInput.onchange=function(){
+  var files=this.files||[];
+  (async function(){
+    for(var i=0;i<files.length;i++)await importVpnFile(files[i]);
+    _vpnFileInput.value='';
+  })();
+};
+var _vpnClearLocal=$('vpn-clear-local-btn');
+if(_vpnClearLocal)_vpnClearLocal.onclick=function(){
+  if(confirm('Удалить все сохранённые на этом устройстве VPN-ключи?')){
+    localStorage.removeItem('flux_offline_vpn_keys');
+    vpnKeys=[];vpnFiltered=[];
+    renderOfflineVpnKeys(true);
+    toast('Локальные ключи удалены');
+  }
+};
+function autoLoadVpnOnStart(){
+  try{renderOfflineVpnKeys(true);}catch(e){console.warn('offline vpn init',e);}
+}
+autoLoadVpnOnStart();
 
 function autoLoadVpnOnStart(){
   if(vpnKeys.length) { renderHomeServers(); return; }
@@ -2617,6 +2677,75 @@ requestAnimationFrame(positionNavIndicator);
 window.addEventListener('load',function(){requestAnimationFrame(positionNavIndicator);},{passive:true,once:true});
 
 if(!firebaseReady){setTimeout(function(){toast('Проверьте интернет');},500);}
+
+/* === FLUX OFFLINE BOOT ===
+   UI, profile and VPN key storage work without network.
+   Firebase authentication/database are intentionally not required.
+*/
+(function bootFluxOffline(){
+  try{
+    window.FLUX_OFFLINE=true;
+    firebaseReady=false;
+    auth=null; db=null;
+
+    var uid=localStorage.getItem('flux_offline_uid')||('offline_'+Math.random().toString(36).slice(2,11));
+    localStorage.setItem('flux_offline_uid',uid);
+    var saved={};
+    try{saved=JSON.parse(localStorage.getItem('flux_offline_profile')||'{}')||{};}catch(e){saved={};}
+
+    currentUser={uid:uid,email:saved.email||'offline@local'};
+    currentUserData=Object.assign({
+      uid:uid,
+      name:saved.name||'Flux User',
+      username:saved.username||'flux_user',
+      avatarId:saved.avatarId||'a1',
+      bio:saved.bio||'',
+      birthday:saved.birthday||''
+    },saved);
+
+    try{
+      localStorage.setItem('flux_offline_profile',JSON.stringify(currentUserData));
+    }catch(e){}
+
+    var enter=function(){
+      try{
+        if(typeof updateProfileUI==='function')updateProfileUI();
+      }catch(e){}
+      try{
+        if(typeof updateSettingsUI==='function')updateSettingsUI();
+      }catch(e){}
+      try{
+        if(typeof updateTogglesUI==='function')updateTogglesUI();
+      }catch(e){}
+      try{
+        if(typeof renderVpnCategoryTabs==='function')renderVpnCategoryTabs();
+        if(typeof renderVpnSources==='function')renderVpnSources();
+      }catch(e){}
+      try{goScreen('main-screen',true);}catch(e){}
+      try{requestAnimationFrame(positionNavIndicator);}catch(e){}
+      try{renderOfflineVpnKeys(true);}catch(e){}
+      try{setSplashStatus('Готово • офлайн');}catch(e){}
+    };
+
+    setTimeout(enter,250);
+  }catch(e){
+    console.error('Offline boot failed',e);
+    try{goScreen('main-screen',true);}catch(_){}
+  }
+})();
+
+
+(function patchOfflineProfilePersistence(){
+  function save(){
+    try{
+      if(!window.FLUX_OFFLINE || !currentUserData)return;
+      localStorage.setItem('flux_offline_profile',JSON.stringify(currentUserData));
+    }catch(e){}
+  }
+  window.addEventListener('beforeunload',save);
+  setInterval(save,1500);
+})();
+
 </script>
 </body>
 </html>
