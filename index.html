@@ -64,6 +64,71 @@
             }
           }
         }
+      },
+      "chatMembers": {
+        "$chatId": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            ".write": "auth != null && auth.uid === $uid && newData.val() === true"
+          }
+        }
+      },
+      "publicProfiles": {
+        "$uid": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.child('name').isString() && newData.child('username').isString()"
+        }
+      },
+      "chatMeta": {
+        "$chatId": {
+          ".read": "auth != null && (data.child('a').val() === auth.uid || data.child('b').val() === auth.uid)",
+          ".write": "auth != null && ((!data.exists() && (newData.child('a').val() === auth.uid || newData.child('b').val() === auth.uid)) || (data.exists() && (data.child('a').val() === auth.uid || data.child('b').val() === auth.uid)))",
+          ".validate": "newData.hasChildren(['a','b']) && newData.child('a').val() !== newData.child('b').val()"
+        }
+      },
+      "chats": {
+        "$chatId": {
+          ".read": "auth != null && (root.child('chatMeta').child($chatId).child('a').val() === auth.uid || root.child('chatMeta').child($chatId).child('b').val() === auth.uid)",
+          ".write": "auth != null && (root.child('chatMeta').child($chatId).child('a').val() === auth.uid || root.child('chatMeta').child($chatId).child('b').val() === auth.uid)",
+          "messages": {
+            "$messageId": {
+              ".write": "auth != null && (root.child('chatMeta').child($chatId).child('a').val() === auth.uid || root.child('chatMeta').child($chatId).child('b').val() === auth.uid) && newData.child('senderId').val() === auth.uid && !root.child('blocks').child(auth.uid).child(newData.child('receiverId').val()).exists() && !root.child('blocks').child(newData.child('receiverId').val()).child(auth.uid).exists()",
+              ".validate": "newData.hasChildren(['senderId','receiverId','text','createdAt']) && newData.child('text').isString() && newData.child('text').val().length <= 2000 && newData.child('senderId').val() !== newData.child('receiverId').val() && newData.child('createdAt').isNumber()"
+            }
+          }
+        }
+      },
+      "chatIndex": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          "$chatId": {
+            ".write": "auth != null && auth.uid === $uid && (root.child('chatMeta').child($chatId).child('a').val() === auth.uid || root.child('chatMeta').child($chatId).child('b').val() === auth.uid)"
+          }
+        }
+      },
+      "blocks": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          "$otherUid": {
+            ".write": "auth != null && auth.uid === $uid && $otherUid !== auth.uid",
+            ".validate": "newData.val() === true || !newData.exists()"
+          }
+        }
+      },
+      "reports": {
+        "$reportId": {
+          ".write": "auth != null && !data.exists() && newData.child('reporterId').val() === auth.uid",
+          ".validate": "newData.hasChildren(['reporterId','targetId','reason','createdAt']) && newData.child('reason').isString() && newData.child('reason').val().length <= 100"
+        }
+      },
+      "notifications": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          "$notificationId": {
+            ".write": "auth != null && (auth.uid === $uid || (newData.child('fromId').val() === auth.uid && (root.child('chatMeta').child(newData.child('chatId').val()).child('a').val() === auth.uid || root.child('chatMeta').child(newData.child('chatId').val()).child('b').val() === auth.uid)))"
+          }
+        }
       }
     }
   }
@@ -156,6 +221,54 @@ input,textarea,select{user-select:text;-webkit-user-select:text;font-family:inhe
 button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;background:none;color:inherit;outline:none;transition:transform .2s var(--ease-out),background .18s var(--ease-out),color .18s var(--ease-out),opacity .18s}
 button:active{transform:scale(.95)}
 button:disabled{transform:none}
+
+/* ============================================================
+   FLUX MESSENGER / ANTI-SPAM UI
+   ============================================================ */
+.social-page{height:100%;overflow-y:auto;padding:calc(10px + env(safe-area-inset-top)) 14px 120px;overscroll-behavior:contain}
+.social-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px 14px}
+.social-title{font-size:25px;font-weight:850;letter-spacing:-.035em}
+.social-subtitle{font-size:12px;color:var(--text-2);margin-top:2px}
+.social-search{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--divider);border-radius:16px;padding:10px 13px;margin-bottom:12px;box-shadow:var(--shadow-2)}
+.social-search svg{flex:0 0 auto;color:var(--text-2)}
+.social-search input{width:100%;border:0;outline:0;background:transparent;color:var(--text);font-size:15px}
+.social-card{background:var(--surface);border:1px solid var(--divider);border-radius:20px;box-shadow:var(--shadow-2);overflow:hidden;margin-bottom:12px}
+.social-card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 15px 10px}
+.social-card-title{font-weight:800;font-size:15px}
+.social-link-btn{color:var(--accent);font-size:12px;font-weight:800;padding:4px}
+.social-empty{padding:25px 18px;text-align:center;color:var(--text-2);font-size:13px}
+.social-user{display:flex;align-items:center;gap:11px;padding:11px 14px;border-top:1px solid var(--divider);min-height:67px}
+.social-user:first-child{border-top:0}
+.social-avatar{width:43px;height:43px;border-radius:14px;display:grid;place-items:center;flex:0 0 auto;font-weight:850;color:#fff;box-shadow:0 5px 14px rgba(0,0,0,.15);position:relative;overflow:hidden}
+.social-avatar img{width:100%;height:100%;object-fit:cover}
+.social-online{position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2px solid var(--surface)}
+.social-user-main{min-width:0;flex:1}
+.social-user-name{font-weight:780;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.social-user-meta{font-size:11px;color:var(--text-2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.social-user-actions{display:flex;gap:6px;align-items:center}
+.social-mini-btn{padding:8px 10px;border-radius:12px;background:var(--surface-2);color:var(--accent);font-size:11px;font-weight:800}
+.social-mini-btn.danger{color:var(--danger)}
+.social-mini-btn.primary{background:var(--accent);color:#fff}
+.chat-row{cursor:pointer}
+.chat-unread{min-width:20px;height:20px;border-radius:10px;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:10px;font-weight:850;padding:0 6px}
+.chat-window{position:fixed;inset:0;z-index:9000;background:var(--bg);display:none;flex-direction:column;padding-top:env(safe-area-inset-top)}
+.chat-window.show{display:flex}
+.chat-header{height:62px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--divider);background:var(--surface);box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.chat-back,.chat-more{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:var(--surface-2)}
+.chat-head-info{min-width:0;flex:1}.chat-head-name{font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.chat-head-status{font-size:11px;color:var(--text-2);margin-top:1px}
+.chat-messages{flex:1;overflow-y:auto;padding:14px 12px 10px;display:flex;flex-direction:column;gap:7px;overscroll-behavior:contain}
+.chat-date{text-align:center;color:var(--text-2);font-size:10px;margin:7px 0}
+.msg-row{display:flex;max-width:88%}.msg-row.mine{align-self:flex-end;justify-content:flex-end}.msg-bubble{padding:9px 11px;border-radius:17px;background:var(--surface);border:1px solid var(--divider);font-size:14px;line-height:1.4;box-shadow:0 2px 7px rgba(0,0,0,.08);word-break:break-word}.msg-row.mine .msg-bubble{background:var(--accent);color:#fff;border-color:transparent;border-bottom-right-radius:6px}.msg-row:not(.mine) .msg-bubble{border-bottom-left-radius:6px}.msg-time{display:block;font-size:9px;opacity:.65;text-align:right;margin-top:3px}.msg-link-warning{font-size:10px;margin-top:5px;opacity:.78}
+.chat-compose{display:flex;align-items:flex-end;gap:7px;padding:8px 10px calc(9px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--divider)}
+.chat-compose textarea{flex:1;min-height:42px;max-height:110px;resize:none;border:1px solid var(--divider);border-radius:16px;background:var(--surface-2);padding:10px 12px;outline:0;color:var(--text);font-size:15px}
+.chat-send{width:43px;height:43px;border-radius:14px;background:var(--accent);color:#fff;display:grid;place-items:center;flex:0 0 auto}
+.social-modal-note{font-size:12px;color:var(--text-2);line-height:1.5;margin:4px 0 12px}
+.social-report-option{display:block;width:100%;text-align:left;padding:12px 13px;border:1px solid var(--divider);border-radius:14px;margin-top:7px;background:var(--surface-2);font-weight:700}
+.social-report-option:active{transform:scale(.98)}
+.social-safety{display:flex;gap:10px;align-items:flex-start;padding:12px 13px;background:var(--accent-soft);border-radius:16px;margin-bottom:12px;font-size:12px;color:var(--text-2);line-height:1.45}
+.social-safety b{color:var(--text)}
+@media (max-width:420px){.social-page{padding-left:11px;padding-right:11px}.msg-row{max-width:92%}}
+body.lite .social-card,body.perf-lite .social-card,body.lite .social-search,body.perf-lite .social-search,body.lite .chat-header,body.perf-lite .chat-header,body.lite .chat-compose,body.perf-lite .chat-compose{box-shadow:none}
 
 .flux-ic{display:inline-block;vertical-align:-0.15em;flex-shrink:0}
 
@@ -863,6 +976,21 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 <div class="list" id="shop-list"></div>
 </div>
 
+
+<div id="tab-social" class="tab-content">
+  <div class="social-page" id="social-page">
+    <div class="social-top">
+      <div><div class="social-title">Сообщество</div><div class="social-subtitle">Общайся безопаснее в Flux</div></div>
+      <button class="header-btn ripple" id="social-refresh" aria-label="Обновить"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.5 9A9 9 0 0118 5l5 5"/><path d="M20.5 15A9 9 0 016 19l-5-5"/></svg></button>
+    </div>
+    <div class="social-safety"><div style="font-size:20px">🛡️</div><div><b>Защита от спама включена</b><br>Для новых диалогов действуют лимиты. Незнакомых пользователей можно заблокировать или пожаловаться.</div></div>
+    <div class="social-search"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="social-user-search" placeholder="Найти пользователя по @username" autocomplete="off" maxlength="32"><button id="social-search-clear" style="display:none;font-size:18px;color:var(--text-2)">×</button></div>
+    <div id="social-search-results"></div>
+    <div class="social-card" id="social-chats-card"><div class="social-card-head"><div class="social-card-title">Мои чаты</div><button class="social-link-btn" id="social-new-chat">Новый чат</button></div><div id="social-chat-list"><div class="social-empty">Здесь появятся ваши личные чаты</div></div></div>
+    <div class="social-card"><div class="social-card-head"><div class="social-card-title">Безопасность</div></div><div class="social-user"><div class="social-avatar" style="background:linear-gradient(135deg,#64748b,#334155)">🛡</div><div class="social-user-main"><div class="social-user-name">Пожаловаться</div><div class="social-user-meta">Сообщайте о спаме и мошенничестве</div></div><button class="social-mini-btn" id="social-report-help">Как работает</button></div><div class="social-user"><div class="social-avatar" style="background:linear-gradient(135deg,#ef4444,#991b1b)">🚫</div><div class="social-user-main"><div class="social-user-name">Заблокированные</div><div class="social-user-meta">Управление пользователями, которым запрещено писать</div></div><button class="social-mini-btn" id="social-blocks">Открыть</button></div></div>
+  </div>
+</div>
+
 <div id="tab-settings" class="tab-content">
 <div class="profile-page" id="profile-page">
   <div class="profile-topbar">
@@ -917,8 +1045,21 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 <div class="nav-indicator" id="nav-indicator"></div>
 <div class="nav-item active" data-tab="vpn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg><span>VPN</span></div>
 <div class="nav-item" data-tab="shop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg><span>Магазин</span></div>
+<div class="nav-item" data-tab="social"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 01-11.7 6.2L4 19l1.3-4.3A7.5 7.5 0 1120 11.5z"/><path d="M8 11h.01M12 11h.01M16 11h.01"/></svg><span>Чаты</span></div>
 <div class="nav-item" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1"/></svg><span>Профиль</span></div>
 </div>
+</div>
+
+
+<div class="chat-window" id="chat-window">
+  <div class="chat-header">
+    <button class="chat-back ripple" id="chat-back" aria-label="Назад"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="social-avatar" id="chat-avatar" style="width:39px;height:39px;border-radius:12px;background:#64748b">?</div>
+    <div class="chat-head-info"><div class="chat-head-name" id="chat-head-name">Чат</div><div class="chat-head-status" id="chat-head-status">—</div></div>
+    <button class="chat-more ripple" id="chat-more" aria-label="Меню"><svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></button>
+  </div>
+  <div class="chat-messages" id="chat-messages"></div>
+  <div class="chat-compose"><textarea id="chat-input" rows="1" maxlength="2000" placeholder="Сообщение…"></textarea><button class="chat-send ripple" id="chat-send" aria-label="Отправить"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></button></div>
 </div>
 
 <div id="profile-sheet" class="profile-sheet"><div class="profile-sheet-body" id="profile-sheet-body"></div></div>
@@ -1559,7 +1700,7 @@ if(firebaseReady&&auth){
           if(pinLockEnabled&&pinLockHash){showPinLock();}
           await whenMinSplashElapsed();
           goScreen('main-screen',true);
-          startSelfListener();startSessionTracking();updateSettingsUI();updateTogglesUI();startPremiumListener();
+          startSelfListener();startSessionTracking();updateSettingsUI();updateTogglesUI();startPremiumListener();try{socialLoad();}catch(e){}
           try{db.ref('users/'+user.uid).update({online:true,lastSeen:now()});}catch(e){}
           requestAnimationFrame(positionNavIndicator);
           setTimeout(function(){ try{ autoLoadVpnOnStart(); }catch(e){} }, 400);
@@ -1581,12 +1722,13 @@ setTimeout(function(){if(currentScreenId==='splash-screen'){hideSplashIfVisible(
 function startSelfListener(){
   if(!currentUser)return;
   var uid=currentUser.uid;
-  db.ref('users/'+uid).update({online:true,lastSeen:now()}).catch(function(){});
-  try{db.ref('users/'+uid).child('online').onDisconnect().set(false);db.ref('users/'+uid).child('lastSeen').onDisconnect().set(now());}catch(e){}
+  db.ref('users/'+uid).update({online:true,lastSeen:now()}).catch(function(){});db.ref('publicProfiles/'+uid).update({name:String((currentUserData&&currentUserData.name)||'Пользователь').slice(0,32),username:String((currentUserData&&currentUserData.username)||'').slice(0,32),avatarId:(currentUserData&&currentUserData.avatarId)||'',photoURL:(currentUserData&&currentUserData.photoURL)||'',online:true,lastSeen:now(),updatedAt:now()}).catch(function(){});
+  try{db.ref('users/'+uid).child('online').onDisconnect().set(false);db.ref('users/'+uid).child('lastSeen').onDisconnect().set(now());db.ref('publicProfiles/'+uid).child('online').onDisconnect().set(false);db.ref('publicProfiles/'+uid).child('lastSeen').onDisconnect().set(now());}catch(e){}
   db.ref('users/'+uid).on('value',function(s){
     var v=s.val();if(!v)return;
     if(v.adminBlocked===true){toast('Аккаунт заблокирован');try{auth.signOut();}catch(e){}return;}
     currentUserData=Object.assign({uid:uid},v);
+    syncPublicProfile();
     window.__fluxPremiumState=v.premium||window.__fluxPremiumState||{};
     updateSettingsUI();
   },function(err){console.warn('users listener:',err);});
@@ -1619,8 +1761,9 @@ $('onb-continue').onclick=async function(){
     updates['usernames/'+username]=currentUser.uid;
     await db.ref().update(updates);
     currentUserData={uid:currentUser.uid,name:name,username:username,avatarId:onbAvatarId};
+    syncPublicProfile();
     goScreen('main-screen',true);
-    startSelfListener();startSessionTracking();startPremiumListener();
+    startSelfListener();startSessionTracking();startPremiumListener();try{socialLoad();}catch(e){}
     updateSettingsUI();updateTogglesUI();
     if(isGlobalPremiumEnabled()){document.body.classList.add('flux-premium');toast('Premium уже активен для всех!');}
     requestAnimationFrame(positionNavIndicator);
@@ -1676,6 +1819,7 @@ $('edit-save').onclick=async function(){
       await db.ref().update(updates);
     }else{await db.ref('users/'+currentUser.uid).update({name:name,bio:bio,avatarId:editAvatarId,birthday:birthday});}
     Object.assign(currentUserData,{name:name,username:newUsername,bio:bio,avatarId:editAvatarId,birthday:birthday});
+    syncPublicProfile();
     updateSettingsUI();
     $('edit-profile-sheet').classList.remove('show');toast('Сохранено');showSuccessOverlay();
   }catch(e){toast('Ошибка: '+(e.message||e.code));}
@@ -1916,6 +2060,198 @@ function showPinSetup(cb){
   modal.querySelector('#setup-cancel').onclick=function(){modal.remove();};
 }
 
+
+/* ============================================================
+   FLUX MESSENGER + ANTI-SPAM / ANTI-SCAM
+   ============================================================ */
+var socialChatListeners={};
+var socialCurrentChat=null;
+var socialCurrentPeer=null;
+var socialChatIndexRef=null;
+var socialSearchTimer=null;
+var socialSendTimes=[];
+var SOCIAL_MAX_NEW_PER_HOUR=8;
+var SOCIAL_MAX_MESSAGES_PER_MINUTE=20;
+
+function socialChatId(a,b){return [String(a),String(b)].sort().join('_');}
+function socialInitials(name){var p=String(name||'?').trim().split(/\s+/).filter(Boolean);return ((p[0]||'?')[0]+(p[1]||'')[0]).toUpperCase().slice(0,2);}
+function socialEscape(s){return esc(String(s==null?'':s));}
+function socialAvatarHtml(u,cls){
+  var bg=(getAvatarColorClass?getAvatarColorClass(u.name||''):''), photo=u.photoURL?'<img src="'+socialEscape(u.photoURL)+'" alt="">':'';
+  return '<div class="social-avatar '+bg+'" style="background:linear-gradient(135deg,#8b5cf6,#4f46e5)">'+photo+(photo?'':socialEscape(socialInitials(u.name)))+'<span class="social-online" style="display:'+(u.online?'block':'none')+'"></span></div>';
+}
+function socialFormatLastSeen(ts,online){
+  if(online)return 'в сети';
+  if(!ts)return 'был(а) недавно';
+  var d=now()-Number(ts||0);
+  if(d<60000)return 'был(а) только что';
+  if(d<3600000)return 'был(а) '+Math.floor(d/60000)+' мин. назад';
+  if(d<86400000)return 'был(а) '+Math.floor(d/3600000)+' ч. назад';
+  return 'был(а) '+new Date(ts).toLocaleDateString('ru-RU');
+}
+function socialIsBlocked(uid){
+  return db.ref('blocks/'+currentUser.uid+'/'+uid).once('value').then(function(s){return s.exists();});
+}
+async function socialGetUser(uid){
+  if(!uid||!db)return null;
+  var s=await db.ref('publicProfiles/'+uid).once('value');var v=s.val();return v?Object.assign({uid:uid},v):null;
+}
+async function syncPublicProfile(){
+  if(!currentUser||!db)return;
+  var d=currentUserData||{};
+  var publicData={uid:currentUser.uid,name:String(d.name||currentUser.displayName||'Пользователь').slice(0,32),username:String(d.username||'').slice(0,32),bio:String(d.bio||'').slice(0,160),avatarId:d.avatarId||'',photoURL:d.photoURL||'',online:!!d.online,lastSeen:Number(d.lastSeen||now()),updatedAt:now()};
+  try{await db.ref('publicProfiles/'+currentUser.uid).update(publicData);}catch(e){console.warn('public profile sync',e);}
+}
+function socialCleanupListeners(){
+  Object.keys(socialChatListeners).forEach(function(k){try{socialChatListeners[k].off();}catch(e){}});socialChatListeners={};
+  if(socialChatIndexRef){try{socialChatIndexRef.off();}catch(e){}socialChatIndexRef=null;}
+}
+async function socialHydrateNotifications(){
+  if(!currentUser||!db)return;
+  try{
+    var s=await db.ref('notifications/'+currentUser.uid).limitToLast(100).once('value');var n=s.val()||{};var grouped={};
+    Object.keys(n).forEach(function(k){var x=n[k]||{};if(x.type==='message'&&x.chatId&&x.fromId)grouped[x.chatId]=x;});
+    for(var chatId in grouped){var x=grouped[chatId];var peer=await socialGetUser(x.fromId);if(peer)await socialNewChatIndex(currentUser.uid,chatId,peer,{unread:1,lastText:x.text||'',updatedAt:Number(x.createdAt||now())});}
+  }catch(e){console.warn('notification hydration',e);}
+}
+function socialLoad(){
+  if(!currentUser||!db)return;
+  socialCleanupListeners();
+  socialRenderChats();
+  socialHydrateNotifications();
+  var ref=db.ref('chatIndex/'+currentUser.uid);socialChatIndexRef=ref;
+  ref.on('value',function(){socialRenderChats();},function(){socialRenderChats();});
+}
+async function socialRenderChats(){
+  var list=document.getElementById('social-chat-list');if(!list||!currentUser||!db)return;
+  try{
+    var snap=await db.ref('chatIndex/'+currentUser.uid).once('value');var idx=snap.val()||{};
+    var arr=Object.keys(idx).map(function(k){return Object.assign({chatId:k},idx[k]);});
+    arr.sort(function(a,b){return Number(b.updatedAt||0)-Number(a.updatedAt||0);});
+    if(!arr.length){list.innerHTML='<div class="social-empty">Здесь появятся ваши личные чаты<br><span style="font-size:11px">Найдите пользователя выше и начните диалог</span></div>';return;}
+    list.innerHTML=arr.slice(0,50).map(function(c){
+      var u={name:c.name||c.username||'Пользователь',username:c.username||'',avatarId:c.avatarId||'',photoURL:c.photoURL||'',online:c.online};
+      return '<div class="social-user chat-row" data-chat="'+socialEscape(c.chatId)+'" data-peer="'+socialEscape(c.peerId)+'">'+socialAvatarHtml(u)+'<div class="social-user-main"><div class="social-user-name">'+socialEscape(u.name)+'</div><div class="social-user-meta">@'+socialEscape(u.username||'user')+(c.lastText?' · '+socialEscape(c.lastText.slice(0,48)):'')+'</div></div>'+(c.unread?'<div class="chat-unread">'+Math.min(99,Number(c.unread||0))+'</div>':'')+'</div>';
+    }).join('');
+    list.querySelectorAll('.chat-row').forEach(function(el){el.onclick=function(){openSocialChat(el.dataset.peer,el.dataset.chat);};});
+  }catch(e){list.innerHTML='<div class="social-empty">Не удалось загрузить чаты</div>';console.warn('socialRenderChats',e);}
+}
+function socialSearchUsers(q){
+  clearTimeout(socialSearchTimer);var out=document.getElementById('social-search-results');var clear=document.getElementById('social-search-clear');
+  q=String(q||'').trim().replace(/^@/,'').toLowerCase();if(clear)clear.style.display=q?'block':'none';
+  if(!q){out.innerHTML='';return;}
+  if(q.length<3){out.innerHTML='<div class="social-empty">Введите минимум 3 символа</div>';return;}
+  out.innerHTML='<div class="social-empty">Поиск…</div>';
+  socialSearchTimer=setTimeout(async function(){
+    try{var s=await db.ref('usernames/'+q).once('value');if(!s.exists()){out.innerHTML='<div class="social-empty">Пользователь @'+socialEscape(q)+' не найден</div>';return;}
+      var uid=s.val();if(uid===currentUser.uid){out.innerHTML='<div class="social-empty">Это ваш собственный профиль</div>';return;}
+      var u=await socialGetUser(uid);if(!u){out.innerHTML='<div class="social-empty">Профиль недоступен</div>';return;}
+      var blocked=await socialIsBlocked(uid);
+      out.innerHTML='<div class="social-card"><div class="social-user">'+socialAvatarHtml(u)+'<div class="social-user-main"><div class="social-user-name">'+socialEscape(u.name||'Пользователь')+'</div><div class="social-user-meta">@'+socialEscape(u.username||q)+' · '+socialEscape(socialFormatLastSeen(u.lastSeen,u.online))+'</div></div><div class="social-user-actions">'+(blocked?'<button class="social-mini-btn" id="social-unblock-search">Разблокировать</button>':'<button class="social-mini-btn primary" id="social-open-search">Написать</button>')+'</div></div></div>';
+      var open=document.getElementById('social-open-search');if(open)open.onclick=function(){openSocialChat(uid,socialChatId(currentUser.uid,uid));};
+      var ub=document.getElementById('social-unblock-search');if(ub)ub.onclick=async function(){await db.ref('blocks/'+currentUser.uid+'/'+uid).remove();socialSearchUsers(q);toast('Пользователь разблокирован');};
+    }catch(e){out.innerHTML='<div class="social-empty">Ошибка поиска</div>';console.warn('social search',e);}
+  },300);
+}
+function socialNewChatIndex(uid,chatId,peer,extra){
+  var data={peerId:peer.uid,name:peer.name||'Пользователь',username:peer.username||'',avatarId:peer.avatarId||'',photoURL:peer.photoURL||'',online:!!peer.online,lastSeen:Number(peer.lastSeen||0),updatedAt:now()};
+  if(extra)Object.assign(data,extra);
+  return db.ref('chatIndex/'+uid+'/'+chatId).set(data);
+}
+async function openSocialChat(peerId,chatId){
+  if(!currentUser||!db||peerId===currentUser.uid)return;
+  try{
+    var peer=await socialGetUser(peerId);if(!peer){toast('Пользователь не найден');return;}
+    var blocked=await socialIsBlocked(peerId);if(blocked){toast('Сначала разблокируйте пользователя');return;}
+    var otherBlocked=await db.ref('blocks/'+peerId+'/'+currentUser.uid).once('value');if(otherBlocked.exists()){toast('Пользователь ограничил сообщения');return;}
+    chatId=chatId||socialChatId(currentUser.uid,peerId);
+    var updates={};updates['chatMeta/'+chatId]={a:[currentUser.uid,peerId].sort()[0],b:[currentUser.uid,peerId].sort()[1],createdAt:now()};
+    await db.ref().update(updates);
+    await socialNewChatIndex(currentUser.uid,chatId,peer,{unread:0});
+    var me=Object.assign({uid:currentUser.uid},currentUserData||{});
+    socialCurrentChat=chatId;socialCurrentPeer=peer;
+    var win=document.getElementById('chat-window');win.classList.add('show');
+    document.getElementById('chat-head-name').textContent=peer.name||'Пользователь';
+    document.getElementById('chat-head-status').textContent='@'+(peer.username||'user')+' · '+socialFormatLastSeen(peer.lastSeen,peer.online);
+    document.getElementById('chat-avatar').innerHTML=peer.photoURL?'<img src="'+socialEscape(peer.photoURL)+'" alt="">':socialEscape(socialInitials(peer.name));
+    socialListenMessages(chatId);
+  }catch(e){console.warn(e);toast('Не удалось открыть чат');}
+}
+function socialListenMessages(chatId){
+  var box=document.getElementById('chat-messages');if(!box)return;
+  Object.keys(socialChatListeners).forEach(function(k){try{socialChatListeners[k].off();}catch(e){}});socialChatListeners={};
+  var ref=db.ref('chats/'+chatId+'/messages').limitToLast(150);socialChatListeners[chatId]=ref;
+  ref.on('value',function(s){
+    var data=s.val()||{};var arr=Object.keys(data).map(function(k){return Object.assign({id:k},data[k]);});arr.sort(function(a,b){return Number(a.createdAt||0)-Number(b.createdAt||0);});
+    box.innerHTML=arr.map(function(m){var mine=m.senderId===currentUser.uid;var hasLink=/https?:\/\//i.test(m.text||'');return '<div class="msg-row '+(mine?'mine':'')+'"><div class="msg-bubble">'+socialEscape(m.text).replace(/\n/g,'<br>')+'<span class="msg-time">'+new Date(Number(m.createdAt||now())).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})+'</span>'+(hasLink?'<div class="msg-link-warning">🔗 Проверьте ссылку перед переходом</div>':'')+'</div></div>';}).join('')||'<div class="social-empty" style="margin:auto">Начните разговор.<br>Не отправляйте пароли, коды и платёжные данные.</div>';
+    box.scrollTop=box.scrollHeight;
+  });
+}
+function socialCanSend(){
+  var t=now();socialSendTimes=socialSendTimes.filter(function(x){return t-x<60000;});
+  if(socialSendTimes.length>=SOCIAL_MAX_MESSAGES_PER_MINUTE){toast('Слишком много сообщений. Подождите минуту.');return false;}
+  socialSendTimes.push(t);return true;
+}
+async function socialSendMessage(){
+  if(!socialCurrentChat||!socialCurrentPeer||!currentUser)return;
+  var input=document.getElementById('chat-input');var text=String(input.value||'').trim();if(!text)return;if(text.length>2000){toast('Сообщение слишком длинное');return;}
+  if(!socialCanSend())return;
+  if(/^(?:пароль|password|код|code)\s*[:=]/i.test(text)){toast('Не отправляйте пароли или коды в чат');return;}
+  try{
+    var blocked=await socialIsBlocked(socialCurrentPeer.uid);if(blocked){toast('Пользователь заблокирован');return;}
+    var other=await db.ref('blocks/'+socialCurrentPeer.uid+'/'+currentUser.uid).once('value');if(other.exists()){toast('Вам нельзя отправлять сообщения этому пользователю');return;}
+    var hourSnap=await db.ref('chatIndex/'+currentUser.uid+'/'+socialCurrentChat+'/createdAt').once('value');
+    var isNewConversation=!hourSnap.exists();
+    if(isNewConversation){
+      var cutoff=now()-3600000;
+      var log=JSON.parse(localStorage.getItem('flux_social_newchat_log')||'[]').filter(function(x){return x>cutoff;});
+      if(log.length>=SOCIAL_MAX_NEW_PER_HOUR){toast('Лимит новых диалогов на час достигнут');return;}
+      log.push(now());try{localStorage.setItem('flux_social_newchat_log',JSON.stringify(log));}catch(e){}
+    }
+    var msgRef=db.ref('chats/'+socialCurrentChat+'/messages').push();
+    var msg={senderId:currentUser.uid,receiverId:socialCurrentPeer.uid,text:text,createdAt:now()};
+    var updates={};updates['chats/'+socialCurrentChat+'/messages/'+msgRef.key]=msg;
+    updates['chatIndex/'+currentUser.uid+'/'+socialCurrentChat+'/lastText']=text;updates['chatIndex/'+currentUser.uid+'/'+socialCurrentChat+'/updatedAt']=msg.createdAt;
+    updates['chatIndex/'+socialCurrentPeer.uid+'/'+socialCurrentChat+'/lastText']=text;updates['chatIndex/'+socialCurrentPeer.uid+'/'+socialCurrentChat+'/updatedAt']=msg.createdAt;
+    updates['chatIndex/'+socialCurrentPeer.uid+'/'+socialCurrentChat+'/unread']=firebase.database.ServerValue.increment(1);
+    updates['notifications/'+socialCurrentPeer.uid+'/n_'+msgRef.key]={type:'message',fromId:currentUser.uid,chatId:socialCurrentChat,text:text.slice(0,100),createdAt:msg.createdAt,read:false};
+    await db.ref().update(updates);input.value='';input.style.height='42px';
+  }catch(e){console.warn('send',e);toast('Не удалось отправить сообщение');}
+}
+async function socialBlockCurrent(){
+  if(!socialCurrentPeer)return;
+  var uid=socialCurrentPeer.uid;
+  showModal('<div class="modal-title">Заблокировать пользователя?</div><div class="modal-text">Он не сможет отправлять вам сообщения через Flux.</div><div class="modal-actions"><button class="modal-btn" id="sb-cancel">Отмена</button><button class="modal-btn danger" id="sb-ok">Заблокировать</button></div>',function(m,close){
+    m.querySelector('#sb-cancel').onclick=close;m.querySelector('#sb-ok').onclick=async function(){try{await db.ref('blocks/'+currentUser.uid+'/'+uid).set(true);toast('Пользователь заблокирован');close();document.getElementById('chat-window').classList.remove('show');}catch(e){toast('Ошибка');}};
+  });
+}
+function socialReportCurrent(){
+  if(!socialCurrentPeer)return;var uid=socialCurrentPeer.uid;
+  showModal('<div class="modal-title">Пожаловаться</div><div class="social-modal-note">Выберите причину. Жалоба попадёт в очередь модерации.</div><button class="social-report-option" data-reason="spam">📢 Спам / массовая реклама</button><button class="social-report-option" data-reason="scam">⚠️ Мошенничество</button><button class="social-report-option" data-reason="abuse">🚫 Оскорбления / нарушение правил</button><button class="social-report-option" data-reason="other">Другое</button>',function(m,close){
+    m.querySelectorAll('.social-report-option').forEach(function(b){b.onclick=async function(){try{var id='r_'+currentUser.uid+'_'+now();await db.ref('reports/'+id).set({reporterId:currentUser.uid,targetId:uid,chatId:socialCurrentChat,reason:b.dataset.reason,createdAt:now(),status:'open'});toast('Жалоба отправлена');close();}catch(e){toast('Не удалось отправить жалобу');}};});
+  });
+}
+function socialShowBlocks(){
+  var body='<div class="modal-title">Заблокированные</div><div id="social-block-list"><div class="social-empty">Загрузка…</div></div><div class="modal-actions"><button class="modal-btn" id="social-block-close">Закрыть</button></div>';
+  showModal(body,function(m,close){m.querySelector('#social-block-close').onclick=close;(async function(){try{var s=await db.ref('blocks/'+currentUser.uid).once('value');var ids=Object.keys(s.val()||{});if(!ids.length){m.querySelector('#social-block-list').innerHTML='<div class="social-empty">Заблокированных нет</div>';return;}var users=await Promise.all(ids.map(socialGetUser));m.querySelector('#social-block-list').innerHTML=users.filter(Boolean).map(function(u){return '<div class="social-user"><div class="social-user-main"><div class="social-user-name">'+socialEscape(u.name||'Пользователь')+'</div><div class="social-user-meta">@'+socialEscape(u.username||'user')+'</div></div><button class="social-mini-btn" data-uid="'+socialEscape(u.uid)+'">Разблокировать</button></div>';}).join('');m.querySelectorAll('[data-uid]').forEach(function(b){b.onclick=async function(){await db.ref('blocks/'+currentUser.uid+'/'+b.dataset.uid).remove();b.closest('.social-user').remove();toast('Разблокировано');};});}catch(e){m.querySelector('#social-block-list').innerHTML='<div class="social-empty">Ошибка</div>';}})();});
+}
+function socialHelp(){showModal('<div class="modal-title">Защита Flux</div><div class="modal-text"><b>Антиспам:</b> ограничение частоты сообщений и новых диалогов.<br><br><b>Блокировка:</b> запрещает сообщения между пользователями.<br><br><b>Жалобы:</b> сохраняются отдельно для модерации.<br><br><b>Важно:</b> не отправляйте в чаты пароли, коды 2FA, данные карты или другие секреты.</div><div class="modal-actions"><button class="modal-btn primary" id="shelp-close">Понятно</button></div>',function(m,close){m.querySelector('#shelp-close').onclick=close;});}
+
+$('social-user-search').addEventListener('input',function(){socialSearchUsers(this.value);});
+$('social-search-clear').onclick=function(){$('social-user-search').value='';socialSearchUsers('');$('social-user-search').focus();};
+$('social-refresh').onclick=function(){socialLoad();toast('Чаты обновлены');};
+$('social-new-chat').onclick=function(){$('social-user-search').focus();toast('Введите @username пользователя');};
+$('social-report-help').onclick=socialHelp;
+$('social-blocks').onclick=socialShowBlocks;
+$('chat-back').onclick=function(){document.getElementById('chat-window').classList.remove('show');socialCurrentChat=null;socialCurrentPeer=null;socialRenderChats();};
+$('chat-send').onclick=socialSendMessage;
+$('chat-input').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();socialSendMessage();}});
+$('chat-input').addEventListener('input',function(){this.style.height='42px';this.style.height=Math.min(110,this.scrollHeight)+'px';});
+$('chat-more').onclick=function(){
+  if(!socialCurrentPeer)return;
+  showModal('<div class="modal-title">'+socialEscape(socialCurrentPeer.name||'Пользователь')+'</div><div class="modal-text">@'+socialEscape(socialCurrentPeer.username||'user')+'<br>'+socialEscape(socialFormatLastSeen(socialCurrentPeer.lastSeen,socialCurrentPeer.online))+'</div><div class="modal-actions stack"><button class="modal-btn" id="chat-report">Пожаловаться</button><button class="modal-btn danger" id="chat-block">Заблокировать</button><button class="modal-btn" id="chat-close-menu">Закрыть</button></div>',function(m,close){m.querySelector('#chat-report').onclick=function(){close();socialReportCurrent();};m.querySelector('#chat-block').onclick=function(){close();socialBlockCurrent();};m.querySelector('#chat-close-menu').onclick=close;});
+};
+
 function switchTab(tab){
   if(!tab)return;
   try{
@@ -1924,6 +2260,7 @@ function switchTab(tab){
     document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active');});
     var tc=document.getElementById('tab-'+tab);if(tc)tc.classList.add('active');
     if(tab==='settings'){updateSettingsUI();updateTogglesUI();}
+    if(tab==='social'){socialLoad();}
     if(tab==='shop'){renderShop();}
     if(tab==='vpn'){renderVpnCategoryTabs();renderVpnSources();try{updateConnectUI();}catch(e){}}
     vibrate('tap');
@@ -1937,11 +2274,11 @@ document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=
   var body=document.querySelector('.main-body');
   if(!body)return;
   var startX=0,startY=0,tracking=false,ignored=false;
-  var order=['vpn','shop','settings'];
+  var order=['vpn','shop','social','settings'];
   body.addEventListener('touchstart',function(e){
     if(e.touches.length!==1){tracking=false;return;}
     var t=e.target;
-    if(t.closest('input, textarea, button, .vpn-key-item, .vpn-key-list, .premium-plan, .premium-plan-crown, .shop-tab, .vpn-chip, .vpn-cat-tab, .profile-info-card, .settings-item, .profile-sheet, .modal-backdrop, .toast, .profile-page, .list, .shop-tabs, .vpn-filters-row, .vpn-home, .premium-benefits, .premium-hero, .premium-plans')){ignored=true;tracking=false;return;}
+    if(t.closest('input, textarea, button, .vpn-key-item, .vpn-key-list, .premium-plan, .premium-plan-crown, .shop-tab, .vpn-chip, .vpn-cat-tab, .profile-info-card, .settings-item, .profile-sheet, .modal-backdrop, .toast, .profile-page, .list, .shop-tabs, .vpn-filters-row, .vpn-home, .social-page, .chat-window, .premium-benefits, .premium-hero, .premium-plans')){ignored=true;tracking=false;return;}
     startX=e.touches[0].clientX;startY=e.touches[0].clientY;tracking=true;ignored=false;
   },{passive:true});
   body.addEventListener('touchend',function(e){
