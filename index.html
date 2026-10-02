@@ -2220,23 +2220,42 @@ function socialNewChatIndex(uid,chatId,peer,extra){
 async function openSocialChat(peerId,chatId){
   if(!currentUser||!db||peerId===currentUser.uid)return;
   try{
-    var peer=await socialGetUser(peerId);if(!peer){toast('Пользователь не найден');return;}
-    var blocked=await socialIsBlocked(peerId);if(blocked){toast('Сначала разблокируйте пользователя');return;}
-    var otherBlocked=await db.ref('blocks/'+peerId+'/'+currentUser.uid).once('value');if(otherBlocked.exists()){toast('Пользователь ограничил сообщения');return;}
+    var peer=await socialGetUser(peerId);
+    if(!peer){toast('Пользователь не найден');return;}
+    if(await socialIsBlocked(peerId)){toast('Сначала разблокируйте пользователя');return;}
+    var otherBlocked=await db.ref('blocks/'+peerId+'/'+currentUser.uid).once('value');
+    if(otherBlocked.exists()){toast('Пользователь ограничил сообщения');return;}
+
     chatId=chatId||socialChatId(currentUser.uid,peerId);
-    var updates={};updates['chatMeta/'+chatId]={a:[currentUser.uid,peerId].sort()[0],b:[currentUser.uid,peerId].sort()[1],createdAt:now()};
-    await db.ref().update(updates);
-    await socialNewChatIndex(currentUser.uid,chatId,peer,{unread:0});
+    var metaRef=db.ref('chatMeta/'+chatId);
+    var metaSnap=await metaRef.once('value');
+    if(!metaSnap.exists()){
+      var a=[String(currentUser.uid),String(peerId)].sort();
+      await metaRef.set({a:a[0],b:a[1],createdAt:now()});
+    }
+
     var me={uid:currentUser.uid,name:currentUserData&&currentUserData.name||currentUser.displayName||'Пользователь',username:currentUserData&&currentUserData.username||'',avatarId:currentUserData&&currentUserData.avatarId||'',photoURL:currentUserData&&currentUserData.photoURL||'',online:true,lastSeen:now()};
-    await socialNewChatIndex(peer.uid,chatId,me,{unread:0});
-    var me=Object.assign({uid:currentUser.uid},currentUserData||{});
-    socialCurrentChat=chatId;socialCurrentPeer=peer;
-    var win=document.getElementById('chat-window');win.classList.add('show');
-    document.getElementById('chat-head-name').textContent=peer.name||'Пользователь';
-    document.getElementById('chat-head-status').textContent='@'+(peer.username||'user')+' · '+socialFormatLastSeen(peer.lastSeen,peer.online);
-    document.getElementById('chat-avatar').innerHTML=peer.photoURL?'<img src="'+socialEscape(peer.photoURL)+'" alt="">':socialEscape(socialInitials(peer.name));
+    // Собственный индекс обязателен для списка чатов.
+    await socialNewChatIndex(currentUser.uid,chatId,peer,{unread:0});
+    // Индекс собеседника не должен мешать открытию чата. Если Rules его разрешают — создаём; иначе чат всё равно открывается.
+    try{await socialNewChatIndex(peer.uid,chatId,me,{unread:0});}catch(indexErr){console.warn('peer chatIndex write denied',indexErr);}
+
+    socialCurrentChat=chatId;
+    socialCurrentPeer=peer;
+    var win=document.getElementById('chat-window');
+    if(!win){toast('Окно чата не найдено');return;}
+    win.classList.add('show');
+    var headName=document.getElementById('chat-head-name');
+    var headStatus=document.getElementById('chat-head-status');
+    var avatar=document.getElementById('chat-avatar');
+    if(headName)headName.textContent=peer.name||'Пользователь';
+    if(headStatus)headStatus.textContent='@'+(peer.username||'user')+' · '+socialFormatLastSeen(peer.lastSeen,peer.online);
+    if(avatar)avatar.innerHTML=peer.photoURL?'<img src="'+socialEscape(peer.photoURL)+'" alt="">':socialEscape(socialInitials(peer.name));
     socialListenMessages(chatId);
-  }catch(e){console.warn(e);toast('Не удалось открыть чат');}
+  }catch(e){
+    console.error('openSocialChat failed:',e);
+    toast('Не удалось открыть чат: '+(e&&e.message?e.message:'проверьте Firebase Rules'));
+  }
 }
 function socialListenMessages(chatId){
   var box=document.getElementById('chat-messages');if(!box)return;
