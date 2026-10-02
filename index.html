@@ -19,8 +19,9 @@
   FIREBASE REALTIME DATABASE SECURITY RULES  (ОБНОВЛЕНО)
   ============================================================
   Пропиши эти правила в Firebase Console → Realtime Database → Rules.
-  Ключевое изменение: chatIndex теперь разрешает участнику чата
-  писать в индекс собеседника (иначе сообщения не отправляются).
+  Ключевые изменения:
+    1) chatMeta .read разрешает чтение несуществующего узла (!data.exists()).
+    2) chatIndex разрешает участнику чата писать в индекс собеседника.
   ============================================================
   {
     "rules": {
@@ -84,7 +85,7 @@
       },
       "chatMeta": {
         "$chatId": {
-          ".read": "auth != null && (data.child('a').val() === auth.uid || data.child('b').val() === auth.uid)",
+          ".read": "auth != null && (!data.exists() || data.child('a').val() === auth.uid || data.child('b').val() === auth.uid)",
           ".write": "auth != null && ((!data.exists() && (newData.child('a').val() === auth.uid || newData.child('b').val() === auth.uid)) || (data.exists() && (data.child('a').val() === auth.uid || data.child('b').val() === auth.uid)))",
           ".validate": "newData.hasChildren(['a','b']) && newData.child('a').val() !== newData.child('b').val()"
         }
@@ -1949,7 +1950,7 @@ function showPinSetup(cb){
 
 
 /* ============================================================
-   FLUX MESSENGER (ПЕРЕПИСАНО — РАБОЧАЯ ВЕРСИЯ)
+   FLUX MESSENGER
    ============================================================ */
 var socialChatListeners={};
 var socialCurrentChat=null;
@@ -2167,17 +2168,29 @@ async function openSocialChat(peerId,chatId){
   try{
     var peer=await socialGetUser(peerId);
     if(!peer){toast('Пользователь не найден');return;}
-    var myBlock=await db.ref('blocks/'+currentUser.uid+'/'+peerId).once('value');
-    if(myBlock.exists()){toast('Сначала разблокируйте пользователя');return;}
-    var otherBlock=await db.ref('blocks/'+peerId+'/'+currentUser.uid).once('value');
-    if(otherBlock.exists()){toast('Пользователь ограничил сообщения');return;}
+
+    // Свой список блокировок читать можно
+    try{
+      var myBlock=await db.ref('blocks/'+currentUser.uid+'/'+peerId).once('value');
+      if(myBlock.exists()){toast('Сначала разблокируйте пользователя');return;}
+    }catch(e){ /* ignore */ }
+
+    // Чужой список блокировок читать нельзя — пропускаем.
+    // Реальная защита работает в правилах chats/.../messages.
 
     chatId=chatId||socialChatId(currentUser.uid,peerId);
-    var metaRef=db.ref('chatMeta/'+chatId);
-    var metaSnap=await metaRef.once('value');
-    if(!metaSnap.exists()){
+
+    // chatMeta может не существовать — оборачиваем в try/catch
+    var metaExists=false;
+    try{
+      var metaSnap=await db.ref('chatMeta/'+chatId).once('value');
+      metaExists=metaSnap.exists();
+    }catch(e){ metaExists=false; }
+
+    if(!metaExists){
       var a=[String(currentUser.uid),String(peerId)].sort();
-      await metaRef.set({a:a[0],b:a[1],createdAt:now()});
+      try{ await db.ref('chatMeta/'+chatId).set({a:a[0],b:a[1],createdAt:now()}); }
+      catch(e){ /* уже существует или гонка */ }
     }
 
     var me={
@@ -2189,16 +2202,16 @@ async function openSocialChat(peerId,chatId){
       online:true,
       lastSeen:now()
     };
-    // Свой индекс — всегда
     try{ await socialNewChatIndex(currentUser.uid,chatId,peer,{unread:0}); }catch(e){ console.warn('own index',e); }
-    // Индекс собеседника (разрешён обновлёнными правилами)
     try{ await socialNewChatIndex(peer.uid,chatId,me,{unread:0}); }catch(e){ console.warn('peer index',e); }
 
     socialCurrentChat=chatId;
     socialCurrentPeer=peer;
+
     var win=document.getElementById('chat-window');
     if(!win){toast('Окно чата не найдено');return;}
     win.classList.add('show');
+
     var headName=document.getElementById('chat-head-name');
     var headStatus=document.getElementById('chat-head-status');
     var avatar=document.getElementById('chat-avatar');
@@ -2210,12 +2223,14 @@ async function openSocialChat(peerId,chatId){
       else if(peer.photoURL){avatar.style.background='#000';avatar.innerHTML='<img src="'+socialEscape(peer.photoURL)+'" alt="">';}
       else{avatar.style.background='linear-gradient(135deg,#8b5cf6,#4f46e5)';avatar.textContent=socialInitials(peer.name);}
     }
-    // Обнуляем непрочитанное
+
     try{ await db.ref('chatIndex/'+currentUser.uid+'/'+chatId+'/unread').set(0); }catch(e){}
     socialListenMessages(chatId);
   }catch(e){
     console.error('openSocialChat failed:',e);
-    toast('Не удалось открыть чат: '+(e&&e.message?e.message:'проверьте правила Firebase'));
+    var msg=String(e&&(e.message||e.code)||'');
+    if(/permission/i.test(msg))toast('Нет доступа. Проверьте правила Firebase.');
+    else toast('Не удалось открыть чат');
   }
 }
 function socialListenMessages(chatId){
@@ -2265,10 +2280,11 @@ async function socialSendMessage(){
   }
 
   try{
-    var blocked=await db.ref('blocks/'+currentUser.uid+'/'+peer.uid).once('value');
-    if(blocked.exists()){toast('Пользователь заблокирован');return;}
-    var other=await db.ref('blocks/'+peer.uid+'/'+currentUser.uid).once('value');
-    if(other.exists()){toast('Вам нельзя отправлять сообщения этому пользователю');return;}
+    // Свой блок — читаем; чужой — сервер сам отклонит сообщение.
+    try{
+      var blocked=await db.ref('blocks/'+currentUser.uid+'/'+peer.uid).once('value');
+      if(blocked.exists()){toast('Пользователь заблокирован');return;}
+    }catch(e){ /* ignore */ }
 
     var msgRef=db.ref('chats/'+chatId+'/messages').push();
     var ts=now();
@@ -2302,7 +2318,6 @@ async function socialSendMessage(){
 
     await db.ref().update(updates);
 
-    // Инкремент непрочитанного у собеседника (если чат не открыт у него — он сам обнулит)
     try{ await db.ref('chatIndex/'+peer.uid+'/'+chatId+'/unread').transaction(function(c){return (Number(c)||0)+1;}); }catch(e){}
 
     input.value='';input.style.height='42px';
@@ -2690,7 +2705,6 @@ function getServerDisplay(k){
   var name = isFluxGithubHost(host) || /raw\.githubusercontent\.com/i.test(String(meta.name||'')) ? '@FluxVpnClient' : (meta.name || host || (k.proto.toUpperCase()+' server'));
   return String(name).replace(/^[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]\s*/, '').trim();
 }
-
 function reactionButtonHtml(idx, kind, active, count){
   var hasCount = count > 0;
   var label = REACTION_LABELS[kind] + (hasCount ? ' · ' + count : '');
