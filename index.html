@@ -10,7 +10,10 @@
 <meta name="apple-mobile-web-app-title" content="Flux">
 <meta name="color-scheme" content="dark light">
 <link rel="manifest" href='data:application/manifest+json,{%22name%22:%22Flux%20Client%22,%22short_name%22:%22Flux%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#17212b%22,%22theme_color%22:%22#17212b%22}'>
-<title>Flux Client — Offline</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<title>Flux Client</title>
 <style>
 
 :root{
@@ -711,7 +714,7 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 
 <div id="tab-vpn" class="tab-content active">
   <div class="vpn-home" id="vpn-home">
-    <div id="offline-mode-badge" style="margin:0 18px 8px;padding:9px 12px;border-radius:14px;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:800;text-align:center">ОФЛАЙН-РЕЖИМ • ключи хранятся на устройстве</div>
+    <div id="offline-mode-badge" style="margin:0 18px 8px;padding:9px 12px;border-radius:14px;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:800;text-align:center">ЛОКАЛЬНЫЕ VPN-КЛЮЧИ • ВХОД ЧЕРЕЗ FIREBASE</div>
 <div class="vpn-home-header">
       <div class="vpn-home-brand">
         <div class="vpn-home-mark">
@@ -2676,75 +2679,6 @@ window.addEventListener('focus',function(){setTimeout(restoreVpnConnectionUI,80)
 requestAnimationFrame(positionNavIndicator);
 window.addEventListener('load',function(){requestAnimationFrame(positionNavIndicator);},{passive:true,once:true});
 
-if(!firebaseReady){setTimeout(function(){toast('Проверьте интернет');},500);}
-
-/* === FLUX OFFLINE BOOT ===
-   UI, profile and VPN key storage work without network.
-   Firebase authentication/database are intentionally not required.
-*/
-(function bootFluxOffline(){
-  try{
-    window.FLUX_OFFLINE=true;
-    firebaseReady=false;
-    auth=null; db=null;
-
-    var uid=localStorage.getItem('flux_offline_uid')||('offline_'+Math.random().toString(36).slice(2,11));
-    localStorage.setItem('flux_offline_uid',uid);
-    var saved={};
-    try{saved=JSON.parse(localStorage.getItem('flux_offline_profile')||'{}')||{};}catch(e){saved={};}
-
-    currentUser={uid:uid,email:saved.email||'offline@local'};
-    currentUserData=Object.assign({
-      uid:uid,
-      name:saved.name||'Flux User',
-      username:saved.username||'flux_user',
-      avatarId:saved.avatarId||'a1',
-      bio:saved.bio||'',
-      birthday:saved.birthday||''
-    },saved);
-
-    try{
-      localStorage.setItem('flux_offline_profile',JSON.stringify(currentUserData));
-    }catch(e){}
-
-    var enter=function(){
-      try{
-        if(typeof updateProfileUI==='function')updateProfileUI();
-      }catch(e){}
-      try{
-        if(typeof updateSettingsUI==='function')updateSettingsUI();
-      }catch(e){}
-      try{
-        if(typeof updateTogglesUI==='function')updateTogglesUI();
-      }catch(e){}
-      try{
-        if(typeof renderVpnCategoryTabs==='function')renderVpnCategoryTabs();
-        if(typeof renderVpnSources==='function')renderVpnSources();
-      }catch(e){}
-      try{goScreen('main-screen',true);}catch(e){}
-      try{requestAnimationFrame(positionNavIndicator);}catch(e){}
-      try{renderOfflineVpnKeys(true);}catch(e){}
-      try{setSplashStatus('Готово • офлайн');}catch(e){}
-    };
-
-    setTimeout(enter,250);
-  }catch(e){
-    console.error('Offline boot failed',e);
-    try{goScreen('main-screen',true);}catch(_){}
-  }
-})();
-
-
-(function patchOfflineProfilePersistence(){
-  function save(){
-    try{
-      if(!window.FLUX_OFFLINE || !currentUserData)return;
-      localStorage.setItem('flux_offline_profile',JSON.stringify(currentUserData));
-    }catch(e){}
-  }
-  window.addEventListener('beforeunload',save);
-  setInterval(save,1500);
-})();
 
 </script>
 </body>
