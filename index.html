@@ -789,6 +789,26 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
   .vpn-reaction.pop{animation:none!important}
   .vpn-reaction.pop .rx-ripple{animation:none!important}
 }
+
+/* ===== Flux Social Upgrade ===== */
+.chat-extra-tools{display:flex;gap:6px;padding:0 10px 6px;background:var(--surface)}
+.chat-tool{width:36px;height:32px;border-radius:10px;background:var(--bg-2);display:grid;place-items:center;color:var(--text-2);font-size:12px;font-weight:800}
+.chat-tool.active{background:var(--accent-soft);color:var(--accent)}
+.chat-searchbar{display:none;padding:7px 10px;background:var(--surface);border-bottom:1px solid var(--divider)}
+.chat-searchbar.show{display:flex;gap:7px}.chat-searchbar input{flex:1;border:0;outline:0;background:var(--bg-2);border-radius:11px;padding:8px 10px;color:var(--text);font-size:14px}
+.chat-search-close{width:34px;border-radius:10px;background:var(--bg-2)}
+.msg-bubble{position:relative}.msg-bubble.context{outline:2px solid var(--accent);outline-offset:2px}
+.msg-reply{border-left:3px solid currentColor;padding:5px 8px;margin:-2px 0 6px;border-radius:6px;background:rgba(0,0,0,.06);font-size:11px;opacity:.82;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mine .msg-reply{background:rgba(255,255,255,.13)}
+.msg-edited{font-size:9px;opacity:.55;margin-left:4px}.msg-actions{display:none;position:absolute;z-index:4;bottom:100%;right:0;margin-bottom:5px;background:var(--surface);border:1px solid var(--divider);box-shadow:var(--shadow-4);border-radius:13px;padding:4px;gap:2px;white-space:nowrap}
+.msg-bubble.open .msg-actions{display:flex}.msg-action{padding:7px 8px;border-radius:9px;font-size:11px;font-weight:750}.msg-action:active{background:var(--bg-2)}
+.chat-compose-wrap{background:var(--surface);border-top:1px solid var(--divider)}
+.reply-bar{display:none;align-items:center;gap:8px;padding:7px 10px;background:var(--accent-softer);border-bottom:1px solid var(--divider)}.reply-bar.show{display:flex}.reply-bar-main{min-width:0;flex:1}.reply-bar-title{font-size:10px;color:var(--accent);font-weight:800}.reply-bar-text{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.reply-cancel{width:30px;height:30px;border-radius:9px;background:var(--bg-2)}
+.chat-typing{height:18px;padding:0 14px;background:var(--surface);color:var(--accent);font-size:10px;display:none}.chat-typing.show{display:block}
+.chat-pinned{display:none;align-items:center;gap:8px;padding:7px 11px;background:var(--accent-soft);border-bottom:1px solid var(--divider);font-size:11px}.chat-pinned.show{display:flex}.chat-pinned span{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.chat-pinned button{font-size:10px;color:var(--accent);font-weight:800}
+.social-profile-card{padding:18px;text-align:center}.social-profile-card .social-avatar{margin:0 auto 9px;width:64px;height:64px;border-radius:19px;font-size:23px}.social-profile-actions{display:flex;gap:7px;margin-top:13px}.social-profile-actions button{flex:1;padding:10px;border-radius:12px;background:var(--bg-2);font-weight:800;font-size:12px}.social-profile-actions .primary{background:var(--accent);color:#fff}
+.chat-empty-search{text-align:center;padding:30px;color:var(--text-2);font-size:12px}
+
 </style>
 </head>
 <body>
@@ -1046,8 +1066,15 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
     <div class="chat-head-info"><div class="chat-head-name" id="chat-head-name">Чат</div><div class="chat-head-status" id="chat-head-status">—</div></div>
     <button class="chat-more ripple" id="chat-more" aria-label="Меню"><svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></button>
   </div>
+  <div class="chat-searchbar" id="chat-searchbar"><input id="chat-message-search" placeholder="Поиск по сообщениям…" autocomplete="off"><button class="chat-search-close" id="chat-search-close">×</button></div>
+  <div class="chat-pinned" id="chat-pinned"><span id="chat-pinned-text"></span><button id="chat-unpin">Открепить</button></div>
   <div class="chat-messages" id="chat-messages"></div>
-  <div class="chat-compose"><textarea id="chat-input" rows="1" maxlength="2000" placeholder="Сообщение…"></textarea><button class="chat-send ripple" id="chat-send" aria-label="Отправить"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></button></div>
+  <div class="chat-typing" id="chat-typing"></div>
+  <div class="chat-compose-wrap">
+    <div class="reply-bar" id="chat-reply-bar"><div class="reply-bar-main"><div class="reply-bar-title">Ответ</div><div class="reply-bar-text" id="chat-reply-text"></div></div><button class="reply-cancel" id="chat-reply-cancel">×</button></div>
+    <div class="chat-extra-tools"><button class="chat-tool" id="chat-search-btn" title="Поиск">⌕</button><button class="chat-tool" id="chat-pin-last" title="Закрепить последнее">⌑</button></div>
+    <div class="chat-compose"><textarea id="chat-input" rows="1" maxlength="2000" placeholder="Сообщение…"></textarea><button class="chat-send ripple" id="chat-send" aria-label="Отправить"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></button></div>
+  </div>
 </div>
 
 <div id="profile-sheet" class="profile-sheet"><div class="profile-sheet-body" id="profile-sheet-body"></div></div>
@@ -2174,6 +2201,14 @@ var socialSearchTimer=null;
 var socialSendTimes=[];
 var SOCIAL_MAX_NEW_PER_HOUR=8;
 var SOCIAL_MAX_MESSAGES_PER_MINUTE=20;
+var socialReplyTo=null;
+var socialTypingTimer=null;
+var socialTypingRef=null;
+var socialMessageCache=[];
+var socialSearchQuery='';
+var socialLastMessageId=null;
+var socialPeerReadRef=null;
+var socialPeerReadAt=0;
 
 function socialChatId(a,b){return [String(a),String(b)].sort().join('_');}
 function socialInitials(name){var p=String(name||'?').trim().split(/\s+/).filter(Boolean);return (((p[0]||'?')[0]||'')+((p[1]||'')[0]||'')).toUpperCase().slice(0,2);}
@@ -2419,6 +2454,7 @@ async function openSocialChat(peerId,chatId){
 
     socialCurrentChat=chatId;
     socialCurrentPeer=peer;
+    socialMarkRead(); socialListenPeerRead();
 
     var win=document.getElementById('chat-window');
     if(!win){toast('Окно чата не найдено');return;}
@@ -2437,7 +2473,11 @@ async function openSocialChat(peerId,chatId){
     }
 
     try{ await db.ref('chatIndex/'+currentUser.uid+'/'+chatId+'/unread').set(0); }catch(e){}
-    socialListenMessages(chatId);
+    socialClearReply(); socialSearchQuery='';
+    var searchBar=$('chat-searchbar');if(searchBar)searchBar.classList.remove('show');
+    var sq=$('chat-message-search');if(sq)sq.value='';
+    await socialLoadPinned();
+    socialListenMessages(chatId); socialListenTyping(); socialRestoreDraft();
   }catch(e){
     console.error('openSocialChat failed:',e);
     var msg=String(e&&(e.message||e.code)||'');
@@ -2445,100 +2485,118 @@ async function openSocialChat(peerId,chatId){
     else toast('Не удалось открыть чат');
   }
 }
+function socialRenderMessageList(arr){
+  var box=document.getElementById('chat-messages'); if(!box)return;
+  var q=String(socialSearchQuery||'').trim().toLowerCase();
+  var visible=q?arr.filter(function(m){return String(m.text||'').toLowerCase().indexOf(q)!==-1;}):arr;
+  if(!visible.length){box.innerHTML=q?'<div class="chat-empty-search">Ничего не найдено</div>':'<div class="social-empty" style="margin:auto">Начните разговор.<br>Не отправляйте пароли, коды и платёжные данные.</div>';return;}
+  box.innerHTML=visible.map(function(m){
+    var mine=m.senderId===currentUser.uid;
+    var hasLink=/https?:\/\//i.test(m.text||'');
+    var reply=m.replyTo;
+    var replyHtml=reply?'<div class="msg-reply">'+socialEscape(reply.name||'Пользователь')+': '+socialEscape(reply.text||'')+'</div>':'';
+    var edited=m.editedAt?'<span class="msg-edited">изменено</span>':''; var status=mine?'<span class="msg-edited">'+(socialPeerReadAt>=Number(m.createdAt||0)?'✓✓':'✓')+'</span>':'';
+    var safeText=socialEscape(m.text||'').replace(/\n/g,'<br>');
+    var deleted=m.deleted===true;
+    if(deleted)safeText='<i>Сообщение удалено</i>';
+    var actions='<div class="msg-actions">'+
+      '<button class="msg-action" data-action="reply" data-id="'+socialEscape(m.id)+'">Ответить</button>'+
+      (mine&&!deleted?'<button class="msg-action" data-action="edit" data-id="'+socialEscape(m.id)+'">Изменить</button><button class="msg-action" data-action="delete" data-id="'+socialEscape(m.id)+'">Удалить</button>':'')+
+      '<button class="msg-action" data-action="pin" data-id="'+socialEscape(m.id)+'">Закрепить</button></div>';
+    return '<div class="msg-row '+(mine?'mine':'')+'" data-message-id="'+socialEscape(m.id)+'"><div class="msg-bubble" data-message-id="'+socialEscape(m.id)+'">'+actions+replyHtml+safeText+edited+status+'<span class="msg-time">'+new Date(Number(m.createdAt||now())).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})+'</span>'+(hasLink&&!deleted?'<div class="msg-link-warning">Проверьте ссылку перед переходом</div>':'')+'</div></div>';
+  }).join('');
+  box.scrollTop=box.scrollHeight;
+}
 function socialListenMessages(chatId){
   var box=document.getElementById('chat-messages');if(!box)return;
   if(socialMessagesRef){try{socialMessagesRef.off();}catch(e){}socialMessagesRef=null;}
-  var ref=db.ref('chats/'+chatId+'/messages').limitToLast(200);
-  socialMessagesRef=ref;
+  var ref=db.ref('chats/'+chatId+'/messages').limitToLast(200); socialMessagesRef=ref;
   ref.on('value',function(s){
     var data=s.val()||{};
-    var arr=Object.keys(data).map(function(k){return Object.assign({id:k},data[k]);});
-    arr.sort(function(a,b){return Number(a.createdAt||0)-Number(b.createdAt||0);});
-    box.innerHTML=arr.map(function(m){
-      var mine=m.senderId===currentUser.uid;
-      var hasLink=/https?:\/\//i.test(m.text||'');
-      return '<div class="msg-row '+(mine?'mine':'')+'"><div class="msg-bubble">'+socialEscape(m.text).replace(/\n/g,'<br>')+'<span class="msg-time">'+new Date(Number(m.createdAt||now())).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})+'</span>'+(hasLink?'<div class="msg-link-warning">🔗 Проверьте ссылку перед переходом</div>':'')+'</div></div>';
-    }).join('')||'<div class="social-empty" style="margin:auto">Начните разговор.<br>Не отправляйте пароли, коды и платёжные данные.</div>';
-    box.scrollTop=box.scrollHeight;
+    socialMessageCache=Object.keys(data).map(function(k){return Object.assign({id:k},data[k]);}).sort(function(a,b){return Number(a.createdAt||0)-Number(b.createdAt||0);});
+    socialLastMessageId=socialMessageCache.length?socialMessageCache[socialMessageCache.length-1].id:null;
+    socialRenderMessageList(socialMessageCache);
   });
+}
+function socialFindMessage(id){return socialMessageCache.find(function(m){return m.id===id;})||null;}
+function socialSetReply(m){
+  if(!m)return; socialReplyTo={id:m.id,name:m.senderId===currentUser.uid?'Вы':(socialCurrentPeer&&socialCurrentPeer.name)||'Пользователь',text:String(m.text||'').slice(0,180)};
+  $('chat-reply-text').textContent=socialReplyTo.text;$('chat-reply-bar').classList.add('show');$('chat-input').focus();
+}
+function socialClearReply(){socialReplyTo=null;$('chat-reply-bar').classList.remove('show');}
+async function socialSoftDeleteMessage(m){
+  if(!m||m.senderId!==currentUser.uid)return;
+  try{await db.ref('chats/'+socialCurrentChat+'/messages/'+m.id).update({text:'',deleted:true,editedAt:now()});toast('Сообщение удалено');}
+  catch(e){toast(/permission/i.test(String(e.message||e))?'Нет прав для удаления сообщения':'Не удалось удалить сообщение');}
+}
+async function socialEditMessage(m){
+  if(!m||m.senderId!==currentUser.uid)return;
+  var value=prompt('Изменить сообщение',m.text||'');
+  if(value===null)return; value=String(value).trim(); if(!value)return toast('Текст не может быть пустым'); if(value.length>2000)return toast('Сообщение слишком длинное');
+  try{await db.ref('chats/'+socialCurrentChat+'/messages/'+m.id).update({text:value,editedAt:now(),deleted:false});toast('Изменено');}
+  catch(e){toast(/permission/i.test(String(e.message||e))?'Нет прав для изменения сообщения':'Не удалось изменить сообщение');}
+}
+async function socialPinMessage(m){
+  if(!m||!currentUser)return;
+  try{
+    await db.ref('chatIndex/'+currentUser.uid+'/'+socialCurrentChat).update({pinnedMessageId:m.id,pinnedText:String(m.text||'').slice(0,180),pinnedAt:now()});
+    $('chat-pinned-text').textContent=(m.senderId===currentUser.uid?'Вы: ':'')+String(m.text||'').slice(0,180);$('chat-pinned').classList.add('show');toast('Сообщение закреплено');
+  }catch(e){toast('Не удалось закрепить');}
+}
+async function socialLoadPinned(){
+  try{var s=await db.ref('chatIndex/'+currentUser.uid+'/'+socialCurrentChat).once('value');var x=s.val()||{};if(x.pinnedMessageId){$('chat-pinned-text').textContent=String(x.pinnedText||'Закреплённое сообщение');$('chat-pinned').classList.add('show');}else $('chat-pinned').classList.remove('show');}catch(e){}
+}
+function socialStartTyping(){
+  if(!currentUser||!socialCurrentChat||!socialCurrentPeer)return;
+  var ref=db.ref('chatIndex/'+currentUser.uid+'/'+socialCurrentChat+'/typing');
+  ref.set({uid:currentUser.uid,at:now()}).catch(function(){});
+  clearTimeout(socialTypingTimer);socialTypingTimer=setTimeout(function(){ref.remove().catch(function(){});},1600);
+}
+function socialListenTyping(){
+  if(socialTypingRef){try{socialTypingRef.off();}catch(e){}}
+  if(!socialCurrentChat||!socialCurrentPeer)return;
+  socialTypingRef=db.ref('chatIndex/'+currentUser.uid+'/'+socialCurrentChat+'/typing');
+  socialTypingRef.on('value',function(s){var x=s.val();var el=$('chat-typing');if(x&&x.uid===socialCurrentPeer.uid&&now()-Number(x.at||0)<3000){el.textContent=(socialCurrentPeer.name||'Пользователь')+' печатает…';el.classList.add('show');}else{el.classList.remove('show');}});
 }
 function socialCanSend(){
   var t=now();socialSendTimes=socialSendTimes.filter(function(x){return t-x<60000;});
   if(socialSendTimes.length>=SOCIAL_MAX_MESSAGES_PER_MINUTE){toast('Слишком много сообщений. Подождите минуту.');return false;}
   socialSendTimes.push(t);return true;
 }
+function socialDraftKey(){return 'flux_draft_'+String(currentUser&&currentUser.uid||'')+'_'+String(socialCurrentChat||'');}
+function socialSaveDraft(){if(!currentUser||!socialCurrentChat)return;var v=String(($('chat-input')&&$('chat-input').value)||'');try{if(v)localStorage.setItem(socialDraftKey(),v);else localStorage.removeItem(socialDraftKey());}catch(e){}}
+function socialRestoreDraft(){if(!currentUser||!socialCurrentChat)return;try{var v=localStorage.getItem(socialDraftKey())||'';if(v){$('chat-input').value=v;$('chat-input').style.height='42px';$('chat-input').style.height=Math.min(110,$('chat-input').scrollHeight)+'px';}}catch(e){}}
+function socialMarkRead(){if(!currentUser||!socialCurrentChat)return;db.ref('chatIndex/'+currentUser.uid+'/'+socialCurrentChat).update({lastReadAt:now(),unread:0}).catch(function(){});}
+function socialListenPeerRead(){
+  if(socialPeerReadRef){try{socialPeerReadRef.off();}catch(e){}}
+  socialPeerReadAt=0;if(!socialCurrentPeer||!socialCurrentChat)return;
+  socialPeerReadRef=db.ref('chatIndex/'+socialCurrentPeer.uid+'/'+socialCurrentChat+'/lastReadAt');
+  socialPeerReadRef.on('value',function(s){socialPeerReadAt=Number(s.val()||0);socialRenderMessageList(socialMessageCache);});
+}
+
 async function socialSendMessage(){
   if(!socialCurrentChat||!socialCurrentPeer||!currentUser)return;
-  var input=document.getElementById('chat-input');
-  var text=String(input.value||'').trim();
-  if(!text)return;
-  if(text.length>2000){toast('Сообщение слишком длинное');return;}
-  if(!socialCanSend())return;
+  var input=document.getElementById('chat-input'); var text=String(input.value||'').trim(); if(!text)return;
+  if(text.length>2000){toast('Сообщение слишком длинное');return;} if(!socialCanSend())return;
   if(/^(?:пароль|password|код|code)\s*[:=]/i.test(text)){toast('Не отправляйте пароли или коды в чат');return;}
-
-  var peer=socialCurrentPeer;
-  var chatId=socialCurrentChat;
-  var chatIsNew=false;
+  var peer=socialCurrentPeer,chatId=socialCurrentChat,chatIsNew=false;
+  try{var existing=await db.ref('chatIndex/'+currentUser.uid+'/'+chatId).once('value');chatIsNew=!existing.exists()||!existing.val().updatedAt;}catch(e){}
+  if(chatIsNew){var cutoff=now()-3600000;var log=JSON.parse(localStorage.getItem('flux_social_newchat_log')||'[]').filter(function(x){return x>cutoff;});if(log.length>=SOCIAL_MAX_NEW_PER_HOUR){toast('Лимит новых диалогов на час достигнут');return;}log.push(now());try{localStorage.setItem('flux_social_newchat_log',JSON.stringify(log));}catch(e){}}
   try{
-    var existing=await db.ref('chatIndex/'+currentUser.uid+'/'+chatId).once('value');
-    chatIsNew=!existing.exists()||!existing.val().updatedAt;
-  }catch(e){}
-
-  if(chatIsNew){
-    var cutoff=now()-3600000;
-    var log=JSON.parse(localStorage.getItem('flux_social_newchat_log')||'[]').filter(function(x){return x>cutoff;});
-    if(log.length>=SOCIAL_MAX_NEW_PER_HOUR){toast('Лимит новых диалогов на час достигнут');return;}
-    log.push(now());try{localStorage.setItem('flux_social_newchat_log',JSON.stringify(log));}catch(e){}
-  }
-
-  try{
-    // Свой блок — читаем; чужой — сервер сам отклонит сообщение.
-    try{
-      var blocked=await db.ref('blocks/'+currentUser.uid+'/'+peer.uid).once('value');
-      if(blocked.exists()){toast('Пользователь заблокирован');return;}
-    }catch(e){ /* ignore */ }
-
-    var msgRef=db.ref('chats/'+chatId+'/messages').push();
-    var ts=now();
+    var blocked=await db.ref('blocks/'+currentUser.uid+'/'+peer.uid).once('value');if(blocked.exists()){toast('Пользователь заблокирован');return;}
+    var msgRef=db.ref('chats/'+chatId+'/messages').push(),ts=now();
     var msg={senderId:currentUser.uid,receiverId:peer.uid,text:text,createdAt:ts};
-    var myName=(currentUserData&&currentUserData.name)||'Пользователь';
-    var myUsername=(currentUserData&&currentUserData.username)||'';
-    var myAvatarId=(currentUserData&&currentUserData.avatarId)||'';
-    var myPhotoURL=(currentUserData&&currentUserData.photoURL)||'';
-
-    var updates={};
-    updates['chats/'+chatId+'/messages/'+msgRef.key]=msg;
-    // Мой индекс
-    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/peerId']=peer.uid;
-    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/name']=peer.name||'Пользователь';
-    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/username']=peer.username||'';
-    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/avatarId']=peer.avatarId||'';
-    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/photoURL']=peer.photoURL||'';
-    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/lastText']=text;
-    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/updatedAt']=ts;
-    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/unread']=0;
-    // Индекс собеседника
-    updates['chatIndex/'+peer.uid+'/'+chatId+'/peerId']=currentUser.uid;
-    updates['chatIndex/'+peer.uid+'/'+chatId+'/name']=myName;
-    updates['chatIndex/'+peer.uid+'/'+chatId+'/username']=myUsername;
-    updates['chatIndex/'+peer.uid+'/'+chatId+'/avatarId']=myAvatarId;
-    updates['chatIndex/'+peer.uid+'/'+chatId+'/photoURL']=myPhotoURL;
-    updates['chatIndex/'+peer.uid+'/'+chatId+'/lastText']=text;
-    updates['chatIndex/'+peer.uid+'/'+chatId+'/updatedAt']=ts;
-    // Уведомление
+    if(socialReplyTo)msg.replyTo={id:socialReplyTo.id,name:socialReplyTo.name,text:socialReplyTo.text};
+    var myName=(currentUserData&&currentUserData.name)||'Пользователь',myUsername=(currentUserData&&currentUserData.username)||'',myAvatarId=(currentUserData&&currentUserData.avatarId)||'',myPhotoURL=(currentUserData&&currentUserData.photoURL)||'';
+    var updates={};updates['chats/'+chatId+'/messages/'+msgRef.key]=msg;
+    updates['chatIndex/'+currentUser.uid+'/'+chatId+'/peerId']=peer.uid;updates['chatIndex/'+currentUser.uid+'/'+chatId+'/name']=peer.name||'Пользователь';updates['chatIndex/'+currentUser.uid+'/'+chatId+'/username']=peer.username||'';updates['chatIndex/'+currentUser.uid+'/'+chatId+'/avatarId']=peer.avatarId||'';updates['chatIndex/'+currentUser.uid+'/'+chatId+'/photoURL']=peer.photoURL||'';updates['chatIndex/'+currentUser.uid+'/'+chatId+'/lastText']=text;updates['chatIndex/'+currentUser.uid+'/'+chatId+'/updatedAt']=ts;updates['chatIndex/'+currentUser.uid+'/'+chatId+'/unread']=0;
+    updates['chatIndex/'+peer.uid+'/'+chatId+'/peerId']=currentUser.uid;updates['chatIndex/'+peer.uid+'/'+chatId+'/name']=myName;updates['chatIndex/'+peer.uid+'/'+chatId+'/username']=myUsername;updates['chatIndex/'+peer.uid+'/'+chatId+'/avatarId']=myAvatarId;updates['chatIndex/'+peer.uid+'/'+chatId+'/photoURL']=myPhotoURL;updates['chatIndex/'+peer.uid+'/'+chatId+'/lastText']=text;updates['chatIndex/'+peer.uid+'/'+chatId+'/updatedAt']=ts;
     updates['notifications/'+peer.uid+'/n_'+msgRef.key]={type:'message',fromId:currentUser.uid,chatId:chatId,text:text.slice(0,100),createdAt:ts,read:false};
-
     await db.ref().update(updates);
-
-    try{ await db.ref('chatIndex/'+peer.uid+'/'+chatId+'/unread').transaction(function(c){return (Number(c)||0)+1;}); }catch(e){}
-
-    input.value='';input.style.height='42px';
-  }catch(e){
-    console.warn('send',e);
-    var msg=String(e&&(e.message||e.code)||'');
-    if(/permission/i.test(msg))toast('Не удалось отправить: проверьте правила Firebase');
-    else toast('Не удалось отправить сообщение');
-  }
+    try{await db.ref('chatIndex/'+peer.uid+'/'+chatId+'/unread').transaction(function(c){return(Number(c)||0)+1;});}catch(e){}
+    input.value='';input.style.height='42px';try{localStorage.removeItem(socialDraftKey());}catch(e){}socialClearReply();
+    try{await db.ref('chatIndex/'+currentUser.uid+'/'+chatId+'/typing').remove();}catch(e){}
+  }catch(e){console.warn('send',e);var em=String(e&&(e.message||e.code)||'');toast(/permission/i.test(em)?'Не удалось отправить: проверьте правила Firebase':'Не удалось отправить сообщение');}
 }
 function socialBlockCurrent(){
   if(!socialCurrentPeer)return;
@@ -2591,14 +2649,33 @@ $('social-search-clear').onclick=function(){$('social-user-search').value='';soc
 $('social-refresh').onclick=function(){socialLoad();toast('Чаты обновлены');};
 $('social-new-chat').onclick=function(){$('social-user-search').value='@';$('social-user-search').focus();socialSearchUsers('@');};
 $('chat-back').onclick=function(){
+  socialSaveDraft();
   document.getElementById('chat-window').classList.remove('show');
   if(socialMessagesRef){try{socialMessagesRef.off();}catch(e){}socialMessagesRef=null;}
-  socialCurrentChat=null;socialCurrentPeer=null;
+  socialCurrentChat=null;socialCurrentPeer=null;socialMessageCache=[];socialClearReply();socialSearchQuery='';
+  if(socialTypingRef){try{socialTypingRef.off();}catch(e){}socialTypingRef=null;}
+  if(socialPeerReadRef){try{socialPeerReadRef.off();}catch(e){}socialPeerReadRef=null;}
+  clearTimeout(socialTypingTimer);
   socialRenderChats();
 };
 $('chat-send').onclick=socialSendMessage;
 $('chat-input').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();socialSendMessage();}});
 $('chat-input').addEventListener('input',function(){this.style.height='42px';this.style.height=Math.min(110,this.scrollHeight)+'px';});
+$('chat-input').addEventListener('input',function(){socialStartTyping();socialSaveDraft();});
+$('chat-reply-cancel').onclick=socialClearReply;
+$('chat-search-btn').onclick=function(){$('chat-searchbar').classList.add('show');$('chat-message-search').focus();};
+$('chat-search-close').onclick=function(){socialSearchQuery='';$('chat-message-search').value='';$('chat-searchbar').classList.remove('show');socialRenderMessageList(socialMessageCache);};
+$('chat-message-search').addEventListener('input',function(){socialSearchQuery=this.value;socialRenderMessageList(socialMessageCache);});
+$('chat-pin-last').onclick=function(){var m=socialMessageCache[socialMessageCache.length-1];if(m)socialPinMessage(m);};
+$('chat-unpin').onclick=async function(){try{await db.ref('chatIndex/'+currentUser.uid+'/'+socialCurrentChat).update({pinnedMessageId:null,pinnedText:null,pinnedAt:null});}catch(e){}$('chat-pinned').classList.remove('show');};
+$('chat-messages').addEventListener('click',function(e){
+  var action=e.target.closest('.msg-action');
+  if(action){e.stopPropagation();var m=socialFindMessage(action.dataset.id);if(!m)return;var a=action.dataset.action;if(a==='reply')socialSetReply(m);else if(a==='edit')socialEditMessage(m);else if(a==='delete')socialSoftDeleteMessage(m);else if(a==='pin')socialPinMessage(m);var bubble=action.closest('.msg-bubble');if(bubble)bubble.classList.remove('open');return;}
+  var bubble=e.target.closest('.msg-bubble');if(!bubble)return;
+  document.querySelectorAll('.msg-bubble.open').forEach(function(x){if(x!==bubble)x.classList.remove('open');});bubble.classList.toggle('open');
+});
+$('chat-messages').addEventListener('dblclick',function(e){var bubble=e.target.closest('.msg-bubble');if(!bubble)return;var m=socialFindMessage(bubble.dataset.messageId);if(m)socialSetReply(m);});
+
 $('chat-more').onclick=function(){
   if(!socialCurrentPeer)return;
   showModal('<div class="modal-title">'+socialEscape(socialCurrentPeer.name||'Пользователь')+'</div><div class="modal-text">@'+socialEscape(socialCurrentPeer.username||'user')+'<br>'+socialEscape(socialFormatLastSeen(socialCurrentPeer.lastSeen,socialCurrentPeer.online))+'</div><div class="modal-actions stack"><button class="modal-btn" id="chat-report">Пожаловаться</button><button class="modal-btn danger" id="chat-block">Заблокировать</button><button class="modal-btn" id="chat-blocks-list">Заблокированные</button><button class="modal-btn" id="chat-close-menu">Закрыть</button></div>',function(m,close){
