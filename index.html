@@ -1307,10 +1307,10 @@ let vpnCountrySourcesLoading=null;
 const VPN_PREMIUM_SOURCES = [
   {
     id:'p1',
-    name:'Все страны',
+    name:'Топ 100 · Verified',
     kind:'premium',
     type:'vpn',
-    url:'https://raw.githubusercontent.com/0xRadikal/Free-v2ray-Configs/main/verified/configs.txt'
+    url:'https://raw.githubusercontent.com/0xRadikal/Free-v2ray-Configs/main/top100.txt'
   },
   {
     id:'p2',
@@ -2944,24 +2944,14 @@ function parseVpnKeys(text){
   var lines=source.split('\n');
   var keys=[];
   var seen=Object.create(null);
-  /*
-   * Источники бывают разного формата:
-   *   vless://...
-   *   vmess://...
-   *   trojan://...
-   *   ss://...
-   * Иногда перед ключом стоят пробелы/нумерация, а после ключа — комментарий.
-   */
   var protoRegex=/(vless|vmess|trojan|ss|hysteria2|hy2|socks5?|socks):\/\/[^\s"'<>]+/ig;
   for(var i=0;i<lines.length;i++){
     var line=String(lines[i]||'').trim();
     if(!line)continue;
     line=line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/,'');
     if(!line||line.charAt(0)==='#'||line.charAt(0)===';')continue;
-
     var matches=line.match(protoRegex);
     if(!matches)continue;
-
     for(var j=0;j<matches.length;j++){
       var raw=String(matches[j]||'').trim().replace(/[),;]+$/,'');
       if(!raw||seen[raw])continue;
@@ -2969,11 +2959,43 @@ function parseVpnKeys(text){
       if(!m)continue;
       var proto=(m[1]||'').toLowerCase();
       if(proto==='socks5'||proto==='socks4')proto='socks';
+      if(!isHappCompatibleKey(raw,proto))continue;
       keys.push({proto:proto,raw:raw});
       seen[raw]=1;
     }
   }
+  keys.sort(function(a,b){
+    var ar=/^vless:\/\//i.test(a.raw),br=/^vless:\/\//i.test(b.raw);
+    var aa=ar?0:1,bb=br?0:1;
+    return aa-bb;
+  });
   return keys;
+}
+function isHappCompatibleKey(raw,proto){
+  try{
+    if(proto==='vless'){
+      var vm=raw.match(/^vless:\/\/[^@]+@([^:?#]+):(\d+)(?:\?|#|$)/i);
+      if(!vm)return false;
+      var q=raw.split('?')[1]||'';
+      var params=new URLSearchParams(q.split('#')[0]);
+      var type=(params.get('type')||'tcp').toLowerCase();
+      var security=(params.get('security')||'').toLowerCase();
+      if(type==='xhttp'||type==='raw')return false;
+      if(security==='reality' && (!params.get('pbk')||!params.get('sni')))return false;
+      return true;
+    }
+    if(proto==='vmess'){
+      var b=raw.slice('vmess://'.length).split('#')[0];
+      var json=atob(b.replace(/-/g,'+').replace(/_/g,'/'));
+      var cfg=JSON.parse(json);
+      return !!(cfg && cfg.add && cfg.port && cfg.id);
+    }
+    if(proto==='ss')return /^ss:\/\/[^@]+@[^:?#]+:\d+/i.test(raw);
+    if(proto==='trojan')return /^trojan:\/\/[^@]+@[^:?#]+:\d+/i.test(raw);
+    if(proto==='hysteria2'||proto==='hy2')return /^hy(?:st)eria2:\/\/[^@]+@[^:?#]+:\d+/i.test(raw);
+    if(proto==='socks')return /^socks:\/\/[^@]+@[^:?#]+:\d+/i.test(raw);
+    return false;
+  }catch(e){return false;}
 }
 function getVpnHost(raw){try{var after=raw.split('://')[1]||'';after=after.split('@').pop();var host=after.split(/[:/?#]/)[0];return host||'';}catch(e){return '';}}
 const COUNTRY_FLAGS={'nl':'🇳🇱','netherlands':'🇳🇱','de':'🇩🇪','germany':'🇩🇪','us':'🇺🇸','usa':'🇺🇸','united states':'🇺🇸','uk':'🇬🇧','gb':'🇬🇧','united kingdom':'🇬🇧','fr':'🇫🇷','france':'🇫🇷','ru':'🇷🇺','russia':'🇷🇺','fi':'🇫🇮','finland':'🇫🇮','se':'🇸🇪','sweden':'🇸🇪','pl':'🇵🇱','poland':'🇵🇱','tr':'🇹🇷','turkey':'🇹🇷','jp':'🇯🇵','japan':'🇯🇵','sg':'🇸🇬','singapore':'🇸🇬','hk':'🇭🇰','hong kong':'🇭🇰','kr':'🇰🇷','south korea':'🇰🇷','korea':'🇰🇷','in':'🇮🇳','india':'🇮🇳','ca':'🇨🇦','canada':'🇨🇦','au':'🇦🇺','australia':'🇦🇺','br':'🇧🇷','brazil':'🇧🇷','it':'🇮🇹','italy':'🇮🇹','es':'🇪🇸','spain':'🇪🇸','ch':'🇨🇭','switzerland':'🇨🇭','at':'🇦🇹','austria':'🇦🇹','cz':'🇨🇿','czech republic':'🇨🇿','ro':'🇷🇴','romania':'🇷🇴','ua':'🇺🇦','ukraine':'🇺🇦','kz':'🇰🇿','kazakhstan':'🇰🇿','ae':'🇦🇪','uae':'🇦🇪','united arab emirates':'🇦🇪','il':'🇮🇱','israel':'🇮🇱','ir':'🇮🇷','iran':'🇮🇷','cn':'🇨🇳','china':'🇨🇳','th':'🇹🇭','thailand':'🇹🇭','vn':'🇻🇳','vietnam':'🇻🇳','id':'🇮🇩','indonesia':'🇮🇩','ph':'🇵🇭','philippines':'🇵🇭','mx':'🇲🇽','mexico':'🇲🇽','ar':'🇦🇷','argentina':'🇦🇷','no':'🇳🇴','norway':'🇳🇴','dk':'🇩🇰','denmark':'🇩🇰','be':'🇧🇪','belgium':'🇧🇪','ie':'🇮🇪','ireland':'🇮🇪','pt':'🇵🇹','portugal':'🇵🇹','gr':'🇬🇷','greece':'🇬🇷','hu':'🇭🇺','hungary':'🇭🇺','bg':'🇧🇬','bulgaria':'🇧🇬','lt':'🇱🇹','lithuania':'🇱🇹','lv':'🇱🇻','latvia':'🇱🇻','ee':'🇪🇪','estonia':'🇪🇪','md':'🇲🇩','moldova':'🇲🇩','by':'🇧🇾','belarus':'🇧🇾','rs':'🇷🇸','serbia':'🇷🇸','hr':'🇭🇷','croatia':'🇭🇷','sk':'🇸🇰','slovakia':'🇸🇰','si':'🇸🇮','slovenia':'🇸🇮','lu':'🇱🇺','luxembourg':'🇱🇺','cy':'🇨🇾','cyprus':'🇨🇾','is':'🇮🇸','iceland':'🇮🇸','al':'🇦🇱','albania':'🇦🇱','ba':'🇧🇦','bosnia':'🇧🇦','mk':'🇲🇰','north macedonia':'🇲🇰','me':'🇲🇪','montenegro':'🇲🇪','ge':'🇬🇪','georgia':'🇬🇪','am':'🇦🇲','armenia':'🇦🇲','az':'🇦🇿','azerbaijan':'🇦🇿','uz':'🇺🇿','uzbekistan':'🇺🇿','kg':'🇰🇬','kyrgyzstan':'🇰🇬','tj':'🇹🇯','tajikistan':'🇹🇯','mn':'🇲🇳','mongolia':'🇲🇳','my':'🇲🇾','malaysia':'🇲🇾','nz':'🇳🇿','new zealand':'🇳🇿','za':'🇿🇦','south africa':'🇿🇦','eg':'🇪🇬','egypt':'🇪🇬','ng':'🇳🇬','nigeria':'🇳🇬','ke':'🇰🇪','kenya':'🇰🇪','cl':'🇨🇱','chile':'🇨🇱','co':'🇨🇴','colombia':'🇨🇴','pe':'🇵🇪','peru':'🇵🇪'};
@@ -3310,11 +3332,13 @@ function doConnect(){
     var happOpened=openInHapp(selectedKey);
     if(!happOpened){toast('Не удалось открыть Happ');}
     setTimeout(function(){
-      var btn=$('vpn-connect-btn');if(btn)btn.classList.add('connected');
-      var lbl=$('vpn-connect-label');if(lbl)lbl.textContent='Подключено';
-      if(status){status.textContent=happOpened?'Выбранный сервер передан в Happ':'Не удалось открыть Happ';status.className='vpn-status connected';}
-      if(happOpened) markVpnConnected(vpnSelectedKey);
-      playSound('success');showSuccessOverlay();vibrate('success');vpnConnecting=false;
+      if(status){status.textContent=happOpened?'Сервер передан в Happ · подключите его там':'Не удалось открыть Happ';status.className='vpn-status '+(happOpened?'opening':'');}
+      if(happOpened){
+        clearVpnConnected();
+        toast('Ключ передан в Happ');
+      }
+      playSound(happOpened?'success':'tap');
+      vpnConnecting=false;
       updateConnectUI();
     },900);
   },900);
