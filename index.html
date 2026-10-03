@@ -136,6 +136,13 @@
     }
   }
 
+  Для новых социальных функций добавь также:
+    "follows": { "$uid": { ".read": "auth != null", "$target": { ".write": "auth != null && auth.uid === $uid" } } },
+    "followers": { "$uid": { ".read": "auth != null", "$follower": { ".write": "auth != null && auth.uid === $follower" } } },
+    "socialPosts": { "$postId": { ".read": "auth != null", ".write": "auth != null" } },
+    "stories": { "$storyId": { ".read": "auth != null", ".write": "auth != null && newData.child('authorId').val() === auth.uid" } },
+    "saved": { "$uid": { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" } },
+
   ВАЖНО: список админов веди вручную в Firebase Console:
     /admins/7rxpLXFm32c2IhJc5vop8sDEo0T2 : true
   ============================================================
@@ -292,6 +299,36 @@ input,textarea,select,[contenteditable="true"]{
 .social-safety{display:flex;gap:10px;align-items:flex-start;padding:12px 13px;background:var(--accent-soft);border-radius:16px;margin-bottom:12px;font-size:12px;color:var(--text-2);line-height:1.45}
 .social-safety b{color:var(--text)}
 @media (max-width:420px){.social-page{padding-left:11px;padding-right:11px}.msg-row{max-width:92%}}
+
+/* ===== Flux Social 2.0 ===== */
+.social-hub-tabs{display:flex;gap:7px;padding:2px 12px 12px;overflow-x:auto;scrollbar-width:none}
+.social-hub-tabs::-webkit-scrollbar{display:none}
+.social-hub-tab{flex:0 0 auto;padding:9px 14px;border-radius:13px;background:var(--bg-2);color:var(--text-2);font-size:12px;font-weight:800}
+.social-hub-tab.active{background:var(--accent);color:#fff;box-shadow:var(--accent-glow)}
+.social-view{display:none}.social-view.active{display:block}
+.story-strip{display:flex;gap:10px;overflow-x:auto;padding:0 12px 12px;scrollbar-width:none}.story-strip::-webkit-scrollbar{display:none}
+.story-item{width:74px;flex:0 0 74px;text-align:center;cursor:pointer}.story-ring{width:58px;height:58px;border-radius:20px;padding:2px;margin:auto;background:var(--accent);box-shadow:0 5px 16px rgba(135,116,225,.2)}
+.story-avatar{width:100%;height:100%;border-radius:18px;background:var(--surface);display:grid;place-items:center;font-size:21px;font-weight:850;overflow:hidden}.story-avatar img{width:100%;height:100%;object-fit:cover}.story-name{font-size:10px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:5px}
+.story-add{background:var(--surface);border:1px dashed var(--accent);color:var(--accent)}
+.feed-compose{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--surface);border:1px solid var(--divider);border-radius:18px;margin:0 12px 10px;box-shadow:var(--shadow-2)}
+.feed-compose-avatar{width:38px;height:38px;border-radius:13px;background:var(--accent-soft);display:grid;place-items:center;font-weight:850;color:var(--accent);overflow:hidden;flex:0 0 auto}.feed-compose-avatar img{width:100%;height:100%;object-fit:cover}
+.feed-compose-placeholder{flex:1;background:var(--bg-2);border-radius:13px;padding:9px 12px;color:var(--text-2);font-size:13px;cursor:pointer}
+.feed-card{background:var(--surface);border:1px solid var(--divider);border-radius:20px;margin:0 12px 10px;overflow:hidden;box-shadow:var(--shadow-2)}
+.feed-head{display:flex;align-items:center;gap:10px;padding:13px 14px 8px}.feed-avatar{width:42px;height:42px;border-radius:14px;background:var(--accent-soft);display:grid;place-items:center;color:var(--accent);font-weight:850;overflow:hidden}.feed-avatar img{width:100%;height:100%;object-fit:cover}.feed-author{min-width:0;flex:1}.feed-author-name{font-weight:800;font-size:14px}.feed-author-meta{font-size:10px;color:var(--text-2);margin-top:2px}.feed-more{width:34px;height:34px;border-radius:10px;background:var(--bg-2);display:grid;place-items:center}
+.feed-body{padding:5px 14px 10px;font-size:14px;line-height:1.48;white-space:pre-wrap;word-break:break-word}.feed-body a{color:var(--accent)}
+.feed-repost{margin:0 14px 10px;padding:10px 11px;border:1px solid var(--divider);border-radius:13px;background:var(--bg-2);font-size:12px;color:var(--text-2)}
+.feed-actions{display:flex;align-items:center;gap:4px;border-top:1px solid var(--divider);padding:6px 9px}.feed-action{flex:1;min-width:0;padding:8px 6px;border-radius:10px;color:var(--text-2);font-size:11px;font-weight:800}.feed-action.active{color:var(--accent);background:var(--accent-soft)}
+.feed-comments{border-top:1px solid var(--divider);padding:8px 12px}.feed-comment{padding:6px 2px;font-size:12px}.feed-comment b{font-weight:800}.feed-comment-input{display:flex;gap:6px;margin-top:6px}.feed-comment-input input{flex:1;border:1px solid var(--divider);background:var(--bg-2);border-radius:11px;padding:8px 10px;outline:0;font-size:13px}.feed-comment-input button{padding:8px 10px;border-radius:11px;background:var(--accent);color:#fff;font-size:11px;font-weight:800}
+.profile-social-stats{display:flex;justify-content:center;gap:28px;margin:14px 0}.profile-stat{text-align:center}.profile-stat b{display:block;font-size:16px}.profile-stat span{font-size:10px;color:var(--text-2)}
+.profile-follow-btn{width:100%;padding:11px;border-radius:14px;background:var(--accent);color:#fff;font-weight:800;margin-top:8px}.profile-follow-btn.following{background:var(--bg-2);color:var(--accent)}
+.social-compose-modal textarea{width:100%;min-height:130px;resize:none;border:1px solid var(--divider);border-radius:14px;background:var(--bg-2);padding:12px;outline:0;color:var(--text);font-size:15px}
+.social-compose-actions{display:flex;gap:8px;margin-top:10px}.social-compose-actions button{flex:1;padding:11px;border-radius:13px;font-weight:800;background:var(--bg-2)}.social-compose-actions .primary{background:var(--accent);color:#fff}
+.poll-box{margin:4px 0 2px;padding:10px;border:1px solid var(--divider);border-radius:14px;background:var(--bg-2)}.poll-title{font-weight:800;margin-bottom:8px}.poll-option{display:block;width:100%;text-align:left;padding:9px 10px;border-radius:10px;background:var(--surface);margin-top:6px;border:1px solid var(--divider);font-size:12px}.poll-option.voted{border-color:var(--accent);color:var(--accent)}
+.social-notice{margin:0 12px 10px;padding:12px 13px;border-radius:16px;background:var(--accent-soft);font-size:12px;color:var(--text-2)}
+.saved-row{display:flex;gap:10px;padding:12px;border-bottom:1px solid var(--divider);cursor:pointer}.saved-icon{width:38px;height:38px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:900}.saved-main{flex:1;min-width:0}.saved-text{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.saved-meta{font-size:10px;color:var(--text-2);margin-top:2px}
+.notification-row{display:flex;gap:10px;padding:12px;border-bottom:1px solid var(--divider)}.notification-icon{width:38px;height:38px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:900}.notification-main{flex:1;font-size:12px}.notification-main small{display:block;color:var(--text-2);margin-top:3px}
+.folder-chips{display:flex;gap:7px;padding:0 12px 10px;overflow-x:auto}.folder-chip{padding:8px 12px;border-radius:11px;background:var(--bg-2);font-size:11px;font-weight:800;white-space:nowrap}.folder-chip.active{background:var(--accent);color:#fff}
+
 
 .messenger-page{height:100%;overflow-y:auto;padding:calc(7px + env(safe-area-inset-top)) 0 calc(112px + env(safe-area-inset-bottom));background:var(--bg)}
 .messenger-head{display:flex;align-items:center;justify-content:space-between;padding:10px 15px 12px}
@@ -1023,6 +1060,7 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
       <div><div class="messenger-title">Чаты</div><div class="messenger-sub" id="social-chat-summary">Личные сообщения</div></div>
       <div class="messenger-actions">
         <button class="header-btn ripple" id="social-refresh" aria-label="Обновить"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.5 9A9 9 0 0118 5l5 5"/><path d="M20.5 15A9 9 0 016 19l-5-5"/></svg></button>
+        <button class="header-btn ripple" id="social-new-story" aria-label="Новая история"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg></button>
         <button class="header-btn ripple" id="social-new-chat" aria-label="Новый чат"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L8 18l-5 1 1-5z"/></svg></button>
       </div>
     </div>
@@ -1032,8 +1070,22 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
       <button id="social-search-clear" class="messenger-search-clear" aria-label="Очистить">×</button>
     </div>
     <div id="social-search-results"></div>
+
+    <div class="social-hub-tabs" id="social-hub-tabs">
+      <button class="social-hub-tab active" data-social-view="chats">Чаты</button>
+      <button class="social-hub-tab" data-social-view="feed">Лента</button>
+      <button class="social-hub-tab" data-social-view="stories">Истории</button>
+      <button class="social-hub-tab" data-social-view="saved">Сохранённое</button>
+      <button class="social-hub-tab" data-social-view="notifications">Уведомления</button>
+    </div>
+    <div class="social-view active" id="social-view-chats">
     <div class="messenger-label">ЛИЧНЫЕ ЧАТЫ</div>
     <div id="social-chat-list"><div class="messenger-empty"><div class="messenger-empty-icon">✈</div><div class="messenger-empty-title">Нет сообщений</div><div class="messenger-empty-text">Найдите пользователя по @username и начните разговор.</div></div></div>
+    </div>
+    <div class="social-view" id="social-view-feed"><div id="social-feed-root"></div></div>
+    <div class="social-view" id="social-view-stories"><div id="social-stories-root"></div></div>
+    <div class="social-view" id="social-view-saved"><div id="social-saved-root"></div></div>
+    <div class="social-view" id="social-view-notifications"><div id="social-notifications-root"></div></div>
   </div>
 </div>
 
@@ -1109,7 +1161,7 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
   <div class="chat-typing" id="chat-typing"></div>
   <div class="chat-compose-wrap">
     <div class="reply-bar" id="chat-reply-bar"><div class="reply-bar-main"><div class="reply-bar-title">Ответ</div><div class="reply-bar-text" id="chat-reply-text"></div></div><button class="reply-cancel" id="chat-reply-cancel">×</button></div>
-    <div class="chat-extra-tools"><button class="chat-tool" id="chat-search-btn" title="Поиск">⌕</button><button class="chat-tool" id="chat-pin-last" title="Закрепить последнее">⌑</button></div>
+    <div class="chat-extra-tools"><button class="chat-tool" id="chat-search-btn" title="Поиск">⌕</button><button class="chat-tool" id="chat-pin-last" title="Закрепить последнее">⌑</button><button class="chat-tool" id="chat-schedule" title="Запланировать">◷</button><button class="chat-tool" id="chat-ttl" title="Исчезающие сообщения">◌</button></div>
     <div class="chat-compose"><textarea id="chat-input" rows="1" maxlength="2000" placeholder="Сообщение…"></textarea><button class="chat-send ripple" id="chat-send" aria-label="Отправить"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></button></div>
   </div>
 </div>
@@ -2434,7 +2486,8 @@ function socialSearchUsers(q){
       if(!u){if(out)out.innerHTML='<div class="social-empty" style="padding:12px 18px">Профиль недоступен</div>';return;}
       var blocked=await db.ref('blocks/'+currentUser.uid+'/'+uid).once('value');
       var isBlocked=blocked.exists();
-      if(out)out.innerHTML='<div class="messenger-result"><div class="social-user">'+socialAvatarHtml(u)+'<div class="social-user-main"><div class="social-user-name">'+socialEscape(u.name||'Пользователь')+'</div><div class="social-user-meta">@'+socialEscape(u.username||username)+' · '+socialEscape(socialFormatLastSeen(u.lastSeen,u.online))+'</div></div><div class="social-user-actions">'+(isBlocked?'<button class="social-mini-btn" id="social-unblock-search">Разблокировать</button>':'<button class="social-mini-btn primary" id="social-open-search">Написать</button>')+'</div></div></div>';
+      if(out)out.innerHTML='<div class="messenger-result"><div class="social-user" data-profile-user="'+socialEscape(uid)+'">'+socialAvatarHtml(u)+'<div class="social-user-main"><div class="social-user-name">'+socialEscape(u.name||'Пользователь')+'</div><div class="social-user-meta">@'+socialEscape(u.username||username)+' · '+socialEscape(socialFormatLastSeen(u.lastSeen,u.online))+'</div></div><div class="social-user-actions">'+(isBlocked?'<button class="social-mini-btn" id="social-unblock-search">Разблокировать</button>':'<button class="social-mini-btn" id="social-profile-search">Профиль</button><button class="social-mini-btn primary" id="social-open-search">Написать</button>')+'</div></div></div>';
+      var profileBtn=document.getElementById('social-profile-search'); if(profileBtn)profileBtn.onclick=function(){fluxShowProfile(uid);};
       var open=document.getElementById('social-open-search');
       if(open)open.onclick=function(){openSocialChat(uid,socialChatId(currentUser.uid,uid));};
       var ub=document.getElementById('social-unblock-search');
@@ -2539,7 +2592,7 @@ function socialRenderMessageList(arr){
     var actions='<div class="msg-actions">'+
       '<button class="msg-action" data-action="reply" data-id="'+socialEscape(m.id)+'">Ответить</button>'+
       (mine&&!deleted?'<button class="msg-action" data-action="edit" data-id="'+socialEscape(m.id)+'">Изменить</button><button class="msg-action" data-action="delete" data-id="'+socialEscape(m.id)+'">Удалить</button>':'')+
-      '<button class="msg-action" data-action="pin" data-id="'+socialEscape(m.id)+'">Закрепить</button></div>';
+      '<button class="msg-action" data-action="pin" data-id="'+socialEscape(m.id)+'">Закрепить</button><button class="msg-action" data-action="save" data-id="'+socialEscape(m.id)+'">Сохранить</button></div>';
     return '<div class="msg-row '+(mine?'mine':'')+'" data-message-id="'+socialEscape(m.id)+'"><div class="msg-bubble" data-message-id="'+socialEscape(m.id)+'">'+actions+replyHtml+safeText+edited+status+'<span class="msg-time">'+new Date(Number(m.createdAt||now())).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})+'</span>'+(hasLink&&!deleted?'<div class="msg-link-warning">Проверьте ссылку перед переходом</div>':'')+'</div></div>';
   }).join('');
   box.scrollTop=box.scrollHeight;
@@ -2573,6 +2626,7 @@ async function socialEditMessage(m){
   try{await db.ref('chats/'+socialCurrentChat+'/messages/'+m.id).update({text:value,editedAt:now(),deleted:false});toast('Изменено');}
   catch(e){toast(/permission/i.test(String(e.message||e))?'Нет прав для изменения сообщения':'Не удалось изменить сообщение');}
 }
+async function socialSaveMessage(m){if(!m||!currentUser)return;try{await db.ref('saved/'+currentUser.uid+'/msg_'+socialCurrentChat+'_'+m.id).set({type:'message',chatId:socialCurrentChat,messageId:m.id,text:m.text||'',authorId:m.senderId,createdAt:now()});toast('Сообщение сохранено');}catch(e){toast('Не удалось сохранить сообщение');}}
 async function socialPinMessage(m){
   if(!m||!currentUser)return;
   try{
@@ -2704,10 +2758,12 @@ $('chat-search-btn').onclick=function(){$('chat-searchbar').classList.add('show'
 $('chat-search-close').onclick=function(){socialSearchQuery='';$('chat-message-search').value='';$('chat-searchbar').classList.remove('show');socialRenderMessageList(socialMessageCache);};
 $('chat-message-search').addEventListener('input',function(){socialSearchQuery=this.value;socialRenderMessageList(socialMessageCache);});
 $('chat-pin-last').onclick=function(){var m=socialMessageCache[socialMessageCache.length-1];if(m)socialPinMessage(m);};
+$('chat-schedule').onclick=fluxScheduleMessage;
+$('chat-ttl').onclick=fluxSetDisappearing;
 $('chat-unpin').onclick=async function(){try{await db.ref('chatIndex/'+currentUser.uid+'/'+socialCurrentChat).update({pinnedMessageId:null,pinnedText:null,pinnedAt:null});}catch(e){}$('chat-pinned').classList.remove('show');};
 $('chat-messages').addEventListener('click',function(e){
   var action=e.target.closest('.msg-action');
-  if(action){e.stopPropagation();var m=socialFindMessage(action.dataset.id);if(!m)return;var a=action.dataset.action;if(a==='reply')socialSetReply(m);else if(a==='edit')socialEditMessage(m);else if(a==='delete')socialSoftDeleteMessage(m);else if(a==='pin')socialPinMessage(m);var bubble=action.closest('.msg-bubble');if(bubble)bubble.classList.remove('open');return;}
+  if(action){e.stopPropagation();var m=socialFindMessage(action.dataset.id);if(!m)return;var a=action.dataset.action;if(a==='reply')socialSetReply(m);else if(a==='edit')socialEditMessage(m);else if(a==='delete')socialSoftDeleteMessage(m);else if(a==='pin')socialPinMessage(m);else if(a==='save')socialSaveMessage(m);var bubble=action.closest('.msg-bubble');if(bubble)bubble.classList.remove('open');return;}
   var bubble=e.target.closest('.msg-bubble');if(!bubble)return;
   document.querySelectorAll('.msg-bubble.open').forEach(function(x){if(x!==bubble)x.classList.remove('open');});bubble.classList.toggle('open');
 });
@@ -2715,7 +2771,10 @@ $('chat-messages').addEventListener('dblclick',function(e){var bubble=e.target.c
 
 $('chat-more').onclick=function(){
   if(!socialCurrentPeer)return;
-  showModal('<div class="modal-title">'+socialEscape(socialCurrentPeer.name||'Пользователь')+'</div><div class="modal-text">@'+socialEscape(socialCurrentPeer.username||'user')+'<br>'+socialEscape(socialFormatLastSeen(socialCurrentPeer.lastSeen,socialCurrentPeer.online))+'</div><div class="modal-actions stack"><button class="modal-btn" id="chat-report">Пожаловаться</button><button class="modal-btn danger" id="chat-block">Заблокировать</button><button class="modal-btn" id="chat-blocks-list">Заблокированные</button><button class="modal-btn" id="chat-close-menu">Закрыть</button></div>',function(m,close){
+  showModal('<div class="modal-title">'+socialEscape(socialCurrentPeer.name||'Пользователь')+'</div><div class="modal-text">@'+socialEscape(socialCurrentPeer.username||'user')+'<br>'+socialEscape(socialFormatLastSeen(socialCurrentPeer.lastSeen,socialCurrentPeer.online))+'</div><div class="modal-actions stack"><button class="modal-btn" id="chat-profile-open">Открыть профиль</button><button class="modal-btn" id="chat-schedule-menu">Запланировать сообщение</button><button class="modal-btn" id="chat-ttl-menu">Исчезающие сообщения</button><button class="modal-btn" id="chat-report">Пожаловаться</button><button class="modal-btn danger" id="chat-block">Заблокировать</button><button class="modal-btn" id="chat-blocks-list">Заблокированные</button><button class="modal-btn" id="chat-close-menu">Закрыть</button></div>',function(m,close){
+    m.querySelector('#chat-profile-open').onclick=function(){close();fluxShowProfile(socialCurrentPeer.uid);};
+    m.querySelector('#chat-schedule-menu').onclick=function(){close();fluxScheduleMessage();};
+    m.querySelector('#chat-ttl-menu').onclick=function(){close();fluxSetDisappearing();};
     m.querySelector('#chat-report').onclick=function(){close();socialReportCurrent();};
     m.querySelector('#chat-block').onclick=function(){close();socialBlockCurrent();};
     m.querySelector('#chat-blocks-list').onclick=function(){close();socialShowBlocks();};
@@ -3542,6 +3601,79 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden)setT
 window.addEventListener('focus',function(){setTimeout(restoreVpnConnectionUI,80);},{passive:true});
 requestAnimationFrame(positionNavIndicator);
 window.addEventListener('load',function(){requestAnimationFrame(positionNavIndicator);},{passive:true,once:true});
+
+
+/* ===== Flux Social 2.0 runtime ===== */
+var fluxSocialView='chats';
+var fluxFeedCache={};
+var fluxFollowCache={};
+var fluxStoryCache={};
+var fluxScheduledKey='flux_scheduled_messages_'+(currentUser?currentUser.uid:'guest');
+function fluxSetSocialView(view){
+  fluxSocialView=view||'chats';
+  document.querySelectorAll('.social-hub-tab').forEach(function(b){b.classList.toggle('active',b.dataset.socialView===fluxSocialView);});
+  document.querySelectorAll('.social-view').forEach(function(v){v.classList.toggle('active',v.id==='social-view-'+fluxSocialView);});
+  if(fluxSocialView==='feed')fluxLoadFeed();
+  if(fluxSocialView==='stories')fluxLoadStories();
+  if(fluxSocialView==='saved')fluxLoadSaved();
+  if(fluxSocialView==='notifications')fluxLoadSocialNotifications();
+}
+function fluxPublicAvatar(u){u=u||{};return u.photoURL?'<img src="'+socialEscape(u.photoURL)+'" alt="">':socialEscape(socialInitials(u.name||'Flux'));}
+function fluxFeedCard(post){
+  var u=post.user||{};var liked=!!(post.likes&&post.likes[currentUser.uid]);var saved=!!(post.saved&&post.saved[currentUser.uid]);
+  var comments=post.comments||{};var ckeys=Object.keys(comments).slice(-3);
+  var body=socialEscape(post.text||'');
+  var poll='';
+  if(post.poll&&post.poll.options){poll='<div class="poll-box"><div class="poll-title">'+socialEscape(post.poll.question||'Опрос')+'</div>'+post.poll.options.map(function(o,i){var votes=post.poll.votes||{};var active=votes[currentUser.uid]===i;return '<button class="poll-option '+(active?'voted':'')+'" data-poll="'+socialEscape(post.id)+'" data-option="'+i+'">'+socialEscape(o)+' </button>';}).join('')+'</div>';}
+  var commentHtml=ckeys.length?'<div class="feed-comments">'+ckeys.map(function(k){var c=comments[k]||{};return '<div class="feed-comment"><b>'+socialEscape(c.name||'Пользователь')+'</b> '+socialEscape(c.text||'')+'</div>';}).join('')+'</div>':'';
+  return '<article class="feed-card" data-post="'+socialEscape(post.id)+'"><div class="feed-head"><div class="feed-avatar">'+fluxPublicAvatar(u)+'</div><div class="feed-author"><div class="feed-author-name">'+socialEscape(u.name||'Пользователь')+(u.username?' <span style="color:var(--text-2);font-weight:600">@'+socialEscape(u.username)+'</span>':'')+'</div><div class="feed-author-meta">'+socialEscape(formatTime(post.createdAt||now()))+(post.edited?' · изменено':'')+'</div></div><button class="feed-more" data-feed-menu="'+socialEscape(post.id)+'">•••</button></div><div class="feed-body">'+body+'</div>'+poll+'<div class="feed-actions"><button class="feed-action '+(liked?'active':'')+'" data-feed-like="'+socialEscape(post.id)+'">♥ '+(Number(post.likeCount)||Object.keys(post.likes||{}).length||0)+'</button><button class="feed-action" data-feed-comment="'+socialEscape(post.id)+'">◯ '+Object.keys(comments).length+'</button><button class="feed-action" data-feed-repost="'+socialEscape(post.id)+'">↗ '+(Number(post.repostCount)||0)+'</button><button class="feed-action '+(saved?'active':'')+'" data-feed-save="'+socialEscape(post.id)+'">▱</button></div>'+commentHtml+'</article>';
+}
+async function fluxLoadFeed(){
+  var root=$('social-feed-root');if(!root||!currentUser||!db)return;
+  root.innerHTML='<div class="social-notice">Лента Flux — публикации людей, на которых вы подписались, и ваши собственные посты.</div><div class="feed-compose"><div class="feed-compose-avatar">'+fluxPublicAvatar(currentUserData||{})+'</div><div class="feed-compose-placeholder" id="flux-feed-compose">Что нового?</div></div><div id="flux-feed-list"><div class="social-empty">Загрузка ленты…</div></div>';
+  $('flux-feed-compose').onclick=fluxOpenPostComposer;
+  try{
+    var snap=await db.ref('socialPosts').orderByChild('createdAt').limitToLast(100).once('value');var raw=snap.val()||{};var ids=Object.keys(raw);
+    var following={};try{var fs=await db.ref('follows/'+currentUser.uid).once('value');following=fs.val()||{};}catch(e){}
+    var posts=[];
+    for(var i=0;i<ids.length;i++){var p=Object.assign({id:ids[i]},raw[ids[i]]||{});if(p.authorId===currentUser.uid||following[p.authorId]){p.user=await socialGetUser(p.authorId)||{};posts.push(p);}}
+    posts.sort(function(a,b){return Number(b.createdAt||0)-Number(a.createdAt||0);});
+    if(!posts.length){$('flux-feed-list').innerHTML='<div class="social-empty">Пока нет публикаций.<br>Подпишитесь на людей или создайте первый пост.</div>';return;}
+    fluxFeedCache={};posts.forEach(function(p){fluxFeedCache[p.id]=p;});$('flux-feed-list').innerHTML=posts.map(fluxFeedCard).join('');fluxBindFeed();
+  }catch(e){$('flux-feed-list').innerHTML='<div class="social-empty">Лента пока недоступна. Если Firebase сообщает permission denied, добавьте правила для socialPosts/follows/socialComments.</div>';}
+}
+function fluxOpenPollComposer(closeParent){showModal('<div class="modal-title">Новый опрос</div><input class="sheet-input" id="poll-question" maxlength=180 placeholder="Вопрос"><input class="sheet-input" id="poll-o1" maxlength=80 placeholder="Вариант 1"><input class="sheet-input" id="poll-o2" maxlength=80 placeholder="Вариант 2"><input class="sheet-input" id="poll-o3" maxlength=80 placeholder="Вариант 3 (необязательно)"><div class="modal-actions"><button class="modal-btn" id="poll-cancel">Отмена</button><button class="modal-btn primary" id="poll-send">Опубликовать</button></div>',function(m,close){m.querySelector('#poll-cancel').onclick=close;m.querySelector('#poll-send').onclick=async function(){var q=m.querySelector('#poll-question').value.trim(),opts=[m.querySelector('#poll-o1').value.trim(),m.querySelector('#poll-o2').value.trim(),m.querySelector('#poll-o3').value.trim()].filter(Boolean);if(!q||opts.length<2)return toast('Нужен вопрос и минимум 2 варианта');try{var ref=db.ref('socialPosts').push();await ref.set({authorId:currentUser.uid,text:'',createdAt:now(),likeCount:0,repostCount:0,poll:{question:q,options:opts,votes:{}}});close();if(closeParent)closeParent();toast('Опрос опубликован');fluxLoadFeed();}catch(e){toast('Не удалось опубликовать опрос');}};});}
+function fluxOpenPostComposer(){
+  showModal('<div class="modal-title">Новая публикация</div><div class="social-compose-modal"><textarea id="flux-post-text" maxlength="2000" placeholder="Расскажите, что происходит…"></textarea><div class="social-compose-actions"><button id="flux-post-cancel">Отмена</button><button id="flux-post-poll">Опрос</button><button class="primary" id="flux-post-send">Опубликовать</button></div></div>',function(m,close){
+    m.querySelector('#flux-post-cancel').onclick=close;m.querySelector('#flux-post-poll').onclick=function(){fluxOpenPollComposer(close);};m.querySelector('#flux-post-send').onclick=async function(){var text=m.querySelector('#flux-post-text').value.trim();if(!text)return toast('Напишите что-нибудь');try{var ref=db.ref('socialPosts').push();var u=currentUserData||{};await ref.set({authorId:currentUser.uid,text:text,createdAt:now(),likeCount:0,repostCount:0});close();toast('Опубликовано');fluxLoadFeed();}catch(e){toast('Не удалось опубликовать — проверьте правила Firebase');}};
+  });
+}
+async function fluxToggleFollow(uid,button){if(!uid||uid===currentUser.uid)return;var following=!!fluxFollowCache[uid];try{if(following){await db.ref('follows/'+currentUser.uid+'/'+uid).remove();await db.ref('followers/'+uid+'/'+currentUser.uid).remove();fluxFollowCache[uid]=false;button.textContent='Подписаться';button.classList.remove('following');}else{await db.ref('follows/'+currentUser.uid+'/'+uid).set(true);await db.ref('followers/'+uid+'/'+currentUser.uid).set(true);fluxFollowCache[uid]=true;button.textContent='Вы подписаны';button.classList.add('following');await db.ref('notifications/'+uid+'/n_follow_'+currentUser.uid).set({type:'follow',fromId:currentUser.uid,createdAt:now(),read:false});} }catch(e){toast('Не удалось изменить подписку — проверьте правила Firebase');}}
+async function fluxShowProfile(uid){var u=await socialGetUser(uid);if(!u)return toast('Профиль недоступен');var fs=await db.ref('follows/'+uid).once('value').catch(function(){return {val:function(){return {}}};});var followers=Object.keys((await db.ref('followers/'+uid).once('value').catch(function(){return {val:function(){return {}}};})).val()||{}).length;var following=Object.keys((fs.val()||{})).length;var mine=!!(await db.ref('follows/'+currentUser.uid+'/'+uid).once('value').catch(function(){return {exists:function(){return false;}}})).exists();fluxFollowCache[uid]=mine;showModal('<div class="modal-title">Профиль</div><div style="text-align:center"><div class="feed-avatar" style="width:76px;height:76px;border-radius:24px;margin:auto;font-size:25px">'+fluxPublicAvatar(u)+'</div><div style="font-size:20px;font-weight:850;margin-top:9px">'+socialEscape(u.name||'Пользователь')+'</div><div style="color:var(--text-2);font-size:12px">@'+socialEscape(u.username||'user')+'</div><div class="modal-text" style="margin-top:8px">'+socialEscape(u.bio||'')+'</div></div><div class="profile-social-stats"><div class="profile-stat"><b>'+followers+'</b><span>подписчиков</span></div><div class="profile-stat"><b>'+following+'</b><span>подписок</span></div></div><button class="profile-follow-btn '+(mine?'following':'')+'" id="flux-follow-btn">'+(mine?'Вы подписаны':'Подписаться')+'</button><div class="modal-actions" style="margin-top:8px"><button class="modal-btn" id="flux-profile-chat">Написать</button><button class="modal-btn" id="flux-profile-close">Закрыть</button></div>',function(m,close){m.querySelector('#flux-follow-btn').onclick=function(){fluxToggleFollow(uid,this);};m.querySelector('#flux-profile-chat').onclick=function(){close();openSocialChat(uid,socialChatId(currentUser.uid,uid));};m.querySelector('#flux-profile-close').onclick=close;});}
+function fluxBindFeed(){
+  document.querySelectorAll('[data-feed-like]').forEach(function(b){b.onclick=async function(){var id=b.dataset.feedLike,p=fluxFeedCache[id];if(!p)return;var ref=db.ref('socialPosts/'+id+'/likes/'+currentUser.uid);try{var s=await ref.once('value');if(s.exists()){await ref.remove();p.likes=p.likes||{};delete p.likes[currentUser.uid];}else{await ref.set(true);p.likes=p.likes||{};p.likes[currentUser.uid]=true;}fluxLoadFeed();}catch(e){toast('Не удалось поставить реакцию');}};});
+  document.querySelectorAll('[data-feed-save]').forEach(function(b){b.onclick=async function(){var id=b.dataset.feedSave,p=fluxFeedCache[id];if(!p)return;try{var ref=db.ref('saved/'+currentUser.uid+'/post_'+id);var s=await ref.once('value');if(s.exists()){await ref.remove();toast('Удалено из сохранённых');}else{await ref.set({type:'post',postId:id,text:p.text||'',authorId:p.authorId,createdAt:now()});toast('Сохранено');}fluxLoadFeed();}catch(e){toast('Не удалось сохранить');}};});
+  document.querySelectorAll('[data-feed-repost]').forEach(function(b){b.onclick=async function(){var p=fluxFeedCache[b.dataset.feedRepost];if(!p)return;try{var ref=db.ref('socialPosts').push();await ref.set({authorId:currentUser.uid,text:p.text||'',repostOf:p.id,createdAt:now(),likeCount:0,repostCount:0});toast('Репост опубликован');fluxLoadFeed();}catch(e){toast('Не удалось сделать репост');}};});
+  document.querySelectorAll('[data-feed-comment]').forEach(function(b){b.onclick=function(){var id=b.dataset.feedComment;showModal('<div class="modal-title">Комментарии</div><div id="flux-comments-box" class="social-empty">Загрузка…</div><div class="feed-comment-input"><input id="flux-comment-input" maxlength="500" placeholder="Комментарий…"><button id="flux-comment-send">Отправить</button></div>',function(m,close){fluxLoadComments(id,m);m.querySelector('#flux-comment-send').onclick=async function(){var text=m.querySelector('#flux-comment-input').value.trim();if(!text)return;try{var key=db.ref('socialPosts/'+id+'/comments').push().key;await db.ref('socialPosts/'+id+'/comments/'+key).set({uid:currentUser.uid,name:(currentUserData&&currentUserData.name)||'Пользователь',text:text,createdAt:now()});m.querySelector('#flux-comment-input').value='';fluxLoadComments(id,m);}catch(e){toast('Не удалось добавить комментарий');}};});};});
+  document.querySelectorAll('[data-feed-menu]').forEach(function(b){b.onclick=function(){var id=b.dataset.feedMenu,p=fluxFeedCache[id];if(!p)return;showModal('<div class="modal-title">Публикация</div><div class="modal-actions stack"><button class="modal-btn" id="fp-profile">Открыть профиль</button><button class="modal-btn" id="fp-save">Сохранить</button><button class="modal-btn" id="fp-close">Закрыть</button></div>',function(m,close){m.querySelector('#fp-profile').onclick=function(){close();fluxShowProfile(p.authorId);};m.querySelector('#fp-save').onclick=function(){close();var x=document.querySelector('[data-feed-save="'+CSS.escape(id)+'"]');if(x)x.click();};m.querySelector('#fp-close').onclick=close;});};});
+  document.querySelectorAll('[data-poll]').forEach(function(b){b.onclick=async function(){var p=fluxFeedCache[b.dataset.poll];if(!p||!p.poll)return;try{await db.ref('socialPosts/'+p.id+'/poll/votes/'+currentUser.uid).set(Number(b.dataset.option));toast('Голос учтён');fluxLoadFeed();}catch(e){toast('Не удалось проголосовать');}};});
+}
+async function fluxLoadComments(id,m){try{var s=await db.ref('socialPosts/'+id+'/comments').limitToLast(50).once('value');var v=s.val()||{};var html=Object.keys(v).map(function(k){var c=v[k]||{};return '<div class="feed-comment"><b>'+socialEscape(c.name||'Пользователь')+'</b> '+socialEscape(c.text||'')+'</div>';}).join('');m.querySelector('#flux-comments-box').innerHTML=html||'<div class="social-empty">Комментариев пока нет</div>';}catch(e){m.querySelector('#flux-comments-box').textContent='Комментарии недоступны';}}
+async function fluxLoadStories(){var root=$('social-stories-root');if(!root)return;root.innerHTML='<div class="social-notice">Истории исчезают через 24 часа. В этой версии они текстовые, поэтому работают без загрузки тяжёлых файлов.</div><div class="story-strip" id="flux-story-strip"></div><div id="flux-story-list"><div class="social-empty">Загрузка…</div></div>';var strip=$('flux-story-strip');var arr=Object.values(fluxStoryCache);strip.innerHTML='<div class="story-item" id="flux-add-story"><div class="story-ring"><div class="story-avatar story-add">+</div></div><div class="story-name">Моя история</div></div>'+arr.map(function(x){return '<div class="story-item" data-story-id="'+socialEscape(x.id)+'"><div class="story-ring"><div class="story-avatar">'+socialEscape((x.name||'F')[0].toUpperCase())+'</div></div><div class="story-name">'+socialEscape(x.name||'История')+'</div></div>';}).join('');$('flux-add-story').onclick=fluxOpenStoryComposer;strip.querySelectorAll('[data-story-id]').forEach(function(b){b.onclick=function(){var x=fluxStoryCache[b.dataset.storyId];if(x)showModal('<div class="modal-title">История · '+socialEscape(x.name||'Пользователь')+'</div><div style="padding:30px 14px;text-align:center;font-size:22px;font-weight:750;white-space:pre-wrap">'+socialEscape(x.text||'')+'</div><button class="sheet-btn secondary" id="story-close">Закрыть</button>',function(m,close){m.querySelector('#story-close').onclick=close;});};});try{var s=await db.ref('stories').once('value');var raw=s.val()||{};var nowt=now();fluxStoryCache={};Object.keys(raw).forEach(function(id){var x=Object.assign({id:id},raw[id]||{});if(Number(x.expiresAt||0)>nowt&&x.authorId!==currentUser.uid)fluxStoryCache[id]=x;});var mine=Object.keys(raw).filter(function(id){return raw[id]&&raw[id].authorId===currentUser.uid&&Number(raw[id].expiresAt||0)>nowt;});mine.forEach(function(id){fluxStoryCache[id]=Object.assign({id:id},raw[id]);});var keys=Object.keys(fluxStoryCache);strip.innerHTML='<div class="story-item" id="flux-add-story"><div class="story-ring"><div class="story-avatar story-add">+</div></div><div class="story-name">Моя история</div></div>'+keys.map(function(id){var x=fluxStoryCache[id];return '<div class="story-item" data-story-id="'+socialEscape(id)+'"><div class="story-ring"><div class="story-avatar">'+socialEscape((x.name||'F')[0].toUpperCase())+'</div></div><div class="story-name">'+socialEscape(x.name||'История')+'</div></div>';}).join('');$('flux-add-story').onclick=fluxOpenStoryComposer;strip.querySelectorAll('[data-story-id]').forEach(function(b){b.onclick=function(){var x=fluxStoryCache[b.dataset.storyId];if(x)showModal('<div class="modal-title">История · '+socialEscape(x.name||'Пользователь')+'</div><div style="padding:30px 14px;text-align:center;font-size:22px;font-weight:750;white-space:pre-wrap">'+socialEscape(x.text||'')+'</div><button class="sheet-btn secondary" id="story-close">Закрыть</button>',function(m,close){m.querySelector('#story-close').onclick=close;});};});}catch(e){$('flux-story-list').innerHTML='<div class="social-empty">Истории пока недоступны. Добавьте правило stories.</div>';}}
+function fluxOpenStoryComposer(){showModal('<div class="modal-title">Новая история</div><textarea id="flux-story-text" maxlength="500" style="width:100%;height:140px;border:1px solid var(--divider);background:var(--bg-2);border-radius:14px;padding:12px;color:var(--text);outline:0" placeholder="Что хотите рассказать?"></textarea><div class="social-compose-actions"><button id="story-cancel">Отмена</button><button class="primary" id="story-publish">Опубликовать</button></div>',function(m,close){m.querySelector('#story-cancel').onclick=close;m.querySelector('#story-publish').onclick=async function(){var text=m.querySelector('#flux-story-text').value.trim();if(!text)return;try{var ref=db.ref('stories').push();await ref.set({authorId:currentUser.uid,name:(currentUserData&&currentUserData.name)||'Пользователь',text:text,createdAt:now(),expiresAt:now()+86400000});close();toast('История опубликована');fluxLoadStories();}catch(e){toast('Не удалось опубликовать историю — проверьте правила Firebase');}};});}
+async function fluxLoadSaved(){var root=$('social-saved-root');if(!root||!currentUser)return;root.innerHTML='<div class="messenger-label">СОХРАНЁННОЕ</div><div class="social-card" id="flux-saved-list"><div class="social-empty">Загрузка…</div></div>';try{var s=await db.ref('saved/'+currentUser.uid).limitToLast(100).once('value');var v=s.val()||{};var keys=Object.keys(v).reverse();var box=$('flux-saved-list');if(!keys.length){box.innerHTML='<div class="social-empty">Здесь будут сохранённые публикации и сообщения.</div>';return;}box.innerHTML=keys.map(function(k){var x=v[k]||{};return '<div class="saved-row"><div class="saved-icon">▱</div><div class="saved-main"><div class="saved-text">'+socialEscape(x.text||'Сохранённое сообщение')+'</div><div class="saved-meta">'+socialEscape(x.type||'сообщение')+' · '+socialEscape(formatTime(x.createdAt||now()))+'</div></div></div>';}).join('');}catch(e){$('flux-saved-list').innerHTML='<div class="social-empty">Сохранённое недоступно</div>';}}
+async function fluxLoadSocialNotifications(){var root=$('social-notifications-root');if(!root||!currentUser)return;root.innerHTML='<div class="messenger-label">УВЕДОМЛЕНИЯ</div><div class="social-card" id="flux-social-notif-list"><div class="social-empty">Загрузка…</div></div>';try{var s=await db.ref('notifications/'+currentUser.uid).limitToLast(100).once('value');var v=s.val()||{};var keys=Object.keys(v).reverse();var box=$('flux-social-notif-list');if(!keys.length){box.innerHTML='<div class="social-empty">Новых уведомлений нет.</div>';return;}box.innerHTML=keys.map(function(k){var n=v[k]||{};var txt=n.type==='follow'?'Кто-то подписался на вас':n.type==='message'?(n.text||'Новое сообщение'):'Новое уведомление';return '<div class="notification-row"><div class="notification-icon">'+(n.type==='follow'?'♥':'•')+'</div><div class="notification-main">'+socialEscape(txt)+'<small>'+socialEscape(formatTime(n.createdAt||now()))+'</small></div></div>';}).join('');}catch(e){$('flux-social-notif-list').innerHTML='<div class="social-empty">Уведомления недоступны</div>';}}
+function fluxAddFolderChip(){showModal('<div class="modal-title">Папка чатов</div><input class="sheet-input" id="flux-folder-name" maxlength="24" placeholder="Например: Друзья"><div class="modal-actions"><button class="modal-btn" id="folder-cancel">Отмена</button><button class="modal-btn primary" id="folder-save">Создать</button></div>',function(m,close){m.querySelector('#folder-cancel').onclick=close;m.querySelector('#folder-save').onclick=function(){var n=m.querySelector('#flux-folder-name').value.trim();if(!n)return;var key='flux_folders_'+currentUser.uid,arr=[];try{arr=JSON.parse(localStorage.getItem(key)||'[]');}catch(e){}arr.push(n);localStorage.setItem(key,JSON.stringify(arr));close();toast('Папка создана');};});}
+function fluxRunScheduled(){if(!currentUser||!db)return;var key='flux_scheduled_messages_'+currentUser.uid,arr=[];try{arr=JSON.parse(localStorage.getItem(key)||'[]');}catch(e){}var left=[];arr.forEach(async function(x){if(Number(x.at||0)>now()){left.push(x);return;}try{var ref=db.ref('chats/'+x.chatId+'/messages').push();await ref.set({senderId:currentUser.uid,receiverId:x.peerId,text:x.text,createdAt:now()});toast('Запланированное сообщение отправлено');}catch(e){left.push(x);}});localStorage.setItem(key,JSON.stringify(left));}
+function fluxScheduleMessage(){if(!socialCurrentPeer||!socialCurrentChat)return;var text=$('chat-input').value.trim();if(!text)return toast('Введите сообщение');var at=prompt('Через сколько минут отправить?', '10');var mins=Number(at);if(!isFinite(mins)||mins<=0)return;var key='flux_scheduled_messages_'+currentUser.uid,arr=[];try{arr=JSON.parse(localStorage.getItem(key)||'[]');}catch(e){}arr.push({chatId:socialCurrentChat,peerId:socialCurrentPeer.uid,text:text,at:now()+mins*60000});localStorage.setItem(key,JSON.stringify(arr));$('chat-input').value='';toast('Сообщение запланировано');}
+function fluxSetDisappearing(){if(!socialCurrentChat)return;var mins=prompt('Удалять новые сообщения через минут?', '60');mins=Number(mins);if(!isFinite(mins)||mins<=0)return;try{localStorage.setItem('flux_ttl_'+socialCurrentChat,String(mins*60000));toast('Автоудаление включено');}catch(e){}}
+function fluxApplyMessageTTL(){if(!socialCurrentChat||!db)return;var ttl=Number(localStorage.getItem('flux_ttl_'+socialCurrentChat)||0);if(!ttl)return;var cutoff=now()-ttl;socialMessageCache.forEach(function(m){if(Number(m.createdAt||0)<cutoff&&m.senderId===currentUser.uid&&!m.deleted){db.ref('chats/'+socialCurrentChat+'/messages/'+m.id).update({text:'',deleted:true,editedAt:now()}).catch(function(){});}});}
+
+document.querySelectorAll('.social-hub-tab').forEach(function(b){b.onclick=function(){fluxSetSocialView(b.dataset.socialView);};});
+$('social-new-story').onclick=function(){fluxSetSocialView('stories');setTimeout(fluxOpenStoryComposer,50);};
+$('social-refresh').addEventListener('click',function(){if(fluxSocialView==='feed')fluxLoadFeed();else if(fluxSocialView==='stories')fluxLoadStories();else if(fluxSocialView==='saved')fluxLoadSaved();else if(fluxSocialView==='notifications')fluxLoadSocialNotifications();});
+setInterval(fluxRunScheduled,15000);
+setInterval(fluxApplyMessageTTL,20000);
 
 if(!firebaseReady){setTimeout(function(){toast('Проверьте интернет');},500);}
 </script>
