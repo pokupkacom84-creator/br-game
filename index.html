@@ -19,9 +19,6 @@
   FIREBASE REALTIME DATABASE SECURITY RULES  (ОБНОВЛЕНО)
   ============================================================
   Пропиши эти правила в Firebase Console → Realtime Database → Rules.
-  Ключевые изменения:
-    1) chatMeta .read разрешает чтение несуществующего узла (!data.exists()).
-    2) chatIndex разрешает участнику чата писать в индекс собеседника.
   ============================================================
   {
     "rules": {
@@ -1244,8 +1241,8 @@ const VPN_PREMIUM_SOURCES = [
     kind:'premium',
     type:'vpn',
     urls:[
-      'https://raw.githubusercontent.com/luxxuria/harvester/d5704710144123e0c489ff496b44adaf8f10d96d/non_ru.txt',
-      'https://raw.githubusercontent.com/luxxuria/harvester/d5704710144123e0c489ff496b44adaf8f10d/speed_tested.txt'
+      'https://raw.githubusercontent.com/luxxuria/harvester/main/non_ru.txt',
+      'https://raw.githubusercontent.com/luxxuria/harvester/main/speed_tested.txt'
     ]
   },
   {
@@ -1260,8 +1257,12 @@ const VPN_PREMIUM_SOURCES = [
 function buildRawUrl(owner,repo,ref,path){return 'https://raw.githubusercontent.com/'+encodeURIComponent(owner)+'/'+encodeURIComponent(repo)+'/'+encodeURIComponent(ref)+'/'+path.split('/').map(encodeURIComponent).join('/');}
 function cacheBust(url){return url+(url.indexOf('?')===-1?'?':'&')+'t='+now()+'_'+Math.random().toString(36).slice(2,8);}
 
-const VPN_FETCH_CACHE_TTL = 10 * 60 * 1000;
-const VPN_PREMIUM_SOURCE_VERSION = 'non_ru_speed_tested_v1';
+/* ============================================================
+   VPN CACHE / UPDATE SYSTEM
+   ============================================================ */
+const VPN_FETCH_CACHE_TTL = 10 * 60 * 1000;        // 10 минут — "свежий" кэш
+const VPN_BACKGROUND_CHECK_INTERVAL = 5 * 60 * 1000; // 5 минут — авто-проверка обновлений
+const VPN_PREMIUM_SOURCE_VERSION = 'non_ru_speed_tested_v2_main'; // бампнули: main-бранч + etag
 const VPN_FETCH_TIMEOUT = 7500;
 const VPN_CACHE_MAX_CHARS = 4500000;
 
@@ -1276,15 +1277,109 @@ function readVpnCache(sourceId){
   }catch(e){return null;}
 }
 
-function writeVpnCache(sourceId,text,url){
+function writeVpnCache(sourceId,text,url,etags){
   try{
     if(typeof text!=='string'||text.length<20||text.length>VPN_CACHE_MAX_CHARS)return;
-    localStorage.setItem('flux_vpn_cache_'+sourceId,JSON.stringify({
-      text:text,ts:now(),url:url||''
-    }));
+    var payload = {
+      text:text,
+      ts:now(),
+      url:url||'',
+      etags:etags||{}
+    };
+    if(String(sourceId)==='p1') payload.sourceVersion = VPN_PREMIUM_SOURCE_VERSION;
+    localStorage.setItem('flux_vpn_cache_'+sourceId,JSON.stringify(payload));
   }catch(e){
     /* Не ломаем загрузку, если WebView запретил/переполнил localStorage. */
   }
+}
+
+/* Возвращает каноничные URL источника — по ним храним ETag. */
+function getSourceCanonicalUrls(source){
+  if(!source) return [];
+  if(Array.isArray(source.urls) && source.urls.length){
+    return source.urls.map(function(u){return String(u||'').trim();}).filter(Boolean);
+  }
+  if(source.github){
+    var g = source.github;
+    var path = String(g.path||'').split('/').map(encodeURIComponent).join('/');
+    var branch = g.branch || 'main';
+    return ['https://raw.githubusercontent.com/'+encodeURIComponent(g.owner)+'/'+encodeURIComponent(g.repo)+'/'+encodeURIComponent(branch)+'/'+path];
+  }
+  if(source.url) return [String(source.url).trim()];
+  return [];
+}
+
+/* Запрос с поддержкой If-None-Match. Возвращает {notModified, text, etag}. */
+function vpnFetchWithEtag(url, etag, timeout){
+  return new Promise(function(resolve, reject){
+    var finished = false;
+    var timer = setTimeout(function(){
+      if(finished) return;
+      finished = true;
+      reject(new Error('Таймаут загрузки'));
+    }, timeout || VPN_FETCH_TIMEOUT);
+
+    var headers = {'Accept':'text/plain,text/*,*/*'};
+    if(etag) headers['If-None-Match'] = etag;
+
+    fetch(url, {
+      method: 'GET',
+      cache: 'no-store',
+      credentials: 'omit',
+      redirect: 'follow',
+      headers: headers
+    }).then(function(resp){
+      if(finished) return;
+      if(resp.status === 304){
+        finished = true; clearTimeout(timer);
+        resolve({notModified: true, etag: etag || ''});
+        return;
+      }
+      if(!resp.ok){
+        finished = true; clearTimeout(timer);
+        reject(new Error('HTTP ' + resp.status));
+        return;
+      }
+      return resp.text().then(function(text){
+        if(finished) return;
+        finished = true; clearTimeout(timer);
+        if(typeof text !== 'string' || text.trim().length < 20){
+          reject(new Error('Пустой ответ'));
+          return;
+        }
+        resolve({
+          text: text,
+          etag: resp.headers.get('ETag') || '',
+          notModified: false
+        });
+      });
+    }).catch(function(err){
+      if(finished) return;
+      finished = true; clearTimeout(timer);
+      reject(err || new Error('Ошибка сети'));
+    });
+  });
+}
+
+/* Условная проверка: если сервер отдаёт 304 по всем URL — значит ничего не поменялось. */
+async function conditionalVpnUpdate(source, cache){
+  var urls = getSourceCanonicalUrls(source);
+  if(!urls.length || !cache.etags) return null;
+
+  var responses = await Promise.all(urls.map(function(u){
+    return vpnFetchWithEtag(u, cache.etags[u], VPN_FETCH_TIMEOUT)
+      .then(function(r){ return {url:u, ok:true, r:r}; })
+      .catch(function(e){ return {url:u, ok:false, error:e}; });
+  }));
+
+  var ok = responses.filter(function(x){return x.ok;});
+  if(!ok.length) return null; // все упали — пусть будет полный фетч
+
+  var allNotModified = ok.every(function(x){return x.r.notModified;});
+  if(allNotModified) return {notModified: true};
+
+  // Хотя бы один изменился — сделаем полный фетч для корректной сборки
+  return null;
 }
 
 function buildVpnFetchUrls(source){
@@ -1371,7 +1466,6 @@ async function fetchGithubApiSource(source){
   var binary;
   try{binary=atob(encoded);}catch(e){throw new Error('Не удалось декодировать файл GitHub');}
 
-  /* UTF-8 без зависимости от TextDecoder — лучше для старых Android WebView. */
   var text='';
   try{
     var bytes=new Uint8Array(binary.length);
@@ -1388,28 +1482,59 @@ async function fetchGithubApiSource(source){
   return {text:text,url:apiUrl,fromCache:false};
 }
 
-async function fetchGithubSource(source){
+/* ============================================================
+   ГЛАВНАЯ ФУНКЦИЯ ПОЛУЧЕНИЯ КОНТЕНТА ИСТОЧНИКА
+   forceCheck=true — игнорировать «свежесть» кэша и проверить GitHub
+   ============================================================ */
+async function fetchGithubSource(source, forceCheck){
   if(!source)throw new Error('Источник не настроен');
 
   var cache=readVpnCache(source.id);
   var age=cache ? now()-Number(cache.ts||0) : Infinity;
-  var fresh=cache&&age>=0&&age<VPN_FETCH_CACHE_TTL;
+  var fresh=cache && age>=0 && age<VPN_FETCH_CACHE_TTL;
 
-  /* Сначала мгновенно используем свежий кэш. */
-  if(fresh){
-    return {text:cache.text,sha:null,url:cache.url||'',fromCache:true};
+  // Быстрый путь: свежий кэш и не просят проверку
+  if(fresh && !forceCheck){
+    return {text:cache.text,url:cache.url||'',fromCache:true,etags:cache.etags||{}};
   }
 
-  /*
-   * Составной Premium-источник:
-   * оба файла загружаются ПАРАЛЛЕЛЬНО и объединяются.
-   * Если один временно недоступен, второй всё равно показывается.
-   */
+  // Если есть кэш — пробуем условную проверку (дёшево, ETag → 304)
+  if(cache && cache.text && cache.etags && Object.keys(cache.etags).length){
+    try{
+      var upd = await conditionalVpnUpdate(source, cache);
+      if(upd && upd.notModified){
+        // Контент не изменился — обновляем только timestamp
+        writeVpnCache(source.id, cache.text, cache.url, cache.etags);
+        return {text:cache.text,url:cache.url||'',fromCache:true,notModified:true,etags:cache.etags};
+      }
+    }catch(e){ /* fallback to full fetch */ }
+  }
+
+  // Полный фетч
+  var result = await fullFetchVpnSource(source);
+  if(result && result.text){
+    writeVpnCache(source.id, result.text, result.url, result.etags||{});
+    return result;
+  }
+
+  // Совсем ничего — отдаём старый кэш
+  if(cache && cache.text && cache.text.length>20){
+    return {text:cache.text,url:cache.url||'',fromCache:true,stale:true,etags:cache.etags||{}};
+  }
+
+  throw new Error('Не удалось загрузить список ключей');
+}
+
+/* Полный фетч без условных запросов. Заодно собирает ETag-и. */
+async function fullFetchVpnSource(source){
+  var etags = {};
+
+  // Составной источник (несколько URL, результат склеиваем)
   if(Array.isArray(source.urls)&&source.urls.length){
     var compositeUrls=source.urls.map(function(u){return String(u||'').trim();}).filter(Boolean);
     var compositeResults=await Promise.all(compositeUrls.map(function(url){
-      return vpnFetchWithTimeout(cacheBust(url),VPN_FETCH_TIMEOUT)
-        .then(function(value){return {ok:true,text:String(value||''),url:url};})
+      return vpnFetchWithEtag(url, null, VPN_FETCH_TIMEOUT)
+        .then(function(r){return {ok:true,text:r.text,url:url,etag:r.etag};})
         .catch(function(error){return {ok:false,text:'',url:url,error:error};});
     }));
 
@@ -1417,44 +1542,43 @@ async function fetchGithubSource(source){
     if(good.length){
       var combinedText=good.map(function(r){return r.text;}).join('\n');
       var combinedUrl=good.map(function(r){return r.url;}).join(' + ');
-      var compositeResult={
+      good.forEach(function(r){ if(r.etag) etags[r.url]=r.etag; });
+      return {
         text:combinedText,
         url:combinedUrl,
         fromCache:false,
         loadedCount:good.length,
         totalCount:compositeUrls.length,
-        partial:good.length<compositeUrls.length
+        partial:good.length<compositeUrls.length,
+        etags:etags
       };
-      writeVpnCache(source.id,combinedText,combinedUrl);
-      return compositeResult;
     }
-  }else if(source.github){
+    return null;
+  }
+
+  // GitHub-источник с зеркалами
+  if(source.github){
     var urls=buildVpnFetchUrls(source);
-    var tasks=[];
-    var settled=false;
+    if(!urls.length) throw new Error('Нет URL источника');
 
-    /*
-     * Не ждём зеркала друг за другом. Все варианты стартуют одновременно,
-     * а первый нормальный ответ побеждает.
-     */
-    var result=await new Promise(function(resolve,reject){
-      var pending=urls.length;
-      var errors=[];
-      if(!pending){reject(new Error('Нет URL источника'));return;}
+    var primaryUrl = getSourceCanonicalUrls(source)[0] || urls[0];
 
+    var result = await new Promise(function(resolve,reject){
+      var settled=false, pending=urls.length, errors=[];
       urls.forEach(function(url){
-        vpnFetchWithTimeout(url,VPN_FETCH_TIMEOUT).then(function(text){
+        vpnFetchWithEtag(url, null, VPN_FETCH_TIMEOUT).then(function(r){
           if(settled)return;
           settled=true;
-          resolve({text:text,url:url,fromCache:false});
+          resolve({text:r.text,url:url,etag:r.etag});
         }).catch(function(err){
           errors.push(err);
           pending--;
           if(pending<=0&&!settled){
+            // Все зеркала упали — пробуем GitHub API
             fetchGithubApiSource(source).then(function(apiResult){
               if(settled)return;
               settled=true;
-              resolve(apiResult);
+              resolve({text:apiResult.text,url:apiResult.url,etag:''});
             }).catch(function(apiErr){
               if(settled)return;
               settled=true;
@@ -1466,10 +1590,15 @@ async function fetchGithubSource(source){
     });
 
     if(result&&result.text){
-      writeVpnCache(source.id,result.text,result.url);
-      return result;
+      // ETag привязываем к каноничному primary URL (raw.githubusercontent)
+      if(result.etag) etags[primaryUrl]=result.etag;
+      return {text:result.text,url:result.url,fromCache:false,etags:etags};
     }
-  }else{
+    return null;
+  }
+
+  // Прямые URL
+  if(source.url||Array.isArray(source.fallbackUrls)){
     var directUrls=[];
     var direct=String(source.url||'').trim();
     if(direct)directUrls.push(direct);
@@ -1484,10 +1613,10 @@ async function fetchGithubSource(source){
     var directResult=await new Promise(function(resolve,reject){
       var pending=directUrls.length, done=false, errors=[];
       directUrls.forEach(function(url){
-        vpnFetchWithTimeout(url,VPN_FETCH_TIMEOUT).then(function(text){
+        vpnFetchWithEtag(url, null, VPN_FETCH_TIMEOUT).then(function(r){
           if(done)return;
           done=true;
-          resolve({text:text,url:url,fromCache:false});
+          resolve({text:r.text,url:url,etag:r.etag});
         }).catch(function(err){
           errors.push(err);
           pending--;
@@ -1495,18 +1624,14 @@ async function fetchGithubSource(source){
         });
       });
     });
+
     if(directResult&&directResult.text){
-      writeVpnCache(source.id,directResult.text,directResult.url);
-      return directResult;
+      if(directResult.etag) etags[directResult.url]=directResult.etag;
+      return {text:directResult.text,url:directResult.url,fromCache:false,etags:etags};
     }
   }
 
-  /* Даже просроченный кэш лучше полного пустого списка. */
-  if(cache&&cache.text&&cache.text.length>20){
-    return {text:cache.text,sha:null,url:cache.url||'',fromCache:true,stale:true};
-  }
-
-  throw new Error('Не удалось загрузить список ключей');
+  return null;
 }
 
 function isPremiumVpnSource(id){return String(id||'').charAt(0)==='p';}
@@ -2381,18 +2506,13 @@ async function openSocialChat(peerId,chatId){
     var peer=await socialGetUser(peerId);
     if(!peer){toast('Пользователь не найден');return;}
 
-    // Свой список блокировок читать можно
     try{
       var myBlock=await db.ref('blocks/'+currentUser.uid+'/'+peerId).once('value');
       if(myBlock.exists()){toast('Сначала разблокируйте пользователя');return;}
-    }catch(e){ /* ignore */ }
-
-    // Чужой список блокировок читать нельзя — пропускаем.
-    // Реальная защита работает в правилах chats/.../messages.
+    }catch(e){ }
 
     chatId=chatId||socialChatId(currentUser.uid,peerId);
 
-    // chatMeta может не существовать — оборачиваем в try/catch
     var metaExists=false;
     try{
       var metaSnap=await db.ref('chatMeta/'+chatId).once('value');
@@ -2402,7 +2522,7 @@ async function openSocialChat(peerId,chatId){
     if(!metaExists){
       var a=[String(currentUser.uid),String(peerId)].sort();
       try{ await db.ref('chatMeta/'+chatId).set({a:a[0],b:a[1],createdAt:now()}); }
-      catch(e){ /* уже существует или гонка */ }
+      catch(e){ }
     }
 
     var me={
@@ -2492,11 +2612,10 @@ async function socialSendMessage(){
   }
 
   try{
-    // Свой блок — читаем; чужой — сервер сам отклонит сообщение.
     try{
       var blocked=await db.ref('blocks/'+currentUser.uid+'/'+peer.uid).once('value');
       if(blocked.exists()){toast('Пользователь заблокирован');return;}
-    }catch(e){ /* ignore */ }
+    }catch(e){ }
 
     var msgRef=db.ref('chats/'+chatId+'/messages').push();
     var ts=now();
@@ -2508,7 +2627,6 @@ async function socialSendMessage(){
 
     var updates={};
     updates['chats/'+chatId+'/messages/'+msgRef.key]=msg;
-    // Мой индекс
     updates['chatIndex/'+currentUser.uid+'/'+chatId+'/peerId']=peer.uid;
     updates['chatIndex/'+currentUser.uid+'/'+chatId+'/name']=peer.name||'Пользователь';
     updates['chatIndex/'+currentUser.uid+'/'+chatId+'/username']=peer.username||'';
@@ -2517,7 +2635,6 @@ async function socialSendMessage(){
     updates['chatIndex/'+currentUser.uid+'/'+chatId+'/lastText']=text;
     updates['chatIndex/'+currentUser.uid+'/'+chatId+'/updatedAt']=ts;
     updates['chatIndex/'+currentUser.uid+'/'+chatId+'/unread']=0;
-    // Индекс собеседника
     updates['chatIndex/'+peer.uid+'/'+chatId+'/peerId']=currentUser.uid;
     updates['chatIndex/'+peer.uid+'/'+chatId+'/name']=myName;
     updates['chatIndex/'+peer.uid+'/'+chatId+'/username']=myUsername;
@@ -2525,7 +2642,6 @@ async function socialSendMessage(){
     updates['chatIndex/'+peer.uid+'/'+chatId+'/photoURL']=myPhotoURL;
     updates['chatIndex/'+peer.uid+'/'+chatId+'/lastText']=text;
     updates['chatIndex/'+peer.uid+'/'+chatId+'/updatedAt']=ts;
-    // Уведомление
     updates['notifications/'+peer.uid+'/n_'+msgRef.key]={type:'message',fromId:currentUser.uid,chatId:chatId,text:text.slice(0,100),createdAt:ts,read:false};
 
     await db.ref().update(updates);
@@ -2825,14 +2941,6 @@ function parseVpnKeys(text){
   var lines=source.split('\n');
   var keys=[];
   var seen=Object.create(null);
-  /*
-   * Источники бывают разного формата:
-   *   vless://...
-   *   vmess://...
-   *   trojan://...
-   *   ss://...
-   * Иногда перед ключом стоят пробелы/нумерация, а после ключа — комментарий.
-   */
   var protoRegex=/(vless|vmess|trojan|ss|hysteria2|hy2|socks5?|socks):\/\/[^\s"'<>]+/ig;
   for(var i=0;i<lines.length;i++){
     var line=String(lines[i]||'').trim();
@@ -3203,7 +3311,10 @@ function renderVpnKeys(){
 }
 let vpnLoadRequestId = 0;
 
-async function loadVpnKeys(silent){
+/* Показывает скелетон, загружает источник и рендерит.
+   silent=true — фоновая проверка без скелетона (для авто-обновления)
+   forceCheck=true — игнорировать «свежесть» кэша (для ручного обновления) */
+async function loadVpnKeys(silent, forceCheck){
   var requestId = ++vpnLoadRequestId;
   var requestedSourceId = vpnActiveSourceId;
   var loadBtn=$('vpn-load-btn'),refreshBtn=$('vpn-refresh-btn'),list=$('vpn-key-list');
@@ -3232,7 +3343,7 @@ async function loadVpnKeys(silent){
   }
   var text=null,lastErr=null;var fromCache=false;
   try{
-    var sourceMeta=await fetchGithubSource(source);
+    var sourceMeta=await fetchGithubSource(source, !!forceCheck);
     if(requestId !== vpnLoadRequestId || requestedSourceId !== vpnActiveSourceId){return;}
     text=sourceMeta.text;fromCache=!!sourceMeta.fromCache;
     if(!text||text.length<20)throw new Error('Пустой ответ');
@@ -3242,7 +3353,7 @@ async function loadVpnKeys(silent){
   }
   if(refreshIcon) refreshIcon.classList.remove('loading');
   if(!text){
-    if(list)list.innerHTML='<div class="vpn-empty">Не удалось загрузить «'+esc(source.name)+'»<br>'+esc((lastErr&&lastErr.message)||'файл не найден')+'<br><button class="btn-link" type="button" onclick="loadVpnKeys(false)">Попробовать снова</button></div>';
+    if(list)list.innerHTML='<div class="vpn-empty">Не удалось загрузить «'+esc(source.name)+'»<br>'+esc((lastErr&&lastErr.message)||'файл не найден')+'<br><button class="btn-link" type="button" onclick="loadVpnKeys(false,true)">Попробовать снова</button></div>';
     if(loadBtn){loadBtn.style.display='flex';loadBtn.disabled=false;}
     if(refreshBtn){refreshBtn.style.display='none';refreshBtn.disabled=false;}
     if(!silent) toast('Ошибка загрузки');
@@ -3277,20 +3388,79 @@ async function loadVpnKeys(silent){
   if(loadBtn)loadBtn.disabled=false;
   if(refreshBtn)refreshBtn.disabled=false;
 }
-$('vpn-load-btn').onclick=function(){ loadVpnKeys(false); };
-$('vpn-refresh-btn').onclick=function(){ loadVpnKeys(false); };
+
+/* Фоновая тихая проверка обновлений: если в GitHub что-то поменялось,
+   список серверов обновится без перерисовки скелетона. */
+var _vpnUpdateCheckInFlight = false;
+async function vpnCheckForUpdates(){
+  if(_vpnUpdateCheckInFlight) return;
+  if(!currentUser || !db) return;
+  var source = getActiveVpnSource();
+  if(!source) return;
+  if(source.kind==='premium' && !isPremiumUserNow()) return;
+
+  _vpnUpdateCheckInFlight = true;
+  try{
+    var result = await fetchGithubSource(source, true); // force check
+    if(!result || !result.text) return;
+    // Если сервер сказал 304 — ничего не поменялось
+    if(result.notModified) return;
+
+    var newKeys = parseVpnKeys(result.text);
+    var seen = Object.create(null);
+    newKeys = newKeys.filter(function(k){ if(seen[k.raw]) return false; seen[k.raw]=1; return true; });
+
+    // Если набор ключей совпадает с текущим — просто выходим (без перерисовки)
+    var same = newKeys.length === vpnKeys.length;
+    if(same){
+      for(var i=0;i<newKeys.length;i++){
+        if(!vpnKeys[i] || vpnKeys[i].raw !== newKeys[i].raw){ same = false; break; }
+      }
+    }
+    if(same) return;
+
+    // Обновляем состояние
+    vpnKeys = newKeys;
+    vpnFiltered = vpnProtoFilter==='all' ? vpnKeys.slice() : vpnKeys.filter(function(k){return k.proto===vpnProtoFilter;});
+    try{ renderVpnFilters(); }catch(e){}
+    renderVpnKeys();
+    updateConnectUI();
+    if(!document.hidden) toast('Список серверов обновлён: '+vpnKeys.length+' ключей');
+  }catch(e){
+    // тихо игнорим — фоновая проверка не должна спамить
+  }finally{
+    _vpnUpdateCheckInFlight = false;
+  }
+}
+
+$('vpn-load-btn').onclick=function(){ loadVpnKeys(false, true); };
+$('vpn-refresh-btn').onclick=function(){ loadVpnKeys(false, true); };
 var _refreshIcon = $('vpn-home-refresh');
-if(_refreshIcon) _refreshIcon.onclick = function(){ loadVpnKeys(false); };
+if(_refreshIcon) _refreshIcon.onclick = function(){ loadVpnKeys(false, true); };
 
 function autoLoadVpnOnStart(){
   if(vpnKeys.length) { renderHomeServers(); return; }
-  loadVpnKeys(true).then(function(){ updateConnectUI(); }).catch(function(){});
+  loadVpnKeys(true, false).then(function(){ updateConnectUI(); }).catch(function(){});
 }
 
+/* Периодическая авто-проверка обновлений в GitHub.
+   Работает, когда приложение не скрыто. */
+setInterval(function(){
+  if(document.hidden) return;
+  vpnCheckForUpdates();
+}, VPN_BACKGROUND_CHECK_INTERVAL);
+
+/* Проверка обновлений при возврате в приложение */
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden) setTimeout(vpnCheckForUpdates, 800);
+});
+window.addEventListener('focus', function(){ setTimeout(vpnCheckForUpdates, 800); });
+
+/* Старое поведение: перезагрузка списка раз в 15 минут — теперь тоже через обновление. */
 if(!window.__fluxLite){
   setInterval(function(){
     if(document.hidden)return;
-    try{var tab=document.getElementById('tab-vpn');if(tab&&tab.classList.contains('active')&&vpnKeys.length)loadVpnKeys(true);}catch(e){}
+    try{var tab=document.getElementById('tab-vpn');if(tab&&tab.classList.contains('active')&&vpnKeys.length)loadVpnKeys(true, false);}catch(e){}
   },15*60*1000);
 }
 
