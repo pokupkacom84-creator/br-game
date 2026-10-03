@@ -2894,7 +2894,9 @@ function renderVpnCategoryTabs(){
       ++vpnLoadRequestId;vpnKeys=[];vpnFiltered=[];vpnProtoFilter='all';
       if(vpnSelectedKey){clearVpnConnected();vpnSelectedKey=null;try{localStorage.removeItem('flux_selected_vpn_key');}catch(e){}}
       renderVpnCategoryTabs();renderVpnSources();renderVpnFilters();renderHomeServers();updateConnectUI();
-      toast('Загружаем '+ (wantPremium?'Premium':'бесплатные') +' ключи…');
+      // Для Premium VPN и «Белых списков» не показываем промежуточный toast.
+      // Список просто загружается без всплывающего уведомления.
+      if(!wantPremium) toast('Загружаем бесплатные ключи…');
       loadVpnKeys();
     };
   });
@@ -3263,9 +3265,8 @@ async function loadVpnKeys(silent){
   }else{
     try{renderVpnFilters();}catch(filterErr){console.error('VPN filter render error:',filterErr);}
     renderVpnKeys();
-    if(!silent){
-      var premiumInfo=(source.id==='p1'?' · non_ru + speed_tested':'');
-      toast(source.name+': '+vpnKeys.length+' ключей'+premiumInfo+(fromCache?' (кэш)':''));
+    if(!silent && !isPremiumVpnSource(source.id)){
+      toast(source.name+': '+vpnKeys.length+' ключей'+(fromCache?' (кэш)':''));
     }
   }
   if(vpnSelectedKey && vpnKeys.length){
