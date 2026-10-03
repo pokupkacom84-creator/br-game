@@ -137,10 +137,7 @@
   }
 
   Для новых социальных функций добавь также:
-    "follows": { "$uid": { ".read": "auth != null", "$target": { ".write": "auth != null && auth.uid === $uid" } } },
     "followers": { "$uid": { ".read": "auth != null", "$follower": { ".write": "auth != null && auth.uid === $follower" } } },
-    "socialPosts": { "$postId": { ".read": "auth != null", ".write": "auth != null" } },
-    "stories": { "$storyId": { ".read": "auth != null", ".write": "auth != null && newData.child('authorId').val() === auth.uid" } },
     "saved": { "$uid": { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" } },
 
   ВАЖНО: список админов веди вручную в Firebase Console:
@@ -1054,41 +1051,6 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 <div class="list" id="shop-list"></div>
 </div>
 
-<div id="tab-social" class="tab-content">
-  <div class="messenger-page" id="social-page">
-    <div class="messenger-head">
-      <div><div class="messenger-title">Чаты</div><div class="messenger-sub" id="social-chat-summary">Личные сообщения</div></div>
-      <div class="messenger-actions">
-        <button class="header-btn ripple" id="social-refresh" aria-label="Обновить"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.5 9A9 9 0 0118 5l5 5"/><path d="M20.5 15A9 9 0 016 19l-5-5"/></svg></button>
-        <button class="header-btn ripple" id="social-new-story" aria-label="Новая история"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg></button>
-        <button class="header-btn ripple" id="social-new-chat" aria-label="Новый чат"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L8 18l-5 1 1-5z"/></svg></button>
-      </div>
-    </div>
-    <div class="messenger-search">
-      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
-      <input id="social-user-search" placeholder="Поиск чатов или @username" autocomplete="off" maxlength="32">
-      <button id="social-search-clear" class="messenger-search-clear" aria-label="Очистить">×</button>
-    </div>
-    <div id="social-search-results"></div>
-
-    <div class="social-hub-tabs" id="social-hub-tabs">
-      <button class="social-hub-tab active" data-social-view="chats">Чаты</button>
-      <button class="social-hub-tab" data-social-view="feed">Лента</button>
-      <button class="social-hub-tab" data-social-view="stories">Истории</button>
-      <button class="social-hub-tab" data-social-view="saved">Сохранённое</button>
-      <button class="social-hub-tab" data-social-view="notifications">Уведомления</button>
-    </div>
-    <div class="social-view active" id="social-view-chats">
-    <div class="messenger-label">ЛИЧНЫЕ ЧАТЫ</div>
-    <div id="social-chat-list"><div class="messenger-empty"><div class="messenger-empty-icon">✈</div><div class="messenger-empty-title">Нет сообщений</div><div class="messenger-empty-text">Найдите пользователя по @username и начните разговор.</div></div></div>
-    </div>
-    <div class="social-view" id="social-view-feed"><div id="social-feed-root"></div></div>
-    <div class="social-view" id="social-view-stories"><div id="social-stories-root"></div></div>
-    <div class="social-view" id="social-view-saved"><div id="social-saved-root"></div></div>
-    <div class="social-view" id="social-view-notifications"><div id="social-notifications-root"></div></div>
-  </div>
-</div>
-
 <div id="tab-settings" class="tab-content">
 <div class="profile-page" id="profile-page">
   <div class="profile-topbar">
@@ -1139,31 +1101,13 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 </div>
 </div>
 
+<!-- Messenger/social features removed from the app UI. -->
 <div class="bottom-nav" id="bottom-nav">
 <div class="nav-indicator" id="nav-indicator"></div>
 <div class="nav-item active" data-tab="vpn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg><span>VPN</span></div>
 <div class="nav-item" data-tab="shop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg><span>Магазин</span></div>
-<div class="nav-item" data-tab="social"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 01-11.7 6.2L4 19l1.3-4.3A7.5 7.5 0 1120 11.5z"/><path d="M8 11h.01M12 11h.01M16 11h.01"/></svg><span>Чаты</span></div>
 <div class="nav-item" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1"/></svg><span>Профиль</span></div>
 </div>
-</div>
-
-<div class="chat-window" id="chat-window">
-  <div class="chat-header">
-    <button class="chat-back ripple" id="chat-back" aria-label="Назад"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
-    <div class="social-avatar" id="chat-avatar" style="width:39px;height:39px;border-radius:12px;background:#64748b">?</div>
-    <div class="chat-head-info"><div class="chat-head-name" id="chat-head-name">Чат</div><div class="chat-head-status" id="chat-head-status">—</div></div>
-    <button class="chat-more ripple" id="chat-more" aria-label="Меню"><svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></button>
-  </div>
-  <div class="chat-searchbar" id="chat-searchbar"><input id="chat-message-search" placeholder="Поиск по сообщениям…" autocomplete="off"><button class="chat-search-close" id="chat-search-close">×</button></div>
-  <div class="chat-pinned" id="chat-pinned"><span id="chat-pinned-text"></span><button id="chat-unpin">Открепить</button></div>
-  <div class="chat-messages" id="chat-messages"></div>
-  <div class="chat-typing" id="chat-typing"></div>
-  <div class="chat-compose-wrap">
-    <div class="reply-bar" id="chat-reply-bar"><div class="reply-bar-main"><div class="reply-bar-title">Ответ</div><div class="reply-bar-text" id="chat-reply-text"></div></div><button class="reply-cancel" id="chat-reply-cancel">×</button></div>
-    <div class="chat-extra-tools"><button class="chat-tool" id="chat-search-btn" title="Поиск">⌕</button><button class="chat-tool" id="chat-pin-last" title="Закрепить последнее">⌑</button><button class="chat-tool" id="chat-schedule" title="Запланировать">◷</button><button class="chat-tool" id="chat-ttl" title="Исчезающие сообщения">◌</button></div>
-    <div class="chat-compose"><textarea id="chat-input" rows="1" maxlength="2000" placeholder="Сообщение…"></textarea><button class="chat-send ripple" id="chat-send" aria-label="Отправить"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></button></div>
-  </div>
 </div>
 
 <div id="profile-sheet" class="profile-sheet"><div class="profile-sheet-body" id="profile-sheet-body"></div></div>
@@ -1929,7 +1873,7 @@ if(firebaseReady&&auth){
           if(pinLockEnabled&&pinLockHash){showPinLock();}
           await whenMinSplashElapsed();
           goScreen('main-screen',true);
-          startSelfListener();startSessionTracking();updateSettingsUI();updateTogglesUI();startPremiumListener();try{socialLoad();}catch(e){}
+          startSelfListener();startSessionTracking();updateSettingsUI();updateTogglesUI();startPremiumListener();
           try{db.ref('users/'+user.uid).update({online:true,lastSeen:now()});}catch(e){}
           requestAnimationFrame(positionNavIndicator);
           setTimeout(function(){ try{ autoLoadVpnOnStart(); }catch(e){} }, 400);
@@ -1989,7 +1933,7 @@ $('onb-continue').onclick=async function(){
     currentUserData={uid:currentUser.uid,name:name,username:username,avatarId:onbAvatarId};
     syncPublicProfile();
     goScreen('main-screen',true);
-    startSelfListener();startSessionTracking();startPremiumListener();try{socialLoad();}catch(e){}
+    startSelfListener();startSessionTracking();startPremiumListener();
     updateSettingsUI();updateTogglesUI();
     if(isGlobalPremiumEnabled()){document.body.classList.add('flux-premium');toast('Premium уже активен для всех!');}
     requestAnimationFrame(positionNavIndicator);
@@ -2735,53 +2679,6 @@ function socialShowBlocks(){
   });
 }
 
-$('social-user-search').addEventListener('input',function(){socialSearchUsers(this.value);});
-$('social-search-clear').onclick=function(){$('social-user-search').value='';socialSearchUsers('');$('social-user-search').focus();};
-$('social-refresh').onclick=function(){socialLoad();toast('Чаты обновлены');};
-$('social-new-chat').onclick=function(){$('social-user-search').value='@';$('social-user-search').focus();socialSearchUsers('@');};
-$('chat-back').onclick=function(){
-  socialSaveDraft();
-  document.getElementById('chat-window').classList.remove('show');
-  if(socialMessagesRef){try{socialMessagesRef.off();}catch(e){}socialMessagesRef=null;}
-  socialCurrentChat=null;socialCurrentPeer=null;socialMessageCache=[];socialClearReply();socialSearchQuery='';
-  if(socialTypingRef){try{socialTypingRef.off();}catch(e){}socialTypingRef=null;}
-  if(socialPeerReadRef){try{socialPeerReadRef.off();}catch(e){}socialPeerReadRef=null;}
-  clearTimeout(socialTypingTimer);
-  socialRenderChats();
-};
-$('chat-send').onclick=socialSendMessage;
-$('chat-input').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();socialSendMessage();}});
-$('chat-input').addEventListener('input',function(){this.style.height='42px';this.style.height=Math.min(110,this.scrollHeight)+'px';});
-$('chat-input').addEventListener('input',function(){socialStartTyping();socialSaveDraft();});
-$('chat-reply-cancel').onclick=socialClearReply;
-$('chat-search-btn').onclick=function(){$('chat-searchbar').classList.add('show');$('chat-message-search').focus();};
-$('chat-search-close').onclick=function(){socialSearchQuery='';$('chat-message-search').value='';$('chat-searchbar').classList.remove('show');socialRenderMessageList(socialMessageCache);};
-$('chat-message-search').addEventListener('input',function(){socialSearchQuery=this.value;socialRenderMessageList(socialMessageCache);});
-$('chat-pin-last').onclick=function(){var m=socialMessageCache[socialMessageCache.length-1];if(m)socialPinMessage(m);};
-$('chat-schedule').onclick=fluxScheduleMessage;
-$('chat-ttl').onclick=fluxSetDisappearing;
-$('chat-unpin').onclick=async function(){try{await db.ref('chatIndex/'+currentUser.uid+'/'+socialCurrentChat).update({pinnedMessageId:null,pinnedText:null,pinnedAt:null});}catch(e){}$('chat-pinned').classList.remove('show');};
-$('chat-messages').addEventListener('click',function(e){
-  var action=e.target.closest('.msg-action');
-  if(action){e.stopPropagation();var m=socialFindMessage(action.dataset.id);if(!m)return;var a=action.dataset.action;if(a==='reply')socialSetReply(m);else if(a==='edit')socialEditMessage(m);else if(a==='delete')socialSoftDeleteMessage(m);else if(a==='pin')socialPinMessage(m);else if(a==='save')socialSaveMessage(m);var bubble=action.closest('.msg-bubble');if(bubble)bubble.classList.remove('open');return;}
-  var bubble=e.target.closest('.msg-bubble');if(!bubble)return;
-  document.querySelectorAll('.msg-bubble.open').forEach(function(x){if(x!==bubble)x.classList.remove('open');});bubble.classList.toggle('open');
-});
-$('chat-messages').addEventListener('dblclick',function(e){var bubble=e.target.closest('.msg-bubble');if(!bubble)return;var m=socialFindMessage(bubble.dataset.messageId);if(m)socialSetReply(m);});
-
-$('chat-more').onclick=function(){
-  if(!socialCurrentPeer)return;
-  showModal('<div class="modal-title">'+socialEscape(socialCurrentPeer.name||'Пользователь')+'</div><div class="modal-text">@'+socialEscape(socialCurrentPeer.username||'user')+'<br>'+socialEscape(socialFormatLastSeen(socialCurrentPeer.lastSeen,socialCurrentPeer.online))+'</div><div class="modal-actions stack"><button class="modal-btn" id="chat-profile-open">Открыть профиль</button><button class="modal-btn" id="chat-schedule-menu">Запланировать сообщение</button><button class="modal-btn" id="chat-ttl-menu">Исчезающие сообщения</button><button class="modal-btn" id="chat-report">Пожаловаться</button><button class="modal-btn danger" id="chat-block">Заблокировать</button><button class="modal-btn" id="chat-blocks-list">Заблокированные</button><button class="modal-btn" id="chat-close-menu">Закрыть</button></div>',function(m,close){
-    m.querySelector('#chat-profile-open').onclick=function(){close();fluxShowProfile(socialCurrentPeer.uid);};
-    m.querySelector('#chat-schedule-menu').onclick=function(){close();fluxScheduleMessage();};
-    m.querySelector('#chat-ttl-menu').onclick=function(){close();fluxSetDisappearing();};
-    m.querySelector('#chat-report').onclick=function(){close();socialReportCurrent();};
-    m.querySelector('#chat-block').onclick=function(){close();socialBlockCurrent();};
-    m.querySelector('#chat-blocks-list').onclick=function(){close();socialShowBlocks();};
-    m.querySelector('#chat-close-menu').onclick=close;
-  });
-};
-
 function switchTab(tab){
   if(!tab)return;
   try{
@@ -2790,7 +2687,6 @@ function switchTab(tab){
     document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active');});
     var tc=document.getElementById('tab-'+tab);if(tc)tc.classList.add('active');
     if(tab==='settings'){updateSettingsUI();updateTogglesUI();}
-    if(tab==='social'){socialLoad();}
     if(tab==='shop'){renderShop();}
     if(tab==='vpn'){renderVpnCategoryTabs();renderVpnSources();try{updateConnectUI();}catch(e){}}
     vibrate('tap');
@@ -2804,7 +2700,7 @@ document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=
   var body=document.querySelector('.main-body');
   if(!body)return;
   var startX=0,startY=0,tracking=false,ignored=false;
-  var order=['vpn','shop','social','settings'];
+  var order=['vpn','shop','settings'];
   body.addEventListener('touchstart',function(e){
     if(e.touches.length!==1){tracking=false;return;}
     var t=e.target;
@@ -3669,11 +3565,6 @@ function fluxScheduleMessage(){if(!socialCurrentPeer||!socialCurrentChat)return;
 function fluxSetDisappearing(){if(!socialCurrentChat)return;var mins=prompt('Удалять новые сообщения через минут?', '60');mins=Number(mins);if(!isFinite(mins)||mins<=0)return;try{localStorage.setItem('flux_ttl_'+socialCurrentChat,String(mins*60000));toast('Автоудаление включено');}catch(e){}}
 function fluxApplyMessageTTL(){if(!socialCurrentChat||!db)return;var ttl=Number(localStorage.getItem('flux_ttl_'+socialCurrentChat)||0);if(!ttl)return;var cutoff=now()-ttl;socialMessageCache.forEach(function(m){if(Number(m.createdAt||0)<cutoff&&m.senderId===currentUser.uid&&!m.deleted){db.ref('chats/'+socialCurrentChat+'/messages/'+m.id).update({text:'',deleted:true,editedAt:now()}).catch(function(){});}});}
 
-document.querySelectorAll('.social-hub-tab').forEach(function(b){b.onclick=function(){fluxSetSocialView(b.dataset.socialView);};});
-$('social-new-story').onclick=function(){fluxSetSocialView('stories');setTimeout(fluxOpenStoryComposer,50);};
-$('social-refresh').addEventListener('click',function(){if(fluxSocialView==='feed')fluxLoadFeed();else if(fluxSocialView==='stories')fluxLoadStories();else if(fluxSocialView==='saved')fluxLoadSaved();else if(fluxSocialView==='notifications')fluxLoadSocialNotifications();});
-setInterval(fluxRunScheduled,15000);
-setInterval(fluxApplyMessageTTL,20000);
 
 if(!firebaseReady){setTimeout(function(){toast('Проверьте интернет');},500);}
 </script>
