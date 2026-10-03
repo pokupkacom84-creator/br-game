@@ -856,8 +856,6 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 .social-profile-card{padding:18px;text-align:center}.social-profile-card .social-avatar{margin:0 auto 9px;width:64px;height:64px;border-radius:19px;font-size:23px}.social-profile-actions{display:flex;gap:7px;margin-top:13px}.social-profile-actions button{flex:1;padding:10px;border-radius:12px;background:var(--bg-2);font-weight:800;font-size:12px}.social-profile-actions .primary{background:var(--accent);color:#fff}
 .chat-empty-search{text-align:center;padding:30px;color:var(--text-2);font-size:12px}
 
-
-.vpn-premium-sources{display:block!important;overflow:visible!important;padding:0 18px 10px!important}.vpn-premium-sources .vpn-source-section-title{display:block;font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--text-2);padding:5px 2px 8px}.vpn-premium-sources .vpn-source-section-title.country-title{padding-top:14px}.vpn-premium-sources .vpn-source-main-row{display:flex;flex-wrap:nowrap;gap:8px;width:100%;overflow-x:auto;scrollbar-width:none}.vpn-premium-sources .vpn-source-main-row::-webkit-scrollbar{display:none}.vpn-premium-sources .vpn-source-main-row .vpn-chip{flex:1 1 0;justify-content:center;min-height:42px;padding:10px 12px;border-radius:13px}.vpn-premium-sources .vpn-country-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;max-height:290px;overflow-y:auto;overflow-x:hidden;padding:0 2px 2px 0;scrollbar-width:none;box-sizing:border-box}.vpn-premium-sources .vpn-country-grid::-webkit-scrollbar{display:none}.vpn-premium-sources .vpn-country-chip{width:100%;min-width:0;min-height:50px;display:flex;align-items:center;gap:8px;padding:10px 10px;border-radius:14px;background:var(--surface);border:1px solid var(--border-2);box-shadow:var(--shadow-1);text-align:left;color:var(--text);font-size:12px;font-weight:750;box-sizing:border-box}.vpn-premium-sources .vpn-country-chip.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}.vpn-premium-sources .vpn-country-flag{font-size:21px;line-height:1;flex:0 0 auto;width:24px;text-align:center}.vpn-premium-sources .vpn-country-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}.vpn-premium-sources .vpn-country-chip small{font-size:9px;color:var(--text-3);font-weight:800;margin-left:auto}.vpn-premium-sources .vpn-country-chip.active small{color:var(--accent)}.vpn-premium-sources .vpn-country-loading{grid-column:1/-1;text-align:center;padding:15px;color:var(--text-2);font-size:12px}.vpn-premium-sources .vpn-main-source{flex:1 1 0}
 </style>
 <script>
 (function(){
@@ -1299,18 +1297,16 @@ const VPN_FREE_SOURCES = [
   {id:'v2',name:'Бесплатный VPN 2',kind:'free',github:{owner:'AvenCores',repo:'goida-vpn-configs',branch:'main',path:'githubmirror/25.txt'}},
   {id:'v3',name:'Бесплатный VPN 3',kind:'free',github:{owner:'AvenCores',repo:'goida-vpn-configs',branch:'main',path:'githubmirror/24.txt'}}
 ];
-const VPN_COUNTRY_INDEX_URL='https://raw.githubusercontent.com/0xRadikal/Free-v2ray-Configs/main/Countries/index.json';
-const VPN_COUNTRY_BASE_URL='https://raw.githubusercontent.com/0xRadikal/Free-v2ray-Configs/main/';
-let vpnCountrySourcesLoaded=false;
-let vpnCountrySourcesLoading=null;
-
 const VPN_PREMIUM_SOURCES = [
   {
     id:'p1',
-    name:'Топ 100 · Verified',
+    name:'Premium VPN',
     kind:'premium',
     type:'vpn',
-    url:'https://raw.githubusercontent.com/0xRadikal/Free-v2ray-Configs/main/top100.txt'
+    urls:[
+      'https://raw.githubusercontent.com/luxxuria/harvester/d5704710144123e0c489ff496b44adaf8f10d96d/non_ru.txt',
+      'https://raw.githubusercontent.com/luxxuria/harvester/d5704710144123e0c489ff496b44adaf8f10d/speed_tested.txt'
+    ]
   },
   {
     id:'p2',
@@ -1320,52 +1316,6 @@ const VPN_PREMIUM_SOURCES = [
     github:{owner:'igareck',repo:'vpn-configs-for-russia',branch:'main',path:'WHITE-CIDR-RU-all.txt'}
   }
 ];
-
-async function loadPremiumCountrySources(){
-  if(vpnCountrySourcesLoaded)return VPN_PREMIUM_SOURCES;
-  if(vpnCountrySourcesLoading)return vpnCountrySourcesLoading;
-  vpnCountrySourcesLoading=(async function(){
-    try{
-      var response=await fetch(cacheBust(VPN_COUNTRY_INDEX_URL),{
-        method:'GET',
-        cache:'no-store',
-        credentials:'omit',
-        headers:{'Accept':'application/json,text/plain,*/*'}
-      });
-      if(!response.ok)throw new Error('HTTP '+response.status);
-      var data=await response.json();
-      var countries=Array.isArray(data&&data.countries)?data.countries:[];
-      countries.forEach(function(country){
-        var code=String(country.code||'').trim().toUpperCase();
-        var file=String(country.file||'').trim();
-        var name=String(country.name||'').trim();
-        var flag=String(country.flag||'').trim();
-        if(!code||!file||!name)return;
-        var id='pc_'+code;
-        if(VPN_PREMIUM_SOURCES.some(function(source){return source.id===id;}))return;
-        VPN_PREMIUM_SOURCES.push({
-          id:id,
-          name:(flag?flag+' ':'')+name,
-          country:name,
-          countryCode:code,
-          flag:flag,
-          count:Number(country.count||0),
-          kind:'premium',
-          type:'country',
-          url:VPN_COUNTRY_BASE_URL+file
-        });
-      });
-      vpnCountrySourcesLoaded=true;
-    }catch(e){
-      console.warn('Premium country sources',e);
-    }finally{
-      vpnCountrySourcesLoading=null;
-    }
-    return VPN_PREMIUM_SOURCES;
-  })();
-  return vpnCountrySourcesLoading;
-}
-
 
 function buildRawUrl(owner,repo,ref,path){return 'https://raw.githubusercontent.com/'+encodeURIComponent(owner)+'/'+encodeURIComponent(repo)+'/'+encodeURIComponent(ref)+'/'+path.split('/').map(encodeURIComponent).join('/');}
 function cacheBust(url){return url+(url.indexOf('?')===-1?'?':'&')+'t='+now()+'_'+Math.random().toString(36).slice(2,8);}
@@ -2944,14 +2894,24 @@ function parseVpnKeys(text){
   var lines=source.split('\n');
   var keys=[];
   var seen=Object.create(null);
+  /*
+   * Источники бывают разного формата:
+   *   vless://...
+   *   vmess://...
+   *   trojan://...
+   *   ss://...
+   * Иногда перед ключом стоят пробелы/нумерация, а после ключа — комментарий.
+   */
   var protoRegex=/(vless|vmess|trojan|ss|hysteria2|hy2|socks5?|socks):\/\/[^\s"'<>]+/ig;
   for(var i=0;i<lines.length;i++){
     var line=String(lines[i]||'').trim();
     if(!line)continue;
     line=line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/,'');
     if(!line||line.charAt(0)==='#'||line.charAt(0)===';')continue;
+
     var matches=line.match(protoRegex);
     if(!matches)continue;
+
     for(var j=0;j<matches.length;j++){
       var raw=String(matches[j]||'').trim().replace(/[),;]+$/,'');
       if(!raw||seen[raw])continue;
@@ -2959,43 +2919,11 @@ function parseVpnKeys(text){
       if(!m)continue;
       var proto=(m[1]||'').toLowerCase();
       if(proto==='socks5'||proto==='socks4')proto='socks';
-      if(!isHappCompatibleKey(raw,proto))continue;
       keys.push({proto:proto,raw:raw});
       seen[raw]=1;
     }
   }
-  keys.sort(function(a,b){
-    var ar=/^vless:\/\//i.test(a.raw),br=/^vless:\/\//i.test(b.raw);
-    var aa=ar?0:1,bb=br?0:1;
-    return aa-bb;
-  });
   return keys;
-}
-function isHappCompatibleKey(raw,proto){
-  try{
-    if(proto==='vless'){
-      var vm=raw.match(/^vless:\/\/[^@]+@([^:?#]+):(\d+)(?:\?|#|$)/i);
-      if(!vm)return false;
-      var q=raw.split('?')[1]||'';
-      var params=new URLSearchParams(q.split('#')[0]);
-      var type=(params.get('type')||'tcp').toLowerCase();
-      var security=(params.get('security')||'').toLowerCase();
-      if(type==='xhttp'||type==='raw')return false;
-      if(security==='reality' && (!params.get('pbk')||!params.get('sni')))return false;
-      return true;
-    }
-    if(proto==='vmess'){
-      var b=raw.slice('vmess://'.length).split('#')[0];
-      var json=atob(b.replace(/-/g,'+').replace(/_/g,'/'));
-      var cfg=JSON.parse(json);
-      return !!(cfg && cfg.add && cfg.port && cfg.id);
-    }
-    if(proto==='ss')return /^ss:\/\/[^@]+@[^:?#]+:\d+/i.test(raw);
-    if(proto==='trojan')return /^trojan:\/\/[^@]+@[^:?#]+:\d+/i.test(raw);
-    if(proto==='hysteria2'||proto==='hy2')return /^hy(?:st)eria2:\/\/[^@]+@[^:?#]+:\d+/i.test(raw);
-    if(proto==='socks')return /^socks:\/\/[^@]+@[^:?#]+:\d+/i.test(raw);
-    return false;
-  }catch(e){return false;}
 }
 function getVpnHost(raw){try{var after=raw.split('://')[1]||'';after=after.split('@').pop();var host=after.split(/[:/?#]/)[0];return host||'';}catch(e){return '';}}
 const COUNTRY_FLAGS={'nl':'🇳🇱','netherlands':'🇳🇱','de':'🇩🇪','germany':'🇩🇪','us':'🇺🇸','usa':'🇺🇸','united states':'🇺🇸','uk':'🇬🇧','gb':'🇬🇧','united kingdom':'🇬🇧','fr':'🇫🇷','france':'🇫🇷','ru':'🇷🇺','russia':'🇷🇺','fi':'🇫🇮','finland':'🇫🇮','se':'🇸🇪','sweden':'🇸🇪','pl':'🇵🇱','poland':'🇵🇱','tr':'🇹🇷','turkey':'🇹🇷','jp':'🇯🇵','japan':'🇯🇵','sg':'🇸🇬','singapore':'🇸🇬','hk':'🇭🇰','hong kong':'🇭🇰','kr':'🇰🇷','south korea':'🇰🇷','korea':'🇰🇷','in':'🇮🇳','india':'🇮🇳','ca':'🇨🇦','canada':'🇨🇦','au':'🇦🇺','australia':'🇦🇺','br':'🇧🇷','brazil':'🇧🇷','it':'🇮🇹','italy':'🇮🇹','es':'🇪🇸','spain':'🇪🇸','ch':'🇨🇭','switzerland':'🇨🇭','at':'🇦🇹','austria':'🇦🇹','cz':'🇨🇿','czech republic':'🇨🇿','ro':'🇷🇴','romania':'🇷🇴','ua':'🇺🇦','ukraine':'🇺🇦','kz':'🇰🇿','kazakhstan':'🇰🇿','ae':'🇦🇪','uae':'🇦🇪','united arab emirates':'🇦🇪','il':'🇮🇱','israel':'🇮🇱','ir':'🇮🇷','iran':'🇮🇷','cn':'🇨🇳','china':'🇨🇳','th':'🇹🇭','thailand':'🇹🇭','vn':'🇻🇳','vietnam':'🇻🇳','id':'🇮🇩','indonesia':'🇮🇩','ph':'🇵🇭','philippines':'🇵🇭','mx':'🇲🇽','mexico':'🇲🇽','ar':'🇦🇷','argentina':'🇦🇷','no':'🇳🇴','norway':'🇳🇴','dk':'🇩🇰','denmark':'🇩🇰','be':'🇧🇪','belgium':'🇧🇪','ie':'🇮🇪','ireland':'🇮🇪','pt':'🇵🇹','portugal':'🇵🇹','gr':'🇬🇷','greece':'🇬🇷','hu':'🇭🇺','hungary':'🇭🇺','bg':'🇧🇬','bulgaria':'🇧🇬','lt':'🇱🇹','lithuania':'🇱🇹','lv':'🇱🇻','latvia':'🇱🇻','ee':'🇪🇪','estonia':'🇪🇪','md':'🇲🇩','moldova':'🇲🇩','by':'🇧🇾','belarus':'🇧🇾','rs':'🇷🇸','serbia':'🇷🇸','hr':'🇭🇷','croatia':'🇭🇷','sk':'🇸🇰','slovakia':'🇸🇰','si':'🇸🇮','slovenia':'🇸🇮','lu':'🇱🇺','luxembourg':'🇱🇺','cy':'🇨🇾','cyprus':'🇨🇾','is':'🇮🇸','iceland':'🇮🇸','al':'🇦🇱','albania':'🇦🇱','ba':'🇧🇦','bosnia':'🇧🇦','mk':'🇲🇰','north macedonia':'🇲🇰','me':'🇲🇪','montenegro':'🇲🇪','ge':'🇬🇪','georgia':'🇬🇪','am':'🇦🇲','armenia':'🇦🇲','az':'🇦🇿','azerbaijan':'🇦🇿','uz':'🇺🇿','uzbekistan':'🇺🇿','kg':'🇰🇬','kyrgyzstan':'🇰🇬','tj':'🇹🇯','tajikistan':'🇹🇯','mn':'🇲🇳','mongolia':'🇲🇳','my':'🇲🇾','malaysia':'🇲🇾','nz':'🇳🇿','new zealand':'🇳🇿','za':'🇿🇦','south africa':'🇿🇦','eg':'🇪🇬','egypt':'🇪🇬','ng':'🇳🇬','nigeria':'🇳🇬','ke':'🇰🇪','kenya':'🇰🇪','cl':'🇨🇱','chile':'🇨🇱','co':'🇨🇴','colombia':'🇨🇴','pe':'🇵🇪','peru':'🇵🇪'};
@@ -3035,56 +2963,34 @@ function renderVpnCategoryTabs(){
       ++vpnLoadRequestId;vpnKeys=[];vpnFiltered=[];vpnProtoFilter='all';
       if(vpnSelectedKey){clearVpnConnected();vpnSelectedKey=null;try{localStorage.removeItem('flux_selected_vpn_key');}catch(e){}}
       renderVpnCategoryTabs();renderVpnSources();renderVpnFilters();renderHomeServers();updateConnectUI();
+      // Для Premium VPN и «Белых списков» не показываем промежуточный toast.
+      // Список просто загружается без всплывающего уведомления.
       if(!wantPremium) toast('Загружаем бесплатные ключи…');
       loadVpnKeys();
     };
   });
 }
-async function renderVpnSources(){
+function renderVpnSources(){
   var wrap=$('vpn-sources');if(!wrap)return;
   var premium=isPremiumUserNow();
   var activePremium=isPremiumVpnSource(vpnActiveSourceId);
-  if(activePremium&&!premium){vpnActiveSourceId='v1';vpnActiveCategory='free';}
   var sources=activePremium?VPN_PREMIUM_SOURCES:VPN_FREE_SOURCES;
-  if(activePremium){
-    wrap.classList.add('vpn-premium-sources');
-    wrap.innerHTML='<div class="vpn-source-section-title">Premium VPN</div><div class="vpn-source-main-row"></div><div class="vpn-source-section-title country-title">Серверы по странам</div><div class="vpn-country-grid"><div class="vpn-country-loading">Загрузка стран…</div></div>';
-    var mainRow=wrap.querySelector('.vpn-source-main-row');
-    var countryGrid=wrap.querySelector('.vpn-country-grid');
-    mainRow.innerHTML=sources.filter(function(src){return src.type!=='country';}).map(function(src){
-      return '<button class="vpn-chip vpn-main-source'+(src.id===vpnActiveSourceId?' active':'')+'" data-src="'+escAttr(src.id)+'">'+ic(src.id==='p2'?'shield':'globe',14)+'<span>'+esc(src.name)+'</span></button>';
-    }).join('');
-    mainRow.querySelectorAll('.vpn-chip').forEach(bindVpnSourceButton);
-    await loadPremiumCountrySources();
-    if(!isPremiumUserNow()||!isPremiumVpnSource(vpnActiveSourceId))return;
-    sources=VPN_PREMIUM_SOURCES;
-    var countries=sources.filter(function(src){return src.type==='country';});
-    countryGrid.innerHTML=countries.length?countries.map(function(src){
-      var count=src.count>0?' <small>'+src.count+'</small>':'';
-      return '<button class="vpn-country-chip'+(src.id===vpnActiveSourceId?' active':'')+'" data-src="'+escAttr(src.id)+'"><span class="vpn-country-flag">'+esc(src.flag||'')+'</span><span class="vpn-country-name">'+esc(src.country||src.name)+'</span>'+count+'</button>';
-    }).join(''):'<div class="vpn-country-loading">Страны временно недоступны</div>';
-    countryGrid.querySelectorAll('[data-src]').forEach(bindVpnSourceButton);
-    return;
-  }
-  wrap.classList.remove('vpn-premium-sources');
+  if(activePremium&&!premium){vpnActiveSourceId='v1';vpnActiveCategory='free';sources=VPN_FREE_SOURCES;}
   wrap.innerHTML=sources.map(function(src){var iconName=src.kind==='premium'?'crown':'tag';return '<button class="vpn-chip'+(src.id===vpnActiveSourceId?' active':'')+'" data-src="'+escAttr(src.id)+'">'+ic(iconName,14)+'<span>'+esc(src.name)+'</span></button>';}).join('');
-  wrap.querySelectorAll('.vpn-chip').forEach(bindVpnSourceButton);
+  wrap.querySelectorAll('.vpn-chip').forEach(function(ch){
+    ch.onclick=function(){
+      var id=ch.dataset.src;
+      if(isPremiumVpnSource(id)&&!isPremiumUserNow()){toast('Premium VPN доступен только Premium');return;}
+      if(vpnActiveSourceId===id)return;
+      vpnActiveSourceId=id;vpnActiveCategory=isPremiumVpnSource(id)?'premium':'free';
+      try{localStorage.setItem('flux_vpn_source',vpnActiveSourceId);localStorage.setItem('flux_vpn_category',vpnActiveCategory);}catch(e){}
+      ++vpnLoadRequestId;vpnKeys=[];vpnFiltered=[];vpnProtoFilter='all';
+      if(vpnSelectedKey){clearVpnConnected();vpnSelectedKey=null;try{localStorage.removeItem('flux_selected_vpn_key');}catch(e){}}
+      renderVpnCategoryTabs();renderVpnSources();renderVpnFilters();renderHomeServers();updateConnectUI();
+      loadVpnKeys();
+    };
+  });
 }
-
-function bindVpnSourceButton(ch){
-  ch.onclick=function(){
-    var id=ch.dataset.src;
-    if(isPremiumVpnSource(id)&&!isPremiumUserNow()){toast('Premium VPN доступен только Premium');return;}
-    if(vpnActiveSourceId===id)return;
-    vpnActiveSourceId=id;vpnActiveCategory=isPremiumVpnSource(id)?'premium':'free';
-    try{localStorage.setItem('flux_vpn_source',vpnActiveSourceId);localStorage.setItem('flux_vpn_category',vpnActiveCategory);}catch(e){}
-    ++vpnLoadRequestId;vpnKeys=[];vpnFiltered=[];vpnProtoFilter='all';
-    if(vpnSelectedKey){clearVpnConnected();vpnSelectedKey=null;try{localStorage.removeItem('flux_selected_vpn_key');}catch(e){}}
-    renderVpnCategoryTabs();renderVpnSources();renderVpnFilters();renderHomeServers();updateConnectUI();
-    loadVpnKeys();
-  };
-}
-
 function renderVpnFilters(){var wrap=$('vpn-filters');if(!wrap)return;if(!vpnKeys.length){wrap.innerHTML='';return;}var protos={all:'Все'};vpnKeys.forEach(function(k){protos[k.proto]=k.proto.toUpperCase();});var html='';Object.keys(protos).forEach(function(p){html+='<button class="vpn-chip'+(vpnProtoFilter===p?' active':'')+'" data-proto="'+escAttr(p)+'">'+esc(protos[p])+' · '+(p==='all'?vpnKeys.length:vpnKeys.filter(function(k){return k.proto===p;}).length)+'</button>';});wrap.innerHTML=html;wrap.querySelectorAll('.vpn-chip').forEach(function(ch){ch.onclick=function(){vpnProtoFilter=ch.dataset.proto;applyVpnFilter();};});}
 function applyVpnFilter(){vpnFiltered=vpnProtoFilter==='all'?vpnKeys.slice():vpnKeys.filter(function(k){return k.proto===vpnProtoFilter;});renderVpnFilters();renderHomeServers();}
 
@@ -3332,13 +3238,11 @@ function doConnect(){
     var happOpened=openInHapp(selectedKey);
     if(!happOpened){toast('Не удалось открыть Happ');}
     setTimeout(function(){
-      if(status){status.textContent=happOpened?'Сервер передан в Happ · подключите его там':'Не удалось открыть Happ';status.className='vpn-status '+(happOpened?'opening':'');}
-      if(happOpened){
-        clearVpnConnected();
-        toast('Ключ передан в Happ');
-      }
-      playSound(happOpened?'success':'tap');
-      vpnConnecting=false;
+      var btn=$('vpn-connect-btn');if(btn)btn.classList.add('connected');
+      var lbl=$('vpn-connect-label');if(lbl)lbl.textContent='Подключено';
+      if(status){status.textContent=happOpened?'Выбранный сервер передан в Happ':'Не удалось открыть Happ';status.className='vpn-status connected';}
+      if(happOpened) markVpnConnected(vpnSelectedKey);
+      playSound('success');showSuccessOverlay();vibrate('success');vpnConnecting=false;
       updateConnectUI();
     },900);
   },900);
@@ -3448,10 +3352,7 @@ $('vpn-refresh-btn').onclick=function(){ loadVpnKeys(false); };
 var _refreshIcon = $('vpn-home-refresh');
 if(_refreshIcon) _refreshIcon.onclick = function(){ loadVpnKeys(false); };
 
-async function autoLoadVpnOnStart(){
-  try{
-    if(isPremiumVpnSource(vpnActiveSourceId))await loadPremiumCountrySources();
-  }catch(e){}
+function autoLoadVpnOnStart(){
   if(vpnKeys.length) { renderHomeServers(); return; }
   loadVpnKeys(true).then(function(){ updateConnectUI(); }).catch(function(){});
 }
