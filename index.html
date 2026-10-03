@@ -1246,55 +1246,201 @@ function buildRawUrl(owner,repo,ref,path){return 'https://raw.githubusercontent.
 function cacheBust(url){return url+(url.indexOf('?')===-1?'?':'&')+'t='+now()+'_'+Math.random().toString(36).slice(2,8);}
 
 const VPN_FETCH_CACHE_TTL = 10 * 60 * 1000;
+const VPN_FETCH_TIMEOUT = 7500;
+const VPN_CACHE_MAX_CHARS = 4500000;
+
 function readVpnCache(sourceId){
-  try{var raw = localStorage.getItem('flux_vpn_cache_' + sourceId);if(!raw) return null;var c = JSON.parse(raw);if(!c || !c.text) return null;return c;}catch(e){ return null; }
+  try{
+    var raw=localStorage.getItem('flux_vpn_cache_'+sourceId);
+    if(!raw)return null;
+    var c=JSON.parse(raw);
+    if(!c||typeof c.text!=='string'||c.text.length<20)return null;
+    return c;
+  }catch(e){return null;}
 }
-function writeVpnCache(sourceId, text, url){try{localStorage.setItem('flux_vpn_cache_' + sourceId, JSON.stringify({ text: text, ts: now(), url: url }));}catch(e){}}
+
+function writeVpnCache(sourceId,text,url){
+  try{
+    if(typeof text!=='string'||text.length<20||text.length>VPN_CACHE_MAX_CHARS)return;
+    localStorage.setItem('flux_vpn_cache_'+sourceId,JSON.stringify({
+      text:text,ts:now(),url:url||''
+    }));
+  }catch(e){
+    /* Не ломаем загрузку, если WebView запретил/переполнил localStorage. */
+  }
+}
+
 function buildVpnFetchUrls(source){
-  var g = source.github;
-  if(!g) return [];
-  var owner = g.owner, repo = g.repo, path = g.path;
-  var branches = [];
-  if(g.branch) branches.push(g.branch);
-  if(branches.indexOf('main') === -1) branches.push('main');
-  if(branches.indexOf('master') === -1) branches.push('master');
-  var urls = [];
+  var g=source&&source.github;
+  if(!g)return [];
+  var owner=encodeURIComponent(g.owner),repo=encodeURIComponent(g.repo);
+  var path=String(g.path||'').split('/').map(encodeURIComponent).join('/');
+  var branches=[];
+  if(g.branch)branches.push(g.branch);
+  if(branches.indexOf('main')===-1)branches.push('main');
+  if(branches.indexOf('master')===-1)branches.push('master');
+
+  var urls=[];
   branches.forEach(function(br){
-    urls.push('https://raw.githubusercontent.com/' + owner + '/' + repo + '/' + br + '/' + path);
-    urls.push('https://cdn.jsdelivr.net/gh/' + owner + '/' + repo + '@' + br + '/' + path);
-    urls.push('https://cdn.statically.io/gh/' + owner + '/' + repo + '/' + br + '/' + path);
-    urls.push('https://raw.githack.com/' + owner + '/' + repo + '/' + br + '/' + path);
+    br=encodeURIComponent(br);
+    urls.push('https://raw.githubusercontent.com/'+owner+'/'+repo+'/'+br+'/'+path);
+    urls.push('https://cdn.jsdelivr.net/gh/'+owner+'/'+repo+'@'+br+'/'+path);
+    urls.push('https://cdn.statically.io/gh/'+owner+'/'+repo+'/'+br+'/'+path);
   });
   return urls;
 }
-async function fetchGithubSource(source){
-  if(!source) throw new Error('Источник не настроен');
-  var cache = readVpnCache(source.id);
-  var fresh = cache && (now() - cache.ts < VPN_FETCH_CACHE_TTL);
-  if(fresh && cache.text && cache.text.length > 20)return { text: cache.text, sha: null, url: cache.url, fromCache: true };
-  if(source.github){
-    var urls = buildVpnFetchUrls(source);
-    var lastErr = null;
-    for(var i=0;i<urls.length;i++){
-      try{
-        var resp = await fetch(cacheBust(urls[i]), { cache: 'no-store' });
-        if(resp.ok){
-          var text = await resp.text();
-          if(text && text.length > 20){writeVpnCache(source.id, text, urls[i]);return { text: text, sha: null, url: urls[i] };}
-        } else { lastErr = new Error('HTTP ' + resp.status); }
-      }catch(e){ lastErr = lastErr || e; }
-    }
-    if(cache && cache.text && cache.text.length > 20)return { text: cache.text, sha: null, url: cache.url, fromCache: true, stale: true };
-    throw lastErr || new Error('Все зеркала недоступны');
-  }
-  var direct = source.url;
-  if(!direct) throw new Error('Источник не настроен');
+
+function buildGithubApiUrl(source){
   try{
-    var r = await fetch(cacheBust(direct), { cache: 'no-store' });
-    if(r.ok){var t = await r.text();if(t && t.length > 20){writeVpnCache(source.id, t, direct);return { text: t, sha: null, url: direct };}}
-  }catch(e){}
-  if(cache && cache.text && cache.text.length > 20)return { text: cache.text, sha: null, url: cache.url, fromCache: true, stale: true };
-  throw new Error('Не удалось загрузить файл');
+    var g=source&&source.github;
+    if(!g)return '';
+    return 'https://api.github.com/repos/'+encodeURIComponent(g.owner)+'/'+encodeURIComponent(g.repo)+'/contents/'+
+      String(g.path||'').split('/').map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(g.branch||'main');
+  }catch(e){return '';}
+}
+
+function vpnFetchWithTimeout(url,timeout){
+  return new Promise(function(resolve,reject){
+    var finished=false;
+    var timer=setTimeout(function(){
+      if(finished)return;
+      finished=true;
+      reject(new Error('Таймаут загрузки'));
+    },timeout||VPN_FETCH_TIMEOUT);
+
+    fetch(url,{
+      method:'GET',
+      cache:'no-store',
+      credentials:'omit',
+      redirect:'follow',
+      headers:{'Accept':'text/plain,text/*,*/*'}
+    }).then(function(resp){
+      if(finished)return;
+      if(!resp.ok){
+        finished=true;clearTimeout(timer);
+        reject(new Error('HTTP '+resp.status));
+        return;
+      }
+      return resp.text();
+    }).then(function(text){
+      if(finished)return;
+      finished=true;clearTimeout(timer);
+      if(typeof text!=='string'||text.trim().length<20){
+        reject(new Error('Пустой ответ'));
+        return;
+      }
+      resolve(text);
+    }).catch(function(err){
+      if(finished)return;
+      finished=true;clearTimeout(timer);
+      reject(err||new Error('Ошибка сети'));
+    });
+  });
+}
+
+async function fetchGithubApiSource(source){
+  var apiUrl=buildGithubApiUrl(source);
+  if(!apiUrl)throw new Error('GitHub API URL не настроен');
+
+  var response=await vpnFetchWithTimeout(apiUrl,VPN_FETCH_TIMEOUT);
+  var data;
+  try{data=JSON.parse(response);}catch(e){throw new Error('GitHub API вернул неверный ответ');}
+
+  if(!data||data.type!=='file'||typeof data.content!=='string'){
+    throw new Error(data&&data.message ? String(data.message) : 'Файл не найден в GitHub');
+  }
+
+  var encoded=data.content.replace(/\s/g,'');
+  var binary;
+  try{binary=atob(encoded);}catch(e){throw new Error('Не удалось декодировать файл GitHub');}
+
+  /* UTF-8 без зависимости от TextDecoder — лучше для старых Android WebView. */
+  var text='';
+  try{
+    var bytes=new Uint8Array(binary.length);
+    for(var i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+    if(window.TextDecoder)text=new TextDecoder('utf-8').decode(bytes);
+    else{
+      text=decodeURIComponent(Array.prototype.map.call(bytes,function(b){
+        return '%'+('0'+b.toString(16)).slice(-2);
+      }).join(''));
+    }
+  }catch(e){text=binary;}
+
+  if(text.length<20)throw new Error('Файл GitHub пустой');
+  return {text:text,url:apiUrl,fromCache:false};
+}
+
+async function fetchGithubSource(source){
+  if(!source)throw new Error('Источник не настроен');
+
+  var cache=readVpnCache(source.id);
+  var age=cache ? now()-Number(cache.ts||0) : Infinity;
+  var fresh=cache&&age>=0&&age<VPN_FETCH_CACHE_TTL;
+
+  /* Сначала мгновенно используем свежий кэш. */
+  if(fresh){
+    return {text:cache.text,sha:null,url:cache.url||'',fromCache:true};
+  }
+
+  if(source.github){
+    var urls=buildVpnFetchUrls(source);
+    var tasks=[];
+    var settled=false;
+
+    /*
+     * Не ждём зеркала друг за другом. Все варианты стартуют одновременно,
+     * а первый нормальный ответ побеждает.
+     */
+    var result=await new Promise(function(resolve,reject){
+      var pending=urls.length;
+      var errors=[];
+      if(!pending){reject(new Error('Нет URL источника'));return;}
+
+      urls.forEach(function(url){
+        vpnFetchWithTimeout(url,VPN_FETCH_TIMEOUT).then(function(text){
+          if(settled)return;
+          settled=true;
+          resolve({text:text,url:url,fromCache:false});
+        }).catch(function(err){
+          errors.push(err);
+          pending--;
+          if(pending<=0&&!settled){
+            /* Последняя попытка — официальный GitHub Contents API. */
+            fetchGithubApiSource(source).then(function(apiResult){
+              if(settled)return;
+              settled=true;
+              resolve(apiResult);
+            }).catch(function(apiErr){
+              if(settled)return;
+              settled=true;
+              reject(apiErr||errors[0]||new Error('Все источники недоступны'));
+            });
+          }
+        });
+      });
+    });
+
+    if(result&&result.text){
+      writeVpnCache(source.id,result.text,result.url);
+      return result;
+    }
+  }else{
+    var direct=String(source.url||'').trim();
+    if(!direct)throw new Error('Источник не настроен');
+    try{
+      var directText=await vpnFetchWithTimeout(direct,VPN_FETCH_TIMEOUT);
+      writeVpnCache(source.id,directText,direct);
+      return {text:directText,sha:null,url:direct,fromCache:false};
+    }catch(e){}
+  }
+
+  /* Даже просроченный кэш лучше полного пустого списка. */
+  if(cache&&cache.text&&cache.text.length>20){
+    return {text:cache.text,sha:null,url:cache.url||'',fromCache:true,stale:true};
+  }
+
+  throw new Error('Не удалось загрузить список ключей');
 }
 
 function isPremiumVpnSource(id){return String(id||'').charAt(0)==='p';}
@@ -2609,14 +2755,38 @@ function updateVisibleReactions(){
 }
 
 function parseVpnKeys(text){
-  var lines=String(text||'').replace(/\r/g,'\n').split(/\n+/);
+  var source=String(text||'').replace(/\uFEFF/g,'').replace(/\r\n?/g,'\n');
+  var lines=source.split('\n');
   var keys=[];
-  var protoRegex=/^(vless|vmess|trojan|ss|hysteria2|hy2|socks5?|socks):\/\//i;
+  var seen=Object.create(null);
+  /*
+   * Источники бывают разного формата:
+   *   vless://...
+   *   vmess://...
+   *   trojan://...
+   *   ss://...
+   * Иногда перед ключом стоят пробелы/нумерация, а после ключа — комментарий.
+   */
+  var protoRegex=/(vless|vmess|trojan|ss|hysteria2|hy2|socks5?|socks):\/\/[^\s"'<>]+/ig;
   for(var i=0;i<lines.length;i++){
-    var line=String(lines[i]||'').replace(/^\uFEFF/,'').trim();
-    if(!line||line.charAt(0)==='#')continue;
-    var m=line.match(protoRegex);
-    if(m){var proto=(m[1]||'').toLowerCase();if(proto==='socks5'||proto==='socks4')proto='socks';keys.push({proto:proto,raw:line});}
+    var line=String(lines[i]||'').trim();
+    if(!line)continue;
+    line=line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/,'');
+    if(!line||line.charAt(0)==='#'||line.charAt(0)===';')continue;
+
+    var matches=line.match(protoRegex);
+    if(!matches)continue;
+
+    for(var j=0;j<matches.length;j++){
+      var raw=String(matches[j]||'').trim().replace(/[),;]+$/,'');
+      if(!raw||seen[raw])continue;
+      var m=raw.match(/^([a-z0-9]+):\/\//i);
+      if(!m)continue;
+      var proto=(m[1]||'').toLowerCase();
+      if(proto==='socks5'||proto==='socks4')proto='socks';
+      keys.push({proto:proto,raw:raw});
+      seen[raw]=1;
+    }
   }
   return keys;
 }
