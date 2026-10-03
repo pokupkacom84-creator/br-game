@@ -1304,7 +1304,7 @@ const VPN_PREMIUM_SOURCES = [
     kind:'premium',
     type:'vpn',
     urls:[
-      'https://raw.githubusercontent.com/luxxuria/harvester/915d3d6ea1082ed2b5355fc8f0ba5ecd09a4c9dd/non_ru.txt'
+      'https://raw.githubusercontent.com/luxxuria/harvester/main/non_ru.txt'
     ]
   },
   {
@@ -1319,7 +1319,8 @@ const VPN_PREMIUM_SOURCES = [
 function buildRawUrl(owner,repo,ref,path){return 'https://raw.githubusercontent.com/'+encodeURIComponent(owner)+'/'+encodeURIComponent(repo)+'/'+encodeURIComponent(ref)+'/'+path.split('/').map(encodeURIComponent).join('/');}
 function cacheBust(url){return url+(url.indexOf('?')===-1?'?':'&')+'t='+now()+'_'+Math.random().toString(36).slice(2,8);}
 
-const VPN_FETCH_CACHE_TTL = 10 * 60 * 1000;
+// Всегда проверяем GitHub при загрузке. Кэш используется только как резерв.
+const VPN_FETCH_CACHE_TTL = 0;
 const VPN_PREMIUM_SOURCE_VERSION = 'non_ru_915d3d6_v1';
 const VPN_FETCH_TIMEOUT = 7500;
 const VPN_CACHE_MAX_CHARS = 4500000;
@@ -1371,7 +1372,8 @@ function buildGithubApiUrl(source){
     var g=source&&source.github;
     if(!g)return '';
     return 'https://api.github.com/repos/'+encodeURIComponent(g.owner)+'/'+encodeURIComponent(g.repo)+'/contents/'+
-      String(g.path||'').split('/').map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(g.branch||'main');
+      String(g.path||'').split('/').map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(g.branch||'main')+
+      '&t='+now()+'_'+Math.random().toString(36).slice(2,8);
   }catch(e){return '';}
 }
 
@@ -3360,7 +3362,7 @@ if(!window.__fluxLite){
   setInterval(function(){
     if(document.hidden)return;
     try{var tab=document.getElementById('tab-vpn');if(tab&&tab.classList.contains('active')&&vpnKeys.length)loadVpnKeys(true);}catch(e){}
-  },15*60*1000);
+  },60*1000);
 }
 
 async function openPromoSheet(){
