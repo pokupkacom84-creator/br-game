@@ -1636,6 +1636,21 @@ async function fullFetchVpnSource(source){
 
 function isPremiumVpnSource(id){return String(id||'').charAt(0)==='p';}
 function isGlobalPremiumEnabled(){var g=window.__fluxGlobalPremiumState||{};return g.active===true;}
+
+/* Надёжно получаем глобальный флаг перед созданием профиля.
+   Убирает гонку между регистрацией и Firebase Realtime listener. */
+async function ensureGlobalPremiumState(){
+  if(!db)return false;
+  if(isGlobalPremiumEnabled())return true;
+  try{
+    var snap=await db.ref('settings/globalPremium').once('value');
+    window.__fluxGlobalPremiumState=snap.val()||{active:false};
+  }catch(e){
+    console.warn('global premium read',e);
+  }
+  return isGlobalPremiumEnabled();
+}
+
 function isPremiumActive(v){if(isGlobalPremiumEnabled())return true;v=v||{};return !!v.active && Number(v.expiresAt||0)>now();}
 function isPremiumUserNow(){if(isGlobalPremiumEnabled())return true;return isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{}));}
 
@@ -1991,16 +2006,25 @@ $('onb-continue').onclick=async function(){
   try{
     var taken=await db.ref('usernames/'+username).once('value');
     if(taken.exists()&&taken.val()!==currentUser.uid){toast('Username занят');this.disabled=false;return;}
+    /* Если админ включил «Premium для ВСЕХ», новый пользователь
+       автоматически получает глобальное право на Premium. */
+    var globalPremium=await ensureGlobalPremiumState();
+
     var updates={};
     updates['users/'+currentUser.uid]={name:name,username:username,avatarId:onbAvatarId,lastSeen:now(),online:true,bio:'',status:''};
     updates['usernames/'+username]=currentUser.uid;
     await db.ref().update(updates);
     currentUserData={uid:currentUser.uid,name:name,username:username,avatarId:onbAvatarId};
+    window.__fluxPremiumState={};
+    if(globalPremium)document.body.classList.add('flux-premium');
     syncPublicProfile();
     goScreen('main-screen',true);
     startSelfListener();startSessionTracking();startPremiumListener();try{socialLoad();}catch(e){}
     updateSettingsUI();updateTogglesUI();
-    if(isGlobalPremiumEnabled()){document.body.classList.add('flux-premium');toast('Premium уже активен для всех!');}
+    if(globalPremium){
+      document.body.classList.add('flux-premium');
+      toast('Premium уже активен для всех!');
+    }
     requestAnimationFrame(positionNavIndicator);
     setTimeout(function(){ try{ autoLoadVpnOnStart(); }catch(e){} }, 400);
   }catch(e){toast('Ошибка: '+(e.message||e.code));}
