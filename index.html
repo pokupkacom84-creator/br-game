@@ -1238,7 +1238,12 @@ const VPN_FREE_SOURCES = [
   {id:'v3',name:'Бесплатный VPN 3',kind:'free',github:{owner:'AvenCores',repo:'goida-vpn-configs',branch:'main',path:'githubmirror/24.txt'}}
 ];
 const VPN_PREMIUM_SOURCES = [
-  {id:'p1',name:'Premium VPN',kind:'premium',type:'vpn',github:{owner:'luxxuria',repo:'harvester',branch:'main',path:'top_600.txt'}},
+  {id:'p1',name:'Premium VPN',kind:'premium',type:'vpn',url:'https://raw.githubusercontent.com/luxxuria/harvester/refs/heads/main/top_600.txt',fallbackUrls:[
+    'https://raw.githubusercontent.com/luxxuria/harvester/main/top_600.txt',
+    'https://cdn.jsdelivr.net/gh/luxxuria/harvester@main/top_600.txt',
+    'https://raw.githubusercontent.com/luxxuria/harvester/refs/heads/main/speed_tested.txt',
+    'https://raw.githubusercontent.com/luxxuria/harvester/refs/heads/main/ping_tested.txt'
+  ]},
   {id:'p2',name:'Белые списки',kind:'premium',type:'vpn',github:{owner:'igareck',repo:'vpn-configs-for-russia',branch:'main',path:'WHITE-CIDR-RU-all.txt'}}
 ];
 
@@ -1426,13 +1431,35 @@ async function fetchGithubSource(source){
       return result;
     }
   }else{
+    var directUrls=[];
     var direct=String(source.url||'').trim();
-    if(!direct)throw new Error('Источник не настроен');
-    try{
-      var directText=await vpnFetchWithTimeout(direct,VPN_FETCH_TIMEOUT);
-      writeVpnCache(source.id,directText,direct);
-      return {text:directText,sha:null,url:direct,fromCache:false};
-    }catch(e){}
+    if(direct)directUrls.push(direct);
+    if(Array.isArray(source.fallbackUrls)){
+      source.fallbackUrls.forEach(function(u){
+        u=String(u||'').trim();
+        if(u && directUrls.indexOf(u)===-1)directUrls.push(u);
+      });
+    }
+    if(!directUrls.length)throw new Error('Источник не настроен');
+
+    var directResult=await new Promise(function(resolve,reject){
+      var pending=directUrls.length, done=false, errors=[];
+      directUrls.forEach(function(url){
+        vpnFetchWithTimeout(url,VPN_FETCH_TIMEOUT).then(function(text){
+          if(done)return;
+          done=true;
+          resolve({text:text,url:url,fromCache:false});
+        }).catch(function(err){
+          errors.push(err);
+          pending--;
+          if(pending<=0&&!done)reject(errors[0]||new Error('Все резервные источники недоступны'));
+        });
+      });
+    });
+    if(directResult&&directResult.text){
+      writeVpnCache(source.id,directResult.text,directResult.url);
+      return directResult;
+    }
   }
 
   /* Даже просроченный кэш лучше полного пустого списка. */
