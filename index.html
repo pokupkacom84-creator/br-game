@@ -1238,19 +1238,30 @@ const VPN_FREE_SOURCES = [
   {id:'v3',name:'Бесплатный VPN 3',kind:'free',github:{owner:'AvenCores',repo:'goida-vpn-configs',branch:'main',path:'githubmirror/24.txt'}}
 ];
 const VPN_PREMIUM_SOURCES = [
-  {id:'p1',name:'Premium VPN',kind:'premium',type:'vpn',url:'https://raw.githubusercontent.com/luxxuria/harvester/refs/heads/main/top_600.txt',fallbackUrls:[
-    'https://raw.githubusercontent.com/luxxuria/harvester/main/top_600.txt',
-    'https://cdn.jsdelivr.net/gh/luxxuria/harvester@main/top_600.txt',
-    'https://raw.githubusercontent.com/luxxuria/harvester/refs/heads/main/speed_tested.txt',
-    'https://raw.githubusercontent.com/luxxuria/harvester/refs/heads/main/ping_tested.txt'
-  ]},
-  {id:'p2',name:'Белые списки',kind:'premium',type:'vpn',github:{owner:'igareck',repo:'vpn-configs-for-russia',branch:'main',path:'WHITE-CIDR-RU-all.txt'}}
+  {
+    id:'p1',
+    name:'Premium VPN',
+    kind:'premium',
+    type:'vpn',
+    urls:[
+      'https://raw.githubusercontent.com/luxxuria/harvester/d5704710144123e0c489ff496b44adaf8f10d96d/non_ru.txt',
+      'https://raw.githubusercontent.com/luxxuria/harvester/d5704710144123e0c489ff496b44adaf8f10d/speed_tested.txt'
+    ]
+  },
+  {
+    id:'p2',
+    name:'Белые списки',
+    kind:'premium',
+    type:'vpn',
+    github:{owner:'igareck',repo:'vpn-configs-for-russia',branch:'main',path:'WHITE-CIDR-RU-all.txt'}
+  }
 ];
 
 function buildRawUrl(owner,repo,ref,path){return 'https://raw.githubusercontent.com/'+encodeURIComponent(owner)+'/'+encodeURIComponent(repo)+'/'+encodeURIComponent(ref)+'/'+path.split('/').map(encodeURIComponent).join('/');}
 function cacheBust(url){return url+(url.indexOf('?')===-1?'?':'&')+'t='+now()+'_'+Math.random().toString(36).slice(2,8);}
 
 const VPN_FETCH_CACHE_TTL = 10 * 60 * 1000;
+const VPN_PREMIUM_SOURCE_VERSION = 'non_ru_speed_tested_v1';
 const VPN_FETCH_TIMEOUT = 7500;
 const VPN_CACHE_MAX_CHARS = 4500000;
 
@@ -1260,6 +1271,7 @@ function readVpnCache(sourceId){
     if(!raw)return null;
     var c=JSON.parse(raw);
     if(!c||typeof c.text!=='string'||c.text.length<20)return null;
+    if(String(sourceId)==='p1' && c.sourceVersion!==VPN_PREMIUM_SOURCE_VERSION)return null;
     return c;
   }catch(e){return null;}
 }
@@ -1388,7 +1400,35 @@ async function fetchGithubSource(source){
     return {text:cache.text,sha:null,url:cache.url||'',fromCache:true};
   }
 
-  if(source.github){
+  /*
+   * Составной Premium-источник:
+   * оба файла загружаются ПАРАЛЛЕЛЬНО и объединяются.
+   * Если один временно недоступен, второй всё равно показывается.
+   */
+  if(Array.isArray(source.urls)&&source.urls.length){
+    var compositeUrls=source.urls.map(function(u){return String(u||'').trim();}).filter(Boolean);
+    var compositeResults=await Promise.all(compositeUrls.map(function(url){
+      return vpnFetchWithTimeout(cacheBust(url),VPN_FETCH_TIMEOUT)
+        .then(function(value){return {ok:true,text:String(value||''),url:url};})
+        .catch(function(error){return {ok:false,text:'',url:url,error:error};});
+    }));
+
+    var good=compositeResults.filter(function(r){return r.ok&&r.text.length>=20;});
+    if(good.length){
+      var combinedText=good.map(function(r){return r.text;}).join('\n');
+      var combinedUrl=good.map(function(r){return r.url;}).join(' + ');
+      var compositeResult={
+        text:combinedText,
+        url:combinedUrl,
+        fromCache:false,
+        loadedCount:good.length,
+        totalCount:compositeUrls.length,
+        partial:good.length<compositeUrls.length
+      };
+      writeVpnCache(source.id,combinedText,combinedUrl);
+      return compositeResult;
+    }
+  }else if(source.github){
     var urls=buildVpnFetchUrls(source);
     var tasks=[];
     var settled=false;
@@ -1411,7 +1451,6 @@ async function fetchGithubSource(source){
           errors.push(err);
           pending--;
           if(pending<=0&&!settled){
-            /* Последняя попытка — официальный GitHub Contents API. */
             fetchGithubApiSource(source).then(function(apiResult){
               if(settled)return;
               settled=true;
@@ -3224,7 +3263,10 @@ async function loadVpnKeys(silent){
   }else{
     try{renderVpnFilters();}catch(filterErr){console.error('VPN filter render error:',filterErr);}
     renderVpnKeys();
-    if(!silent)toast(source.name+': '+vpnKeys.length+' ключей'+(fromCache?' (кэш)':''));
+    if(!silent){
+      var premiumInfo=(source.id==='p1'?' · non_ru + speed_tested':'');
+      toast(source.name+': '+vpnKeys.length+' ключей'+premiumInfo+(fromCache?' (кэш)':''));
+    }
   }
   if(vpnSelectedKey && vpnKeys.length){
     var found=false;
