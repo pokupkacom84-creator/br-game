@@ -90,9 +90,7 @@ body.lite .premium-status-orb,body.perf-lite .premium-status-orb{animation:none 
 body.lite .premium-badge,body.perf-lite .premium-badge{animation:none !important}
 body.lite .vpn-connect-rings,body.perf-lite .vpn-connect-rings{display:none !important}
 
-/* ============================================================
-   ЗАПРЕТ ВЫДЕЛЕНИЯ ТЕКСТА / КОНТЕКСТНОГО МЕНЮ
-   ============================================================ */
+/* ЗАПРЕТ ВЫДЕЛЕНИЯ ТЕКСТА / КОНТЕКСТНОГО МЕНЮ */
 *,*::before,*::after{
   margin:0;padding:0;box-sizing:border-box;
   -webkit-tap-highlight-color:transparent;
@@ -573,7 +571,8 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 .shop-tab.active{background:var(--accent-grad);color:#fff;box-shadow:var(--accent-glow)}
 .shop-tab .tab-emoji{line-height:0;display:inline-flex;align-items:center;justify-content:center}
 .empty{text-align:center;color:var(--text-2);font-size:14px;padding:var(--s-5)}
-@keyframes fnShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+.vpn-key-item,.settings-item,.premium-benefit,.premium-plan{transform:translateZ(0)}
 
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
@@ -854,9 +853,7 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
 
 <script>
 
-/* ============================================================
-   ГЛОБАЛЬНЫЙ ЗАПРЕТ КОНТЕКСТНОГО МЕНЮ И ВЫДЕЛЕНИЯ
-   ============================================================ */
+/* ГЛОБАЛЬНЫЙ ЗАПРЕТ КОНТЕКСТНОГО МЕНЮ И ВЫДЕЛЕНИЯ */
 (function blockContextMenuAndSelection(){
   function isEditable(el){
     if(!el || !el.closest) return false;
@@ -877,13 +874,6 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
     e.preventDefault();
     return false;
   }, {capture:true});
-  /* Блокируем длинный тап на iOS */
-  document.addEventListener('touchstart', function(e){
-    if(isEditable(e.target)) return;
-    var t = e.target;
-    if(!t) return;
-    /* Разрешаем взаимодействие с кнопками и ссылками */
-  }, {passive:true});
 })();
 
 (function detectLiteMode(){
@@ -1780,6 +1770,7 @@ $('profile-qr-btn').onclick=function(){
 };
 $('profile-menu-btn').onclick=function(e){
   e.stopPropagation();
+  showModal('<div class="modal-title">Меню</div><div class="modal-actions stack"><button class="modal-btn" id="pm-edit">Редактировать профиль</button><button class="modal-btn" id="pm-premium">Premium</button><button class="modal-btn" id="pm-reload">Обновить</button><button class="modal-btn" id="pm-close">Закрыть</button></div>',function(m,close){
     m.querySelector('#pm-edit').onclick=function(){close();$('btn-edit-profile').click();};
     m.querySelector('#pm-premium').onclick=function(){close();switchTab('shop');};
     m.querySelector('#pm-reload').onclick=function(){location.reload();};
@@ -2073,15 +2064,10 @@ function openPaymentInExternalBrowser(url){
 }
 function getPaymentBotUsername(){if(!TELEGRAM_BOT_USERNAME||TELEGRAM_BOT_USERNAME==='YOUR_BOT_USERNAME'){toast('Не настроен username бота');return null;}return TELEGRAM_BOT_USERNAME;}
 
-window.__fluxPendingPurchaseSourceId = null;
-
 function buyPremium(plan){
   if(!currentUser||!plan){toast('Войдите в Flux');return;}
   var bot=getPaymentBotUsername();if(!bot)return;
   var payload=currentUser.uid+'_'+plan.id;
-  if(window.__fluxPendingPurchaseSourceId){
-    payload += '|' + window.__fluxPendingPurchaseSourceId;
-  }
   var url='https://t.me/'+bot+'?start='+encodeURIComponent(payload);
   if(openPaymentInExternalBrowser(url)){toast('Открываем оплату…');}
   else{toast('Не удалось открыть Telegram. Скопируйте ссылку вручную.');fallbackCopy(url);}
@@ -2646,7 +2632,6 @@ async function loadVpnKeys(silent, forceCheck){
   }else{
     try{renderVpnFilters();}catch(filterErr){console.error('VPN filter render error:',filterErr);}
     renderVpnKeys();
-    /* Тост о загрузке серверов УБРАН — по просьбе пользователя. */
   }
   if(vpnSelectedKey && vpnKeys.length){
     var found=false;
@@ -2689,7 +2674,6 @@ async function vpnCheckForUpdates(){
     try{ renderVpnFilters(); }catch(e){}
     renderVpnKeys();
     updateConnectUI();
-    /* Тост об обновлении списка серверов УБРАН — по просьбе пользователя. */
   }catch(e){
   }finally{
     _vpnUpdateCheckInFlight = false;
@@ -2861,226 +2845,6 @@ window.addEventListener('load',function(){requestAnimationFrame(positionNavIndic
 
 if(!firebaseReady){setTimeout(function(){toast('Проверьте интернет');},500);}
 
-</script>
-
-<!-- ============================================================
-     FLUX NETWORK MODULE
-     ============================================================ -->
-<script>
-(function(){
-'use strict';
-
-if(!firebaseReady || !db || !auth){
-  return;
-}
-
-const FN_TAGS = ['fast','stable','streaming','gaming','ads','privacy','bypass','cheap','premium'];
-const FN_LIKE_RATE_LIMIT = 50;
-const FN_REPORTS_TO_HIDE = 3;
-const FN_MAX_CONFIG_LEN = 2048;
-const FN_BLACKLIST_CACHE_TTL = 5*60*1000;
-
-function fnFingerprint(){
-  try{
-    var parts = [navigator.userAgent||'',(screen.width||0)+'x'+(screen.height||0),screen.colorDepth||0,new Date().getTimezoneOffset(),navigator.language||'',navigator.hardwareConcurrency||0,navigator.deviceMemory||0].join('|');
-    var h = 5381;
-    for(var i=0;i<parts.length;i++) h = ((h<<5)+h+parts.charCodeAt(i))>>>0;
-    return 'fp_'+h.toString(36);
-  }catch(e){ return 'fp_unknown'; }
-}
-
-async function fnSha256(str){
-  try{
-    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-    return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
-  }catch(e){
-    var h = 5381;
-    for(var i=0;i<str.length;i++) h = ((h<<5)+h+str.charCodeAt(i))>>>0;
-    return 'fallback_'+h.toString(36);
-  }
-}
-
-function fnValidateConfig(raw){
-  raw = String(raw||'').trim();
-  if(!raw) return 'Пустой ключ';
-  if(raw.length > FN_MAX_CONFIG_LEN) return 'Ключ слишком длинный (>2048)';
-  if(!/^(vless|vmess|trojan|ss|hysteria2|hy2|socks):\/\//i.test(raw)) return 'Неизвестный протокол';
-  var host = '';
-  try{ host = raw.split('://')[1].split('@').pop().split(/[:/?#]/)[0]; }catch(e){}
-  if(!host || host.length < 3) return 'Не найден хост в ключе';
-  if(/[\s<>"']/.test(host)) return 'Недопустимые символы в хосте';
-  return null;
-}
-
-function fnRateCheck(key, limit, windowMs){
-  try{
-    var data = JSON.parse(localStorage.getItem('fn_rate_'+key)||'[]');
-    var nowTs = Date.now();
-    data = data.filter(function(t){ return nowTs - t < windowMs; });
-    if(data.length >= limit) return false;
-    data.push(nowTs);
-    localStorage.setItem('fn_rate_'+key, JSON.stringify(data));
-    return true;
-  }catch(e){ return true; }
-}
-
-function fnTimeAgo(ts){
-  var diff = Date.now() - Number(ts||0);
-  var s = Math.floor(diff/1000);
-  if(s < 60) return 'только что';
-  if(s < 3600) return Math.floor(s/60)+' мин';
-  if(s < 86400) return Math.floor(s/3600)+' ч';
-  if(s < 2592000) return Math.floor(s/86400)+' д';
-  return new Date(Number(ts)).toLocaleDateString('ru-RU',{day:'2-digit',month:'short'});
-}
-
-function fnAvatarBg(u){
-  u = u || {};
-  if(u.avatarId){
-    var preset = getPresetAvatar(u.avatarId);
-    return { style:'background:'+preset.bg, content:preset.emoji };
-  }
-  if(u.photoURL) return { style:'background-image:url("'+escAttr(u.photoURL)+'")', content:'' };
-  var cls = getAvatarColorClass(u.name||u.username||'?');
-  var colorMap = {
-    'color-0':'linear-gradient(135deg,#fb7185,#e11d48)','color-1':'linear-gradient(135deg,#4ade80,#16a34a)',
-    'color-2':'linear-gradient(135deg,#facc15,#d97706)','color-3':'linear-gradient(135deg,#60a5fa,#2563eb)',
-    'color-4':'linear-gradient(135deg,#a78bfa,#7c3aed)','color-5':'linear-gradient(135deg,#f472b6,#db2777)',
-    'color-6':'linear-gradient(135deg,#5eead4,#0d9488)','color-7':'linear-gradient(135deg,#fb923c,#ea580c)'
-  };
-  return { style:'background:'+(colorMap[cls]||colorMap['color-4']), content:initials(u.name||u.username||'?') };
-}
-
-function fnComputeUserWeight(user, stats){
-  if(!user) return 0;
-  var w = 1;
-  if(user.emailVerified) w += 0.5;
-  if(user.telegram && user.telegram.id) w += 1;
-  var ageDays = (Date.now() - Number(user.createdAt||Date.now())) / 86400000;
-  w += Math.min(2, ageDays/30);
-  if(stats && stats.publishedSources) w += Math.min(1, stats.publishedSources/10);
-  if(user.premium && user.premium.active && Number(user.premium.expiresAt||0) > Date.now()) w += 0.5;
-  var accepted = (stats && stats.acceptedReports)||0;
-  var rejected = (stats && stats.rejectedReports)||0;
-  if(accepted > 0) w += Math.min(1, Math.log(accepted+1));
-  if(rejected > 0) w -= Math.min(0.7, rejected*0.15);
-  return Math.max(0.1, w);
-}
-
-
-async function fnLoadBlacklist(){
-  try{
-    var snap = await db.ref('blacklistHosts').once('value');
-  }catch(e){ return {}; }
-}
-async function fnIsHostBlacklisted(host){var bl = await fnLoadBlacklist();return !!bl[host];}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-var FN_REPORT_REASONS = [
-  { id:'malicious', label:'Вредоносный (майнер/логгер)' },
-  { id:'notworking', label:'Не работает' },
-  { id:'duplicate', label:'Дубликат' },
-  { id:'spam', label:'Спам / реклама' },
-  { id:'other', label:'Другое' }
-];
-
-
-
-
-function fnOpenReportModal(sourceId){
-  var selected = '';
-  showModal(
-    '<div class="modal-title">Жалоба на источник</div>'+
-    '<div class="modal-text">Выбери причину:</div>'+
-    '<div class="fn-report-reasons" id="fn-rr">'+FN_REPORT_REASONS.map(function(r){ return '<div class="fn-report-reason" data-reason="'+r.id+'">'+esc(r.label)+'</div>'; }).join('')+'</div>'+
-    '<div class="modal-actions stack"><button class="modal-btn primary" id="fn-rr-send">Отправить</button><button class="modal-btn" id="fn-rr-close">Отмена</button></div>',
-    function(m, close){
-      m.querySelector('#fn-rr-close').onclick = close;
-      m.querySelectorAll('[data-reason]').forEach(function(el){
-        el.onclick = function(){
-          m.querySelectorAll('[data-reason]').forEach(function(x){ x.classList.remove('on'); });
-          el.classList.add('on'); selected = el.dataset.reason;
-        };
-      });
-      m.querySelector('#fn-rr-send').onclick = function(){ if(!selected){ toast('Выбери причину'); return; } close(); fnSubmitReport(sourceId, selected); };
-    }
-  );
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  var header = document.querySelector('.vpn-home-header');
-  if(!header) return;
-  var btn = document.createElement('button');
-  btn.className = 'vpn-home-refresh ripple';
-  btn.innerHTML = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 8l3 3M17 8l-3 3M7 16l3-3M17 16l-3-3"/></svg>';
-  btn.style.marginRight = '6px';
-  var refresh = header.querySelector('#vpn-home-refresh');
-  if(refresh) header.insertBefore(btn, refresh);
-  else header.appendChild(btn);
-})();
-
-document.querySelectorAll('.nav-item[data-tab="settings"]').forEach(function(item){
-  item.addEventListener('click', function(){
-  });
-});
-
-})();
 </script>
 </body>
 </html>
