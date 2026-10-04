@@ -382,6 +382,21 @@ body.flux-premium .profile-premium-crown{opacity:1;transform:scale(1) rotate(-15
 .vpn-icon-btn.star{background:transparent;color:var(--text-2);border:1.5px solid var(--border);box-shadow:none}
 .vpn-icon-btn.star.active{color:var(--warning);border-color:var(--warning)}
 .vpn-key-check{position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;z-index:3;box-shadow:0 3px 10px var(--accent-glow);}
+.vpn-bulk-tools{display:flex;align-items:center;gap:8px;padding:8px 16px 4px}
+.vpn-bulk-select{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:10px 14px;border-radius:14px;background:var(--surface);color:var(--text);border:1px solid var(--border-2);font-size:12.5px;font-weight:800;box-shadow:var(--shadow-1)}
+.vpn-bulk-select.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.vpn-bulk-select:active{transform:scale(.97)}
+.vpn-bulk-bar{display:none;position:sticky;bottom:10px;z-index:20;margin:10px 16px 0;padding:10px;border-radius:18px;background:var(--surface-glass);border:1px solid var(--border-2);box-shadow:var(--shadow-4);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);align-items:center;gap:9px}
+.vpn-bulk-bar.show{display:flex}
+.vpn-bulk-count{flex:1;min-width:0;font-size:12px;font-weight:800;color:var(--text)}
+.vpn-bulk-count small{display:block;color:var(--text-2);font-size:10.5px;font-weight:600;margin-top:2px}
+.vpn-bulk-action{flex:0 0 auto;min-height:42px;padding:10px 14px;border-radius:13px;background:var(--accent-grad);color:#fff;font-size:12px;font-weight:850;box-shadow:var(--accent-glow)}
+.vpn-bulk-action:disabled{opacity:.45}
+.vpn-key-item.bulk-selected{border-color:var(--accent);background:linear-gradient(135deg,var(--accent-soft),var(--accent-softer));box-shadow:0 4px 16px var(--accent-glow)}
+.vpn-key-bulk-check{position:absolute;right:10px;top:10px;width:25px;height:25px;border-radius:50%;border:2px solid var(--text-3);background:var(--surface);display:flex;align-items:center;justify-content:center;color:transparent;font-size:13px;font-weight:900;z-index:4;transition:all .18s}
+.vpn-key-item.bulk-selected .vpn-key-bulk-check{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 3px 10px var(--accent-glow)}
+.vpn-key-item.bulk-mode{cursor:pointer;padding-right:45px}
+
 
 .vpn-key-reactions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
 .vpn-reaction{
@@ -740,6 +755,9 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
     <div class="vpn-filters-row" id="vpn-sources"></div>
     <div class="vpn-servers-header"><span>Серверы</span><span class="vpn-servers-count" id="vpn-servers-count">0</span></div>
     <div class="vpn-filters-row" id="vpn-filters"></div>
+    <div class="vpn-bulk-tools" id="vpn-bulk-tools">
+      <button class="vpn-bulk-select" id="vpn-bulk-toggle" type="button">☑ <span>Выбрать ключи</span></button>
+    </div>
     <div class="vpn-key-list" id="vpn-key-list"><div class="vpn-empty">Нажмите <b>«Обновить»</b> вверху, чтобы загрузить серверы</div></div>
     <div class="vpn-count" id="vpn-count"></div>
     <div class="vpn-load-wrap">
@@ -2261,7 +2279,7 @@ function renderVpnCategoryTabs(){
       if(vpnActiveSourceId===id)return;
       vpnActiveSourceId=id;vpnActiveCategory=wantPremium?'premium':'free';
       try{localStorage.setItem('flux_vpn_source',vpnActiveSourceId);localStorage.setItem('flux_vpn_category',vpnActiveCategory);}catch(e){}
-      ++vpnLoadRequestId;vpnKeys=[];vpnFiltered=[];vpnProtoFilter='all';
+      ++vpnLoadRequestId;vpnKeys=[];vpnFiltered=[];vpnProtoFilter='all';vpnBulkKeys=Object.create(null);vpnBulkMode=false;
       if(vpnSelectedKey){clearVpnConnected();vpnSelectedKey=null;try{localStorage.removeItem('flux_selected_vpn_key');}catch(e){}}
       renderVpnCategoryTabs();renderVpnSources();renderVpnFilters();renderHomeServers();updateConnectUI();
       loadVpnKeys();
@@ -2282,7 +2300,7 @@ function renderVpnSources(){
       if(vpnActiveSourceId===id)return;
       vpnActiveSourceId=id;vpnActiveCategory=isPremiumVpnSource(id)?'premium':'free';
       try{localStorage.setItem('flux_vpn_source',vpnActiveSourceId);localStorage.setItem('flux_vpn_category',vpnActiveCategory);}catch(e){}
-      ++vpnLoadRequestId;vpnKeys=[];vpnFiltered=[];vpnProtoFilter='all';
+      ++vpnLoadRequestId;vpnKeys=[];vpnFiltered=[];vpnProtoFilter='all';vpnBulkKeys=Object.create(null);vpnBulkMode=false;
       if(vpnSelectedKey){clearVpnConnected();vpnSelectedKey=null;try{localStorage.removeItem('flux_selected_vpn_key');}catch(e){}}
       renderVpnCategoryTabs();renderVpnSources();renderVpnFilters();renderHomeServers();updateConnectUI();
       loadVpnKeys();
@@ -2290,10 +2308,136 @@ function renderVpnSources(){
   });
 }
 function renderVpnFilters(){var wrap=$('vpn-filters');if(!wrap)return;if(!vpnKeys.length){wrap.innerHTML='';return;}var protos={all:'Все'};vpnKeys.forEach(function(k){protos[k.proto]=k.proto.toUpperCase();});var html='';Object.keys(protos).forEach(function(p){html+='<button class="vpn-chip'+(vpnProtoFilter===p?' active':'')+'" data-proto="'+escAttr(p)+'">'+esc(protos[p])+' · '+(p==='all'?vpnKeys.length:vpnKeys.filter(function(k){return k.proto===p;}).length)+'</button>';});wrap.innerHTML=html;wrap.querySelectorAll('.vpn-chip').forEach(function(ch){ch.onclick=function(){vpnProtoFilter=ch.dataset.proto;applyVpnFilter();};});}
-function applyVpnFilter(){vpnFiltered=vpnProtoFilter==='all'?vpnKeys.slice():vpnKeys.filter(function(k){return k.proto===vpnProtoFilter;});renderVpnFilters();renderHomeServers();}
+function applyVpnFilter(){
+  vpnFiltered=vpnProtoFilter==='all'?vpnKeys.slice():vpnKeys.filter(function(k){return k.proto===vpnProtoFilter;});
+  renderVpnFilters();renderHomeServers();renderVpnBulkBar();
+}
 
 let vpnSelectedKey = null;
 let vpnConnecting = false;
+let vpnBulkMode = false;
+let vpnBulkKeys = Object.create(null);
+let vpnBulkConnecting = false;
+
+function getVpnBulkVisibleKeys(){
+  return vpnFiltered.slice(0, Math.min(vpnFiltered.length, window.__fluxLite ? 80 : 200));
+}
+function getVpnBulkSelected(){
+  var visible = getVpnBulkVisibleKeys();
+  return visible.filter(function(k){ return k && vpnBulkKeys[k.raw]; });
+}
+function setVpnBulkMode(on){
+  vpnBulkMode = !!on;
+  var btn = $('vpn-bulk-toggle');
+  if(btn){
+    btn.classList.toggle('active', vpnBulkMode);
+    btn.innerHTML = vpnBulkMode ? '✓ <span>Готово</span>' : '☑ <span>Выбрать ключи</span>';
+  }
+  var list = $('vpn-key-list');
+  if(list) list.classList.toggle('bulk-mode', vpnBulkMode);
+  renderHomeServers();
+  renderVpnBulkBar();
+}
+function toggleVpnBulkKey(k){
+  if(!k || !k.raw || vpnBulkConnecting) return;
+  if(vpnBulkKeys[k.raw]) delete vpnBulkKeys[k.raw];
+  else vpnBulkKeys[k.raw] = true;
+  vibrate('tap'); playSound('tap');
+  renderHomeServers();
+  renderVpnBulkBar();
+}
+function toggleVpnBulkAll(){
+  var visible = getVpnBulkVisibleKeys();
+  if(!visible.length){ toast('Нет ключей для выбора'); return; }
+  var allSelected = visible.every(function(k){ return vpnBulkKeys[k.raw]; });
+  visible.forEach(function(k){
+    if(allSelected) delete vpnBulkKeys[k.raw];
+    else vpnBulkKeys[k.raw] = true;
+  });
+  renderHomeServers();
+  renderVpnBulkBar();
+}
+function clearVpnBulkSelection(){
+  vpnBulkKeys = Object.create(null);
+  renderHomeServers();
+  renderVpnBulkBar();
+}
+function renderVpnBulkBar(){
+  var tools = $('vpn-bulk-tools');
+  if(!tools) return;
+  var selected = getVpnBulkSelected();
+  var all = getVpnBulkVisibleKeys();
+  var allSelected = all.length > 0 && all.every(function(k){ return vpnBulkKeys[k.raw]; });
+  tools.innerHTML =
+    '<button class="vpn-bulk-select'+(vpnBulkMode?' active':'')+'" id="vpn-bulk-toggle" type="button">'+
+      (vpnBulkMode ? '✓ <span>Готово</span>' : '☑ <span>Выбрать ключи</span>')+
+    '</button>'+
+    (vpnBulkMode ? '<button class="vpn-bulk-select" id="vpn-bulk-all" type="button">'+
+      (allSelected ? '☐ <span>Снять все</span>' : '☑ <span>Выбрать все</span>')+
+    '</button>' : '');
+  var toggle = $('vpn-bulk-toggle');
+  if(toggle) toggle.onclick = function(){ setVpnBulkMode(!vpnBulkMode); };
+  var allBtn = $('vpn-bulk-all');
+  if(allBtn) allBtn.onclick = function(){ toggleVpnBulkAll(); };
+
+  var oldBar = $('vpn-bulk-bar');
+  if(oldBar) oldBar.remove();
+  if(!vpnBulkMode) return;
+
+  var bar = document.createElement('div');
+  bar.id = 'vpn-bulk-bar';
+  bar.className = 'vpn-bulk-bar'+(selected.length ? ' show' : '');
+  bar.innerHTML =
+    '<div class="vpn-bulk-count">'+
+      selected.length+' выбрано'+
+      '<small>Можно передать все выбранные ключи в Happ</small>'+
+    '</div>'+
+    '<button class="vpn-bulk-action" id="vpn-bulk-connect" type="button" '+(selected.length?'':'disabled')+'>Подключить выбранные</button>';
+  tools.parentNode.insertBefore(bar, tools.nextSibling);
+  var connect = $('vpn-bulk-connect');
+  if(connect) connect.onclick = connectSelectedVpnKeysToHapp;
+}
+async function connectSelectedVpnKeysToHapp(){
+  if(vpnBulkConnecting) return;
+  var selected = getVpnBulkSelected().slice();
+  if(!selected.length){ toast('Сначала выберите ключи'); return; }
+
+  vpnBulkConnecting = true;
+  var btn = $('vpn-bulk-connect');
+  if(btn){ btn.disabled = true; btn.textContent = 'Передаём…'; }
+
+  var status = $('vpn-status');
+  if(status){ status.textContent = 'Подготавливаем '+selected.length+' ключей для Happ…'; status.className='vpn-status opening'; }
+
+  var success = 0;
+  for(var i=0;i<selected.length;i++){
+    if(status) status.textContent = 'Передаём в Happ: '+(i+1)+' из '+selected.length;
+    try{
+      var happKey = await buildHappSelectedKey(selected[i]);
+      if(happKey && openInHapp(happKey)){
+        success++;
+      }
+    }catch(e){ console.warn('Bulk Happ import failed',e); }
+    // Give Android/iOS time to process each happ:// intent.
+    if(i < selected.length-1) await new Promise(function(resolve){ setTimeout(resolve, 850); });
+  }
+
+  vpnBulkConnecting = false;
+  if(btn){ btn.disabled = false; btn.textContent = 'Подключить выбранные'; }
+
+  if(success === selected.length){
+    if(status){ status.textContent = 'Все '+success+' ключей переданы в Happ'; status.className='vpn-status connected'; }
+    playSound('success'); showSuccessOverlay(); vibrate('success');
+    toast('Готово: '+success+' ключей передано в Happ');
+  }else if(success > 0){
+    if(status){ status.textContent = 'Передано '+success+' из '+selected.length+' ключей'; status.className='vpn-status opening'; }
+    toast('Передано '+success+' из '+selected.length+' ключей');
+  }else{
+    if(status){ status.textContent = 'Не удалось открыть Happ'; status.className='vpn-status opening'; }
+    toast('Happ не открылся');
+  }
+}
+
 try{var savedRaw = localStorage.getItem('flux_selected_vpn_key');if(savedRaw) vpnSelectedKey = {raw:savedRaw, proto:(savedRaw.split('://')[0]||'').toLowerCase()};}catch(e){}
 
 function isFluxGithubHost(host){return /(?:^|\.)raw\.githubusercontent\.com$/i.test(String(host||''));}
@@ -2358,6 +2502,7 @@ function renderHomeServers(){
     var k = vpnFiltered[i];
     var isFav = !!vpnFavorites[k.raw];
     var isSel = vpnSelectedKey && vpnSelectedKey.raw === k.raw;
+    var isBulkSel = !!vpnBulkKeys[k.raw];
     var counts = getReactionCounts(k.raw);
     var mine = getMyReaction(k.raw);
     var meta = {name:'', flag:''};try{ meta = extractVpnMeta(k.raw); }catch(e){}
@@ -2373,7 +2518,8 @@ function renderHomeServers(){
       }
     }
     if(!title) title = host || k.proto.toUpperCase()+' сервер';
-    html += '<div class="vpn-key-item'+(isSel?' selected':'')+'" data-idx="'+i+'">'
+    html += '<div class="vpn-key-item'+(isSel?' selected':'')+(vpnBulkMode?' bulk-mode':'')+(isBulkSel?' bulk-selected':'')+'" data-idx="'+i+'">'
+      + '<div class="vpn-key-bulk-check">'+(isBulkSel?'✓':'')+'</div>'
       + '<div class="vpn-key-info">'
       +   '<div class="vpn-key-header"><span class="vpn-key-flag">'+flagHtml+'</span><span class="vpn-key-title">'+esc(truncate(title,42))+'</span></div>'
       +   '<div class="vpn-key-proto">'+esc(k.proto)+'</div>'
@@ -2391,8 +2537,16 @@ function renderHomeServers(){
       + '</div>';
   }
   list.innerHTML = html;
-  list.querySelectorAll('.vpn-key-item').forEach(function(el){el.onclick = function(){ selectServer(vpnFiltered[+el.dataset.idx]); };});
+  list.querySelectorAll('.vpn-key-item').forEach(function(el){
+    el.onclick = function(event){
+      var idx = +el.dataset.idx;
+      var key = vpnFiltered[idx];
+      if(vpnBulkMode){ toggleVpnBulkKey(key); }
+      else { selectServer(key); }
+    };
+  });
   bindVpnActions(list);
+  renderVpnBulkBar();
   updateConnectUI();
 }
 function selectServer(k){
@@ -2670,6 +2824,9 @@ async function vpnCheckForUpdates(){
     if(same) return;
 
     vpnKeys = newKeys;
+    var currentBulk = Object.create(null);
+    vpnKeys.forEach(function(k){ if(vpnBulkKeys[k.raw]) currentBulk[k.raw]=true; });
+    vpnBulkKeys = currentBulk;
     vpnFiltered = vpnProtoFilter==='all' ? vpnKeys.slice() : vpnKeys.filter(function(k){return k.proto===vpnProtoFilter;});
     try{ renderVpnFilters(); }catch(e){}
     renderVpnKeys();
@@ -2682,6 +2839,7 @@ async function vpnCheckForUpdates(){
 
 $('vpn-load-btn').onclick=function(){ loadVpnKeys(false, true); };
 $('vpn-refresh-btn').onclick=function(){ loadVpnKeys(false, true); };
+renderVpnBulkBar();
 var _refreshIcon = $('vpn-home-refresh');
 if(_refreshIcon) _refreshIcon.onclick = function(){ loadVpnKeys(false, true); };
 
