@@ -2320,11 +2320,12 @@ let vpnBulkKeys = Object.create(null);
 let vpnBulkConnecting = false;
 
 function getVpnBulkVisibleKeys(){
-  return vpnFiltered.slice(0, Math.min(vpnFiltered.length, window.__fluxLite ? 80 : 200));
+  // Selection applies to ALL currently filtered keys, not only the first rendered page.
+  return vpnFiltered.slice();
 }
 function getVpnBulkSelected(){
-  var visible = getVpnBulkVisibleKeys();
-  return visible.filter(function(k){ return k && vpnBulkKeys[k.raw]; });
+  var all = getVpnBulkVisibleKeys();
+  return all.filter(function(k){ return k && vpnBulkKeys[k.raw]; });
 }
 function setVpnBulkMode(on){
   vpnBulkMode = !!on;
@@ -2342,9 +2343,11 @@ function toggleVpnBulkKey(k){
   if(!k || !k.raw || vpnBulkConnecting) return;
   if(vpnBulkKeys[k.raw]) delete vpnBulkKeys[k.raw];
   else vpnBulkKeys[k.raw] = true;
+  clearVpnConnected();
   vibrate('tap'); playSound('tap');
   renderHomeServers();
   renderVpnBulkBar();
+  updateConnectUI();
 }
 function toggleVpnBulkAll(){
   var visible = getVpnBulkVisibleKeys();
@@ -2354,13 +2357,16 @@ function toggleVpnBulkAll(){
     if(allSelected) delete vpnBulkKeys[k.raw];
     else vpnBulkKeys[k.raw] = true;
   });
+  clearVpnConnected();
   renderHomeServers();
   renderVpnBulkBar();
+  updateConnectUI();
 }
 function clearVpnBulkSelection(){
   vpnBulkKeys = Object.create(null);
   renderHomeServers();
   renderVpnBulkBar();
+  updateConnectUI();
 }
 function renderVpnBulkBar(){
   var tools = $('vpn-bulk-tools');
@@ -2390,9 +2396,9 @@ function renderVpnBulkBar(){
   bar.innerHTML =
     '<div class="vpn-bulk-count">'+
       selected.length+' выбрано'+
-      '<small>Можно передать все выбранные ключи в Happ</small>'+
+      '<small>Выбранные ключи будут добавлены в Happ</small>'+
     '</div>'+
-    '<button class="vpn-bulk-action" id="vpn-bulk-connect" type="button" '+(selected.length?'':'disabled')+'>Подключить выбранные</button>';
+    '<button class="vpn-bulk-action" id="vpn-bulk-connect" type="button" '+(selected.length?'':'disabled')+'>Добавить выбранные в Happ</button>';
   tools.parentNode.insertBefore(bar, tools.nextSibling);
   var connect = $('vpn-bulk-connect');
   if(connect) connect.onclick = connectSelectedVpnKeysToHapp;
@@ -2404,37 +2410,91 @@ async function connectSelectedVpnKeysToHapp(){
 
   vpnBulkConnecting = true;
   var btn = $('vpn-bulk-connect');
-  if(btn){ btn.disabled = true; btn.textContent = 'Передаём…'; }
+  if(btn){ btn.disabled = true; btn.textContent = 'Добавление…'; }
 
+  // Do not claim that all servers are connected. Happ can import many profiles,
+  // but only one VPN tunnel can normally be active at a time.
+  clearVpnConnected();
   var status = $('vpn-status');
-  if(status){ status.textContent = 'Подготавливаем '+selected.length+' ключей для Happ…'; status.className='vpn-status opening'; }
+  var selEl = $('vpn-selected');
+  var dashState = document.querySelector('.vpn-dashboard-state');
+  if(status){
+    status.textContent = 'Добавляем '+selected.length+' ключей в Happ…';
+    status.className = 'vpn-status opening';
+  }
+  if(selEl){
+    selEl.className = 'vpn-selected';
+    selEl.innerHTML = '<b>Выбрано:</b> '+selected.length+' ключей для Happ';
+  }
+  if(dashState){
+    dashState.classList.remove('connected');
+    dashState.innerHTML = '<span class="vpn-dashboard-state-dot"></span>Выбрано '+selected.length;
+  }
+  var mainBtn=$('vpn-connect-btn');
+  var mainLbl=$('vpn-connect-label');
+  if(mainBtn) mainBtn.classList.remove('connected');
+  if(mainLbl) mainLbl.textContent='Подключиться';
 
   var success = 0;
+  var failed = 0;
+
   for(var i=0;i<selected.length;i++){
-    if(status) status.textContent = 'Передаём в Happ: '+(i+1)+' из '+selected.length;
+    if(status) status.textContent = 'Добавляем в Happ: '+(i+1)+' из '+selected.length;
     try{
       var happKey = await buildHappSelectedKey(selected[i]);
       if(happKey && openInHapp(happKey)){
         success++;
+      }else{
+        failed++;
       }
-    }catch(e){ console.warn('Bulk Happ import failed',e); }
-    // Give Android/iOS time to process each happ:// intent.
-    if(i < selected.length-1) await new Promise(function(resolve){ setTimeout(resolve, 850); });
+    }catch(e){
+      failed++;
+      console.warn('Bulk Happ import failed',e);
+    }
+    // Let Android process the intent before the next one.
+    if(i < selected.length-1){
+      await new Promise(function(resolve){ setTimeout(resolve, 1100); });
+    }
   }
 
   vpnBulkConnecting = false;
-  if(btn){ btn.disabled = false; btn.textContent = 'Подключить выбранные'; }
+  if(btn){ btn.disabled = false; btn.textContent = 'Добавить выбранные в Happ'; }
 
   if(success === selected.length){
-    if(status){ status.textContent = 'Все '+success+' ключей переданы в Happ'; status.className='vpn-status connected'; }
-    playSound('success'); showSuccessOverlay(); vibrate('success');
-    toast('Готово: '+success+' ключей передано в Happ');
+    if(status){
+      status.textContent = 'Все '+success+' ключей добавлены в Happ';
+      status.className = 'vpn-status connected';
+    }
+    if(selEl){
+      selEl.className='vpn-selected';
+      selEl.innerHTML='<b>Добавлено в Happ:</b> '+success+' ключей';
+    }
+    if(dashState){
+      dashState.classList.remove('connected');
+      dashState.innerHTML='<span class="vpn-dashboard-state-dot"></span>'+success+' ключей';
+    }
+    playSound('success'); vibrate('success');
+    toast('Готово: '+success+' ключей добавлено в Happ');
   }else if(success > 0){
-    if(status){ status.textContent = 'Передано '+success+' из '+selected.length+' ключей'; status.className='vpn-status opening'; }
-    toast('Передано '+success+' из '+selected.length+' ключей');
+    if(status){
+      status.textContent = 'Добавлено '+success+' из '+selected.length+' ключей';
+      status.className = 'vpn-status opening';
+    }
+    if(selEl){
+      selEl.className='vpn-selected';
+      selEl.innerHTML='<b>Добавлено в Happ:</b> '+success+' из '+selected.length;
+    }
+    if(dashState){
+      dashState.classList.remove('connected');
+      dashState.innerHTML='<span class="vpn-dashboard-state-dot"></span>'+success+' из '+selected.length;
+    }
+    toast('Добавлено '+success+' из '+selected.length+' ключей');
   }else{
-    if(status){ status.textContent = 'Не удалось открыть Happ'; status.className='vpn-status opening'; }
-    toast('Happ не открылся');
+    if(status){
+      status.textContent = 'Не удалось добавить ключи в Happ';
+      status.className = 'vpn-status opening';
+    }
+    toast('Happ не принял ключи');
   }
 }
 
@@ -2591,6 +2651,29 @@ function updateConnectUI(){
   var selEl = $('vpn-selected');
   var dashState = document.querySelector('.vpn-dashboard-state');
   if(!btn || !status) return;
+
+  // Bulk mode is a selection/import workflow, not a single-server connection.
+  // Prevent a previously connected server from making the whole bulk selection
+  // look like it is connected.
+  if(vpnBulkMode && !vpnBulkConnecting){
+    var bulkCount = getVpnBulkSelected().length;
+    if(bulkCount > 0){
+      btn.classList.remove('connected','connecting');
+      if(lbl) lbl.textContent = 'Подключить';
+      status.textContent = bulkCount+' ключей выбрано';
+      status.className = 'vpn-status';
+      if(selEl){
+        selEl.className='vpn-selected';
+        selEl.innerHTML='<b>Выбрано:</b> '+bulkCount+' ключей';
+      }
+      if(dashState){
+        dashState.classList.remove('connected');
+        dashState.innerHTML='<span class="vpn-dashboard-state-dot"></span>Выбрано '+bulkCount;
+      }
+      return;
+    }
+  }
+
   var connected = isVpnMarkedConnected();
   if(vpnConnecting){
     btn.classList.add('connecting');btn.classList.remove('connected');
