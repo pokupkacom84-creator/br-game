@@ -747,16 +747,52 @@ body.dark .modal{background:rgba(24,31,43,.76)!important;border-color:rgba(255,2
 .toast{background:rgba(255,255,255,.62)!important;-webkit-backdrop-filter:blur(28px) saturate(155%);backdrop-filter:blur(28px) saturate(155%);border-color:rgba(255,255,255,.55)!important;box-shadow:0 12px 32px rgba(20,30,55,.16),inset 0 1px 0 rgba(255,255,255,.62)!important}
 body.dark .toast{background:rgba(24,31,43,.72)!important;border-color:rgba(255,255,255,.10)!important;box-shadow:0 14px 36px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.06)!important}
 
-/* Keep glass visible even in lightweight mode */
-body.lite .vpn-key-item,body.perf-lite .vpn-key-item,
-body.lite .profile-info-card,body.perf-lite .profile-info-card,
-body.lite .premium-benefit,body.perf-lite .premium-benefit,
-body.lite .premium-plan,body.perf-lite .premium-plan,
-body.lite .profile-sheet-body,body.perf-lite .profile-sheet-body,
-body.lite .modal,body.perf-lite .modal,
-body.lite .toast,body.perf-lite .toast{
-  -webkit-backdrop-filter:blur(24px) saturate(145%)!important;
-  backdrop-filter:blur(24px) saturate(145%)!important;
+/* Performance-safe glass */
+html,body,#main-screen,.main-body,.tab-content,.vpn-home{
+  width:100%;max-width:100vw;min-width:0;overflow-x:hidden;
+}
+.tab-content.active{animation:fluxTabFade .22s ease-out}
+@keyframes fluxTabFade{from{opacity:.72}to{opacity:1}}
+.vpn-home{contain:layout paint;isolation:isolate}
+.vpn-dashboard-card{width:auto;max-width:calc(100% - 36px)}
+.vpn-connect-wrap,.vpn-cat-tabs,.vpn-servers-header,.vpn-key-list{width:100%;max-width:100%;min-width:0}
+.vpn-key-list{contain:layout paint}
+
+/* Only the navigation keeps strong backdrop blur; content uses cheap translucent surfaces. */
+.bottom-nav{
+  backdrop-filter:blur(24px) saturate(150%) !important;
+  -webkit-backdrop-filter:blur(24px) saturate(150%) !important;
+  contain:paint;
+}
+.vpn-key-item,.glass-surface,.vpn-home-refresh,.premium-benefit,.premium-plan,.profile-info-card,.profile-action,.session-item,.pin-key{
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+}
+.glass-surface{background:rgba(255,255,255,.64)!important}
+body.dark .glass-surface{background:rgba(24,31,43,.72)!important}
+.vpn-key-item{background:rgba(255,255,255,.72)!important}
+body.dark .vpn-key-item{background:rgba(25,33,45,.76)!important}
+.vpn-key-item.selected{background:linear-gradient(135deg,var(--accent-soft),rgba(255,255,255,.48))!important}
+body.dark .vpn-key-item.selected{background:linear-gradient(135deg,var(--accent-soft),rgba(25,33,45,.66))!important}
+.vpn-home-refresh{background:rgba(255,255,255,.68)!important}
+body.dark .vpn-home-refresh{background:rgba(24,31,43,.72)!important}
+
+/* Ambient light without expensive large blur filters. */
+.vpn-home::before,.vpn-home::after{filter:none;opacity:.22;mix-blend-mode:normal}
+.vpn-ambient span{filter:none !important;opacity:.12;will-change:transform}
+.vpn-ambient .a1{background:radial-gradient(circle,var(--accent-glow),transparent 68%)}
+.vpn-ambient .a2{background:radial-gradient(circle,var(--accent-soft),transparent 70%)}
+.vpn-ambient .a3{background:radial-gradient(circle,var(--accent-soft),transparent 70%)}
+
+/* Lightweight mode disables all expensive backdrop filters instead of re-enabling them. */
+body.lite *,body.perf-lite *{
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+body.lite .bottom-nav,body.perf-lite .bottom-nav{
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  background:var(--surface) !important;
 }
 
 </style>
