@@ -364,19 +364,26 @@ body.flux-premium .profile-premium-crown{opacity:1;transform:scale(1) rotate(-15
 .vpn-servers-header{display:flex;justify-content:space-between;align-items:center;padding:22px 20px 10px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;color:var(--text-2);}
 .vpn-servers-count{background:var(--accent-soft);color:var(--accent);padding:3px 10px;border-radius:99px;font-size:11px;font-weight:800;letter-spacing:.3px;}
 
-.vpn-state-art{display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:10px 22px 2px;position:relative;z-index:2;animation:vpnStateArtIn .42s cubic-bezier(.2,.8,.2,1)}
+.vpn-state-art{display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:214px;padding:16px 22px 22px;position:relative;z-index:2;overflow:hidden;animation:vpnStateArtIn .42s cubic-bezier(.2,.8,.2,1)}
 .vpn-state-art.show{display:flex}
-.vpn-state-art-player{width:138px;height:138px;margin:-4px auto -2px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 10px 22px rgba(124,58,237,.12))}
+.vpn-state-art::before{content:"";position:absolute;width:170px;height:170px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,.13),rgba(59,130,246,0) 68%);top:24px;left:50%;transform:translateX(-50%);pointer-events:none}
+.vpn-state-art-player{width:112px;height:112px;margin:0 auto;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;filter:drop-shadow(0 12px 24px rgba(59,130,246,.12))}
 .vpn-state-art-player svg{width:100%;height:100%;overflow:visible}
-.vpn-state-art-title{font-size:14px;font-weight:850;letter-spacing:-.02em;color:var(--text);margin-top:2px;line-height:1.25}
-.vpn-state-art-text{font-size:12px;line-height:1.45;color:var(--text-2);max-width:300px;margin-top:5px;font-weight:600}
-.vpn-state-art-action{margin-top:10px;display:none;min-height:38px;padding:0 16px;border-radius:12px;background:var(--accent-grad);color:#fff;font-size:12px;font-weight:800;box-shadow:0 7px 18px var(--accent-glow)}
+.vpn-state-art-title{font-size:15px;font-weight:850;letter-spacing:-.025em;color:var(--text);margin-top:3px;line-height:1.25;position:relative;z-index:1}
+.vpn-state-art-text{font-size:12.5px;line-height:1.48;color:var(--text-2);max-width:310px;margin-top:6px;font-weight:600;position:relative;z-index:1}
+.vpn-state-art-action{margin-top:11px;display:none;min-height:40px;padding:0 18px;border-radius:13px;background:var(--accent-grad);color:#fff;font-size:12.5px;font-weight:800;box-shadow:0 7px 18px var(--accent-glow);position:relative;z-index:1}
 .vpn-state-art-action.show{display:inline-flex;align-items:center;justify-content:center}
-.vpn-state-art.error .vpn-state-art-title{color:#ef4444}
-.vpn-state-art.connected .vpn-state-art-title{color:var(--success)}
+.vpn-state-art.error .vpn-state-art-title{color:#ef5350}
+.vpn-state-art.offline .vpn-state-art-title{color:#f59e0b}
 .vpn-state-art.premium .vpn-state-art-title{color:#a855f7}
-@keyframes vpnStateArtIn{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.vpn-state-art{animation:none}}
+.vpn-state-art.filtered .vpn-state-art-title{color:var(--accent)}
+.vpn-state-art.loading{min-height:178px}
+.vpn-state-art.loading .vpn-state-art-player{width:92px;height:92px}
+.vpn-state-art.loading .vpn-state-art-text{max-width:285px}
+.vpn-state-art.idle{min-height:198px}
+.vpn-state-art.idle .vpn-state-art-player{width:100px;height:100px}
+@keyframes vpnStateArtIn{from{opacity:0;transform:translateY(8px) scale(.975)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.vpn-state-art{animation:none}.vpn-state-art-player *{animation:none!important}}
 .vpn-key-list{display:flex;flex-direction:column;gap:8px;padding:0 16px;}
 .vpn-key-item{position:relative;overflow:hidden;background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:13px 14px;display:flex;align-items:flex-start;gap:12px;min-height:76px;box-shadow:var(--shadow-1);transition:transform .18s var(--ease-out), border-color .2s, background .2s;cursor:pointer;}
 .vpn-key-item:active{transform:scale(.985)}
@@ -748,12 +755,6 @@ body.flux-premium .profile-avatar-big{box-shadow:0 0 0 3px rgba(168,85,247,.22),
       </button>
       <div class="vpn-connect-rings"><div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div></div>
       <div class="vpn-status" id="vpn-status">Выберите сервер ниже</div>
-      <div class="vpn-state-art" id="vpn-state-art" aria-live="polite">
-        <div class="vpn-state-art-player" id="vpn-state-art-player"></div>
-        <div class="vpn-state-art-title" id="vpn-state-art-title"></div>
-        <div class="vpn-state-art-text" id="vpn-state-art-text"></div>
-        <button class="vpn-state-art-action ripple" id="vpn-state-art-action" type="button"></button>
-      </div>
       <div class="vpn-selected" id="vpn-selected"></div>
     </div>
     <div class="vpn-cat-tabs" id="vpn-category-tabs"></div>
@@ -2368,9 +2369,12 @@ function renderHomeServers(){
   var list = $('vpn-key-list'); if(!list) return;
   var countEl = $('vpn-servers-count');
   if(!vpnFiltered.length){
-    list.innerHTML = '<div class="vpn-empty">Нажмите <b>«Обновить»</b> вверху, чтобы загрузить серверы</div>';
-    if(countEl) countEl.textContent = '0';return;
+    list.innerHTML = '';
+    if(countEl) countEl.textContent = '0';
+    if(vpnLottie) vpnLottie.show(vpnKeys.length ? 'filtered' : 'idle');
+    return;
   }
+  if(vpnLottie) vpnLottie.hide();
   if(countEl) countEl.textContent = String(vpnFiltered.length);
   var limit = Math.min(vpnFiltered.length, window.__fluxLite ? 80 : 200);
   var html = '';
@@ -2452,73 +2456,136 @@ function restoreVpnConnectionUI(){
 }
 var vpnLottie = (function(){
   var current=null;
-  var loaded=false;
   var libraryPromise=null;
+  var activeType='';
+  var stateSeq=0;
   var states={
-    loading:{path:'https://assets2.lottiefiles.com/packages/lf20_szlepvdh.json',loop:true,title:'Сервера просыпаются…',text:'Собираем свежие VPN-ключи. Ещё секундочку.'},
-    error:{path:'https://assets2.lottiefiles.com/packages/lf20_zyu0ctqb.json',loop:true,title:'Ой… серверы куда-то убежали',text:'Мы их уже ищем. Попробуй обновить список — иногда серверы любят прятаться.',action:'Попробовать снова'},
-    empty:{path:'https://assets2.lottiefiles.com/packages/lf20_V2yuoK.json',loop:true,title:'Тут пока пусто',text:'Ни одного подходящего ключа. Похоже, VPN-серверы сегодня взяли выходной.',action:'Обновить'},
-    offline:{path:'https://assets2.lottiefiles.com/packages/lf20_zyu0ctqb.json',loop:true,title:'Интернет решил отдохнуть',text:'Не получается достучаться до списка серверов. Проверь соединение и попробуй ещё раз.',action:'Повторить'},
-    connected:{path:'https://assets2.lottiefiles.com/packages/lf20_jbrw3hcz.json',loop:false,title:'Защита включена',text:'Сервер передан в Happ. Flux держит соединение под контролем.'},
-    premium:{path:'https://assets2.lottiefiles.com/packages/lf20_0yfsb3a1.json',loop:true,title:'Эта полка только для Premium',text:'Здесь лежат быстрые и редкие серверы. Открой Premium, чтобы забрать доступ.',action:'Открыть Premium'}
+    idle:{loop:true,title:'Серверы ждут сигнала',text:'Нажми «Загрузить серверы» — и найдём для тебя рабочие варианты.',action:'Загрузить серверы'},
+    loading:{loop:true,title:'Сервера просыпаются…',text:'Проверяем источники и собираем свежий список. Ещё немного.',action:''},
+    error:{loop:true,title:'Ой… серверы куда-то убежали',text:'Мы уже их ищем. Попробуй обновить список — иногда серверы любят прятаться.',action:'Поймать серверы'},
+    empty:{loop:true,title:'Здесь подозрительно тихо',text:'Подходящих ключей не нашлось. Похоже, серверы ушли на перекур.',action:'Проверить ещё раз'},
+    filtered:{loop:true,title:'Фильтр съел все серверы',text:'По этому протоколу ничего не нашлось. Вернём все серверы обратно?',action:'Показать все'},
+    offline:{loop:true,title:'Интернет вышел из чата',text:'Мы не можем достучаться до источника ключей. Проверь соединение и попробуй снова.',action:'Повторить'},
+    premium:{loop:true,title:'Охраняем VIP-серверы',text:'Быстрые и редкие серверы спрятаны за Premium. Там их много.',action:'Открыть Premium'},
+    connected:{loop:false,title:'Защита включена',text:'Выбранный сервер передан в Happ.',action:''}
   };
+  var palettes={
+    idle:{main:[0.29,0.59,0.98,1],dark:[0.22,0.35,0.58,1],soft:[0.5,0.72,1,1],accent:[0.48,0.34,0.95,1]},
+    loading:{main:[0.27,0.58,0.96,1],dark:[0.20,0.34,0.58,1],soft:[0.52,0.74,1,1],accent:[0.53,0.34,0.96,1]},
+    error:{main:[0.94,0.32,0.31,1],dark:[0.54,0.18,0.18,1],soft:[1,0.61,0.58,1],accent:[0.98,0.45,0.18,1]},
+    empty:{main:[0.60,0.43,0.98,1],dark:[0.33,0.24,0.58,1],soft:[0.76,0.68,1,1],accent:[0.32,0.68,0.96,1]},
+    filtered:{main:[0.35,0.58,0.98,1],dark:[0.22,0.35,0.58,1],soft:[0.60,0.76,1,1],accent:[0.56,0.35,0.96,1]},
+    offline:{main:[0.96,0.58,0.20,1],dark:[0.58,0.33,0.12,1],soft:[1,0.78,0.45,1],accent:[0.96,0.35,0.28,1]},
+    premium:{main:[0.67,0.34,0.96,1],dark:[0.40,0.19,0.58,1],soft:[0.84,0.67,1,1],accent:[1,0.72,0.22,1]},
+    connected:{main:[0.20,0.78,0.43,1],dark:[0.11,0.46,0.27,1],soft:[0.52,0.95,0.68,1],accent:[0.16,0.75,0.71,1]}
+  };
+  function col(a){return a.slice();}
+  function staticEllipse(x,y,w,h,c){return {ty:'el',p:{a:0,k:[x,y]},s:{a:0,k:[w,h]}};
+  }
+  function staticRect(x,y,w,h,r){return {ty:'rc',p:{a:0,k:[x,y]},s:{a:0,k:[w,h]},r:{a:0,k:r}};
+  }
+  function fill(c,opacity){return {ty:'fl',c:{a:0,k:col(c)},o:{a:0,k:opacity==null?100:opacity},r:1};}
+  function stroke(c,w,opacity){return {ty:'st',c:{a:0,k:col(c)},o:{a:0,k:opacity==null?100:opacity},w:{a:0,k:w},lc:2,lj:2};}
+  function tr(p,r,s,anchor){return {ty:'tr',p:p,a:{a:0,k:anchor||[0,0]},s:s||{a:0,k:[100,100,100]},r:r||{a:0,k:0},o:{a:0,k:100},sk:{a:0,k:0},sa:{a:0,k:0}};}
+  function linear(a,b){return {a:1,k:[{t:0,s:a,e:b,i:{x:[0.35],y:[0.35]},o:{x:[0.65],y:[0.65]}},{t:18,s:b,e:a,i:{x:[0.35],y:[0.35]},o:{x:[0.65],y:[0.65]}},{t:36,s:a,e:b,i:{x:[0.35],y:[0.35]},o:{x:[0.65],y:[0.65]}},{t:54,s:b,e:a,i:{x:[0.35],y:[0.35]},o:{x:[0.65],y:[0.65]}}]};}
+  function bounceY(base,amt){return {a:1,k:[{t:0,s:[200,base,0],e:[200,base-amt,0],i:{x:[0.35],y:[0.35]},o:{x:[0.65],y:[0.65]}},{t:15,s:[200,base-amt,0],e:[200,base,0],i:{x:[0.35],y:[0.35]},o:{x:[0.65],y:[0.65]}},{t:30,s:[200,base,0],e:[200,base-amt+4,0],i:{x:[0.35],y:[0.35]},o:{x:[0.65],y:[0.65]}},{t:45,s:[200,base-amt+4,0],e:[200,base,0],i:{x:[0.35],y:[0.35]},o:{x:[0.65],y:[0.65]}}]};}
+  function makeAnimation(type){
+    var pal=palettes[type]||palettes.idle;
+    var move={a:0,k:[200,205,0]};
+    var rot={a:0,k:0};
+    var scale={a:0,k:[100,100,100]};
+    if(type==='loading') move={a:1,k:[{t:0,s:[200,205,0],e:[200,194,0]},{t:14,s:[200,194,0],e:[200,205,0]},{t:28,s:[200,205,0],e:[200,198,0]},{t:42,s:[200,198,0],e:[200,205,0]}]};
+    if(type==='error'){rot={a:1,k:[{t:0,s:0,e:-7},{t:14,s:-7,e:5},{t:28,s:5,e:-2},{t:42,s:-2,e:0}]};move={a:1,k:[{t:0,s:[200,207,0],e:[195,205,0]},{t:12,s:[195,205,0],e:[204,207,0]},{t:24,s:[204,207,0],e:[200,205,0]}]};}
+    if(type==='empty') scale=linear([100,100,100],[103,103,100]);
+    if(type==='filtered') move=bounceY(205,5);
+    if(type==='offline'){rot={a:1,k:[{t:0,s:0,e:-3},{t:18,s:-3,e:3},{t:36,s:3,e:0}]};}
+    if(type==='premium'){move=bounceY(204,5);scale=linear([100,100,100],[104,104,100]);}
+    if(type==='connected'){move={a:1,k:[{t:0,s:[200,218,0],e:[200,200,0]},{t:18,s:[200,200,0],e:[200,205,0]},{t:32,s:[200,205,0],e:[200,203,0]}]};scale={a:1,k:[{t:0,s:[78,78,100],e:[112,112,100]},{t:18,s:[112,112,100],e:[100,100,100]}]};}
+    var mainGroup=[
+      staticEllipse(0,4,150,112,[0.10,0.13,0.19,0.16]),fill([0.10,0.13,0.19,0.16],100),
+      staticRect(0,8,126,88,27),fill(pal.main,100),
+      staticEllipse(-24,-12,16,18,[1,1,1,1]),fill([1,1,1,1],100),
+      staticEllipse(24,-12,16,18,[1,1,1,1]),fill([1,1,1,1],100),
+      staticEllipse(-24,-11,7,10,[0.08,0.10,0.16,1]),fill([0.08,0.10,0.16,1],100),
+      staticEllipse(24,-11,7,10,[0.08,0.10,0.16,1]),fill([0.08,0.10,0.16,1],100),
+      staticRect(0,15,28,7,3),fill([1,1,1,0.8],80),
+      tr(move,rot,scale,[0,0])
+    ];
+    var layers=[
+      {ddd:0,ind:1,ty:4,nm:'Flux Buddy',sr:1,ks:{o:{a:0,k:100},r:{a:0,k:0},p:{a:0,k:[200,200,0]},a:{a:0,k:[0,0,0]},s:{a:0,k:[100,100,100]},sk:{a:0,k:0},sa:{a:0,k:0}},ao:0,shapes:[{ty:'gr',it:mainGroup}],ip:0,op:90,st:0,bm:0}
+    ];
+    var haloSize=type==='loading'?190:175;
+    layers.unshift({ddd:0,ind:0,ty:4,nm:'Halo',sr:1,ks:{o:{a:0,k:18},r:{a:0,k:0},p:{a:0,k:[200,200,0]},a:{a:0,k:[0,0,0]},s:linear([94,94,100],[108,108,100]),sk:{a:0,k:0},sa:{a:0,k:0}},ao:0,shapes:[{ty:'gr',it:[staticEllipse(0,0,haloSize,haloSize,[pal.main[0],pal.main[1],pal.main[2],0.18]),fill([pal.main[0],pal.main[1],pal.main[2],0.18],18),tr({a:0,k:[0,0]},null,{a:0,k:[100,100,100]})]}],ip:0,op:90,st:0,bm:0});
+    if(type==='loading'){
+      layers.push({ddd:0,ind:3,ty:4,nm:'Loading dots',sr:1,ks:{o:{a:0,k:100},r:{a:0,k:0},p:{a:0,k:[0,0,0]},a:{a:0,k:[0,0,0]},s:{a:0,k:[100,100,100]},sk:{a:0,k:0},sa:{a:0,k:0}},ao:0,shapes:[{ty:'gr',it:[staticEllipse(130,118,16,16,pal.soft),fill(pal.soft,100),staticEllipse(170,106,16,16,pal.soft),fill(pal.soft,100),staticEllipse(210,118,16,16,pal.soft),fill(pal.soft,100),tr({a:0,k:[0,0]},null,{a:0,k:[100,100,100]})]}],ip:0,op:90,st:0,bm:0});
+    } else if(type==='error'){
+      layers.push({ddd:0,ind:3,ty:4,nm:'Error mark',sr:1,ks:{o:{a:0,k:100},r:{a:1,k:[{t:0,s:-8,e:8},{t:18,s:8,e:-8},{t:36,s:-8,e:8}]},p:{a:0,k:[280,142,0]},a:{a:0,k:[0,0,0]},s:{a:0,k:[100,100,100]},sk:{a:0,k:0},sa:{a:0,k:0}},ao:0,shapes:[{ty:'gr',it:[staticRect(0,-10,8,20,4),fill([1,1,1,1],100),staticRect(0,10,8,8,4),fill([1,1,1,1],100),tr({a:0,k:[0,0]},null,{a:0,k:[100,100,100]})]}],ip:0,op:90,st:0,bm:0});
+    } else if(type==='offline'){
+      layers.push({ddd:0,ind:3,ty:4,nm:'Offline mark',sr:1,ks:{o:{a:0,k:100},r:{a:0,k:0},p:{a:0,k:[282,145,0]},a:{a:0,k:[0,0,0]},s:{a:0,k:[100,100,100]},sk:{a:0,k:0},sa:{a:0,k:0}},ao:0,shapes:[{ty:'gr',it:[staticEllipse(0,0,16,16,pal.accent),fill(pal.accent,100),staticRect(0,0,5,22,3),fill([1,1,1,1],100),tr({a:0,k:[0,0]},null,{a:0,k:[100,100,100]})]}],ip:0,op:90,st:0,bm:0});
+    } else if(type==='premium'){
+      layers.push({ddd:0,ind:3,ty:4,nm:'Premium spark',sr:1,ks:{o:{a:0,k:100},r:linear(0,360),p:{a:0,k:[283,142,0]},a:{a:0,k:[0,0,0]},s:{a:0,k:[100,100,100]},sk:{a:0,k:0},sa:{a:0,k:0}},ao:0,shapes:[{ty:'gr',it:[staticRect(0,-9,8,18,3),fill(pal.accent,100),staticRect(0,8,8,8,3),fill(pal.soft,100),tr({a:0,k:[0,0]},null,{a:0,k:[100,100,100]})]}],ip:0,op:90,st:0,bm:0});
+    } else if(type==='connected'){
+      layers.push({ddd:0,ind:3,ty:4,nm:'Check',sr:1,ks:{o:{a:1,k:[{t:0,s:0,e:100},{t:10,s:100,e:100}]},r:{a:0,k:0},p:{a:0,k:[200,200,0]},a:{a:0,k:[0,0,0]},s:{a:1,k:[{t:0,s:[65,65,100],e:[100,100,100]},{t:18,s:[100,100,100],e:[96,96,100]}]},sk:{a:0,k:0},sa:{a:0,k:0}},ao:0,shapes:[{ty:'gr',it:[staticRect(-13,6,8,24,4),fill([1,1,1,1],100),staticRect(8,-4,8,38,4),fill([1,1,1,1],100),tr({a:0,k:[0,0]},null,{a:0,k:[100,100,100]})]}],ip:0,op:50,st:0,bm:0});
+    }
+    return {v:'5.7.15',fr:30,ip:0,op:type==='connected'?50:90,w:400,h:400,nm:'Flux '+type,ddd:0,assets:[],layers:layers};
+  }
+  var dataCache={};
+  function getData(type){if(!dataCache[type])dataCache[type]=makeAnimation(type);return dataCache[type];}
   function ensureLibrary(){
     if(window.lottie)return Promise.resolve(true);
     if(libraryPromise)return libraryPromise;
     libraryPromise=new Promise(function(resolve){
-      var tries=0;
-      var timer=setInterval(function(){
-        tries++;
-        if(window.lottie){clearInterval(timer);loaded=true;resolve(true);return;}
-        if(tries>30){clearInterval(timer);resolve(false);}
-      },100);
+      var tries=0;var timer=setInterval(function(){tries++;if(window.lottie){clearInterval(timer);resolve(true);}else if(tries>35){clearInterval(timer);resolve(false);}},100);
     });
     return libraryPromise;
   }
-  function destroy(){
-    if(current){try{current.destroy();}catch(e){}current=null;}
-    var p=document.getElementById('vpn-state-art-player');
-    if(p)p.innerHTML='';
+  function setLoadWrap(hidden){
+    var wrap=document.querySelector('.vpn-load-wrap');
+    if(wrap)wrap.style.display=hidden?'none':'';
   }
+  function ensureRoot(){
+    var list=document.getElementById('vpn-key-list');
+    if(!list)return null;
+    var root=document.getElementById('vpn-state-art');
+    if(!root){
+      root=document.createElement('div');root.id='vpn-state-art';root.className='vpn-state-art';root.setAttribute('aria-live','polite');
+      list.insertBefore(root,list.firstChild||null);
+    }
+    root.innerHTML='<div class="vpn-state-art-player" id="vpn-state-art-player"></div><div class="vpn-state-art-title" id="vpn-state-art-title"></div><div class="vpn-state-art-text" id="vpn-state-art-text"></div><button class="vpn-state-art-action ripple" id="vpn-state-art-action" type="button"></button>';
+    return root;
+  }
+  function destroy(){if(current){try{current.destroy();}catch(e){}current=null;}}
   function fallbackIcon(type){
-    var icons={error:'!',empty:'—',offline:'×',loading:'…',connected:'✓',premium:'★'};
-    var p=document.getElementById('vpn-state-art-player');
-    if(!p)return;
-    p.innerHTML='<div style="width:82px;height:82px;border-radius:28px;display:flex;align-items:center;justify-content:center;background:var(--accent-soft);border:1px solid var(--border);color:var(--accent);font-size:36px;font-weight:900;box-shadow:0 12px 28px rgba(124,58,237,.12)">'+(icons[type]||'•')+'</div>';
+    var map={idle:'•',loading:'…',error:'!',empty:'—',filtered:'⌕',offline:'×',premium:'★',connected:'✓'};
+    var p=document.getElementById('vpn-state-art-player');if(!p)return;
+    p.innerHTML='<div style="width:74px;height:74px;border-radius:26px;background:var(--accent-soft);border:1px solid var(--border);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:900;box-shadow:0 12px 26px rgba(59,130,246,.12)">'+(map[type]||'•')+'</div>';
   }
   function show(type){
-    var root=document.getElementById('vpn-state-art');
-    var player=document.getElementById('vpn-state-art-player');
-    var title=document.getElementById('vpn-state-art-title');
-    var text=document.getElementById('vpn-state-art-text');
-    var action=document.getElementById('vpn-state-art-action');
-    if(!root||!player||!title||!text||!action)return;
     var cfg=states[type]||states.error;
+    var root=ensureRoot();if(!root)return;
+    var seq=++stateSeq;activeType=type;destroy();
+    setLoadWrap(true);
     root.className='vpn-state-art show '+type;
-    title.textContent=cfg.title;
-    text.textContent=cfg.text;
-    action.textContent=cfg.action||'';
-    action.classList.toggle('show',!!cfg.action);
-    action.onclick=null;
-    if(cfg.action){
-      action.onclick=function(){
-        if(type==='premium'){var shop=document.querySelector('.nav-item[data-tab="shop"]');if(shop)shop.click();return;}
-        if(typeof loadVpnKeys==='function')loadVpnKeys(false,true);
-      };
-    }
-    destroy();
+    root.dataset.state=type;
+    root.querySelector('#vpn-state-art-title').textContent=cfg.title;
+    root.querySelector('#vpn-state-art-text').textContent=cfg.text;
+    var action=root.querySelector('#vpn-state-art-action');
+    action.textContent=cfg.action||'';action.classList.toggle('show',!!cfg.action);action.onclick=null;
+    if(cfg.action)action.onclick=function(){
+      if(type==='premium'){var shop=document.querySelector('.nav-item[data-tab="shop"]');if(shop)shop.click();return;}
+      if(type==='filtered'){vpnProtoFilter='all';vpnFiltered=vpnKeys.slice();renderVpnFilters();renderHomeServers();return;}
+      if(typeof loadVpnKeys==='function')loadVpnKeys(false,true);
+    };
     ensureLibrary().then(function(ok){
-      if(!document.getElementById('vpn-state-art')||root.className.indexOf('show')<0)return;
+      if(seq!==stateSeq||activeType!==type||!root.classList.contains('show'))return;
+      var player=root.querySelector('#vpn-state-art-player');if(!player)return;
       if(!ok||!window.lottie){fallbackIcon(type);return;}
-      try{current=window.lottie.loadAnimation({container:player,renderer:'svg',loop:cfg.loop,autoplay:true,path:cfg.path,rendererSettings:{preserveAspectRatio:'xMidYMid meet'}});current.addEventListener('data_failed',function(){fallbackIcon(type);});}
-      catch(e){fallbackIcon(type);}
+      try{
+        current=window.lottie.loadAnimation({container:player,renderer:'svg',loop:cfg.loop,autoplay:true,animationData:getData(type),rendererSettings:{preserveAspectRatio:'xMidYMid meet'}});
+      }catch(e){fallbackIcon(type);}
     });
   }
-  function hide(){
-    var root=document.getElementById('vpn-state-art');
-    if(root)root.classList.remove('show');
-    destroy();
-  }
+  function hide(){activeType='';++stateSeq;destroy();var root=document.getElementById('vpn-state-art');if(root)root.remove();setLoadWrap(false);}
   return {show:show,hide:hide};
 })();
 
@@ -2530,11 +2597,6 @@ function updateConnectUI(){
   var dashState = document.querySelector('.vpn-dashboard-state');
   if(!btn || !status) return;
   var connected = isVpnMarkedConnected();
-  if(vpnLottie){
-    if(vpnConnecting) vpnLottie.show('loading');
-    else if(connected && vpnSelectedKey) vpnLottie.show('connected');
-    else vpnLottie.hide();
-  }
   if(vpnConnecting){
     btn.classList.add('connecting');btn.classList.remove('connected');
     if(lbl) lbl.textContent = 'Подключение';
@@ -2678,7 +2740,12 @@ async function loadVpnKeys(silent, forceCheck){
   if(loadBtn)loadBtn.disabled=true;
   if(refreshBtn)refreshBtn.disabled=true;
   if(refreshIcon) refreshIcon.classList.add('loading');
-  if(!silent){ showVpnSkeletons(4); if(vpnLottie)vpnLottie.show('loading'); }
+  if(!silent){
+    if(list)list.innerHTML='';
+    var loadingCount=$('vpn-count');if(loadingCount){loadingCount.textContent='';loadingCount.dataset.num='0';loadingCount._lastTotal=0;}
+    var loadingServerCount=$('vpn-servers-count');if(loadingServerCount)loadingServerCount.textContent='0';
+    if(vpnLottie)vpnLottie.show('loading');
+  }
 
   var source=getActiveVpnSource();
   if(!source || source.id !== requestedSourceId){
@@ -2710,6 +2777,8 @@ async function loadVpnKeys(silent, forceCheck){
   if(refreshIcon) refreshIcon.classList.remove('loading');
   if(!text){
     if(list)list.innerHTML='';
+    var failCount=$('vpn-count');if(failCount){failCount.textContent='';failCount.dataset.num='0';failCount._lastTotal=0;}
+    var failServerCount=$('vpn-servers-count');if(failServerCount)failServerCount.textContent='0';
     if(vpnLottie)vpnLottie.show(navigator.onLine===false?'offline':'error');
     if(loadBtn){loadBtn.style.display='flex';loadBtn.disabled=false;}
     if(refreshBtn){refreshBtn.style.display='none';refreshBtn.disabled=false;}
@@ -2726,11 +2795,13 @@ async function loadVpnKeys(silent, forceCheck){
   vpnProtoFilter='all';vpnFiltered=vpnKeys.slice();
   if(vpnKeys.length===0){
     if(list)list.innerHTML='';
+    var emptyCount=$('vpn-count');if(emptyCount){emptyCount.textContent='';emptyCount.dataset.num='0';emptyCount._lastTotal=0;}
+    var emptyServerCount=$('vpn-servers-count');if(emptyServerCount)emptyServerCount.textContent='0';
     if(vpnLottie)vpnLottie.show('empty');
     if(loadBtn)loadBtn.style.display='flex';
     if(refreshBtn)refreshBtn.style.display='none';
   }else{
-    if(vpnLottie && !vpnConnecting && !isVpnMarkedConnected())vpnLottie.hide();
+    if(vpnLottie)vpnLottie.hide();
     try{renderVpnFilters();}catch(filterErr){console.error('VPN filter render error:',filterErr);}
     renderVpnKeys();
   }
