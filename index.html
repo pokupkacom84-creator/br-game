@@ -824,6 +824,41 @@ body.flux-live-bg-off .vpn-ambient span{animation:none!important;opacity:0!impor
   .tab-content.tab-leaving{opacity:0!important}
 }
 
+
+/* FLUX FINAL VISUAL LAYER */
+.vpn-home{position:relative;isolation:isolate;overflow-y:auto;background:var(--bg);}
+.vpn-home::before,.vpn-home::after{content:"";position:absolute;display:block;pointer-events:none;z-index:0;border-radius:50%;background-repeat:no-repeat;transition:opacity .5s ease,transform 1s ease;}
+.vpn-home::before{width:340px;height:340px;left:-145px;top:70px;background:radial-gradient(circle at 50% 50%,var(--accent-air) 0%,rgba(135,116,225,.07) 38%,transparent 72%);filter:blur(24px);opacity:.9;animation:fluxFinalGlowA 12s ease-in-out infinite alternate;}
+.vpn-home::after{width:390px;height:390px;right:-175px;top:330px;background:radial-gradient(circle at 50% 50%,var(--accent-soft) 0%,rgba(135,116,225,.06) 40%,transparent 74%);filter:blur(28px);opacity:.82;animation:fluxFinalGlowB 15s ease-in-out infinite alternate;}
+.vpn-ambient{position:absolute!important;inset:0;z-index:0!important;pointer-events:none;overflow:hidden;display:block!important;opacity:1;visibility:visible;transition:opacity .35s ease,visibility .35s ease;}
+.vpn-ambient span{position:absolute;display:block;border-radius:50%;pointer-events:none;will-change:transform;filter:blur(24px)!important;}
+.vpn-ambient .a1{width:210px;height:210px;left:22%;top:12%;background:radial-gradient(circle,var(--accent-air) 0%,rgba(135,116,225,.08) 42%,transparent 72%);opacity:.78;animation:fluxFinalGlowC 11s ease-in-out infinite alternate;}
+.vpn-ambient .a2{width:250px;height:250px;right:8%;bottom:15%;background:radial-gradient(circle,var(--accent-soft) 0%,rgba(135,116,225,.06) 43%,transparent 73%);opacity:.7;animation:fluxFinalGlowD 14s ease-in-out infinite alternate;}
+.vpn-ambient .a3{width:145px;height:145px;left:52%;top:52%;background:radial-gradient(circle,var(--accent-soft) 0%,transparent 70%);opacity:.55;filter:blur(18px)!important;animation:fluxFinalGlowE 8s ease-in-out infinite alternate;}
+.vpn-home>*:not(.vpn-ambient){position:relative;z-index:1;}
+@keyframes fluxFinalGlowA{from{transform:translate3d(0,0,0) scale(.92)}to{transform:translate3d(65px,34px,0) scale(1.1)}}
+@keyframes fluxFinalGlowB{from{transform:translate3d(0,0,0) scale(.94)}to{transform:translate3d(-55px,-55px,0) scale(1.08)}}
+@keyframes fluxFinalGlowC{from{transform:translate3d(-18px,12px,0) scale(.9)}to{transform:translate3d(42px,-28px,0) scale(1.08)}}
+@keyframes fluxFinalGlowD{from{transform:translate3d(18px,18px,0) scale(.9)}to{transform:translate3d(-42px,-38px,0) scale(1.1)}}
+@keyframes fluxFinalGlowE{from{transform:translate3d(0,0,0)}to{transform:translate3d(28px,-22px,0)}}
+body.flux-live-bg-off .vpn-home::before,body.flux-live-bg-off .vpn-home::after,body.flux-live-bg-off .vpn-ambient{opacity:0!important;visibility:hidden!important;}
+body.flux-live-bg-off .vpn-ambient span{animation:none!important;}
+
+/* Stable Telegram × Dynamic Island screen transitions */
+.main-body{position:relative;overflow:hidden;}
+.tab-content{position:absolute!important;inset:0;width:100%;height:100%;display:none!important;flex-direction:column;overflow:hidden;transform:none!important;opacity:1;z-index:1;}
+.tab-content.active{display:flex!important;}
+.tab-content.tab-leaving{display:flex!important;z-index:3;pointer-events:none;}
+.tab-content.tab-enter{display:flex!important;z-index:4;pointer-events:auto;}
+.tab-content.route-next.tab-enter{animation:fluxFinalTabInNext .36s cubic-bezier(.22,.8,.24,1) both!important;}
+.tab-content.route-next.tab-leaving{animation:fluxFinalTabOutNext .36s cubic-bezier(.22,.8,.24,1) both!important;}
+.tab-content.route-prev.tab-enter{animation:fluxFinalTabInPrev .36s cubic-bezier(.22,.8,.24,1) both!important;}
+.tab-content.route-prev.tab-leaving{animation:fluxFinalTabOutPrev .36s cubic-bezier(.22,.8,.24,1) both!important;}
+@keyframes fluxFinalTabInNext{from{opacity:0;transform:translate3d(34px,0,0) scale(.985)!important}to{opacity:1;transform:translate3d(0,0,0) scale(1)!important}}
+@keyframes fluxFinalTabOutNext{from{opacity:1;transform:translate3d(0,0,0) scale(1)!important}to{opacity:0;transform:translate3d(-24px,0,0) scale(.992)!important}}
+@keyframes fluxFinalTabInPrev{from{opacity:0;transform:translate3d(-34px,0,0) scale(.985)!important}to{opacity:1;transform:translate3d(0,0,0) scale(1)!important}}
+@keyframes fluxFinalTabOutPrev{from{opacity:1;transform:translate3d(0,0,0) scale(1)!important}to{opacity:0;transform:translate3d(24px,0,0) scale(.992)!important}}
+@media(prefers-reduced-motion:reduce){.vpn-home::before,.vpn-home::after,.vpn-ambient span,.tab-content.route-next.tab-enter,.tab-content.route-next.tab-leaving,.tab-content.route-prev.tab-enter,.tab-content.route-prev.tab-leaving{animation:none!important}.tab-content.route-next.tab-enter,.tab-content.route-prev.tab-enter{opacity:1!important;transform:none!important}.tab-content.route-next.tab-leaving,.tab-content.route-prev.tab-leaving{opacity:0!important;transform:none!important}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 </head>
@@ -1617,6 +1652,7 @@ const THEMES=[
 ];
 let currentTheme=localStorage.getItem('flux_theme_color')||'violet';
 let liveBackgroundEnabled=localStorage.getItem('flux_live_background')!=='0';
+document.body.classList.toggle('flux-live-bg-off',!liveBackgroundEnabled);
 function setLiveBackground(enabled,persist){
   liveBackgroundEnabled=!!enabled;
   document.body.classList.toggle('flux-live-bg-off',!liveBackgroundEnabled);
@@ -2255,41 +2291,47 @@ setVpnVisualState('idle');
 var tabTransitionSeq=0;
 function switchTab(tab){
   if(!tab)return;
-  try{
-    var tc=document.getElementById('tab-'+tab);if(!tc)return;
-    var current=document.querySelector('.tab-content.active:not(.tab-leaving)');
-    if(!current){current=document.querySelector('.tab-content.active');}
-    document.querySelectorAll('.tab-content.tab-leaving').forEach(function(t){if(t!==current)t.classList.remove('active','tab-leaving','route-next','route-prev','tab-enter');});
-    if(current===tc){
-      document.querySelectorAll('.nav-item').forEach(function(n){n.classList.toggle('active',n.dataset.tab===tab);});
-      positionNavIndicator();
-      return;
-    }
-    var order=['vpn','shop','settings'];
-    var currentTab=current&&current.id?current.id.replace('tab-',''):'';
-    var dir=order.indexOf(tab)>=order.indexOf(currentTab)?'next':'prev';
-    var seq=++tabTransitionSeq;
+  var tc=document.getElementById('tab-'+tab);
+  if(!tc)return;
+  var current=document.querySelector('.tab-content.active:not(.tab-leaving)');
+  if(!current)current=document.querySelector('.tab-content.active');
+  if(current===tc){
     document.querySelectorAll('.nav-item').forEach(function(n){n.classList.toggle('active',n.dataset.tab===tab);});
-    if(current){
-      current.classList.remove('tab-enter','route-next','route-prev');
-      current.classList.add('tab-leaving','route-'+dir);
-    }
-    tc.classList.remove('tab-leaving','route-next','route-prev','tab-enter');
-    tc.classList.add('active','tab-enter','route-'+dir);
-    void tc.offsetWidth;
-    setTimeout(function(){
-      if(seq===tabTransitionSeq){
-        if(current)current.classList.remove('active','tab-leaving','route-next','route-prev','tab-enter');
-        tc.classList.remove('tab-enter','route-next','route-prev');
-      }
-    },340);
-    if(tab==='settings'){updateSettingsUI();updateTogglesUI();}
-    if(tab==='shop'){renderShop();}
-    if(tab==='vpn'){renderVpnCategoryTabs();renderVpnSources();try{updateConnectUI();}catch(e){}}
-    vibrate('tap');
     positionNavIndicator();
-  }catch(e){}
+    return;
+  }
+  var order=['vpn','shop','settings'];
+  var currentTab=current&&current.id?current.id.replace('tab-',''):order[0];
+  var dir=order.indexOf(tab)>=order.indexOf(currentTab)?'next':'prev';
+  var seq=++tabTransitionSeq;
+  document.querySelectorAll('.tab-content').forEach(function(t){
+    if(t!==current&&t!==tc)t.classList.remove('active','tab-leaving','tab-enter','route-next','route-prev');
+  });
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.toggle('active',n.dataset.tab===tab);});
+  tc.classList.remove('tab-leaving','tab-enter','route-next','route-prev');
+  if(current){
+    current.classList.remove('tab-enter','route-next','route-prev');
+    current.classList.add('active','tab-leaving','route-'+dir);
+  }
+  tc.classList.add('active','tab-enter','route-'+dir);
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      tc.classList.add('tab-enter');
+    });
+  });
+  setTimeout(function(){
+    if(seq!==tabTransitionSeq)return;
+    if(current)current.classList.remove('active','tab-leaving','route-next','route-prev');
+    tc.classList.remove('tab-enter','route-next','route-prev');
+    tc.classList.add('active');
+  },380);
+  if(tab==='settings'){updateSettingsUI();updateTogglesUI();}
+  if(tab==='shop'){renderShop();}
+  if(tab==='vpn'){renderVpnCategoryTabs();renderVpnSources();try{updateConnectUI();}catch(e){}}
+  vibrate('tap');
+  positionNavIndicator();
 }
+
 document.querySelectorAll('.nav-item').forEach(function(item){item.addEventListener('click',function(e){e.preventDefault();switchTab(item.dataset.tab);});});
 document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(t){t.onclick=function(){document.querySelectorAll('#shop-tabs .shop-tab').forEach(function(x){x.classList.remove('active');});t.classList.add('active');renderShop();};});
 
