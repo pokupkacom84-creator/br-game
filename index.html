@@ -869,6 +869,12 @@ body.flux-blur-off .bottom-nav,body.flux-blur-off .profile-sheet-body,body.flux-
 .vpn-ambient .a3{background:radial-gradient(circle,var(--accent-soft) 0%,transparent 72%)!important;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+
+<style id="flux-app-avatar-style">
+.flux-app-avatar{display:flex!important;align-items:center;justify-content:center;overflow:hidden}
+.flux-app-avatar svg{width:68%;height:68%;display:block;filter:drop-shadow(0 4px 8px rgba(0,0,0,.16))}
+.profile-avatar-big.flux-app-avatar svg{width:62%;height:62%}
+</style>
 </head>
 <body>
 
@@ -1711,12 +1717,13 @@ const AVATAR_COLORS=['#fb7185','#4ade80','#facc15','#60a5fa','#a78bfa','#f472b6'
 function getPresetAvatar(id){for(var i=0;i<PRESET_AVATARS.length;i++)if(PRESET_AVATARS[i].id===id)return PRESET_AVATARS[i];return PRESET_AVATARS[0];}
 function getAvatarColorClass(name){if(!name)return 'color-0';var hash=0;for(var i=0;i<name.length;i++){hash=(hash*31+name.charCodeAt(i))>>>0;}return 'color-'+(hash%AVATAR_COLORS.length);}
 function initials(name){if(!name)return '?';var p=name.trim().split(/\s+/);return ((p[0]?p[0][0]:'')+(p[1]?p[1][0]:'')).toUpperCase();}
+function fluxAvatarLogo(){return '<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="fluxAvatarGradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#c084fc"/><stop offset="52%" stop-color="#a855f7"/><stop offset="100%" stop-color="#7c3aed"/></linearGradient></defs><path fill="url(#fluxAvatarGradient)" d="M 354 162 L 297 77 L 282 62 L 260 50 L 244 46 L 224 46 L 196 54 L 177 66 L 164 81 L 122 146 L 119 148 L 120 149 L 67 228 L 41 269 L 40 268 L 41 270 L 20 299 L 17 306 L 14 308 L 0 334 L 124 334 L 129 329 L 128 328 L 135 319 L 138 311 L 147 300 L 147 297 L 168 266 L 170 260 L 229 166 L 286 260 L 289 261 L 291 257 L 293 257 L 292 256 L 305 237 L 307 237 L 306 235 L 331 198 L 336 193 L 353 167 Z"/><path fill="url(#fluxAvatarGradient)" d="M 511 183 L 384 184 L 368 208 L 365 210 L 366 211 L 282 336 L 234 261 L 231 261 L 203 301 L 200 302 L 201 304 L 198 305 L 199 307 L 195 312 L 193 312 L 194 314 L 171 347 L 168 349 L 187 380 L 195 390 L 194 393 L 195 392 L 198 395 L 214 422 L 218 426 L 217 428 L 219 428 L 233 445 L 245 453 L 259 460 L 274 464 L 291 465 L 313 461 L 328 454 L 341 445 L 354 429 L 366 409 L 369 407 L 368 406 L 422 322 L 433 308 L 443 291 L 444 292 L 443 290 L 471 247 L 473 247 L 472 245 L 481 231 L 484 229 L 489 218 L 491 216 L 492 217 L 492 214 L 509 189 Z"/></svg>';}
 function avatarHtml(u,size){
   size=size||'';
   if(!u)return '<div class="avatar '+size+' color-0">?</div>';
   var preset=u.avatarId?getPresetAvatar(u.avatarId):null;
   var cls='avatar '+size+' ';
-  if(preset)return '<div class="'+cls+'" style="background:'+preset.bg+'">'+preset.emoji+'</div>';
+  if(preset)return '<div class="'+cls+' flux-app-avatar" style="background:'+preset.bg+'">'+fluxAvatarLogo()+'</div>';
   if(u.photoURL)return '<div class="'+cls+'" data-avatar-url="'+escAttr(u.photoURL)+'"></div>';
   return '<div class="'+cls+getAvatarColorClass(u.name||u.username||'?')+'">'+esc(initials(u.name||u.username||'?'))+'</div>';
 }
@@ -2144,9 +2151,9 @@ function updateSettingsUI(){
   if(bigAv){
     var presetBig=currentUserData.avatarId?getPresetAvatar(currentUserData.avatarId):null;
     bigAv.className='profile-avatar-big';
-    if(presetBig){bigAv.style.background=presetBig.bg;bigAv.textContent=presetBig.emoji;bigAv.style.backgroundImage='';}
-    else if(currentUserData.photoURL){bigAv.style.background='';bigAv.style.backgroundImage='url("'+currentUserData.photoURL+'")';bigAv.textContent='';}
-    else{bigAv.style.background='';bigAv.className='profile-avatar-big '+getAvatarColorClass(currentUserData.name||'');bigAv.textContent=initials(currentUserData.name);}
+    if(presetBig){bigAv.style.background=presetBig.bg;bigAv.innerHTML=fluxAvatarLogo();bigAv.style.backgroundImage='';}
+    else if(currentUserData.photoURL){bigAv.style.background='';bigAv.style.backgroundImage='url("'+currentUserData.photoURL+'")';bigAv.innerHTML='';}
+    else{bigAv.style.background='';bigAv.className='profile-avatar-big flux-app-avatar '+getAvatarColorClass(currentUserData.name||'');bigAv.innerHTML=fluxAvatarLogo();}
   }
   var infoName=$('info-name');if(infoName)infoName.textContent=currentUserData.name||'—';
   var infoUser=$('info-username');if(infoUser)infoUser.textContent=currentUserData.username?'@'+currentUserData.username:'—';
