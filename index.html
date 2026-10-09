@@ -1074,8 +1074,9 @@ body.flux-blur-off .bottom-nav,body.flux-blur-off .profile-sheet-body,body.flux-
     <div class="settings-item" id="btn-theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><span>Тёмная тема</span><div class="toggle" id="theme-toggle"></div></div>
     <div class="settings-item" id="btn-theme-color"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2a10 10 0 100 20c1.38 0 2.5-1.12 2.5-2.5 0-.66-.26-1.26-.68-1.7a2.5 2.5 0 011.82-4.3H18a4 4 0 004-4 10 10 0 00-10-7.5z"/></svg><span>Цветовая тема</span><div class="settings-value" id="theme-color-value">Violet</div></div>
 
-  <div class="settings-section-title">Визуалы</div>
+  <div class="settings-section-title">Visual Lab</div>
   <div class="profile-info-card" style="margin-top:0">
+    <div class="settings-item" id="btn-visual-preset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/><rect x="13" y="10" width="8" height="11" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/></svg><div class="settings-copy"><div class="settings-copy-title">Пресет оформления</div><div class="settings-copy-sub">Быстро меняет свечение, блюр и акцентный цвет</div></div><div class="settings-value" id="visual-preset-value">Night</div></div>
     <div class="settings-item" id="btn-live-background"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M5.8 6.2c1.9 1.4 4 2.1 6.2 2.1s4.3-.7 6.2-2.1"/><path d="M5.8 17.8c1.9-1.4 4-2.1 6.2-2.1s4.3.7 6.2 2.1"/><path d="M8.2 3.8c1.4 1.9 2.1 4 2.1 6.2s-.7 4.3-2.1 6.2"/></svg><div class="settings-copy"><div class="settings-copy-title">Живой фон</div><div class="settings-copy-sub">Мягкое движущееся свечение на экране VPN</div></div><div class="toggle" id="live-background-toggle"></div></div>
     <div class="settings-item" id="btn-blur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg><div class="settings-copy"><div class="settings-copy-title">Блюр</div><div class="settings-copy-sub">Размытие элементов интерфейса</div></div><div class="toggle" id="blur-toggle"></div></div>
     <div class="settings-item" id="btn-blur-strength"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M7 12h10M10 17h4"/></svg><div class="settings-copy"><div class="settings-copy-title">Сила блюра</div><div class="settings-copy-sub">Интенсивность размытия элементов</div></div><div class="settings-value" id="blur-strength-value">Средний</div></div>
@@ -1708,6 +1709,9 @@ let liveBackgroundEnabled=localStorage.getItem('flux_live_background')!=='0';
 let blurEnabled=localStorage.getItem('flux_blur')!=='0';
 let blurStrength=parseInt(localStorage.getItem('flux_blur_strength')||'2',10);
 let backgroundStrength=parseInt(localStorage.getItem('flux_background_strength')||'2',10);
+let savedVisualPreset=localStorage.getItem('flux_visual_preset');
+let visualPreset=savedVisualPreset||(localStorage.getItem('flux_blur_strength')!==null||localStorage.getItem('flux_background_strength')!==null||localStorage.getItem('flux_live_background')!==null?'custom':'night');
+if(!['minimal','night','neon','custom'].includes(visualPreset))visualPreset='night';
 if(![1,2,3,4].includes(blurStrength))blurStrength=2;
 if(![1,2,3,4].includes(backgroundStrength))backgroundStrength=2;
 function applyVisualSettings(){
@@ -1730,12 +1734,28 @@ function setBlurEnabled(enabled,persist){
   applyVisualSettings();
   if(persist!==false){try{localStorage.setItem('flux_blur',blurEnabled?'1':'0');}catch(e){}}
 }
+function setVisualPreset(id,notify){
+  var presets={
+    minimal:{theme:'midnight',blur:1,bg:1,live:false},
+    night:{theme:'violet',blur:2,bg:2,live:true},
+    neon:{theme:'aurora',blur:3,bg:4,live:true}
+  };
+  var p=presets[id];if(!p)return;
+  visualPreset=id;blurStrength=p.blur;backgroundStrength=p.bg;liveBackgroundEnabled=p.live;
+  try{localStorage.setItem('flux_visual_preset',id);localStorage.setItem('flux_blur_strength',String(blurStrength));localStorage.setItem('flux_background_strength',String(backgroundStrength));localStorage.setItem('flux_live_background',liveBackgroundEnabled?'1':'0');}catch(e){}
+  applyTheme(p.theme);applyVisualSettings();updateTogglesUI();
+  if(notify!==false)toast('Пресет: '+({minimal:'Minimal',night:'Night',neon:'Neon'}[id]));
+}
+function markVisualCustom(){visualPreset='custom';try{localStorage.setItem('flux_visual_preset','custom');}catch(e){}updateTogglesUI();}
+function cycleVisualPreset(){var order=['minimal','night','neon'];var i=order.indexOf(visualPreset);setVisualPreset(order[(i+1)%order.length]);}
 function cycleBlurStrength(){
+  markVisualCustom();
   blurStrength=blurStrength>=4?1:blurStrength+1;
   try{localStorage.setItem('flux_blur_strength',String(blurStrength));}catch(e){}
   applyVisualSettings();updateTogglesUI();
 }
 function cycleBackgroundStrength(){
+  markVisualCustom();
   backgroundStrength=backgroundStrength>=4?1:backgroundStrength+1;
   try{localStorage.setItem('flux_background_strength',String(backgroundStrength));}catch(e){}
   applyVisualSettings();updateTogglesUI();
@@ -1935,7 +1955,7 @@ function applyTheme(themeId){
   var lbl=$('theme-color-value');if(lbl)lbl.textContent=t.name;
 }
 var savedTheme=localStorage.getItem('tg_theme');setTheme(savedTheme?savedTheme==='dark':true);applyTheme(currentTheme);
-applyVisualSettings();setLiveBackground(liveBackgroundEnabled,false);
+applyVisualSettings();setLiveBackground(liveBackgroundEnabled,false);updateTogglesUI();
 
 function showModal(html,setup){var bd=$('modal-backdrop'),m=$('modal');m.innerHTML=html;bd.classList.add('show');var close=function(){bd.classList.remove('show');m.innerHTML='';};if(setup)setup(m,close);}
 function hideModal(){var bd=$('modal-backdrop');bd.classList.remove('show');$('modal').innerHTML='';}
@@ -2200,6 +2220,7 @@ function updateSettingsUI(){
 function updateTogglesUI(){
   var tt=$('theme-toggle');if(tt)tt.classList.toggle('on',document.body.classList.contains('dark'));
   var lb=$('live-background-toggle');if(lb)lb.classList.toggle('on',liveBackgroundEnabled);
+  var vp=$('visual-preset-value');if(vp)vp.textContent=({minimal:'Minimal',night:'Night',neon:'Neon',custom:'Свои настройки'}[visualPreset]||'Night');
   var bt=$('blur-toggle');if(bt)bt.classList.toggle('on',blurEnabled);
   var bs=$('blur-strength-value');if(bs)bs.textContent=['','Слабый','Средний','Сильный','Максимум'][blurStrength];
   var bgs=$('background-strength-value');if(bgs)bgs.textContent=['','Слабый','Средний','Сильный','Максимум'][backgroundStrength];
@@ -2221,10 +2242,11 @@ $('btn-theme').onclick=function(){setTheme(!document.body.classList.contains('da
 $('btn-theme-color').onclick=function(){
   var sheet=$('theme-sheet');sheet.classList.add('show');var g=$('theme-grid');
   g.innerHTML=THEMES.map(function(t){return '<div class="theme-item'+(t.id===currentTheme?' selected':'')+'" data-id="'+t.id+'"><div class="theme-preview" style="--preview1:'+t.c1+';--preview2:'+t.c2+'"><div class="tp-header"></div><div class="tp-bubble-in"></div><div class="tp-bubble-out"></div></div><span>'+esc(t.name)+'</span></div>';}).join('');
-  g.querySelectorAll('.theme-item').forEach(function(el){el.onclick=function(){applyTheme(el.dataset.id);updateTogglesUI();sheet.classList.remove('show');vibrate('tap');};});
+  g.querySelectorAll('.theme-item').forEach(function(el){el.onclick=function(){markVisualCustom();applyTheme(el.dataset.id);updateTogglesUI();sheet.classList.remove('show');vibrate('tap');};});
 };
-$('btn-live-background').onclick=function(){setLiveBackground(!liveBackgroundEnabled);updateTogglesUI();if(liveBackgroundEnabled)toast('Живой фон включён');else toast('Живой фон отключён');};
-$('btn-blur').onclick=function(){setBlurEnabled(!blurEnabled);updateTogglesUI();toast(blurEnabled?'Блюр включён':'Блюр отключён');};
+$('btn-visual-preset').onclick=function(){cycleVisualPreset();};
+$('btn-live-background').onclick=function(){markVisualCustom();setLiveBackground(!liveBackgroundEnabled);updateTogglesUI();if(liveBackgroundEnabled)toast('Живой фон включён');else toast('Живой фон отключён');};
+$('btn-blur').onclick=function(){markVisualCustom();setBlurEnabled(!blurEnabled);updateTogglesUI();toast(blurEnabled?'Блюр включён':'Блюр отключён');};
 $('btn-blur-strength').onclick=function(){cycleBlurStrength();toast('Сила блюра: '+$('blur-strength-value').textContent);};
 $('btn-background-strength').onclick=function(){cycleBackgroundStrength();toast('Сила фона: '+$('background-strength-value').textContent);};
 $('theme-cancel').onclick=function(){$('theme-sheet').classList.remove('show');};
