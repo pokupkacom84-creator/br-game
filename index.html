@@ -1625,15 +1625,51 @@ function isGlobalPremiumEnabled(){var g=window.__fluxGlobalPremiumState||{};retu
 
 async function ensureGlobalPremiumState(){
   if(!db)return false;
-  if(isGlobalPremiumEnabled())return true;
   try{
     var snap=await db.ref('settings/globalPremium').once('value');
     window.__fluxGlobalPremiumState=snap.val()||{active:false};
   }catch(e){console.warn('global premium read',e);}
+  var g=window.__fluxGlobalPremiumState||{};
+  if(g.active===true&&!Number(g.activeSince||0)){
+    var stamp=now();
+    g={active:true,activeSince:stamp,lastActiveSince:stamp,totalPausedMs:Math.max(0,Number(g.totalPausedMs||0)),totalPausedBeforeLastPeriod:Math.max(0,Number(g.totalPausedMs||0)),updatedAt:Number(g.updatedAt||stamp),updatedBy:g.updatedBy||''};
+    window.__fluxGlobalPremiumState=g;
+    try{await db.ref('settings/globalPremium').update({activeSince:g.activeSince,lastActiveSince:g.lastActiveSince,totalPausedMs:g.totalPausedMs,totalPausedBeforeLastPeriod:g.totalPausedBeforeLastPeriod});}catch(e){}
+  }
   return isGlobalPremiumEnabled();
 }
 
-function isPremiumActive(v){if(isGlobalPremiumEnabled())return true;v=v||{};return !!v.active && Number(v.expiresAt||0)>now();}
+function getGlobalPauseTotalMs(){
+  var g=window.__fluxGlobalPremiumState||{};
+  var total=Math.max(0,Number(g.totalPausedMs||0));
+  if(g.active===true&&Number(g.activeSince||0)>0)total+=Math.max(0,now()-Number(g.activeSince));
+  return total;
+}
+function getPremiumPauseBaseline(v){
+  v=v||{};
+  if(v.globalPauseBaselineMs!==undefined&&v.globalPauseBaselineMs!==null&&Number.isFinite(Number(v.globalPauseBaselineMs)))return Math.max(0,Number(v.globalPauseBaselineMs));
+  var g=window.__fluxGlobalPremiumState||{};
+  var updated=Number(v.updatedAt||0);
+  if(!updated){
+    var plan=String(v.plan||'').toLowerCase();
+    var planDays=({month:30,pm_month:30,quarter:90,pm_quarter:90,year:365,pm_year:365,admin:0})[plan]||0;
+    if(planDays&&Number(v.expiresAt||0))updated=Number(v.expiresAt)-planDays*86400000;
+  }
+  var lastStart=Number(g.activeSince||g.lastActiveSince||0);
+  if(g.active!==true&&updated>0&&updated>Number(g.updatedAt||0))return Math.max(0,Number(g.totalPausedMs||0));
+  if(updated>0&&lastStart>0&&updated>lastStart&&(g.active===true||updated<=Number(g.updatedAt||0))){
+    var before=Number(g.totalPausedBeforeLastPeriod!==undefined?g.totalPausedBeforeLastPeriod:(g.totalPausedMs||0));
+    return Math.max(0,before+(updated-lastStart));
+  }
+  return 0;
+}
+function getPremiumEffectiveExpiry(v){
+  v=v||{};
+  var exp=Number(v.expiresAt||0);
+  if(!exp)return 0;
+  return exp+Math.max(0,getGlobalPauseTotalMs()-getPremiumPauseBaseline(v));
+}
+function isPremiumActive(v){if(isGlobalPremiumEnabled())return true;v=v||{};return !!v.active && getPremiumEffectiveExpiry(v)>now();}
 function isPremiumUserNow(){if(isGlobalPremiumEnabled())return true;return isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{}));}
 
 function startGlobalPremiumListener(){
@@ -2136,11 +2172,11 @@ function updateSettingsUI(){
   if(pcs){
     if(active){
       var subLine='';var rightBadge='';
-      if(globalOn){subLine='Premium активен для всех';rightBadge='<span class="premium-global-badge">'+ic('users',12)+'<span>ALL</span></span>';}
-      else{var exp=Number(pv.expiresAt||0);subLine='Активен · до '+esc(formatDateLong(exp));rightBadge='<div class="premium-days-badge">'+premiumDaysCircleHtml(exp)+'</div>';}
+      if(globalOn){subLine='Глобальный Premium включён · личный срок заморожен';rightBadge='<span class="premium-global-badge">'+ic('users',12)+'<span>ALL</span></span>';}
+      else{var exp=getPremiumEffectiveExpiry(pv);subLine='Активен · до '+esc(formatDateLong(exp));rightBadge='<div class="premium-days-badge">'+premiumDaysCircleHtml(exp)+'</div>';}
       pcs.innerHTML='<div class="premium-status-card" id="profile-premium-card"><div class="premium-status-row"><div class="premium-status-orb" id="premium-orb">'+ic('crown',22)+'</div><div style="min-width:0;flex:1"><div class="premium-status-title">Flux Premium</div><div class="premium-status-sub">'+subLine+'</div></div>'+rightBadge+'</div></div>';
     }else{
-      pcs.innerHTML='<div class="premium-status-card" id="profile-premium-card"><div class="premium-status-row"><div class="premium-status-orb">P</div><div><div class="premium-status-title">Flux Premium</div><div class="premium-status-sub">Откройте Premium и получите расширенные возможности</div></div><div class="premium-status-action">Открыть</div></div></div>';
+      pcs.innerHTML='<div class="premium-status-card" id="profile-premium-card"><div class="premium-status-row"><div class="premium-status-orb">P</div><div><div class="premium-status-title">Flux Premium</div><div class="premium-status-sub">При глобальном Premium оплаченный срок замораживается</div></div><div class="premium-status-action">Открыть</div></div></div>';
     }
     var card=pcs.querySelector('#profile-premium-card');
     if(card)card.onclick=openPremiumManager;
@@ -2394,19 +2430,19 @@ function renderPremiumTab(list){
   var prem=(window.__fluxPremiumState||{});
   var personalActive=isPremiumActive(prem)&&!globalOn;
   var active=globalOn||personalActive;
-  var exp=Number(prem.expiresAt||0);
+  var exp=getPremiumEffectiveExpiry(prem);
   var until=exp?new Date(exp).toLocaleDateString('ru-RU',{day:'2-digit',month:'long',year:'numeric'}):'';
   var html='';
   html+='<div class="premium-hero"><div class="premium-hero-deco">'+ic('burst',190)+'</div><div class="premium-kicker">Flux</div><div class="premium-title">'+ic('crown',26)+'<span>Flux Premium</span></div><div class="premium-sub">Премиум-статус Flux с расширенными возможностями, особым оформлением и приоритетом новых функций.</div>';
   if(active){
-    if(globalOn){html+='<div class="premium-active"><strong>'+ic('users',16)+'<span>Premium для всех</span></strong><span>включён администратором</span></div>';}
-    else if(exp>now()){html+='<div class="premium-active"><strong>'+ic('crown',16)+'<span>Premium активен</span></strong><span>до '+until+'</span></div>';}
+    if(globalOn){html+='<div class="premium-active"><strong>'+ic('users',16)+'<span>Premium для всех</span></strong><span>личный срок заморожен</span></div><div style="margin:10px 0 0;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.09);font-size:12px;line-height:1.45;position:relative;z-index:1">Ваш оплаченный Premium не расходуется, пока глобальный Premium включён. Срок продолжит идти после его отключения.</div>';}
+    else if(exp>now()){html+='<div class="premium-active"><strong>'+ic('crown',16)+'<span>Premium активен</span></strong><span>до '+until+'</span></div>';html+='<div style="margin:10px 0 0;padding:10px 12px;border-radius:12px;background:var(--surface-2);font-size:12px;line-height:1.45">Если администратор включит глобальный Premium, оставшийся срок вашей покупки будет заморожен до его отключения.</div>';}
   }
   html+='</div>';
   html+='<div class="premium-benefits">'+_benefit('crown','Premium-бейдж','Особый значок Premium рядом с именем и в профиле.')+_benefit('shield','Premium VPN','Доступ к отдельному списку Premium VPN-ключей.')+_benefit('pin','Больше закреплений','Можно закреплять больше элементов без обычного ограничения.')+_benefit('flame','До 3 реакций','Расширенные возможности реакций в интерфейсе.')+_benefit('sparkle','Premium-оформление','Особое оформление профиля и Premium-элементов интерфейса.')+_benefit('burst','Анимации','Дополнительные визуальные эффекты и анимация Premium-элементов.')+_benefit('rocket','Новые Premium-функции','Приоритетный доступ к новым возможностям, которые добавляются в Premium.')+_benefit('unlock','Premium-доступ','Все возможности, которые в приложении отмечены как доступные только Premium.')+'</div>';
   html+='<div style="padding:8px 16px 6px;font-size:17px;font-weight:850">Выберите период</div><div class="premium-plans">';
   FLUX_PREMIUM_PLANS.forEach(function(p){html+='<div class="premium-plan '+(p.popular?'popular':'')+'" data-premium="'+p.id+'">'+(p.popular?'<div class="premium-plan-badge">Популярно</div>':'')+'<div class="premium-plan-crown">'+ic('crown',22)+'</div><div class="premium-plan-info"><div class="premium-plan-title">'+p.title+'</div><div class="premium-plan-meta">'+p.days+' дней · оплата в рублях</div></div><div class="premium-plan-price">'+Number(p.rub).toLocaleString('ru-RU')+' ₽</div></div>';});
-  html+='</div><div class="premium-note">Оплата проходит в рублях через Telegram-бота. После перевода отправьте скриншот — администратор проверит платёж и активирует Premium.</div>';
+  html+='</div><div class="premium-note">Оплата проходит в рублях через Telegram-бота. После перевода отправьте скриншот — администратор проверит платёж и активирует Premium. При включении глобального Premium оплаченные дни замораживаются и продолжат расходоваться только после его отключения.</div>';
   list.innerHTML=html;
   list.querySelectorAll('[data-premium]').forEach(function(el){el.onclick=function(){buyPremium(getPremiumPlan(el.dataset.premium));};});
 }
@@ -2432,7 +2468,7 @@ async function openPremiumManager(){
   var pv=window.__fluxPremiumState||currentUserData.premium||{};
   var personalActive=isPremiumActive(pv)&&!globalOn;
   var active=globalOn||personalActive;
-  var exp=Number(pv.expiresAt||0);
+  var exp=getPremiumEffectiveExpiry(pv);
   var history=[];
   try{
     var snap=await db.ref('payments/'+currentUser.uid).once('value');
@@ -2442,16 +2478,21 @@ async function openPremiumManager(){
   }catch(e){}
   var hist=history.length?history.slice(0,8).map(function(x){return '<div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--divider)"><div><b>'+esc(x.itemLabel||premiumPlanTitle(x.plan))+'</b><div style="font-size:11px;color:var(--text-2);margin-top:2px">'+esc(formatDateLong(Number(x.confirmedAt||x.createdAt||0)))+'</div></div><b style="color:#a855f7">'+Number(x.rub||0).toLocaleString('ru-RU')+' ₽</b></div>';}).join(''):'<div style="color:var(--text-2);font-size:13px;padding:8px 0">Покупок Premium пока нет</div>';
   var statusRow='';
-  if(globalOn){statusRow='<div class="premium-feature-row"><b>Статус</b><span>Premium включён для ВСЕХ пользователей администратором</span></div>';}
-  else if(personalActive){statusRow='<div class="premium-feature-row"><b>Срок</b><span>до '+esc(formatDateLong(exp))+'</span></div><div class="premium-feature-row"><b>Тариф</b><span>'+esc(premiumPlanTitle(pv.plan))+'</span></div>';}
-  else{statusRow='<div class="premium-feature-row"><b>Статус</b><span>Premium ещё не активирован</span></div>';}
+  if(globalOn){statusRow='<div class="premium-feature-row"><b>Статус</b><span>Premium включён для всех. Оплаченный личный срок заморожен и продолжится после отключения глобального Premium.</span></div>';}
+  else if(personalActive){statusRow='<div class="premium-feature-row"><b>Срок</b><span>до '+esc(formatDateLong(exp))+'</span></div><div class="premium-feature-row"><b>Тариф</b><span>'+esc(premiumPlanTitle(pv.plan))+'</span></div><div class="premium-feature-row"><b>Заморозка срока</b><span>Если глобальный Premium включат, оплаченные дни не будут расходоваться до его отключения.</span></div>';}
+  else{statusRow='<div class="premium-feature-row"><b>Статус</b><span>Premium ещё не активирован</span></div><div class="premium-feature-row"><b>Заморозка срока</b><span>После покупки оплаченные дни не будут расходоваться, пока глобальный Premium включён.</span></div>';}
   showModal('<div class="premium-modal-icon">'+ic('crown',58)+'</div><div class="modal-title" style="text-align:center">Flux Premium</div><div class="premium-modal-price">'+(active?'Активен':'Не активен')+'</div><div class="premium-feature-list">'+statusRow+'<div class="premium-feature-row"><b>Возможности</b><span>Premium VPN, безлимитные закрепления, Premium-бейдж, оформление и анимации</span></div></div><div style="font-size:14px;font-weight:850;margin:8px 0">История покупок</div><div style="max-height:190px;overflow:auto">'+hist+'</div><div class="modal-actions" style="margin-top:16px"><button class="modal-btn primary" id="pm-renew">'+(active?'Продлить Premium':'Купить Premium')+'</button><button class="modal-btn" id="pm-close">Закрыть</button></div>',function(m,close){m.querySelector('#pm-close').onclick=close;m.querySelector('#pm-renew').onclick=function(){close();switchTab('shop');};});
 }
 async function loadPremiumState(){
   if(!currentUser||!db)return;
   try{
     var snap=await db.ref('users/'+currentUser.uid+'/premium').once('value');
-    var v=snap.val()||{};window.__fluxPremiumState=v;
+    var v=snap.val()||{};
+    if(v.active&&Number(v.expiresAt||0)>0&&(v.globalPauseBaselineMs===undefined||v.globalPauseBaselineMs===null)){
+      v.globalPauseBaselineMs=getPremiumPauseBaseline(v);
+      try{await db.ref('users/'+currentUser.uid+'/premium/globalPauseBaselineMs').set(v.globalPauseBaselineMs);}catch(e){}
+    }
+    window.__fluxPremiumState=v;
     try{renderVpnCategoryTabs();renderVpnSources();}catch(e){}
     var globalOn=isGlobalPremiumEnabled();
     var active=isPremiumActive(v);
@@ -3147,8 +3188,19 @@ async function openAdminPanel(){
     globalPremiumToggle.onclick=async function(){
       var next=!isGlobalPremiumEnabled();this.disabled=true;
       try{
-        await db.ref('settings/globalPremium').set({active:next,updatedAt:now(),updatedBy:currentUser.uid});
-        window.__fluxGlobalPremiumState={active:next,updatedAt:now(),updatedBy:currentUser.uid};
+        var oldGlobal=window.__fluxGlobalPremiumState||{};
+        var stamp=now();
+        var totalPaused=Math.max(0,Number(oldGlobal.totalPausedMs||0));
+        var activeSince=Number(oldGlobal.activeSince||0);
+        var globalState;
+        if(next){
+          globalState={active:true,activeSince:stamp,lastActiveSince:stamp,totalPausedMs:totalPaused,totalPausedBeforeLastPeriod:totalPaused,updatedAt:stamp,updatedBy:currentUser.uid};
+        }else{
+          if(oldGlobal.active===true&&activeSince>0)totalPaused+=Math.max(0,stamp-activeSince);
+          globalState={active:false,activeSince:0,lastActiveSince:activeSince||Number(oldGlobal.lastActiveSince||0),totalPausedMs:totalPaused,totalPausedBeforeLastPeriod:Math.max(0,Number(oldGlobal.totalPausedBeforeLastPeriod!==undefined?oldGlobal.totalPausedBeforeLastPeriod:oldGlobal.totalPausedMs||0)),updatedAt:stamp,updatedBy:currentUser.uid};
+        }
+        await db.ref('settings/globalPremium').set(globalState);
+        window.__fluxGlobalPremiumState=globalState;
         this.classList.toggle('on',next);
         this.setAttribute('aria-pressed',next?'true':'false');
         document.body.classList.toggle('flux-premium',next||isPremiumActive(window.__fluxPremiumState||((currentUserData&&currentUserData.premium)||{})));
@@ -3186,7 +3238,7 @@ async function openAdminUserActions(u){
   if(!u||!isFluxAdmin())return;
   showModal('<div class="modal-title">Управление пользователем</div><div class="modal-text"><b>'+esc(u.name||'Без имени')+'</b><br>'+esc(u.username?'@'+u.username:u.uid)+'</div><div class="profile-info-card"><div class="info-row"><div class="info-value">'+(isPremiumActive(u.premium||{})?'Активен':'Нет')+'</div><div class="info-label">Premium</div></div></div><div class="modal-actions stack"><button class="modal-btn" id="adm-premium">Выдать Premium</button><button class="modal-btn" id="adm-block">'+(u.adminBlocked?'Разблокировать':'Заблокировать')+'</button><button class="modal-btn" id="adm-close">Закрыть</button></div>',function(m,close){
     m.querySelector('#adm-close').onclick=close;
-    m.querySelector('#adm-premium').onclick=async function(){var days=prompt('На сколько дней выдать Premium?','30');if(days===null)return;days=Math.max(1,Math.floor(Number(days)));if(!Number.isFinite(days))return;try{var ref=db.ref('users/'+u.uid+'/premium'),snap=await ref.once('value'),p=snap.val()||{},base=isPremiumActive(p)?Number(p.expiresAt||now()):now(),exp=base+days*86400000;await ref.update({active:true,expiresAt:exp,plan:'admin',updatedAt:now(),grantedBy:currentUser.uid});toast('Premium выдан на '+days+' дней');close();}catch(e){toast('Не удалось выдать Premium');}};
+    m.querySelector('#adm-premium').onclick=async function(){var days=prompt('На сколько дней выдать Premium?','30');if(days===null)return;days=Math.max(1,Math.floor(Number(days)));if(!Number.isFinite(days))return;try{var ref=db.ref('users/'+u.uid+'/premium'),snap=await ref.once('value'),p=snap.val()||{},base=isPremiumActive(p)?Math.max(now(),getPremiumEffectiveExpiry(p)):now(),exp=base+days*86400000,grantTime=now();await ref.update({active:true,expiresAt:exp,globalPauseBaselineMs:getGlobalPauseTotalMs(),plan:'admin',updatedAt:grantTime,grantedBy:currentUser.uid});toast('Premium выдан на '+days+' дней');close();}catch(e){toast('Не удалось выдать Premium');}};
     m.querySelector('#adm-block').onclick=async function(){if(u.uid===currentUser.uid){toast('Нельзя заблокировать свой аккаунт');return;}try{await db.ref('users/'+u.uid+'/adminBlocked').set(!u.adminBlocked);toast(u.adminBlocked?'Пользователь разблокирован':'Пользователь заблокирован');close();}catch(e){toast('Не удалось изменить блокировку');}};
   });
 }
