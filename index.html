@@ -298,6 +298,30 @@ body.dark.lite .bottom-nav,body.dark.perf-lite .bottom-nav{
 }
 .avatar-preset-item:active{transform:scale(.92)}
 .avatar-preset-item.selected{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);transform:scale(1.05)}
+
+/* ===== TELEGRAM-STYLE CROP & ZOOM ===== */
+.crop-container{
+  position:relative;width:260px;height:260px;margin:16px auto;border-radius:50%;
+  overflow:hidden;box-shadow:0 0 0 9999px rgba(0,0,0,.68),0 0 0 2px var(--accent);
+  touch-action:none;background:#0f1721;cursor:grab;
+  user-select:none;-webkit-user-select:none;
+}
+.crop-container:active{cursor:grabbing}
+.crop-container canvas{display:block;width:260px;height:260px;pointer-events:none}
+.crop-zoom-wrap{display:flex;align-items:center;justify-content:center;gap:12px;margin:12px 0 18px}
+.crop-zoom-wrap input[type=range]{
+  -webkit-appearance:none;appearance:none;width:200px;height:6px;border-radius:3px;
+  background:var(--bg-3);outline:none;
+}
+.crop-zoom-wrap input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;
+  background:var(--accent);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3);
+}
+.crop-zoom-wrap input[type=range]::-moz-range-thumb{
+  width:22px;height:22px;border-radius:50%;background:var(--accent);
+  cursor:pointer;border:none;box-shadow:0 2px 6px rgba(0,0,0,.3);
+}
+
 .profile-premium-crown{position:absolute;bottom:14px;left:calc(50% + 30px);color:#f59e0b;opacity:0;transform:scale(0);transition:opacity .3s,transform .35s var(--ease-out);pointer-events:none;z-index:2;line-height:0}
 .profile-premium-crown svg{display:block}
 body.flux-premium .profile-premium-crown{opacity:1;transform:scale(1) rotate(-15deg)}
@@ -1194,6 +1218,22 @@ body.flux-studio-glow .vpn-dashboard-card,body.flux-studio-glow .vpn-connect-btn
   <div class="avatar-grid" id="avatar-presets-grid"></div>
   <button class="sheet-btn secondary ripple" id="avatar-btn-initials" type="button">Использовать инициалы</button>
   <button class="sheet-btn secondary ripple" id="avatar-sheet-close" type="button" style="margin-top:10px">Отмена</button>
+</div>
+</div>
+
+<!-- ОКНО TELEGRAM-ОБРЕЗКИ ФОТО (CROP & ZOOM) -->
+<div id="crop-sheet" class="profile-sheet" style="z-index:9998">
+<div class="profile-sheet-body" style="text-align:center">
+  <div class="profile-sheet-title">Редактирование фото</div>
+  <div class="crop-container" id="crop-container">
+    <canvas id="crop-canvas" width="260" height="260"></canvas>
+  </div>
+  <div class="crop-zoom-wrap">
+    <span style="font-size:16px">🔍</span>
+    <input type="range" id="crop-zoom-slider" min="1" max="3" step="0.01" value="1">
+  </div>
+  <button class="sheet-btn ripple" id="crop-btn-save">Сохранить фото</button>
+  <button class="sheet-btn secondary ripple" id="crop-btn-cancel" style="margin-top:10px">Отмена</button>
 </div>
 </div>
 
@@ -2384,14 +2424,14 @@ var _avatarFile=$('avatar-file-input');
 if(_avatarFile) _avatarFile.onchange=function(e){
   var file=e.target.files && e.target.files[0];
   if(!file) return;
-  if(file.size > 8*1024*1024){ toast('Файл слишком большой (макс 8 МБ)'); e.target.value=''; return; }
-  resizeImageFile(file, 320, function(dataUrl){
-    AVATAR_PENDING={ photoURL:dataUrl, avatarId:null };
-    renderAvatarSheetPreview();
-    saveAvatarSelection(AVATAR_PENDING);
-    $('avatar-sheet').classList.remove('show');
+  if(file.size > 12*1024*1024){ toast('Файл слишком большой (макс 12 МБ)'); e.target.value=''; return; }
+  var reader=new FileReader();
+  reader.onload=function(evt){
+    openFluxCropper(evt.target.result);
     e.target.value='';
-  });
+  };
+  reader.onerror=function(){ toast('Ошибка чтения файла'); };
+  reader.readAsDataURL(file);
 };
 
 var _avatarInitialsBtn=$('avatar-btn-initials');
@@ -2402,6 +2442,132 @@ if(_avatarInitialsBtn) _avatarInitialsBtn.onclick=function(){
   $('avatar-sheet').classList.remove('show');
 };
 /* === /AVATAR PICKER === */
+
+/* === TELEGRAM-STYLE CROP & ZOOM === */
+var fluxCropImg = new Image();
+var fluxCropCanvas = null;
+var fluxCropCtx = null;
+var fluxCropZoom = 1;
+var fluxCropMinScale = 1;
+var fluxCropMaxScale = 3.5;
+var fluxCropX = 0;
+var fluxCropY = 0;
+var fluxCropDragging = false;
+var fluxCropStartX = 0;
+var fluxCropStartY = 0;
+var fluxCropBoxSize = 260;
+
+function openFluxCropper(imageSrc){
+  fluxCropCanvas = $('crop-canvas');
+  if(!fluxCropCanvas) return;
+  fluxCropCtx = fluxCropCanvas.getContext('2d');
+  fluxCropImg = new Image();
+  fluxCropImg.onload = function(){
+    var w = fluxCropImg.width;
+    var h = fluxCropImg.height;
+    fluxCropMinScale = Math.max(fluxCropBoxSize / w, fluxCropBoxSize / h);
+    fluxCropZoom = fluxCropMinScale;
+    fluxCropMaxScale = fluxCropMinScale * 3.5;
+    fluxCropX = (fluxCropBoxSize - w * fluxCropZoom) / 2;
+    fluxCropY = (fluxCropBoxSize - h * fluxCropZoom) / 2;
+
+    var slider = $('crop-zoom-slider');
+    if(slider){
+      slider.min = fluxCropMinScale;
+      slider.max = fluxCropMaxScale;
+      slider.step = (fluxCropMaxScale - fluxCropMinScale) / 100;
+      slider.value = fluxCropZoom;
+    }
+    fluxDrawCrop();
+    var sh = $('crop-sheet');
+    if(sh) sh.classList.add('show');
+  };
+  fluxCropImg.onerror = function(){ toast('Не удалось загрузить изображение'); };
+  fluxCropImg.src = imageSrc;
+}
+
+function fluxDrawCrop(){
+  if(!fluxCropCtx || !fluxCropImg || !fluxCropImg.width) return;
+  var size = fluxCropBoxSize;
+  fluxCropCtx.clearRect(0, 0, size, size);
+  var drawW = fluxCropImg.width * fluxCropZoom;
+  var drawH = fluxCropImg.height * fluxCropZoom;
+  if(fluxCropX > 0) fluxCropX = 0;
+  if(fluxCropY > 0) fluxCropY = 0;
+  if(fluxCropX < size - drawW) fluxCropX = size - drawW;
+  if(fluxCropY < size - drawH) fluxCropY = size - drawH;
+  fluxCropCtx.drawImage(fluxCropImg, fluxCropX, fluxCropY, drawW, drawH);
+}
+
+(function initFluxCropperGestures(){
+  var container = $('crop-container');
+  if(!container) return;
+  function getPoint(e){
+    if(e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    if(e.changedTouches && e.changedTouches[0]) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+    return { x: e.clientX, y: e.clientY };
+  }
+  function onStart(e){
+    if(!fluxCropImg || !fluxCropImg.width) return;
+    fluxCropDragging = true;
+    var p = getPoint(e);
+    fluxCropStartX = p.x - fluxCropX;
+    fluxCropStartY = p.y - fluxCropY;
+  }
+  function onMove(e){
+    if(!fluxCropDragging) return;
+    e.preventDefault();
+    var p = getPoint(e);
+    fluxCropX = p.x - fluxCropStartX;
+    fluxCropY = p.y - fluxCropStartY;
+    fluxDrawCrop();
+  }
+  function onEnd(){ fluxCropDragging = false; }
+
+  container.addEventListener('mousedown', onStart);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onEnd);
+  container.addEventListener('touchstart', onStart, {passive:true});
+  window.addEventListener('touchmove', onMove, {passive:false});
+  window.addEventListener('touchend', onEnd);
+  window.addEventListener('touchcancel', onEnd);
+})();
+
+var _cropSlider = $('crop-zoom-slider');
+if(_cropSlider) _cropSlider.oninput = function(){
+  var oldScale = fluxCropZoom;
+  fluxCropZoom = parseFloat(this.value) || fluxCropMinScale;
+  var size = fluxCropBoxSize;
+  fluxCropX = size / 2 - (size / 2 - fluxCropX) * (fluxCropZoom / oldScale);
+  fluxCropY = size / 2 - (size / 2 - fluxCropY) * (fluxCropZoom / oldScale);
+  fluxDrawCrop();
+};
+
+var _cropSave = $('crop-btn-save');
+if(_cropSave) _cropSave.onclick = function(){
+  if(!fluxCropCanvas) return;
+  try{
+    var finalData = fluxCropCanvas.toDataURL('image/jpeg', 0.88);
+    AVATAR_PENDING = { photoURL: finalData, avatarId: null };
+    saveAvatarSelection(AVATAR_PENDING);
+    $('crop-sheet').classList.remove('show');
+    $('avatar-sheet').classList.remove('show');
+    try{ playSound('success'); vibrate('success'); }catch(e){}
+    showSuccessOverlay();
+  }catch(err){
+    console.warn('crop save', err);
+    toast('Не удалось сохранить фото');
+  }
+};
+
+var _cropCancel = $('crop-btn-cancel');
+if(_cropCancel) _cropCancel.onclick = function(){
+  $('crop-sheet').classList.remove('show');
+};
+
+var _cropSheet = $('crop-sheet');
+if(_cropSheet) _cropSheet.onclick = function(e){ if(e.target === this) this.classList.remove('show'); };
+/* === /TELEGRAM-STYLE CROP & ZOOM === */
 
 $('profile-qr-btn').onclick=function(){
   var uname=currentUserData.username?('@'+currentUserData.username):'—';var uid=currentUser.uid||'';
