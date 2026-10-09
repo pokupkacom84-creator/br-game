@@ -3503,8 +3503,38 @@ function buildHappSelectedKey(k){
   var title=buildFluxHappTitle(raw);
   return Promise.resolve(base+'#'+encodeURIComponent(title));
 }
+
+/* Системные уведомления: браузер/PWA и необязательный мост Android WebView. */
+async function requestFluxNotificationPermission(){
+  try{
+    if(window.Android && typeof window.Android.requestNotificationPermission === 'function'){
+      window.Android.requestNotificationPermission();
+    }
+    if('Notification' in window && Notification.permission === 'default'){
+      await Notification.requestPermission();
+    }
+  }catch(e){ console.warn('Notification permission unavailable',e); }
+}
+function fluxExternalNotification(title, body){
+  var sentNative=false;
+  try{
+    if(window.Android && typeof window.Android.showNotification === 'function'){
+      window.Android.showNotification(String(title||'Flux Client'),String(body||''));sentNative=true;
+    }
+  }catch(e){ console.warn('Native notification unavailable',e); }
+  try{
+    if('Notification' in window && Notification.permission === 'granted'){
+      var n=new Notification(String(title||'Flux Client'),{body:String(body||''),tag:'flux-vpn-status',silent:false});
+      n.onclick=function(){try{window.focus();n.close();}catch(e){}};
+      return true;
+    }
+  }catch(e){ console.warn('Browser notification unavailable',e); }
+  return sentNative;
+}
+
 function doConnect(){
   if(vpnConnecting) return;
+  requestFluxNotificationPermission();
   if(!vpnSelectedKey){ toast('Сначала выберите сервер'); return; }
   vpnConnecting = true;
   updateConnectUI();
@@ -3521,7 +3551,7 @@ function doConnect(){
       var btn=$('vpn-connect-btn');if(btn)btn.classList.add('connected');
       var lbl=$('vpn-connect-label');if(lbl)lbl.textContent='Подключено';
       if(status){status.textContent=happOpened?'Выбранный сервер передан в Happ':'Не удалось открыть Happ';status.className='vpn-status connected';}
-      if(happOpened) markVpnConnected(vpnSelectedKey);
+      if(happOpened){markVpnConnected(vpnSelectedKey);fluxExternalNotification('Flux Client','Конфигурация передана в Happ. Завершите подключение в Happ.');}
       playSound('success');if(happOpened){showSuccessOverlay();vibrate('success');}vpnConnecting=false;
       updateConnectUI();
       if(!happOpened){setVpnVisualState('error');setTimeout(function(){if(!vpnConnecting&&!isVpnMarkedConnected())setVpnVisualState('idle');},2200);}
@@ -4111,63 +4141,31 @@ function renderReelsFeed(){
   }
 }
 
-function reelsIsDirectVideoUrl(url){
-  try{
-    var u = new URL(String(url||''), window.location.href);
-    if(u.protocol!=='https:' && u.protocol!=='http:') return false;
-    return /\.(mp4|webm|ogv|ogg|m4v)(?:$|\?)/i.test(u.pathname + u.search) || /\.m3u8(?:$|\?)/i.test(u.pathname + u.search);
-  }catch(e){ return false; }
-}
-
 function reelsLoadMedia(el){
+  if(el.dataset.loaded==='1') return;
   var videoId = el.dataset.videoId;
-  var reelUrl = String(el.dataset.reelUrl||'').trim();
-  if(el.dataset.loaded==='1'){
-    var existingVideo = el.querySelector('video');
-    if(existingVideo){ existingVideo.muted=true; var playPromise=existingVideo.play(); if(playPromise&&playPromise.catch)playPromise.catch(function(){}); }
+  if(!videoId){
+    el.innerHTML = '<div class="reel-media-placeholder">Не удалось определить videoId</div>';
+    el.dataset.loaded='1';
     return;
   }
   el.dataset.loaded='1';
-  el.innerHTML='';
-  if(reelUrl && reelsIsDirectVideoUrl(reelUrl)){
-    var video=document.createElement('video');
-    video.src=reelUrl;
-    video.setAttribute('playsinline','');
-    video.setAttribute('webkit-playsinline','');
-    video.setAttribute('preload','metadata');
-    video.setAttribute('muted','');
-    video.muted=true;
-    video.loop=true;
-    video.autoplay=true;
-    video.controls=true;
-    video.style.cssText='width:100%;height:100%;object-fit:contain;background:#000;display:block;';
-    video.addEventListener('error',function(){
-      el.innerHTML='<div class="reel-media-placeholder">Не удалось воспроизвести видео. Проверьте ссылку или доступ к файлу.</div>';
-    },{once:true});
-    el.appendChild(video);
-    var playPromise=video.play(); if(playPromise&&playPromise.catch)playPromise.catch(function(){});
-    return;
-  }
-  if(videoId){
-    var iframe=document.createElement('iframe');
-    iframe.src=buildTikTokEmbedUrl(videoId);
-    iframe.setAttribute('allow','encrypted-media; fullscreen; picture-in-picture; autoplay');
-    iframe.setAttribute('allowfullscreen','true');
-    iframe.setAttribute('loading','lazy');
-    iframe.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
-    iframe.title='Видео TikTok';
-    iframe.style.cssText='width:100%;height:100%;border:0;background:#000;display:block;';
-    el.appendChild(iframe);
-    return;
-  }
-  el.innerHTML='<div class="reel-media-placeholder">Формат ссылки не поддерживается. Нужна полная ссылка TikTok или прямая ссылка на MP4/WebM.</div>';
+  var iframe = document.createElement('iframe');
+  iframe.src = buildTikTokEmbedUrl(videoId);
+  iframe.setAttribute('allow','encrypted-media; fullscreen; picture-in-picture; autoplay');
+  iframe.setAttribute('allowfullscreen','true');
+  iframe.setAttribute('loading','lazy');
+  iframe.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
+  iframe.style.cssText = 'width:100%;height:100%;border:0;background:#000;display:block;';
+  el.innerHTML = '';
+  el.appendChild(iframe);
 }
 
 function reelsUnloadMedia(el){
   if(el.dataset.loaded!=='1') return;
-  var video=el.querySelector('video');
-  if(video){ try{video.pause();}catch(e){} }
-  // iframe TikTok сохраняем, чтобы не сбрасывать позицию и не мигать при прокрутке.
+  // оставим загруженным для лёгких устройств, чтобы не мигало
+  if(window.__fluxLite) return;
+  // иначе — оставим как есть, чтобы iframe не терял состояние
 }
 
 function reelsUpdateVisibleButtons(){
@@ -4398,9 +4396,9 @@ function openReelAddSheet(){
     +   '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="3"/><path d="M2 9h20"/><path d="M9 3l3 6"/><path d="M15 3l3 6"/><path d="M10 13.5l4.5 2.5-4.5 2.5z" fill="currentColor"/></svg>'
     +   '<span>Добавить видео</span>'
     + '</div>'
-    + '<div class="modal-text">Вставь полную ссылку TikTok или прямую ссылку на видео MP4/WebM. Видео появится в ленте без скачивания на устройство. Ролики загружаются по мере прокрутки, а прямые видео автоматически воспроизводятся без звука, пока видны на экране.</div>'
+    + '<div class="modal-text">Вставь ссылку на видео TikTok (например, <b>https://www.tiktok.com/@user/video/1234567890</b>). Видео будет встроено официальным iframe-плеером TikTok — без скачивания.</div>'
     + '<div class="profile-sheet-subtitle">Ссылка на видео</div>'
-    + '<input class="sheet-input" id="reel-add-url" placeholder="TikTok или https://…/video.mp4" autocomplete="off" inputmode="url">'
+    + '<input class="sheet-input" id="reel-add-url" placeholder="https://www.tiktok.com/@…/video/…" autocomplete="off" inputmode="url">'
     + '<div class="profile-sheet-subtitle">Подпись (необязательно)</div>'
     + '<input class="sheet-input" id="reel-add-desc" placeholder="Описание видео" maxlength="160">'
     + '<button class="sheet-btn ripple" id="reel-add-save">Опубликовать</button>'
@@ -4411,18 +4409,20 @@ function openReelAddSheet(){
     var url = String(document.getElementById('reel-add-url').value||'').trim();
     var desc = String(document.getElementById('reel-add-desc').value||'').trim().slice(0,160);
     var parsed = parseTikTokUrl(url);
-    var directVideo = reelsIsDirectVideoUrl(url);
-    if((!parsed || !parsed.videoId) && !directVideo){
-      toast('Нужна полная ссылка TikTok или прямая ссылка на MP4/WebM'); return;
+    if(!parsed || (!parsed.videoId && !parsed.shortCode)){
+      toast('Неверная ссылка TikTok'); return;
+    }
+    if(!parsed.videoId){
+      toast('Короткие ссылки (vm./vt.) пока не поддерживаются — вставь полную ссылку на видео');
+      return;
     }
     var btn = this; btn.disabled = true; btn.textContent = 'Публикуем…';
     try{
       var ref = db.ref('reels').push();
       await ref.set({
-        videoId: parsed && parsed.videoId ? parsed.videoId : '',
+        videoId: parsed.videoId,
         url: url,
-        mediaType: directVideo ? 'direct' : 'tiktok',
-        author: (parsed && parsed.author) || (currentUserData && currentUserData.username) || '',
+        author: parsed.author || (currentUserData && currentUserData.username) || '',
         authorName: (currentUserData && currentUserData.name) || '',
         authorUsername: (currentUserData && currentUserData.username) || '',
         authorId: currentUser.uid,
