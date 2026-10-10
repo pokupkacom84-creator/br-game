@@ -738,6 +738,29 @@ button:active,.nav-item:active,.vpn-key-item:active,.vpn-chip:active,.vpn-cat-ta
   .vpn-reaction.pop .rx-ripple{animation:none!important}
   .vpn-home::before,.vpn-home::after,.vpn-ambient span,.nav-item.active svg{animation:none!important}
 }
+
+.chat-home{display:flex;flex-direction:column;flex:1;min-height:0;background:var(--bg)}
+.chat-head{display:flex;align-items:center;justify-content:space-between;padding:calc(16px + env(safe-area-inset-top)) 18px 12px;background:var(--surface);border-bottom:1px solid var(--border)}
+.chat-title{font-size:26px;font-weight:850;letter-spacing:-.04em}.chat-subtitle{font-size:12px;color:var(--text-2);margin-top:2px}
+.chat-new{width:44px;height:44px;border-radius:50%;background:var(--accent-grad);color:#fff;font-size:28px;line-height:1;box-shadow:var(--accent-glow)}
+.chat-search-wrap{padding:12px 14px 8px}.chat-search{width:100%;border:1px solid var(--border);border-radius:13px;background:var(--bg-2);padding:12px 14px;outline:none}
+.chat-list{flex:1;overflow-y:auto;padding-bottom:120px}.chat-row{display:flex;align-items:center;gap:12px;padding:12px 16px;min-height:76px;cursor:pointer}.chat-row:active{background:var(--bg-2)}
+.chat-avatar{width:52px;height:52px;border-radius:50%;background:var(--accent-grad);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;flex-shrink:0;background-size:cover;background-position:center}
+.chat-row-info{min-width:0;flex:1;border-bottom:1px solid var(--divider);align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:4px;padding-right:2px}
+.chat-row-top{display:flex;align-items:center;gap:8px}.chat-row-name{font-size:15px;font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}.chat-row-time{font-size:11px;color:var(--text-3);flex-shrink:0}
+.chat-row-last{font-size:13px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.chat-empty{padding:38px 25px;text-align:center;color:var(--text-2);font-size:14px}
+.chat-view{position:absolute;inset:0;z-index:15;display:none;flex-direction:column;background:var(--bg)}.chat-view.show{display:flex}
+.chat-view-head{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top)) 12px 10px;background:var(--surface);border-bottom:1px solid var(--border);min-height:62px}
+.chat-back{width:38px;height:40px;color:var(--accent);font-size:28px}.chat-peer{min-width:0;flex:1}.chat-peer-name{font-size:16px;font-weight:800}.chat-peer-status{font-size:11px;color:var(--text-2)}
+.chat-messages{flex:1;overflow-y:auto;padding:14px 12px 18px;display:flex;flex-direction:column;gap:7px;background:radial-gradient(circle at 15% 15%,var(--accent-softer),transparent 36%),var(--bg)}
+.chat-bubble{max-width:82%;padding:9px 11px 6px;border-radius:15px;background:var(--surface);box-shadow:var(--shadow-1);align-self:flex-start;overflow-wrap:anywhere;font-size:14px;white-space:pre-wrap}
+.chat-bubble.mine{align-self:flex-end;background:var(--accent);color:white;border-bottom-right-radius:5px}.chat-bubble:not(.mine){border-bottom-left-radius:5px}
+.chat-bubble-time{text-align:right;font-size:10px;opacity:.65;margin-top:3px}
+.chat-compose{display:flex;align-items:flex-end;gap:8px;padding:9px 10px calc(9px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--border)}
+.chat-compose textarea{resize:none;max-height:110px;min-height:42px;flex:1;border:1px solid var(--border);border-radius:20px;background:var(--bg-2);padding:10px 14px;outline:none}
+.chat-send{width:43px;height:43px;border-radius:50%;background:var(--accent-grad);color:#fff;font-size:19px;flex-shrink:0}
+.chat-day{align-self:center;font-size:11px;color:var(--text-2);background:var(--surface);padding:5px 10px;border-radius:10px;margin:8px 0}
+.chat-modal-input{width:100%;padding:13px;border:1px solid var(--border-2);border-radius:12px;background:var(--bg-2);margin:12px 0}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 
@@ -1013,14 +1036,27 @@ button:active,.nav-item:active,.vpn-key-item:active,.vpn-chip:active,.vpn-cat-ta
 </div>
 </div>
 
+<div id="tab-chats" class="tab-content">
+<div class="chat-home">
+  <div class="chat-head"><div><div class="chat-title">Сообщения</div><div class="chat-subtitle">Личные чаты Flux</div></div><button class="chat-new ripple" id="chat-new-btn" aria-label="Новый чат">＋</button></div>
+  <div class="chat-search-wrap"><input id="chat-search" class="chat-search" placeholder="Поиск чатов" autocomplete="off"></div>
+  <div id="chat-list" class="chat-list"><div class="chat-empty">Здесь появятся ваши диалоги</div></div>
+</div>
+</div>
 <div class="bottom-nav" id="bottom-nav">
 <div class="nav-indicator" id="nav-indicator"></div>
+<div class="nav-item" data-tab="chats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8z"/></svg><span>Чаты</span></div>
 <div class="nav-item active" data-tab="vpn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg><span>VPN</span></div>
 <div class="nav-item" data-tab="shop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg><span>Магазин</span></div>
 <div class="nav-item" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1"/></svg><span>Профиль</span></div>
 </div>
 </div>
 
+<div id="chat-view" class="chat-view">
+<div class="chat-view-head"><button class="chat-back" id="chat-back-btn">‹</button><div class="chat-avatar" id="chat-peer-avatar">F</div><div class="chat-peer"><div class="chat-peer-name" id="chat-peer-name">Чат</div><div class="chat-peer-status" id="chat-peer-status">Flux</div></div></div>
+<div class="chat-messages" id="chat-messages"></div>
+<div class="chat-compose"><textarea id="chat-compose-input" rows="1" maxlength="4000" placeholder="Сообщение"></textarea><button class="chat-send" id="chat-send-btn">➤</button></div>
+</div>
 <div id="profile-sheet" class="profile-sheet"><div class="profile-sheet-body" id="profile-sheet-body"></div></div>
 
 <div id="edit-profile-sheet" class="profile-sheet edit-profile-sheet">
@@ -2794,6 +2830,7 @@ function switchTab(tab){
   });
   document.querySelectorAll('.nav-item').forEach(function(n){n.classList.toggle('active',n.dataset.tab===tab);});
   if(tab==='settings'){updateSettingsUI();updateTogglesUI();}
+  if(tab==='chats'){fluxChatLoadList();}
   if(tab==='shop'){renderShop();}
   if(tab==='vpn'){renderVpnCategoryTabs();renderVpnSources();try{updateConnectUI();}catch(e){}}
   vibrate('tap');
@@ -3677,6 +3714,79 @@ window.addEventListener('load',function(){requestAnimationFrame(positionNavIndic
 
 if(!firebaseReady){setTimeout(function(){toast('Проверьте интернет');},500);}
 
+
+var fluxChatActiveId=null,fluxChatPeer=null,fluxChatMessagesRef=null,fluxChatListRef=null,fluxChatRows={},fluxChatMessageCache={};
+function fluxChatId(a,b){return [a,b].sort().join('_');}
+function fluxChatInitial(u){return String(u&&u.name||u&&u.username||'?').trim().slice(0,1).toUpperCase();}
+function fluxChatOpenTab(){if(!currentUser){toast('Сначала войдите в аккаунт');return;}switchTab('chats');fluxChatLoadList();}
+function fluxChatLoadList(){
+ if(!db||!currentUser)return;
+ if(fluxChatListRef)fluxChatListRef.off();
+ var list=$('chat-list');if(!list)return;
+ list.innerHTML='<div class="chat-empty">Загрузка диалогов…</div>';
+ fluxChatListRef=db.ref('userChats/'+currentUser.uid);
+ fluxChatListRef.on('value',function(snap){
+  var data=snap.val()||{},ids=Object.keys(data);
+  if(!ids.length){list.innerHTML='<div class="chat-empty">Пока нет диалогов.<br>Нажмите ＋, чтобы найти собеседника по username.</div>';return;}
+  Promise.all(ids.map(function(cid){return db.ref('chats/'+cid).once('value').then(function(cs){return {cid:cid,meta:data[cid]||{},chat:cs.val()||{}};}).catch(function(){return {cid:cid,meta:data[cid]||{},chat:{}};});})).then(function(rows){
+   rows.sort(function(a,b){return Number((b.chat.lastMessage||{}).time||b.meta.updatedAt||0)-Number((a.chat.lastMessage||{}).time||a.meta.updatedAt||0);});
+   fluxChatRows={};rows.forEach(function(r){var peerId=(r.chat.members||{})[currentUser.uid];if(!peerId){peerId=r.cid.split('_').filter(function(x){return x!==currentUser.uid;})[0];}if(peerId)fluxChatRows[r.cid]={peerId:peerId,row:r};});
+   fluxChatRenderList();
+  });
+ },function(){list.innerHTML='<div class="chat-empty">Не удалось загрузить чаты. Проверьте правила Firebase.</div>';});
+}
+function fluxChatRenderList(){
+ var list=$('chat-list'),q=($('chat-search').value||'').toLowerCase().trim();if(!list)return;
+ var items=Object.keys(fluxChatRows).map(function(cid){return {cid:cid,peerId:fluxChatRows[cid].peerId,row:fluxChatRows[cid].row};}).filter(function(x){var c=x.row.chat||{},p=c.lastMessage||{};return !q||String(x.peerName||'').toLowerCase().includes(q)||String(p.text||'').toLowerCase().includes(q);});
+ if(!items.length){list.innerHTML='<div class="chat-empty">Ничего не найдено</div>';return;}
+ list.innerHTML='';
+ items.forEach(function(x){
+  db.ref('users/'+x.peerId).once('value').then(function(us){
+   var u=us.val()||{},c=x.row.chat||{},m=c.lastMessage||{};x.peerName=u.name||u.username||'Пользователь';
+   if(q&&!x.peerName.toLowerCase().includes(q)&&!String(m.text||'').toLowerCase().includes(q))return;
+   var el=document.createElement('div');el.className='chat-row';el.innerHTML='<div class="chat-avatar">'+esc(fluxChatInitial(u))+'</div><div class="chat-row-info"><div class="chat-row-top"><div class="chat-row-name">'+esc(x.peerName)+'</div><div class="chat-row-time">'+esc(formatTime(m.time||x.row.meta.updatedAt))+'</div></div><div class="chat-row-last">'+esc(m.sender===currentUser.uid?'Вы: ':'')+esc(m.text||'Начните общение')+'</div></div>';
+   el.onclick=function(){fluxChatOpen(x.cid,x.peerId,u);};list.appendChild(el);
+  });
+ });
+}
+function fluxChatNew(){
+ if(!currentUser||!db){toast('Нет соединения с Firebase');return;}
+ showModal('<div class="modal-title">Новый чат</div><div class="modal-text">Введите username собеседника без @</div><input id="flux-chat-username" class="chat-modal-input" placeholder="username" autocomplete="off" maxlength="32"><div class="modal-actions"><button class="modal-btn" id="flux-chat-cancel">Отмена</button><button class="modal-btn primary" id="flux-chat-find">Найти</button></div>',function(m,close){
+  m.querySelector('#flux-chat-cancel').onclick=close;
+  m.querySelector('#flux-chat-find').onclick=async function(){
+   var un=m.querySelector('#flux-chat-username').value.trim().replace(/^@/,'').toLowerCase();if(!/^[a-z0-9_]{3,32}$/.test(un)){toast('Введите корректный username');return;}
+   try{var us=await db.ref('usernames/'+un).once('value');var uid=us.val();if(!uid){toast('Пользователь не найден');return;}if(uid===currentUser.uid){toast('Это ваш аккаунт');return;}
+    var ps=await db.ref('users/'+uid).once('value'),u=ps.val()||{};if(!u.name){toast('Профиль недоступен');return;}
+    var cid=fluxChatId(currentUser.uid,uid),updates={};updates['userChats/'+currentUser.uid+'/'+cid]={peerId:uid,updatedAt:now()};updates['userChats/'+uid+'/'+cid]={peerId:currentUser.uid,updatedAt:now()};updates['chats/'+cid+'/members/'+currentUser.uid]=true;updates['chats/'+cid+'/members/'+uid]=true;await db.ref().update(updates);close();fluxChatOpen(cid,uid,u);switchTab('chats');
+   }catch(e){toast('Не удалось найти пользователя');}
+  };
+ });
+}
+function fluxChatOpen(cid,peerId,peer){
+ if(!db||!currentUser)return;
+ fluxChatActiveId=cid;fluxChatPeer=peer||{};$('chat-view').classList.add('show');$('chat-peer-name').textContent=fluxChatPeer.name||fluxChatPeer.username||'Пользователь';$('chat-peer-status').textContent=fluxChatPeer.online?'в сети':(fluxChatPeer.username?'@'+fluxChatPeer.username:'Flux');
+ if(fluxChatMessagesRef)fluxChatMessagesRef.off();
+ var box=$('chat-messages');box.innerHTML='';
+ fluxChatMessagesRef=db.ref('chats/'+cid+'/messages');
+ fluxChatMessagesRef.limitToLast(300).on('value',function(snap){
+  box.innerHTML='';snap.forEach(function(ms){var m=ms.val()||{},mine=m.sender===currentUser.uid,el=document.createElement('div');el.className='chat-bubble'+(mine?' mine':'');el.innerHTML=esc(m.text||'')+'<div class="chat-bubble-time">'+esc(formatTime(m.time))+(mine?' · '+(m.read?'✓✓':'✓'):'')+'</div>';box.appendChild(el);});
+  box.scrollTop=box.scrollHeight;
+ },function(){toast('Не удалось загрузить сообщения');});
+}
+async function fluxChatSend(){
+ var input=$('chat-compose-input'),txt=input.value.trim();if(!txt||!fluxChatActiveId||!currentUser||!db)return;
+ if(txt.length>4000){toast('Максимум 4000 символов');return;}
+ input.value='';input.style.height='42px';
+ var msg={sender:currentUser.uid,text:txt,time:now(),read:false};
+ try{var ref=db.ref('chats/'+fluxChatActiveId+'/messages').push();var updates={};updates['chats/'+fluxChatActiveId+'/messages/'+ref.key]=msg;updates['chats/'+fluxChatActiveId+'/lastMessage']=msg;updates['chats/'+fluxChatActiveId+'/updatedAt']=msg.time;updates['userChats/'+currentUser.uid+'/'+fluxChatActiveId+'/updatedAt']=msg.time;updates['userChats/'+fluxChatPeer.uid+'/'+fluxChatActiveId+'/updatedAt']=msg.time;await db.ref().update(updates);}
+ catch(e){input.value=txt;toast('Сообщение не отправлено. Проверьте правила Firebase.');}
+}
+$('chat-new-btn').addEventListener('click',fluxChatNew);
+$('chat-search').addEventListener('input',fluxChatRenderList);
+$('chat-back-btn').addEventListener('click',function(){$('chat-view').classList.remove('show');if(fluxChatMessagesRef)fluxChatMessagesRef.off();fluxChatActiveId=null;fluxChatLoadList();});
+$('chat-send-btn').addEventListener('click',fluxChatSend);
+$('chat-compose-input').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();fluxChatSend();}});
+$('chat-compose-input').addEventListener('input',function(){this.style.height='42px';this.style.height=Math.min(this.scrollHeight,110)+'px';});
 </script>
 </body>
 </html>
