@@ -768,6 +768,11 @@ button:active,.nav-item:active,.vpn-key-item:active,.vpn-chip:active,.vpn-cat-ta
 .chat-send{width:43px;height:43px;border-radius:50%;background:var(--accent-grad);color:#fff;font-size:19px;flex-shrink:0}
 .chat-day{align-self:center;font-size:11px;color:var(--text-2);background:var(--surface);padding:5px 10px;border-radius:10px;margin:8px 0}
 .chat-modal-input{width:100%;padding:13px;border:1px solid var(--border-2);border-radius:12px;background:var(--bg-2);margin:12px 0}
+.chat-typing{min-height:0;padding:0 16px;color:var(--text-2,#9aa6b5);font-size:12px;background:var(--surface,#1b2530)}
+.chat-reply-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px;background:var(--surface,#1b2530);border-top:1px solid var(--border,rgba(255,255,255,.08));color:var(--text,#fff)}
+.chat-reply-bar div{display:flex;flex-direction:column;min-width:0;gap:2px}.chat-reply-bar b{font-size:11px;color:var(--accent,#8175ff)}.chat-reply-bar span{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70vw}.chat-reply-bar button{font-size:22px;color:var(--text-2,#9aa6b5)}
+.chat-attach{width:38px;height:42px;flex-shrink:0;border-radius:50%;font-size:25px;color:var(--text-2,#9aa6b5)}.chat-bubble{cursor:pointer}.chat-bubble-reply{border-left:3px solid var(--accent,#8175ff);padding:4px 7px;margin-bottom:5px;border-radius:4px;background:rgba(127,112,255,.10);font-size:11px;color:inherit;opacity:.86}
+.chat-bubble-edited{font-size:9px;opacity:.65;margin-left:4px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 
@@ -1077,7 +1082,10 @@ button:active,.nav-item:active,.vpn-key-item:active,.vpn-chip:active,.vpn-cat-ta
 <div id="chat-view" class="chat-view">
 <div class="chat-view-head"><button class="chat-back" id="chat-back-btn">‹</button><div class="chat-avatar" id="chat-peer-avatar">F</div><div class="chat-peer"><div class="chat-peer-name" id="chat-peer-name">Чат</div><div class="chat-peer-status" id="chat-peer-status">Flux</div></div></div>
 <div class="chat-messages" id="chat-messages"></div>
-<div class="chat-compose"><textarea id="chat-compose-input" rows="1" maxlength="4000" placeholder="Сообщение"></textarea><button class="chat-send" id="chat-send-btn">➤</button></div>
+<div id="chat-typing" class="chat-typing" aria-live="polite"></div>
+<div id="chat-reply-bar" class="chat-reply-bar" style="display:none"><div><b>Ответ</b><span id="chat-reply-text"></span></div><button id="chat-reply-cancel" aria-label="Отменить ответ">×</button></div>
+<div class="chat-compose"><button class="chat-attach" id="chat-attach-btn" aria-label="Прикрепить">＋</button><textarea id="chat-compose-input" rows="1" maxlength="4000" placeholder="Сообщение"></textarea><button class="chat-send" id="chat-send-btn">➤</button></div>
+<input id="chat-file-input" type="file" accept="image/*,video/*" hidden>
 </div>
 <div id="profile-sheet" class="profile-sheet"><div class="profile-sheet-body" id="profile-sheet-body"></div></div>
 
@@ -3737,7 +3745,7 @@ window.addEventListener('load',function(){requestAnimationFrame(positionNavIndic
 if(!firebaseReady){setTimeout(function(){toast('Проверьте интернет');},500);}
 
 
-var fluxChatActiveId=null,fluxChatPeer=null,fluxChatMessagesRef=null,fluxChatListRef=null,fluxChatRows={},fluxChatMessageCache={};
+var fluxChatActiveId=null,fluxChatPeer=null,fluxChatMessagesRef=null,fluxChatListRef=null,fluxChatRows={},fluxChatMessageCache={},fluxChatTypingRef=null,fluxChatTypingTimer=null,fluxChatReplyTo=null,fluxChatStorage=null;
 function fluxChatId(a,b){return [a,b].sort().join('_');}
 function fluxChatInitial(u){return String(u&&u.name||u&&u.username||'?').trim().slice(0,1).toUpperCase();}
 function fluxChatOpenTab(){if(!currentUser){toast('Сначала войдите в аккаунт');return;}switchTab('chats');fluxChatLoadList();}
@@ -3752,7 +3760,7 @@ function fluxChatLoadList(){
   if(!ids.length){list.innerHTML='<div class="chat-empty">Пока нет диалогов.<br>Нажмите ＋, чтобы найти собеседника по username.</div>';return;}
   Promise.all(ids.map(function(cid){return db.ref('chats/'+cid).once('value').then(function(cs){return {cid:cid,meta:data[cid]||{},chat:cs.val()||{}};}).catch(function(){return {cid:cid,meta:data[cid]||{},chat:{}};});})).then(function(rows){
    rows.sort(function(a,b){return Number((b.chat.lastMessage||{}).time||b.meta.updatedAt||0)-Number((a.chat.lastMessage||{}).time||a.meta.updatedAt||0);});
-   fluxChatRows={};rows.forEach(function(r){var peerId=(r.chat.members||{})[currentUser.uid];if(!peerId){peerId=r.cid.split('_').filter(function(x){return x!==currentUser.uid;})[0];}if(peerId)fluxChatRows[r.cid]={peerId:peerId,row:r};});
+   fluxChatRows={};rows.forEach(function(r){var peerId=(r.chat.members||{})[currentUser.uid];if(peerId===true||!peerId){peerId=(r.chat.members||{})[Object.keys(r.chat.members||{}).filter(function(k){return k!==currentUser.uid;})[0]];if(peerId===true||!peerId)peerId=r.meta.peerId||r.cid.split('_').filter(function(x){return x!==currentUser.uid;})[0];}if(peerId)fluxChatRows[r.cid]={peerId:peerId,row:r};});
    fluxChatRenderList();
   });
  },function(){list.innerHTML='<div class="chat-empty">Не удалось загрузить чаты. Проверьте правила Firebase.</div>';});
@@ -3779,36 +3787,41 @@ function fluxChatNew(){
    var un=m.querySelector('#flux-chat-username').value.trim().replace(/^@/,'').toLowerCase();if(!/^[a-z0-9_]{3,32}$/.test(un)){toast('Введите корректный username');return;}
    try{var us=await db.ref('usernames/'+un).once('value');var uid=us.val();if(!uid){toast('Пользователь не найден');return;}if(uid===currentUser.uid){toast('Это ваш аккаунт');return;}
     var ps=await db.ref('users/'+uid).once('value'),u=ps.val()||{};if(!u.name){toast('Профиль недоступен');return;}
-    var cid=fluxChatId(currentUser.uid,uid),updates={};updates['userChats/'+currentUser.uid+'/'+cid]={peerId:uid,updatedAt:now()};updates['userChats/'+uid+'/'+cid]={peerId:currentUser.uid,updatedAt:now()};updates['chats/'+cid+'/members/'+currentUser.uid]=true;updates['chats/'+cid+'/members/'+uid]=true;await db.ref().update(updates);close();fluxChatOpen(cid,uid,u);switchTab('chats');
+    var cid=fluxChatId(currentUser.uid,uid),updates={};updates['userChats/'+currentUser.uid+'/'+cid]={peerId:uid,updatedAt:now()};updates['userChats/'+uid+'/'+cid]={peerId:currentUser.uid,updatedAt:now()};updates['chats/'+cid+'/members/'+currentUser.uid]=uid;updates['chats/'+cid+'/members/'+uid]=currentUser.uid;await db.ref().update(updates);close();fluxChatOpen(cid,uid,u);switchTab('chats');
    }catch(e){toast('Не удалось найти пользователя');}
   };
  });
 }
 function fluxChatOpen(cid,peerId,peer){
  if(!db||!currentUser)return;
- fluxChatActiveId=cid;fluxChatPeer=peer||{};$('chat-view').classList.add('show');$('chat-peer-name').textContent=fluxChatPeer.name||fluxChatPeer.username||'Пользователь';$('chat-peer-status').textContent=fluxChatPeer.online?'в сети':(fluxChatPeer.username?'@'+fluxChatPeer.username:'Flux');
+ fluxChatActiveId=cid;fluxChatPeer=Object.assign({uid:peerId},peer||{});fluxChatPeer.uid=peerId;$('chat-view').classList.add('show');$('chat-peer-name').textContent=fluxChatPeer.name||fluxChatPeer.username||'Пользователь';$('chat-peer-status').textContent=fluxChatPeer.online?'в сети':(fluxChatPeer.username?'@'+fluxChatPeer.username:'Flux');$('chat-peer-avatar').textContent=fluxChatInitial(fluxChatPeer);fluxChatReplyTo=null;$('chat-reply-bar').style.display='none';
  if(fluxChatMessagesRef)fluxChatMessagesRef.off();
  var box=$('chat-messages');box.innerHTML='';
  fluxChatMessagesRef=db.ref('chats/'+cid+'/messages');
  fluxChatMessagesRef.limitToLast(300).on('value',function(snap){
-  box.innerHTML='';snap.forEach(function(ms){var m=ms.val()||{},mine=m.sender===currentUser.uid,el=document.createElement('div');el.className='chat-bubble'+(mine?' mine':'');el.innerHTML=esc(m.text||'')+'<div class="chat-bubble-time">'+esc(formatTime(m.time))+(mine?' · '+(m.read?'✓✓':'✓'):'')+'</div>';box.appendChild(el);});
+  box.innerHTML='';fluxChatMessageCache={};snap.forEach(function(ms){var m=ms.val()||{},mid=ms.key;fluxChatMessageCache[mid]=m;var mine=m.sender===currentUser.uid,el=document.createElement('div');el.className='chat-bubble'+(mine?' mine':'');el.dataset.messageId=mid;var reply=m.replyTo&&fluxChatMessageCache[m.replyTo];var replyHtml=m.replyText?'<div class="chat-bubble-reply">'+esc(m.replySender||'Ответ')+': '+esc(m.replyText)+'</div>':'';el.innerHTML=replyHtml+esc(m.text||'')+(m.edited?'<span class="chat-bubble-edited">изм.</span>':'')+'<div class="chat-bubble-time">'+esc(formatTime(m.time))+(mine?' · '+(m.read?'✓✓':'✓'):'')+'</div>';el.addEventListener('click',function(){fluxChatMessageAction(mid,m,mine);});el.addEventListener('contextmenu',function(e){e.preventDefault();fluxChatMessageAction(mid,m,mine);});box.appendChild(el);});
   box.scrollTop=box.scrollHeight;
- },function(){toast('Не удалось загрузить сообщения');});
+  if(fluxChatActiveId&&currentUser)db.ref('chats/'+fluxChatActiveId+'/messages').once('value').then(function(all){var updates={};all.forEach(function(n){var v=n.val()||{};if(v.sender!==currentUser.uid&&!v.read)updates[n.key+'/read']=true;});if(Object.keys(updates).length)db.ref('chats/'+fluxChatActiveId+'/messages').update(updates).catch(function(){});}).catch(function(){});
+ },function(){toast('Не удалось загрузить сообщения. Проверьте правила Firebase.');});
+ if(fluxChatTypingRef)fluxChatTypingRef.off();fluxChatTypingRef=db.ref('chats/'+cid+'/typing/'+peerId);fluxChatTypingRef.on('value',function(s){$('chat-peer-status').textContent=s.val()?'печатает…':(fluxChatPeer.username?'@'+fluxChatPeer.username:'Flux');});
 }
 async function fluxChatSend(){
  var input=$('chat-compose-input'),txt=input.value.trim();if(!txt||!fluxChatActiveId||!currentUser||!db)return;
  if(txt.length>4000){toast('Максимум 4000 символов');return;}
- input.value='';input.style.height='42px';
- var msg={sender:currentUser.uid,text:txt,time:now(),read:false};
+ input.value='';input.style.height='42px';fluxChatReplyTo=null;$('chat-reply-bar').style.display='none';try{db.ref('chats/'+fluxChatActiveId+'/typing/'+currentUser.uid).remove();}catch(e){}
+ var msg={sender:currentUser.uid,text:txt,time:now(),read:false};if(fluxChatReplyTo){msg.replyTo=fluxChatReplyTo.id;msg.replyText=fluxChatReplyTo.text.slice(0,180);msg.replySender=fluxChatReplyTo.sender===currentUser.uid?'Вы':(fluxChatPeer.name||'Собеседник');}
  try{var ref=db.ref('chats/'+fluxChatActiveId+'/messages').push();var updates={};updates['chats/'+fluxChatActiveId+'/messages/'+ref.key]=msg;updates['chats/'+fluxChatActiveId+'/lastMessage']=msg;updates['chats/'+fluxChatActiveId+'/updatedAt']=msg.time;updates['userChats/'+currentUser.uid+'/'+fluxChatActiveId+'/updatedAt']=msg.time;updates['userChats/'+fluxChatPeer.uid+'/'+fluxChatActiveId+'/updatedAt']=msg.time;await db.ref().update(updates);}
  catch(e){input.value=txt;toast('Сообщение не отправлено. Проверьте правила Firebase.');}
 }
 $('chat-new-btn').addEventListener('click',fluxChatNew);
 $('chat-search').addEventListener('input',fluxChatRenderList);
-$('chat-back-btn').addEventListener('click',function(){$('chat-view').classList.remove('show');if(fluxChatMessagesRef)fluxChatMessagesRef.off();fluxChatActiveId=null;fluxChatLoadList();});
+$('chat-back-btn').addEventListener('click',function(){$('chat-view').classList.remove('show');if(fluxChatMessagesRef)fluxChatMessagesRef.off();if(fluxChatTypingRef)fluxChatTypingRef.off();if(fluxChatActiveId&&currentUser&&db)db.ref('chats/'+fluxChatActiveId+'/typing/'+currentUser.uid).remove().catch(function(){});fluxChatActiveId=null;fluxChatPeer=null;fluxChatLoadList();});
 $('chat-send-btn').addEventListener('click',fluxChatSend);
 $('chat-compose-input').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();fluxChatSend();}});
-$('chat-compose-input').addEventListener('input',function(){this.style.height='42px';this.style.height=Math.min(this.scrollHeight,110)+'px';});
+$('chat-compose-input').addEventListener('input',function(){this.style.height='42px';this.style.height=Math.min(this.scrollHeight,110)+'px';if(!fluxChatActiveId||!currentUser||!db)return;db.ref('chats/'+fluxChatActiveId+'/typing/'+currentUser.uid).set(true).catch(function(){});clearTimeout(fluxChatTypingTimer);fluxChatTypingTimer=setTimeout(function(){if(fluxChatActiveId&&currentUser)db.ref('chats/'+fluxChatActiveId+'/typing/'+currentUser.uid).remove().catch(function(){});},1600);});
+function fluxChatMessageAction(id,m,mine){var choices=mine?'Ответить,Изменить,Удалить':'Ответить,Пожаловаться';var action=prompt('Действие с сообщением:\n'+choices+'\n\nВведите действие');if(!action)return;action=action.trim().toLowerCase();if(action==='ответить'||action==='ответ'){fluxChatReplyTo={id:id,text:m.text||'[медиа]',sender:m.sender};$('chat-reply-text').textContent=(m.text||'[медиа]').slice(0,180);$('chat-reply-bar').style.display='flex';$('chat-compose-input').focus();return;}if(mine&&(action==='изменить'||action==='редактировать')){var next=prompt('Изменить сообщение',m.text||'');if(next===null)return;next=next.trim();if(!next){toast('Текст не может быть пустым');return;}db.ref('chats/'+fluxChatActiveId+'/messages/'+id).update({text:next,edited:true,editedAt:now()}).then(function(){db.ref('chats/'+fluxChatActiveId+'/lastMessage').update({text:next,edited:true}).catch(function(){});}).catch(function(){toast('Не удалось изменить сообщение');});return;}if(mine&&(action==='удалить'||action==='удалить для себя')){if(!confirm('Удалить сообщение у всех участников чата?'))return;db.ref('chats/'+fluxChatActiveId+'/messages/'+id).remove().then(function(){toast('Сообщение удалено');}).catch(function(){toast('Не удалось удалить сообщение');});}}
+$('chat-reply-cancel').addEventListener('click',function(){fluxChatReplyTo=null;$('chat-reply-bar').style.display='none';});
+$('chat-attach-btn').addEventListener('click',function(){toast('Прикрепление файлов требует Firebase Storage и правил Storage.');});
 </script>
 </body>
 </html>
