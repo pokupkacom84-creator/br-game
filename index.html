@@ -2443,6 +2443,40 @@ function updateSettingsUI(){
       authorEl.innerHTML='';
     }
   }
+  var refBox=$('profile-referral-card');
+  if(!refBox){
+    refBox=document.createElement('div');
+    refBox.id='profile-referral-card';
+    if(authorEl) authorEl.insertAdjacentElement('afterend',refBox);
+  }
+  if(refBox){
+    var botName=TELEGRAM_BOT_USERNAME;
+    var inviteUrl='https://t.me/'+botName+'?start=ref_'+encodeURIComponent(currentUser.uid);
+    refBox.innerHTML='<div class="premium-status-card" style="margin:10px 12px;cursor:default"><div class="premium-status-row"><div class="premium-status-orb" style="background:linear-gradient(135deg,#16a34a,#22c55e)">₽</div><div style="min-width:0;flex:1"><div class="premium-status-title">Реферальная программа</div><div class="premium-status-sub">15 ₽ за каждого друга на баланс Premium</div></div></div><div style="display:flex;gap:8px;margin-top:12px"><button id="profile-ref-share" class="btn-primary" style="padding:11px;font-size:13px;flex:1">Пригласить друга</button><button id="profile-ref-balance" class="header-btn" style="width:auto;padding:0 12px;border:1px solid var(--border)">Баланс</button></div><div id="profile-ref-info" style="font-size:12px;color:var(--text-2);margin-top:10px">Загрузка баланса…</div></div>';
+    var shareBtn=$('profile-ref-share');
+    if(shareBtn)shareBtn.onclick=function(){
+      var url='https://t.me/'+TELEGRAM_BOT_USERNAME+'?start=ref_'+encodeURIComponent(currentUser.uid);
+      var share='https://t.me/share/url?url='+encodeURIComponent(url)+'&text='+encodeURIComponent('Заходи в Flux! За каждого приглашённого друга начисляется 15 ₽ на баланс.');
+      if(!TELEGRAM_BOT_USERNAME){toast('Бот пока не настроен');return;}
+      if(!openPaymentInExternalBrowser(share))fallbackCopy(url);
+    };
+    var balBtn=$('profile-ref-balance');
+    if(balBtn)balBtn.onclick=function(){switchTab('shop');toast('Баланс можно использовать при оплате Premium через Telegram-бота');};
+    if(db&&currentUser){
+      Promise.all([
+        db.ref('users/'+currentUser.uid+'/refBalance/rub').once('value'),
+        db.ref('users/'+currentUser.uid+'/refStats').once('value')
+      ]).then(function(values){
+        var balance=Number(values[0].val()||0);
+        var stats=values[1].val()||{};
+        var info=$('profile-ref-info');
+        if(info)info.textContent='Баланс: '+balance+' ₽ · Друзей: '+Number(stats.totalInvited||0)+' · Всего заработано: '+Number(stats.totalBonus||0)+' ₽';
+      }).catch(function(){
+        var info=$('profile-ref-info');
+        if(info)info.textContent='Привяжи Telegram в профиле, затем открой бота и нажми /invite.';
+      });
+    }
+  }
   var ps=$('profile-display-status');
   if(ps){var statusText=(currentUserData.status||'').trim();if(statusText)ps.textContent=statusText;else ps.textContent=currentUserData.username?'@'+currentUserData.username:'—';}
   var bigAv=$('profile-avatar-big');
@@ -2765,7 +2799,7 @@ function renderPremiumTab(list){
   html+='<div class="premium-benefits">'+_benefit('crown','Premium-бейдж','Особый значок Premium рядом с именем и в профиле.')+_benefit('shield','Premium VPN','Доступ к отдельному списку Premium VPN-ключей.')+_benefit('pin','Больше закреплений','Можно закреплять больше элементов без обычного ограничения.')+_benefit('flame','До 3 реакций','Расширенные возможности реакций в интерфейсе.')+_benefit('sparkle','Premium-оформление','Особое оформление профиля и Premium-элементов интерфейса.')+_benefit('burst','Анимации','Дополнительные визуальные эффекты и анимация Premium-элементов.')+_benefit('rocket','Новые Premium-функции','Приоритетный доступ к новым возможностям, которые добавляются в Premium.')+_benefit('unlock','Premium-доступ','Все возможности, которые в приложении отмечены как доступные только Premium.')+'</div>';
   html+='<div style="padding:8px 16px 6px;font-size:17px;font-weight:850">Выберите период</div><div class="premium-plans">';
   FLUX_PREMIUM_PLANS.forEach(function(p){html+='<div class="premium-plan '+(p.popular?'popular':'')+'" data-premium="'+p.id+'">'+(p.popular?'<div class="premium-plan-badge">Популярно</div>':'')+'<div class="premium-plan-crown">'+ic('crown',22)+'</div><div class="premium-plan-info"><div class="premium-plan-title">'+p.title+'</div><div class="premium-plan-meta">'+p.days+' дней · оплата в рублях</div></div><div class="premium-plan-price">'+Number(p.rub).toLocaleString('ru-RU')+' ₽</div></div>';});
-  html+='</div><div class="premium-note">Оплата проходит в рублях через Telegram-бота. После перевода отправьте скриншот — администратор проверит платёж и активирует Premium. При включении глобального Premium оплаченные дни замораживаются и продолжат расходоваться только после его отключения.</div>';
+  html+='</div><div class="premium-note">💰 <b>Оплата с реферального баланса</b><br>Выберите тариф — в Telegram-боте появится кнопка «Оплатить с баланса», если средств хватает. Списание и активация выполняются ботом, чтобы нельзя было подделать оплату через приложение.<br><br>Обычная оплата: перевод в рублях и отправка скриншота администратору. При включении глобального Premium оплаченные дни замораживаются и продолжат расходоваться только после его отключения.</div>';
   list.innerHTML=html;
   list.querySelectorAll('[data-premium]').forEach(function(el){el.onclick=function(){buyPremium(getPremiumPlan(el.dataset.premium));};});
 }
