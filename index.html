@@ -738,8 +738,6 @@ button:active,.nav-item:active,.vpn-key-item:active,.vpn-chip:active,.vpn-cat-ta
   .vpn-reaction.pop .rx-ripple{animation:none!important}
   .vpn-home::before,.vpn-home::after,.vpn-ambient span,.nav-item.active svg{animation:none!important}
 }
-
-#flux-referral-card{cursor:default}#flux-referral-card button{cursor:pointer}#flux-ref-link{user-select:text;-webkit-user-select:text}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 
@@ -935,17 +933,6 @@ button:active,.nav-item:active,.vpn-key-item:active,.vpn-chip:active,.vpn-cat-ta
   <div class="profile-display-status" id="profile-display-status"></div>
   <div id="profile-premium-status"></div>
   <div id="profile-author-status"></div>
-  <section id="flux-referral-card" class="profile-info-card" style="padding:16px;margin-top:12px">
-    <div style="display:flex;align-items:center;gap:12px">
-      <div style="width:46px;height:46px;border-radius:15px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:24px">₽</div>
-      <div style="flex:1;min-width:0"><div style="font-size:12px;color:var(--text-2);font-weight:700">РЕФЕРАЛЬНЫЙ БАЛАНС</div><div id="flux-ref-balance" style="font-size:26px;font-weight:850;letter-spacing:-.5px">0 ₽</div></div>
-      <div style="text-align:right"><div style="font-size:11px;color:var(--text-2)">Приглашено</div><div id="flux-ref-count" style="font-size:18px;font-weight:800">0</div></div>
-    </div>
-    <div style="font-size:13px;color:var(--text-2);margin:12px 0">Приглашай друзей — получай <b style="color:var(--accent)">15 ₽</b> за каждого нового пользователя.</div>
-    <div id="flux-ref-link" style="font-size:12px;word-break:break-all;padding:10px;border-radius:12px;background:var(--bg-2);margin-bottom:10px">Ссылка появится после входа</div>
-    <button id="flux-ref-share" class="btn-primary" style="padding:12px;font-size:14px">Пригласить друга</button>
-    <div style="font-size:10.5px;color:var(--text-3);margin-top:9px">Начисление отображается в балансе Flux. Выплата через Telegram-бота требует подключения его серверной части.</div>
-  </section>
   <div class="profile-actions">
     <button class="profile-action ripple" id="btn-edit-profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Изменить</span></button>
     <button class="profile-action ripple" id="profile-btn-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>Настройки</span></button>
@@ -2100,8 +2087,6 @@ $('onb-continue').onclick=async function(){
     var globalPremium=await ensureGlobalPremiumState();
     var updates={};
     updates['users/'+currentUser.uid]={name:name,username:username,avatarId:onbAvatarId,lastSeen:now(),online:true,bio:'',status:''};
-    var incomingRef=fluxReferralCode(fluxGetReferrerFromUrl());
-    if(incomingRef&&incomingRef!==currentUser.uid){updates['users/'+currentUser.uid+'/referral']={referrerUid:incomingRef,createdAt:now(),status:'pending'};updates['referralClaims/'+currentUser.uid]={referrerUid:incomingRef,status:'pending',createdAt:now(),rewardRub:15};}
     updates['usernames/'+username]=currentUser.uid;
     await db.ref().update(updates);
     currentUserData={uid:currentUser.uid,name:name,username:username,avatarId:onbAvatarId};
@@ -2413,63 +2398,8 @@ function premiumDaysCircleHtml(expiresAt){
   return '<div class="premium-days-circle"><svg viewBox="0 0 36 36"><circle class="track" cx="18" cy="18" r="15"/><circle class="bar" cx="18" cy="18" r="15" stroke-dasharray="'+dash+' '+C.toFixed(2)+'" stroke-dashoffset="0"/></svg><span class="days-num">'+days+'</span></div>';
 }
 
-
-function fluxReferralCode(uid){return String(uid||'').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,80);}
-function fluxGetReferrerFromUrl(){
-  try{return new URLSearchParams(location.search).get('ref')||'';}catch(e){return '';}
-}
-function fluxReferralLink(){
-  var code=fluxReferralCode(currentUser&&currentUser.uid);
-  if(!code)return '';
-  var u=new URL(location.href);u.searchParams.set('ref',code);u.hash='';
-  return u.toString();
-}
-function fluxRenderReferral(){
-  if(!currentUser||!db)return;
-  var uid=currentUser.uid,link=fluxReferralLink();
-  var linkEl=$('flux-ref-link');if(linkEl)linkEl.textContent=link||'Ссылка недоступна';
-  db.ref('users/'+uid+'/referralBalance').off('value');
-  db.ref('users/'+uid+'/referralBalance').on('value',function(s){
-    var el=$('flux-ref-balance');if(el)el.textContent=(Number(s.val())||0).toLocaleString('ru-RU')+' ₽';
-  });
-  db.ref('users/'+uid+'/referralCount').off('value');
-  db.ref('users/'+uid+'/referralCount').on('value',function(s){
-    var el=$('flux-ref-count');if(el)el.textContent=String(Number(s.val())||0);
-  });
-}
-(function setupFluxReferralButton(){
-  document.addEventListener('click',function(e){
-    var b=e.target&&e.target.closest?e.target.closest('#flux-ref-share'):null;if(!b)return;
-    var link=fluxReferralLink();if(!link){toast('Сначала войдите в аккаунт');return;}
-    var msg='Присоединяйся к Flux Client! Заходи по моей ссылке: '+link;
-    if(navigator.share){navigator.share({title:'Flux Client',text:msg,url:link}).catch(function(){});}
-    else if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(link).then(function(){toast('Реферальная ссылка скопирована');}).catch(function(){fallbackCopy(link);});}
-    else fallbackCopy(link);
-  });
-})();
-function fluxApplyReferralOnSignup(uid){
-  var ref=fluxReferralCode(fluxGetReferrerFromUrl());
-  if(!ref||!uid||ref===uid)return Promise.resolve(false);
-  // Only attach a referrer to a freshly created profile; do not overwrite existing attribution.
-  return db.ref('users/'+uid).transaction(function(v){
-    if(!v||v.name)return;
-    v.referral=v.referral||{referrerUid:ref,createdAt:now(),status:'pending'};
-    return v;
-  }).then(async function(result){
-    var v=result&&result.snapshot&&result.snapshot.val();
-    if(!v||!v.referral||v.referral.referrerUid!==ref)return false;
-    // Client-side attribution only; secure money crediting must be performed by trusted backend.
-    await db.ref('referralClaims/'+uid).transaction(function(existing){
-      if(existing)return;
-      return {referrerUid:ref,status:'pending',createdAt:now(),rewardRub:15};
-    });
-    return true;
-  }).catch(function(err){console.warn('Referral attribution failed',err);return false;});
-}
-
 function updateSettingsUI(){
   if(!currentUserData)return;
-  try{fluxRenderReferral();}catch(e){}
   var globalOn=isGlobalPremiumEnabled();
   var pv=window.__fluxPremiumState||currentUserData.premium||{};
   var personalActive=isPremiumActive(pv)&&!globalOn;
