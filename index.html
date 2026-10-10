@@ -326,7 +326,7 @@ body.dark.lite .bottom-nav,body.dark.perf-lite .bottom-nav{
 
 .profile-display-name{text-align:center;font-size:24px;font-weight:700;letter-spacing:-.025em;padding:0 24px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2}
 .profile-display-status{text-align:center;color:var(--text-2);font-size:13.5px;margin-top:6px;min-height:20px;padding:0 24px;font-weight:500}
-.profile-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:20px 12px 8px}
+.profile-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:20px 12px 8px}
 .profile-action{background:var(--bg-2);border-radius:16px;padding:14px 6px;display:flex;flex-direction:column;align-items:center;gap:9px;font-size:12.5px;color:var(--text);font-weight:500;cursor:pointer;border:none;text-align:center;box-shadow:var(--shadow-1)}
 .profile-action:active{background:var(--bg-3);transform:scale(.96)}
 .profile-action svg{width:22px;height:22px;color:var(--text);opacity:.85;flex-shrink:0}
@@ -1125,10 +1125,15 @@ body.flux-studio-glow .vpn-dashboard-card,body.flux-studio-glow .vpn-connect-btn
   <div class="profile-display-name" id="profile-display-name">—</div>
   <div class="profile-display-status" id="profile-display-status"></div>
   <div id="profile-premium-status"></div>
+  <div id="profile-author-status"></div>
   <div class="profile-actions">
     <button class="profile-action ripple" id="btn-edit-profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Изменить</span></button>
     <button class="profile-action ripple" id="profile-btn-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>Настройки</span></button>
     <button class="profile-action ripple" id="btn-open-premium"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 7l4 4 5-7 5 7 4-4v10H3z"/><path d="M3 20h18"/></svg><span>Premium</span></button>
+    <button class="profile-action ripple" id="btn-become-author">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+      <span>Стать автором</span>
+    </button>
   </div>
   <div class="profile-info-card">
     <div class="info-row"><div class="info-value" id="info-name">—</div><div class="info-label">Имя</div></div>
@@ -1385,6 +1390,7 @@ setTimeout(function(){
 setTimeout(function(){hideSplashIfVisible();},9000);
 
 const TELEGRAM_BOT_USERNAME = 'FluxPremPay_bot';
+const AUTHOR_REWARD_PERCENT_LABEL = 30;
 const FLUX_PREMIUM_PLANS = [
   {id:'pm_month', title:'1 месяц', days:30, rub:199, badge:'Месяц'},
   {id:'pm_quarter', title:'3 месяца', days:90, rub:499, badge:'3 месяца', popular:true},
@@ -2645,6 +2651,30 @@ function updateSettingsUI(){
     var card=pcs.querySelector('#profile-premium-card');
     if(card)card.onclick=openPremiumManager;
   }
+  var authorEl=$('profile-author-status');
+  if(authorEl){
+    var tv=(currentUserData.telegramVerification)||{};
+    if(tv.status==='confirmed'){
+      authorEl.innerHTML='<div class="premium-status-card" style="cursor:default;background:linear-gradient(135deg,rgba(34,197,94,.14),rgba(16,185,129,.10));border-color:rgba(34,197,94,.32)">'
+        + '<div class="premium-status-row">'
+        + '<div class="premium-status-orb" style="background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 4px 10px rgba(34,197,94,.3)">🛡</div>'
+        + '<div style="min-width:0;flex:1"><div class="premium-status-title">Автор Flux Network</div>'
+        + '<div class="premium-status-sub">Telegram привязан · получай '+AUTHOR_REWARD_PERCENT_LABEL+'% дней Premium за каждую подписку через твои источники</div></div>'
+        + '</div></div>';
+    } else if(tv.code){
+      authorEl.innerHTML='<div class="premium-status-card" style="cursor:pointer" id="author-pending-card">'
+        + '<div class="premium-status-row">'
+        + '<div class="premium-status-orb" style="background:linear-gradient(135deg,#f59e0b,#f97316)">⏳</div>'
+        + '<div style="min-width:0;flex:1"><div class="premium-status-title">Верификация ожидается</div>'
+        + '<div class="premium-status-sub">Открой бота и нажми Start, чтобы завершить</div></div>'
+        + '<div class="premium-status-action">Открыть</div>'
+        + '</div></div>';
+      var pc=authorEl.querySelector('#author-pending-card');
+      if(pc) pc.onclick=becomeAuthor;
+    } else {
+      authorEl.innerHTML='';
+    }
+  }
   var ps=$('profile-display-status');
   if(ps){var statusText=(currentUserData.status||'').trim();if(statusText)ps.textContent=statusText;else ps.textContent=currentUserData.username?'@'+currentUserData.username:'—';}
   var bigAv=$('profile-avatar-big');
@@ -2700,6 +2730,53 @@ function isFluxAdmin(){
   var d=currentUserData||{};return d.isAdmin===true||d.role==='admin'||d.admin===true;
 }
 function updateAdminVisibility(){var b=document.getElementById('btn-admin-panel');if(b)b.style.display=isFluxAdmin()?'flex':'none';}
+
+/* ===================== AUTHOR / REFERRAL ===================== */
+function genFluxVerifyCode(){
+  var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var part=function(n){var s='';for(var i=0;i<n;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s;};
+  return 'FLUX-'+part(4)+'-'+part(4);
+}
+
+async function becomeAuthor(){
+  if(!currentUser || !db){ toast('Войдите в аккаунт'); return; }
+  var bot = TELEGRAM_BOT_USERNAME;
+  if(!bot || bot === 'YOUR_BOT_USERNAME'){ toast('Бот не настроен'); return; }
+
+  var v = (currentUserData && currentUserData.telegramVerification) || {};
+  if(v.status === 'confirmed'){
+    toast('Telegram уже привязан — открой бота и жми /invite');
+    var url0 = 'https://t.me/' + bot;
+    openPaymentInExternalBrowser(url0);
+    return;
+  }
+
+  var code = genFluxVerifyCode();
+  try{
+    await db.ref('users/'+currentUser.uid+'/telegramVerification').update({
+      code: code,
+      status: 'pending',
+      createdAt: now()
+    });
+    if(!currentUserData.telegramVerification) currentUserData.telegramVerification = {};
+    currentUserData.telegramVerification.code = code;
+    currentUserData.telegramVerification.status = 'pending';
+    updateSettingsUI();
+  }catch(e){
+    console.warn('becomeAuthor write', e);
+    toast('Не удалось создать код');
+    return;
+  }
+
+  var url = 'https://t.me/' + bot + '?start=' + encodeURIComponent('verify_' + code);
+  if(openPaymentInExternalBrowser(url)){
+    toast('Подтверди верификацию в Telegram');
+  }else{
+    fallbackCopy(url);
+    toast('Скопируй ссылку и открой её в Telegram');
+  }
+}
+/* =================== /AUTHOR / REFERRAL =================== */
 
 $('btn-theme').onclick=function(){setTheme(!document.body.classList.contains('dark'));updateTogglesUI();};
 $('btn-theme-color').onclick=function(){openThemeStudio();};
@@ -3741,6 +3818,10 @@ function fallbackCopy(text){
 function _copyFallback(text){
   try{var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('Скопировано');playSound('success');}catch(e){toast('Не удалось скопировать');}
 }
+
+/* AUTHOR BUTTON HANDLER */
+var _authorBtn = document.getElementById('btn-become-author');
+if(_authorBtn) _authorBtn.onclick = becomeAuthor;
 
 var promoBtn=document.getElementById('btn-promo-code');if(promoBtn)promoBtn.onclick=openPromoSheet;
 var adminBtn=document.getElementById('btn-admin-panel');if(adminBtn)adminBtn.onclick=openAdminPanel;
