@@ -740,6 +740,13 @@ button:active,.nav-item:active,.vpn-key-item:active,.vpn-chip:active,.vpn-cat-ta
 }
 
 .chat-home{display:flex;flex-direction:column;flex:1;min-height:0;background:var(--bg)}
+#tab-chats{display:none;position:absolute;inset:0 0 104px 0;z-index:3;min-height:0;overflow:hidden;background:var(--bg);}
+#tab-chats.active{display:flex!important;}
+#tab-chats .chat-home{width:100%;height:100%;padding-top:env(safe-area-inset-top);}
+#tab-chats .chat-list{flex:1;min-height:0;overflow-y:auto;padding-bottom:18px;}
+#chat-view{z-index:20;}
+#bottom-nav{z-index:25;}
+
 .chat-head{display:flex;align-items:center;justify-content:space-between;padding:calc(16px + env(safe-area-inset-top)) 18px 12px;background:var(--surface);border-bottom:1px solid var(--border)}
 .chat-title{font-size:26px;font-weight:850;letter-spacing:-.04em}.chat-subtitle{font-size:12px;color:var(--text-2);margin-top:2px}
 .chat-new{width:44px;height:44px;border-radius:50%;background:var(--accent-grad);color:#fff;font-size:28px;line-height:1;box-shadow:var(--accent-glow)}
@@ -794,6 +801,21 @@ button:active,.nav-item:active,.vpn-key-item:active,.vpn-chip:active,.vpn-cat-ta
 .flux-whats-new-confirm:active{transform:scale(.985)}
 .flux-whats-new-note{text-align:center;font-size:10px;line-height:1.4;color:var(--text-3);margin-top:10px}
 @media(prefers-reduced-motion:reduce){#modal.flux-whats-new-modal{animation:none}.flux-whats-new-confirm{transition:none}}
+</style>
+
+
+<style id="flux-chat-layout-fix">
+#main-screen .main-body{position:relative;isolation:isolate;min-height:0;overflow:hidden}
+#main-screen .main-body>#tab-chats{position:absolute!important;inset:0!important;width:100%;height:100%;min-height:0;display:none!important;flex-direction:column;overflow:hidden;z-index:8;background:var(--bg,#111820)}
+#main-screen .main-body>#tab-chats.active{display:flex!important}
+#tab-chats .chat-home{display:flex;flex-direction:column;flex:1;width:100%;height:100%;min-height:0;background:var(--bg,#111820);color:var(--text,#f4f6fb);padding-top:env(safe-area-inset-top)}
+#tab-chats .chat-head{flex-shrink:0;background:var(--surface,#1b2530);border-bottom:1px solid var(--border,rgba(255,255,255,.08));padding:calc(16px + env(safe-area-inset-top)) 18px 12px}
+#tab-chats .chat-title{color:var(--text,#f4f6fb)}
+#tab-chats .chat-new{background:var(--accent,#7467ff);box-shadow:none}
+#tab-chats .chat-search{color:var(--text,#f4f6fb);background:var(--surface,#1b2530);border-color:var(--border,rgba(255,255,255,.1))}
+#tab-chats .chat-list{flex:1;min-height:0;overflow-y:auto;padding-bottom:24px}
+#tab-chats .chat-empty{padding:36px 24px;color:var(--text-2,#9aa6b5);line-height:1.55}
+#chat-view{position:absolute;inset:0 0 0 0;background:var(--bg,#111820);color:var(--text,#f4f6fb)}
 </style>
 
 </head>
@@ -1034,8 +1056,6 @@ button:active,.nav-item:active,.vpn-key-item:active,.vpn-chip:active,.vpn-cat-ta
   </div>
 </div>
 </div>
-</div>
-
 <div id="tab-chats" class="tab-content">
 <div class="chat-home">
   <div class="chat-head"><div><div class="chat-title">Сообщения</div><div class="chat-subtitle">Личные чаты Flux</div></div><button class="chat-new ripple" id="chat-new-btn" aria-label="Новый чат">＋</button></div>
@@ -1043,6 +1063,8 @@ button:active,.nav-item:active,.vpn-key-item:active,.vpn-chip:active,.vpn-cat-ta
   <div id="chat-list" class="chat-list"><div class="chat-empty">Здесь появятся ваши диалоги</div></div>
 </div>
 </div>
+</div>
+
 <div class="bottom-nav" id="bottom-nav">
 <div class="nav-indicator" id="nav-indicator"></div>
 <div class="nav-item" data-tab="chats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8z"/></svg><span>Чаты</span></div>
@@ -2825,7 +2847,7 @@ function switchTab(tab){
   if(!tab)return;
   var next=document.getElementById('tab-'+tab);
   if(!next)return;
-  document.querySelectorAll('.main-body>.tab-content').forEach(function(t){
+  document.querySelectorAll('.tab-content').forEach(function(t){
     t.classList.toggle('active',t===next);
   });
   document.querySelectorAll('.nav-item').forEach(function(n){n.classList.toggle('active',n.dataset.tab===tab);});
