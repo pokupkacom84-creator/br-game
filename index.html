@@ -954,6 +954,54 @@ body.flux-chat-open #bottom-nav{display:none!important}
 body.perf-lite .flux-chat-media-grid,body.perf-lite .flux-chat-preview,body.perf-lite .flux-chat-file{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 </style>
 
+
+<style id="flux-peer-profile-styles">
+#flux-peer-profile{position:fixed;inset:0;z-index:9990;display:none;flex-direction:column;overflow:hidden;background:var(--bg,#202124);color:var(--text,#f6f6f7);padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+#flux-peer-profile.show{display:flex}
+.flux-peer-profile-topbar{height:54px;min-height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:var(--bg,#202124)}
+.flux-peer-profile-topbar button{height:42px;min-width:42px;padding:0 8px;border-radius:50%;display:grid;place-items:center;background:transparent;color:var(--text,#f6f6f7);font-size:27px;line-height:1}
+.flux-peer-profile-topbar button:active{background:var(--surface,#303236)}
+.flux-peer-profile-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:28px}
+.flux-peer-profile-scroll::-webkit-scrollbar{display:none}
+.flux-peer-profile-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:7px 20px 16px}
+.flux-peer-profile-avatar{width:144px;height:144px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;flex:0 0 144px;background:var(--surface,#303236);color:var(--text);font-size:48px;font-weight:750;background-position:center;background-size:cover;margin-bottom:21px;box-shadow:0 0 0 1px rgba(255,255,255,.025)}
+.flux-peer-profile-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.flux-peer-profile-name{font-size:30px;line-height:1.12;font-weight:500;letter-spacing:-.6px;max-width:100%;overflow-wrap:anywhere}
+.flux-peer-profile-status{margin-top:8px;font-size:15px;line-height:1.35;color:var(--text-2,#95979d)}
+.flux-peer-profile-username{font-size:14px;color:var(--accent,#8e83ff);margin-top:7px;min-height:17px}
+.flux-peer-profile-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;padding:18px 14px 19px}
+.flux-peer-profile-action{height:91px;min-width:0;border:0;border-radius:23px;background:var(--surface,#303236);color:var(--text,#f6f6f7);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-size:12px;font-weight:500}
+.flux-peer-profile-action:active{filter:brightness(1.13);transform:scale(.98)}
+.flux-peer-profile-action svg{width:25px;height:25px;display:block;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.flux-peer-profile-card{background:var(--surface,#2a2b2e);border-radius:24px;margin:0 14px 17px;overflow:hidden}
+.flux-peer-profile-info-row{padding:15px 18px 14px;min-height:61px;border-bottom:1px solid var(--divider,rgba(255,255,255,.06));display:flex;flex-direction:column;gap:4px;overflow-wrap:anywhere}
+.flux-peer-profile-info-row:last-child{border-bottom:0}
+.flux-peer-profile-info-value{font-size:17px;line-height:1.25;color:var(--text,#f6f6f7);font-weight:450;overflow-wrap:anywhere}
+.flux-peer-profile-info-label{font-size:13px;line-height:1.25;color:var(--text-2,#92949a)}
+.flux-peer-profile-add{margin:0 14px 18px;border-radius:22px;min-height:72px;padding:0 19px;display:flex;align-items:center;gap:14px;background:var(--surface,#2a2b2e);color:var(--text);font-size:16px}
+.flux-peer-profile-add-icon{width:34px;height:34px;display:grid;place-items:center;font-size:25px;color:var(--text-2)}
+.flux-peer-profile-tabs{position:sticky;top:0;z-index:2;display:flex;gap:3px;padding:6px;background:var(--surface,#303236);border-radius:30px;margin:0 14px 12px}
+.flux-peer-profile-tab{flex:1;min-width:0;padding:10px 4px;border-radius:24px;background:transparent;color:var(--text-2,#a1a1a7);font-size:13px;font-weight:550;white-space:nowrap}
+.flux-peer-profile-tab.active{background:var(--bg-3,#45464b);color:var(--text,#fff)}
+.flux-peer-profile-tabcontent{padding:0 2px 12px}
+.flux-peer-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;padding:0 2px}
+.flux-peer-profile-photo{position:relative;display:block;padding:0;overflow:hidden;aspect-ratio:1;background:var(--surface,#303236);border-radius:2px;color:var(--text-2)}
+.flux-peer-profile-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.flux-peer-profile-photo .placeholder{height:100%;display:grid;place-items:center;font-size:12px}
+.flux-peer-profile-list{display:flex;flex-direction:column;gap:1px;padding:0 14px}
+.flux-peer-profile-file{width:100%;display:flex;gap:12px;align-items:center;text-align:left;padding:13px 12px;background:var(--surface,#2a2b2e);color:var(--text);border-radius:13px;min-width:0}
+.flux-peer-profile-file-icon{width:43px;height:45px;flex:0 0 43px;display:grid;place-items:center;border-radius:12px;background:var(--bg-3,#414247);color:var(--accent,#8e83ff);font-size:22px}
+.flux-peer-profile-file-detail{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.flux-peer-profile-file-detail b{font-size:14px;line-height:1.25;overflow-wrap:anywhere;font-weight:550}
+.flux-peer-profile-file-detail small{font-size:12px;color:var(--text-2,#92949a)}
+.flux-peer-profile-file-open{font-size:19px;color:var(--text-2)}
+.flux-peer-profile-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;padding:34px 22px;color:var(--text-2);font-size:13px;line-height:1.4}
+.flux-peer-profile-empty strong{font-size:16px;color:var(--text);font-weight:650}
+.flux-peer-profile-audio{width:100%;max-width:330px;margin-top:7px}
+@media(max-width:370px){.flux-peer-profile-actions{gap:6px;padding-left:10px;padding-right:10px}.flux-peer-profile-action{height:82px;border-radius:19px;font-size:11px}.flux-peer-profile-avatar{width:126px;height:126px;flex-basis:126px}.flux-peer-profile-name{font-size:27px}.flux-peer-profile-tab{font-size:12px}}
+body.perf-lite .flux-peer-profile-action,body.perf-lite .flux-peer-profile-card{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+</style>
+
 </head>
 <body>
 
@@ -1219,6 +1267,18 @@ body.perf-lite .flux-chat-media-grid,body.perf-lite .flux-chat-preview,body.perf
 <div class="chat-compose"><button class="chat-attach" id="chat-attach-btn" aria-label="Прикрепить">＋</button><textarea id="chat-compose-input" rows="1" maxlength="4000" placeholder="Сообщение"></textarea><button class="chat-send" id="chat-send-btn">➤</button></div>
 <input id="chat-file-input" type="file" accept="image/*" multiple hidden><input id="chat-doc-input" type="file" accept="*/*" multiple hidden>
 </div>
+
+<div id="flux-peer-profile" aria-hidden="true">
+  <div class="flux-peer-profile-topbar">
+    <button type="button" id="flux-peer-profile-back" aria-label="Назад">‹</button>
+    <span aria-hidden="true"></span>
+    <button type="button" id="flux-peer-profile-menu" aria-label="Действия">⋮</button>
+  </div>
+  <main id="flux-peer-profile-scroll" class="flux-peer-profile-scroll">
+    <div id="flux-peer-profile-body"></div>
+  </main>
+</div>
+
 <div id="profile-sheet" class="profile-sheet"><div class="profile-sheet-body" id="profile-sheet-body"></div></div>
 
 <div id="edit-profile-sheet" class="profile-sheet edit-profile-sheet">
@@ -3929,7 +3989,7 @@ function fluxChatOpen(cid,peerId,peer){
     fluxChatMessageCache={};fluxChatCurrentMediaList=[];fluxChatCurrentMediaMap={};fluxChatAttachmentDataMap={};
     entries.forEach(function(entry){fluxChatMessageCache[entry.id]=entry.m;fluxChatMediaArray(entry.m).forEach(function(media,i){var kind=media.kind||(/^video\//.test(media.mime||'')?'video':(/^image\//.test(media.mime||'')?'image':'file')),key=entry.id+':'+i;fluxChatAttachmentDataMap[key]=media;if((media.url||media.dataPath)&&kind==='image'){media.kind=kind;media.url=media.url||'';media.dataPath=media.dataPath||'';media.name=media.name||'Медиа';media.size=media.size||0;media.mime=media.mime||'';media.caption=entry.m.text||'';media.senderName=entry.m.senderName||'';fluxChatCurrentMediaMap[key]=fluxChatCurrentMediaList.length;fluxChatCurrentMediaList.push(media);}});});
     box.innerHTML='';var prevDay='';entries.forEach(function(entry){var m=entry.m,day=new Date(Number(m.time)||Date.now()).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});if(day!==prevDay){var dayEl=document.createElement('div');dayEl.className='chat-day';dayEl.textContent=day;box.appendChild(dayEl);prevDay=day;}box.appendChild(fluxChatRenderMessage(entry.id,m,m.sender===currentUser.uid));});
-    fluxChatObserveInlineAttachments(box);box.scrollTop=box.scrollHeight;
+    fluxChatObserveInlineAttachments(box);box.scrollTop=box.scrollHeight;if(document.getElementById('flux-peer-profile')&&document.getElementById('flux-peer-profile').classList.contains('show')){var selectedProfileTab=document.querySelector('#flux-peer-profile [data-peer-tab].active');if(selectedProfileTab)selectedProfileTab.click();}
     db.ref('chats/'+cid+'/messages').once('value').then(function(all){if(fluxChatActiveId!==cid)return;var updates={};all.forEach(function(n){var v=n.val()||{};if(v.sender!==currentUser.uid&&!v.read)updates['chats/'+cid+'/messages/'+n.key+'/read']=true;});var last=entries.length?entries[entries.length-1].m:null;if(last&&last.sender!==currentUser.uid&&!last.read)updates['chats/'+cid+'/lastMessage/read']=true;if(Object.keys(updates).length)db.ref().update(updates).catch(function(){});}).catch(function(){});
   },function(){if(fluxChatActiveId===cid)toast('Не удалось загрузить сообщения. Проверьте интернет и попробуйте ещё раз.');});
   if(fluxChatPeer.type==='group'){fluxChatTypingRef=db.ref('chats/'+cid+'/typing');fluxChatTypingRef.on('value',function(s){var typing=s.val()||{},names=Object.keys(typing).filter(function(k){return k!==currentUser.uid&&typing[k];});$('chat-peer-status').textContent=names.length?names.length+' печатает…':fluxChatStatusText(fluxChatPeer);});}
@@ -4052,5 +4112,93 @@ function fluxChatCloseLightbox(){var viewer=$('flux-media-viewer');if(viewer){vi
 window.addEventListener('keydown',function(e){if(!$('flux-media-viewer')||!$('flux-media-viewer').classList.contains('show'))return;if(e.key==='Escape')fluxChatCloseLightbox();if(e.key==='ArrowLeft')fluxChatOpenLightbox(fluxChatLightboxIndex-1);if(e.key==='ArrowRight')fluxChatOpenLightbox(fluxChatLightboxIndex+1);});
 
 </script>
+
+<script id="flux-peer-profile-script">
+(function(){
+  'use strict';
+  var root=document.getElementById('flux-peer-profile');
+  var body=document.getElementById('flux-peer-profile-body');
+  var scroll=document.getElementById('flux-peer-profile-scroll');
+  if(!root||!body||!scroll)return;
+  var activeTab='media',profileRef=null,profileToken=0,profileScrollY=0;
+  function escText(v){return typeof esc==='function'?esc(String(v==null?'':v)):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function iconSvg(kind){
+    var d={chat:'<path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H7l-4 2 1.5-4.2A7.5 7.5 0 1 1 20 11.5Z"/>',search:'<circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/>',share:'<path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v8h14v-8"/>',media:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m21 15-5-5L5 20"/>'};
+    return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(d[kind]||d.chat)+'</svg>';
+  }
+  function lastSeenText(u){
+    if(u&&u.online)return 'в сети';
+    var ts=Number(u&&u.lastSeen||0);if(!ts)return u&&u.username?'@'+u.username:'не в сети';
+    var d=new Date(ts);if(!Number.isFinite(d.getTime()))return 'не в сети';
+    var nowDate=new Date(),time=d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+    if(d.toDateString()===nowDate.toDateString())return 'был(а) сегодня в '+time;
+    var yesterday=new Date(nowDate);yesterday.setDate(yesterday.getDate()-1);
+    if(d.toDateString()===yesterday.toDateString())return 'был(а) вчера в '+time;
+    return 'был(а) '+d.toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:d.getFullYear()===nowDate.getFullYear()?undefined:'numeric'});
+  }
+  function prettyDate(v){if(!v)return '';var d=new Date(String(v).length===10&&String(v).indexOf('-')>0?String(v)+'T12:00:00':v);if(!Number.isFinite(d.getTime()))return String(v);return d.toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:'numeric'}).replace(' г.','');}
+  function profileUser(){return window.fluxChatPeer||{};}
+  function closeProfile(){root.classList.remove('show');root.setAttribute('aria-hidden','true');document.body.classList.remove('flux-peer-profile-open');if(profileRef){profileRef.off();profileRef=null;}}
+  function openProfile(){
+    var p=profileUser();if(!window.fluxChatActiveId||!p||(!p.uid&&p.type!=='group'))return;
+    if(p.type==='group'&& !p.uid) { /* group information can be displayed from chat metadata */ }
+    if(profileRef){profileRef.off();profileRef=null;}
+    activeTab='media';profileScrollY=0;scroll.scrollTop=0;root.classList.add('show');root.setAttribute('aria-hidden','false');document.body.classList.add('flux-peer-profile-open');renderProfile();
+    if(p.uid&&typeof db!=='undefined'&&db){profileRef=db.ref('users/'+p.uid);profileRef.on('value',function(s){if(!root.classList.contains('show'))return;var latest=s.val()||{};window.fluxChatPeer=Object.assign({},window.fluxChatPeer||{},latest);renderProfile();});}
+  }
+  function sharedData(){
+    var result={images:[],files:[],links:[],music:[]},cache=window.fluxChatMessageCache||{};
+    Object.keys(cache).forEach(function(id){var m=cache[id]||{},time=Number(m.time)||0;fluxChatMediaArray(m).forEach(function(raw,i){var item=Object.assign({},raw||{});item._msgId=id;item._time=time;item._index=i;item.kind=item.kind||(/^image\//i.test(item.mime||'')?'image':'file');var mime=String(item.mime||'').toLowerCase(),name=String(item.name||'').toLowerCase();if(item.kind==='image'||mime.indexOf('image/')===0)result.images.push(item);else if(mime.indexOf('audio/')===0||/\.(mp3|m4a|aac|wav|ogg|flac|opus)$/i.test(name))result.music.push(item);else result.files.push(item);});
+      var text=String(m.text||''),re=/https?:\/\/[^\s<>"']+/ig,match;while((match=re.exec(text))!==null){var url=match[0].replace(/[),.!?;:]+$/,'');if(url&&!result.links.some(function(x){return x.url===url;}))result.links.push({url:url,time:time,sender:m.sender});}
+    });
+    ['images','files','music'].forEach(function(k){result[k].sort(function(a,b){return b._time-a._time;});});result.links.sort(function(a,b){return b.time-a.time;});
+    return result;
+  }
+  function addInfoRow(value,label){if(value===null||value===undefined||String(value).trim()==='')return '';return '<div class="flux-peer-profile-info-row"><div class="flux-peer-profile-info-value">'+escText(value)+'</div><div class="flux-peer-profile-info-label">'+escText(label)+'</div></div>';}
+  function renderProfile(){
+    var p=profileUser(),isGroup=p.type==='group',name=isGroup?(p.title||'Группа'):(p.name||p.username||'Пользователь'),status=isGroup?(Object.keys(p.members||{}).length+' участников'):lastSeenText(p),handle=!isGroup&&p.username?'@'+String(p.username).replace(/^@/,''):'';
+    body.innerHTML='<section class="flux-peer-profile-hero"><div class="flux-peer-profile-avatar" id="flux-peer-profile-avatar"></div><div class="flux-peer-profile-name">'+escText(name)+'</div><div class="flux-peer-profile-status">'+escText(status)+'</div>'+(handle?'<div class="flux-peer-profile-username">'+escText(handle)+'</div>':'')+'</section>'+
+      '<div class="flux-peer-profile-actions"><button class="flux-peer-profile-action" type="button" data-peer-action="chat">'+iconSvg('chat')+'<span>Чат</span></button><button class="flux-peer-profile-action" type="button" data-peer-action="media">'+iconSvg('media')+'<span>Медиа</span></button><button class="flux-peer-profile-action" type="button" data-peer-action="search">'+iconSvg('search')+'<span>Поиск</span></button><button class="flux-peer-profile-action" type="button" data-peer-action="share">'+iconSvg('share')+'<span>Поделиться</span></button></div>'+
+      '<div class="flux-peer-profile-card">'+(isGroup?addInfoRow(Object.keys(p.members||{}).length+' участников','Участники'):addInfoRow(handle||'Не указан','Имя пользователя')+addInfoRow(p.bio,'О себе')+addInfoRow(p.phone||p.phoneNumber,'Телефон')+addInfoRow(prettyDate(p.birthday),'День рождения')+addInfoRow(p.status,'Статус'))+'</div>'+
+      '<div class="flux-peer-profile-tabs" role="tablist"><button type="button" class="flux-peer-profile-tab '+(activeTab==='media'?'active':'')+'" data-peer-tab="media">Медиа</button><button type="button" class="flux-peer-profile-tab '+(activeTab==='files'?'active':'')+'" data-peer-tab="files">Файлы</button><button type="button" class="flux-peer-profile-tab '+(activeTab==='links'?'active':'')+'" data-peer-tab="links">Ссылки</button><button type="button" class="flux-peer-profile-tab '+(activeTab==='music'?'active':'')+'" data-peer-tab="music">Музыка</button></div><div class="flux-peer-profile-tabcontent" id="flux-peer-profile-tabcontent"></div>';
+    var av=document.getElementById('flux-peer-profile-avatar');if(av&&typeof fluxChatSetAvatar==='function')fluxChatSetAvatar(av,p);
+    body.querySelectorAll('[data-peer-tab]').forEach(function(b){b.onclick=function(){activeTab=b.getAttribute('data-peer-tab');renderProfile();};});
+    body.querySelectorAll('[data-peer-action]').forEach(function(b){b.onclick=function(){var action=b.getAttribute('data-peer-action');if(action==='chat'){closeProfile();return;}if(action==='media'){activeTab='media';renderProfile();scroll.scrollTop=body.querySelector('.flux-peer-profile-tabs').offsetTop;return;}if(action==='search'){closeProfile();peerSearch();return;}if(action==='share'){var text=handle||name;if(navigator.share){navigator.share({title:name,text:text}).catch(function(){if(typeof fluxChatCopyText==='function')fluxChatCopyText(text);});}else if(typeof fluxChatCopyText==='function')fluxChatCopyText(text);return;}};});
+    renderTab();
+  }
+  function emptyState(title,text){return '<div class="flux-peer-profile-empty"><strong>'+escText(title)+'</strong><span>'+escText(text)+'</span></div>';}
+  function renderTab(){
+    var dest=document.getElementById('flux-peer-profile-tabcontent');if(!dest)return;var data=sharedData();profileToken++;var token=profileToken;
+    if(activeTab==='media'){
+      var imgs=window.fluxChatCurrentMediaList||[];if(!imgs.length){dest.innerHTML=emptyState('Пока нет медиа','Фотографии, отправленные в этом чате, появятся здесь.');return;}
+      dest.innerHTML='<div class="flux-peer-profile-grid">'+imgs.map(function(it,i){return '<button type="button" class="flux-peer-profile-photo" data-peer-image="'+i+'"><span class="placeholder">Фото</span></button>';}).join('')+'</div>';
+      var buttons=Array.prototype.slice.call(dest.querySelectorAll('[data-peer-image]'));
+      buttons.forEach(function(btn){var index=Number(btn.getAttribute('data-peer-image')),item=imgs[index];if(item&&item.url){btn.innerHTML='<img src="'+escText(item.url)+'" alt="Фото" loading="lazy">';}else if(item&&item.dataPath){var io=typeof IntersectionObserver==='function'?new IntersectionObserver(function(entries){entries.forEach(function(en){if(!en.isIntersecting)return;io.unobserve(en.target);fluxChatResolveMedia(item).then(function(url){if(url&&root.classList.contains('show')&&token===profileToken&&btn.isConnected)btn.innerHTML='<img src="'+escText(url)+'" alt="Фото" loading="lazy">';});});},{root:scroll,rootMargin:'260px'}):null;if(io)io.observe(btn);else fluxChatResolveMedia(item).then(function(url){if(url&&btn.isConnected)btn.innerHTML='<img src="'+escText(url)+'" alt="Фото">';});}
+        btn.onclick=function(){closeProfile();fluxChatOpenLightbox(index);};
+      });return;
+    }
+    var items=activeTab==='files'?data.files:activeTab==='music'?data.music:data.links;
+    if(!items.length){dest.innerHTML=emptyState(activeTab==='files'?'Нет файлов':activeTab==='links'?'Нет ссылок':'Нет музыки',activeTab==='files'?'Документы из этого чата появятся здесь.':activeTab==='links'?'Ссылки из сообщений появятся здесь.':'Аудиофайлы из этого чата появятся здесь.');return;}
+    if(activeTab==='links'){
+      dest.innerHTML='<div class="flux-peer-profile-list">'+items.slice(0,100).map(function(it){return '<a class="flux-peer-profile-file" href="'+escText(it.url)+'" target="_blank" rel="noopener"><span class="flux-peer-profile-file-icon">↗</span><span class="flux-peer-profile-file-detail"><b>'+escText(it.url)+'</b><small>'+escText(new Date(it.time||Date.now()).toLocaleDateString('ru-RU'))+'</small></span></a>';}).join('')+'</div>';return;
+    }
+    dest.innerHTML='<div class="flux-peer-profile-list">'+items.slice(0,100).map(function(it,i){return '<button type="button" class="flux-peer-profile-file" data-peer-file="'+i+'"><span class="flux-peer-profile-file-icon">'+(activeTab==='music'?'♫':'↧')+'</span><span class="flux-peer-profile-file-detail"><b>'+escText(it.name|| (activeTab==='music'?'Аудиофайл':'Файл'))+'</b><small>'+escText(fluxChatFormatSize(it.size))+(it.mime?' · '+escText(String(it.mime).split('/').pop().toUpperCase()):'')+' · '+escText(new Date(it._time||Date.now()).toLocaleDateString('ru-RU'))+'</small></span><span class="flux-peer-profile-file-open">↗</span></button>'+(activeTab==='music'&&it.url?'<audio class="flux-peer-profile-audio" controls preload="none" src="'+escText(it.url)+'"></audio>':'');}).join('')+'</div>';
+    dest.querySelectorAll('[data-peer-file]').forEach(function(btn){btn.onclick=async function(){var it=items[Number(btn.getAttribute('data-peer-file'))];if(!it)return;var url=await fluxChatResolveMedia(it);if(!url){toast('Не удалось открыть файл');return;}var a=document.createElement('a');a.href=url;a.download=it.name||'flux-file';a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();};});
+  }
+  function peerSearch(){
+    if(typeof showModal!=='function')return;
+    showModal('<div class="modal-title">Поиск в чате</div><input id="flux-peer-search-input" class="chat-modal-input" placeholder="Найти сообщение" maxlength="120"><div class="modal-actions"><button class="modal-btn" id="flux-peer-search-cancel">Отмена</button><button class="modal-btn primary" id="flux-peer-search-go">Найти</button></div>',function(m,close){var input=m.querySelector('#flux-peer-search-input');m.querySelector('#flux-peer-search-cancel').onclick=close;m.querySelector('#flux-peer-search-go').onclick=function(){var q=input.value.trim().toLowerCase();if(!q)return;var rows=Object.keys(window.fluxChatMessageCache||{}).map(function(id){return{id:id,m:fluxChatMessageCache[id]||{}};}).filter(function(x){return String(x.m.text||'').toLowerCase().includes(q);}).sort(function(a,b){return Number(b.m.time||0)-Number(a.m.time||0);});if(!rows.length){close();toast('Сообщения не найдены');return;}var id=rows[0].id;close();setTimeout(function(){var el=document.querySelector('#chat-messages [data-message-id="'+id.replace(/"/g,'')+'"]');if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.style.outline='2px solid var(--accent)';setTimeout(function(){el.style.outline='';},1600);}else toast('Сообщение не отображается в текущем списке');},80);};input.focus();});
+  }
+  document.getElementById('flux-peer-profile-back').addEventListener('click',closeProfile);
+  document.getElementById('flux-peer-profile-menu').addEventListener('click',function(){var p=profileUser(),name=p.name||p.username||p.title||'Пользователь';if(p.username&&typeof fluxChatCopyText==='function')fluxChatCopyText('@'+String(p.username).replace(/^@/,''));else if(p.uid&&typeof fluxChatCopyText==='function')fluxChatCopyText(String(name));else toast('Дополнительных действий нет');});
+  var av=document.getElementById('chat-peer-avatar'),peerInfo=document.querySelector('#chat-view .chat-peer');
+  if(av){av.style.cursor='pointer';av.setAttribute('role','button');av.setAttribute('aria-label','Открыть профиль');av.tabIndex=0;av.addEventListener('click',openProfile);av.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();openProfile();}});}
+  if(peerInfo){peerInfo.style.cursor='pointer';peerInfo.setAttribute('role','button');peerInfo.setAttribute('aria-label','Открыть профиль');peerInfo.tabIndex=0;peerInfo.addEventListener('click',openProfile);peerInfo.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();openProfile();}});}
+  root.addEventListener('click',function(e){if(e.target===root)closeProfile();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&root.classList.contains('show'))closeProfile();});
+  var back=document.getElementById('chat-back-btn');if(back)back.addEventListener('click',closeProfile);
+})();
+</script>
+
 </body>
 </html>
