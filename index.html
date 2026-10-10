@@ -746,6 +746,33 @@ button:active,.nav-item:active,.vpn-key-item:active,.vpn-chip:active,.vpn-cat-ta
 .flux-app-avatar svg{width:68%;height:68%;display:block;filter:drop-shadow(0 4px 8px rgba(0,0,0,.16))}
 .profile-avatar-big.flux-app-avatar svg{width:62%;height:62%}
 </style>
+
+<style id="flux-whats-new-styles">
+#modal-backdrop.flux-whats-new-backdrop{z-index:100000;background:rgba(8,13,24,.62);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);padding:20px}
+#modal.flux-whats-new-modal{position:relative;overflow:hidden;max-width:390px;padding:0!important;border-radius:28px!important;background:var(--surface)!important;border:1px solid var(--border-2)!important;box-shadow:0 26px 80px rgba(0,0,0,.30)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;color:var(--text)}
+.flux-whats-new-hero{position:relative;overflow:hidden;padding:25px 23px 22px;background:linear-gradient(145deg,rgba(135,116,225,.22),rgba(135,116,225,.05) 58%,transparent);border-bottom:1px solid var(--divider)}
+.flux-whats-new-hero:before{content:"";position:absolute;width:180px;height:180px;right:-75px;top:-105px;border-radius:50%;background:rgba(135,116,225,.19);filter:blur(2px);pointer-events:none}
+.flux-whats-new-brand{display:flex;align-items:center;gap:9px;margin-bottom:23px;color:var(--text-2);font-size:10px;font-weight:850;letter-spacing:2px}
+.flux-whats-new-logo{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;color:#fff;background:linear-gradient(145deg,#a99af8,#7561d5);box-shadow:0 6px 18px rgba(135,116,225,.34)}
+.flux-whats-new-logo svg{width:21px;height:21px}
+.flux-whats-new-kicker{font-size:10px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.flux-whats-new-title{font-size:25px;line-height:1.12;font-weight:850;letter-spacing:-.8px;color:var(--text);margin:0 0 8px}
+.flux-whats-new-subtitle{font-size:13px;line-height:1.5;color:var(--text-2);max-width:280px}
+.flux-whats-new-body{padding:19px 20px 20px}
+.flux-whats-new-section{font-size:10px;font-weight:850;letter-spacing:1.4px;color:var(--text-3);margin:0 0 11px}
+.flux-whats-new-list{display:flex;flex-direction:column;gap:10px}
+.flux-whats-new-item{display:flex;align-items:flex-start;gap:12px;padding:13px;border:1px solid var(--border);border-radius:17px;background:var(--bg-2)}
+.flux-whats-new-icon{flex:0 0 39px;width:39px;height:39px;border-radius:13px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.flux-whats-new-icon svg{width:21px;height:21px;stroke:currentColor}
+.flux-whats-new-item-title{font-size:14px;font-weight:800;color:var(--text);line-height:1.3;margin:1px 0 4px}
+.flux-whats-new-item-text{font-size:12px;line-height:1.45;color:var(--text-2)}
+.flux-whats-new-footer{margin-top:18px}
+.flux-whats-new-confirm{display:flex;width:100%;align-items:center;justify-content:center;gap:8px;min-height:48px;border:0;border-radius:15px;background:var(--accent-grad);color:#fff;font-size:14px;font-weight:800;box-shadow:0 8px 20px rgba(135,116,225,.25);cursor:pointer}
+.flux-whats-new-confirm:active{transform:scale(.985)}
+.flux-whats-new-note{text-align:center;font-size:10px;line-height:1.4;color:var(--text-3);margin-top:10px}
+@media(prefers-reduced-motion:reduce){#modal.flux-whats-new-modal{animation:none}.flux-whats-new-confirm{transition:none}}
+</style>
+
 </head>
 <body>
 
@@ -1960,8 +1987,29 @@ var savedTheme=localStorage.getItem('tg_theme');setTheme(savedTheme?savedTheme==
 applyVisualSettings();setLiveBackground(liveBackgroundEnabled,false);updateTogglesUI();
 
 function showModal(html,setup){var bd=$('modal-backdrop'),m=$('modal');m.innerHTML=html;bd.classList.add('show');var close=function(){bd.classList.remove('show');m.innerHTML='';};if(setup)setup(m,close);}
-function hideModal(){var bd=$('modal-backdrop');bd.classList.remove('show');$('modal').innerHTML='';}
-$('modal-backdrop').onclick=function(e){if(e.target===this)hideModal();};
+
+const FLUX_WHATS_NEW = {
+  title: 'Добро пожаловать в Flux Client!',
+  subtitle: 'Мы добавили несколько полезных возможностей. Загляни, что нового.',
+  features: [
+    { id: 'referrals', title: 'Реферальная программа', text: 'Приглашай друзей по своей ссылке и получай 15 ₽ за каждого приглашённого.', icon: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M16 11h6"/></svg>' },
+    { id: 'avatars', title: 'Обновлённые аватарки', text: 'Профили получили новые аватарки и стали выглядеть аккуратнее.', icon: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/><path d="m17.5 3 .7 1.8L20 5.5l-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg>' }
+  ]
+};
+function maybeShowWhatsNew(){
+  if(!FLUX_WHATS_NEW||!FLUX_WHATS_NEW.features||!FLUX_WHATS_NEW.features.length)return;
+  if(currentScreenId!=='main-screen'||pinLocked)return;
+  var signature;
+  try{signature=JSON.stringify(FLUX_WHATS_NEW);if(localStorage.getItem('flux_whats_new_signature')===signature)return;}catch(e){signature=String(Date.now());}
+  var items=FLUX_WHATS_NEW.features.map(function(f){return '<div class="flux-whats-new-item"><div class="flux-whats-new-icon">'+f.icon+'</div><div><div class="flux-whats-new-item-title">'+f.title+'</div><div class="flux-whats-new-item-text">'+f.text+'</div></div></div>';}).join('');
+  showModal('<div class="flux-whats-new-hero"><div class="flux-whats-new-brand"><span class="flux-whats-new-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14L8 19h11"/><path d="M5 12h5" opacity=".75"/></svg></span><span>FLUX CLIENT / UPDATE</span></div><div class="flux-whats-new-kicker">Что нового</div><div class="flux-whats-new-title">'+FLUX_WHATS_NEW.title+'</div><div class="flux-whats-new-subtitle">'+FLUX_WHATS_NEW.subtitle+'</div></div><div class="flux-whats-new-body"><div class="flux-whats-new-section">НОВЫЕ ФУНКЦИИ</div><div class="flux-whats-new-list">'+items+'</div><div class="flux-whats-new-footer"><button type="button" class="flux-whats-new-confirm" id="flux-whats-new-confirm">Хорошо, больше не показывать <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></button><div class="flux-whats-new-note">Окно появится снова, когда в Flux добавятся новые функции</div></div></div>',function(m,close){
+    m.classList.add('flux-whats-new-modal');
+    var backdrop=$('modal-backdrop');if(backdrop)backdrop.classList.add('flux-whats-new-backdrop');
+    var btn=m.querySelector('#flux-whats-new-confirm');if(btn)btn.onclick=function(){try{localStorage.setItem('flux_whats_new_signature',signature);}catch(e){}if(backdrop)backdrop.classList.remove('flux-whats-new-backdrop');m.classList.remove('flux-whats-new-modal');close();};
+  });
+}
+function hideModal(){var bd=$('modal-backdrop');bd.classList.remove('show','flux-whats-new-backdrop');$('modal').classList.remove('flux-whats-new-modal');$('modal').innerHTML='';}
+$('modal-backdrop').onclick=function(e){if(e.target===this){this.classList.remove('flux-whats-new-backdrop');$('modal').classList.remove('flux-whats-new-modal');hideModal();}};
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){if($('modal-backdrop').classList.contains('show'))hideModal();document.querySelectorAll('.profile-sheet.show').forEach(function(s){s.classList.remove('show');});}});
 
 function authError(code){var m={'auth/invalid-email':'Неверный email','auth/user-not-found':'Пользователь не найден','auth/wrong-password':'Неверный пароль','auth/invalid-credential':'Неверные данные','auth/email-already-in-use':'Email уже используется','auth/weak-password':'Слабый пароль','auth/network-request-failed':'Нет соединения','auth/too-many-requests':'Слишком много попыток','auth/operation-not-allowed':'Email/Password выключен','auth/configuration-not-found':'Включите Email/Password','auth/api-key-not-valid':'Неверный API-ключ'};return m[code]||('Ошибка: '+code);}
@@ -2034,6 +2082,7 @@ if(firebaseReady&&auth){
           await whenMinSplashElapsed();
           goScreen('main-screen',true);
           startSelfListener();startSessionTracking();updateSettingsUI();updateTogglesUI();startPremiumListener();
+          setTimeout(maybeShowWhatsNew,700);
           try{db.ref('users/'+user.uid).update({online:true,lastSeen:now()});}catch(e){}
           requestAnimationFrame(positionNavIndicator);
           setTimeout(function(){ try{ autoLoadVpnOnStart(); }catch(e){} }, 400);
@@ -2095,6 +2144,7 @@ $('onb-continue').onclick=async function(){
     goScreen('main-screen',true);
     startSelfListener();startSessionTracking();startPremiumListener();
     updateSettingsUI();updateTogglesUI();
+    setTimeout(maybeShowWhatsNew,700);
     if(globalPremium){
       document.body.classList.add('flux-premium');
       toast('Premium уже активен для всех!');
@@ -2701,7 +2751,7 @@ async function pinKeyPress(k){
 }
 function updatePinDots(){var dots=document.querySelectorAll('#pin-dots .pin-dot');dots.forEach(function(d,i){d.classList.toggle('filled',i<pinInput.length);});}
 function showPinLock(){pinLocked=true;pinInput='';buildPinPad();updatePinDots();$('pin-lock').classList.add('show');}
-function unlockApp(){pinLocked=false;pinInput='';$('pin-lock').classList.remove('show');}
+function unlockApp(){pinLocked=false;pinInput='';$('pin-lock').classList.remove('show');setTimeout(function(){try{maybeShowWhatsNew();}catch(e){}},350);}
 
 document.addEventListener('visibilitychange',function(){
   if(!document.hidden&&pinLockEnabled&&pinLockHash&&currentUser&&currentScreenId==='main-screen'&&!pinLocked){showPinLock();}
