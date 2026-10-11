@@ -2157,34 +2157,49 @@ function setTheme(dark){
 }
 function applyTheme(themeId){
   var t=THEMES.find(function(x){return x.id===themeId;})||THEMES[0];
-  currentTheme=t.id;try{localStorage.setItem('flux_theme_color',t.id);}catch(e){}
-  var root=document.documentElement;var isDark=document.body.classList.contains('dark');
-  var primary=isDark?t.c2:t.c1;
-  var primaryContainer=isDark?t.containerDark:t.containerLight;
-  var onPrimary=isDark?t.onPrimaryDark:t.onPrimaryLight;
-  var onContainer=isDark?t.onContainerDark:t.onContainerLight;
-  root.style.setProperty('--accent',primary);
-  root.style.setProperty('--accent-2',primary);
-  root.style.setProperty('--accent-grad','var(--accent)');
-  root.style.setProperty('--accent-soft',primaryContainer);
-  root.style.setProperty('--accent-softer',isDark?'#2B2930':'#F3EDF7');
-  root.style.setProperty('--accent-air','transparent');
-  root.style.setProperty('--accent-glow','none');
-  root.style.setProperty('--neu-shadow','none');
-  root.style.setProperty('--md-primary',primary);
-  root.style.setProperty('--md-on-primary',onPrimary);
-  root.style.setProperty('--md-primary-container',primaryContainer);
-  root.style.setProperty('--md-on-primary-container',onContainer);
-  root.style.setProperty('--md-outline',isDark?'#938F99':'#79747E');
-  root.style.setProperty('--md-outline-variant',isDark?'#49454F':'#CAC4D0');
-  /* Theme Studio applies a complete tonal accent system, not just labels. */
+  currentTheme=t.id;
+  try{localStorage.setItem('flux_theme_color',t.id);}catch(e){}
+  var root=document.documentElement, dark=document.body.classList.contains('dark');
+  var primary=dark?t.c2:t.c1;
+  var container=dark?t.containerDark:t.containerLight;
+  var onContainer=dark?t.onContainerDark:t.onContainerLight;
+  var onPrimary=dark?t.onPrimaryDark:t.onPrimaryLight;
+  /* Material You tonal roles: palette selection recolors the entire app, not just buttons. */
+  var tokens=dark?{
+    '--bg':'#141218','--bg-2':'#1D1B20','--bg-3':'#2B2930',
+    '--surface':'#141218','--surface-glass':'#1D1B20','--surface-container-low':'#1D1B20',
+    '--surface-container':'#211F26','--surface-container-high':'#2B2930','--surface-container-highest':'#36343B',
+    '--text':'#E6E1E9','--text-2':'#CAC4D0','--text-3':'#938F99',
+    '--border':'rgba(230,225,233,.10)','--border-2':'rgba(230,225,233,.15)','--divider':'rgba(230,225,233,.10)',
+    '--header-text':'#E6E1E9','--nav-bg':'#1D1B20','--danger':'#F2B8B5','--danger-soft':'#601410',
+    '--success':'#A6D389','--warning':'#E8C65A','--md-outline':'#938F99','--md-outline-variant':'#49454F',
+    '--accent':primary,'--accent-2':primary,'--accent-soft':container,'--accent-softer':'#292333',
+    '--md-primary':primary,'--md-on-primary':onPrimary,'--md-primary-container':container,'--md-on-primary-container':onContainer
+  }:{
+    '--bg':'#F7F2FA','--bg-2':'#F3EDF7','--bg-3':'#EAE3EF',
+    '--surface':'#FFFBFE','--surface-glass':'#FFFBFE','--surface-container-low':'#F7F2FA',
+    '--surface-container':'#F3EDF7','--surface-container-high':'#ECE6F0','--surface-container-highest':'#E6E0E9',
+    '--text':'#1D1B20','--text-2':'#49454F','--text-3':'#79747E',
+    '--border':'rgba(29,27,32,.10)','--border-2':'rgba(29,27,32,.14)','--divider':'rgba(29,27,32,.10)',
+    '--header-text':'#1D1B20','--nav-bg':'#FFFBFE','--danger':'#B3261E','--danger-soft':'#F9DEDC',
+    '--success':'#386A20','--warning':'#7D5700','--md-outline':'#79747E','--md-outline-variant':'#CAC4D0',
+    '--accent':primary,'--accent-2':primary,'--accent-soft':container,'--accent-softer':'#F3EDF7',
+    '--md-primary':primary,'--md-on-primary':onPrimary,'--md-primary-container':container,'--md-on-primary-container':onContainer
+  };
+  Object.keys(tokens).forEach(function(k){root.style.setProperty(k,tokens[k],'important');});
+  root.style.setProperty('--accent-grad','var(--accent)','important');
+  root.style.setProperty('--accent-air','transparent','important');
+  root.style.setProperty('--accent-glow','none','important');
+  root.style.setProperty('--neu-shadow','none','important');
+  root.style.setProperty('--neu-pressed','none','important');
   root.style.setProperty('--flux-theme-tint',t.c1);
-  root.style.setProperty('--flux-theme-container',primaryContainer);
+  root.style.setProperty('--flux-theme-container',container);
   root.style.setProperty('--flux-theme-on-container',onContainer);
-  root.style.setProperty('--flux-theme-soft-surface',isDark?'color-mix(in srgb, var(--surface-container-low) 88%, '+t.c2+' 12%)':'color-mix(in srgb, var(--surface-container-low) 94%, '+t.c1+' 6%)');
-  root.style.setProperty('--flux-theme-border',isDark?'color-mix(in srgb, '+t.c2+' 28%, var(--md-outline-variant))':'color-mix(in srgb, '+t.c1+' 24%, var(--md-outline-variant))');
   root.style.setProperty('--flux-theme-on-primary',onPrimary);
-  var meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.setAttribute('content',isDark?'#141218':primaryContainer);
+  root.style.setProperty('--flux-theme-soft-surface',dark?'color-mix(in srgb, #1D1B20 88%, '+t.c2+' 12%)':'color-mix(in srgb, #F7F2FA 94%, '+t.c1+' 6%)');
+  root.style.setProperty('--flux-theme-border',dark?'color-mix(in srgb, '+t.c2+' 28%, #49454F)':'color-mix(in srgb, '+t.c1+' 24%, #CAC4D0)');
+  root.style.setProperty('--color-scheme',dark?'dark':'light');
+  var meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.setAttribute('content',dark?'#141218':container);
   var lbl=$('theme-color-value');if(lbl)lbl.textContent=t.name;
   try{if(typeof refreshStudioPreview==='function')refreshStudioPreview();}catch(e){}
 }
@@ -4103,6 +4118,34 @@ body:not(.flux-live-bg-off) .vpn-home{background:color-mix(in srgb,var(--bg) cal
 body.flux-radius-compact .vpn-dashboard-card,body.flux-radius-compact .profile-info-card,body.flux-radius-compact .premium-status-card,body.flux-radius-compact .vpn-key-item,body.flux-radius-compact .settings-item,body.flux-radius-compact .profile-action{border-radius:12px!important}
 body.flux-radius-soft .vpn-dashboard-card,body.flux-radius-soft .profile-info-card,body.flux-radius-soft .premium-status-card,body.flux-radius-soft .vpn-key-item,body.flux-radius-soft .settings-item,body.flux-radius-soft .profile-action{border-radius:18px!important}
 body.flux-radius-round .vpn-dashboard-card,body.flux-radius-round .profile-info-card,body.flux-radius-round .premium-status-card,body.flux-radius-round .vpn-key-item,body.flux-radius-round .settings-item,body.flux-radius-round .profile-action{border-radius:24px!important}
+</style>
+
+
+<style id="flux-material-you-live-tonal-system">
+/* Material You: all real screens and controls consume the selected tonal roles. */
+:root{--md-surface:#FFFBFE;--md-surface-container:#F3EDF7;--md-surface-high:#ECE6F0;--md-on-surface:#1D1B20;--md-on-surface-variant:#49454F;--md-outline:#79747E;--md-outline-variant:#CAC4D0}
+body.dark{--md-surface:#141218;--md-surface-container:#211F26;--md-surface-high:#2B2930;--md-on-surface:#E6E1E9;--md-on-surface-variant:#CAC4D0;--md-outline:#938F99;--md-outline-variant:#49454F}
+/* Keep opaque M3 surfaces; no neon, glow, or glass blur. */
+#main-screen,.screen,.vpn-home{background:var(--bg)!important;color:var(--text)!important}
+.profile-sheet,.theme-studio-sheet,.modal,.modal-content,.settings-panel,.profile-panel{background:var(--surface)!important;color:var(--text)!important}
+.profile-sheet-header,.settings-section,.settings-item,.profile-action,.profile-info-card,.vpn-dashboard-card,.vpn-key-item,.vpn-home-refresh,.premium-benefit,.premium-plan,.premium-status-card,.studio-control{color:var(--text)!important;border-color:var(--border-2)!important}
+.settings-item,.profile-action,.profile-info-card,.vpn-home-refresh,.vpn-key-item,.premium-benefit,.premium-plan,.premium-status-card{background:var(--surface-container-low,var(--bg-2))!important}
+.vpn-dashboard-card,.studio-control{background:var(--surface-container,var(--bg-2))!important}
+.vpn-connect-btn,.btn-primary,.sheet-btn:not(.secondary),.vpn-btn,.vpn-empty-action,.modal-btn.primary,.vpn-icon-btn,.studio-actions #studio-done{background:var(--md-primary)!important;background-image:none!important;color:var(--md-on-primary)!important;border-color:transparent!important;box-shadow:none!important}
+.vpn-key-item.selected,.vpn-chip.active,.vpn-cat-tab.active:not(.shop-tab),.selected,.studio-swatch.selected{border-color:var(--md-primary)!important}
+.vpn-key-item.selected,.vpn-chip.active{background:var(--md-primary-container)!important;color:var(--md-on-primary-container)!important}
+.vpn-cat-tab.active,.shop-tab.active{background:var(--md-primary)!important;color:var(--md-on-primary)!important}
+.toggle,.switch-track{background:var(--surface-container-highest,var(--bg-3))!important;border-color:var(--md-outline)!important;box-shadow:none!important}
+.toggle.on,.switch-track.on{background:var(--md-primary-container)!important;border-color:var(--md-primary)!important}
+.toggle.on:after,.switch-track.on:after{background:var(--md-primary)!important}
+input,textarea,select,.input,.search-input{background:var(--surface-container-low,var(--bg-2))!important;color:var(--text)!important;border-color:var(--md-outline-variant)!important}
+.nav-item.active,.bottom-nav .active{color:var(--md-primary)!important}
+.nav-indicator,.bottom-nav-indicator{background:var(--md-primary-container)!important}
+.theme-studio-sheet .studio-swatch.selected .studio-swatch-dot{box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--md-primary)!important}
+.studio-preview-phone{background:var(--preview-surface,var(--surface-container))!important;color:var(--preview-text,var(--text))!important;border-color:var(--border-2)!important;box-shadow:none!important}
+.studio-preview-logo,.studio-preview-ring{background:var(--md-primary)!important;box-shadow:none!important;color:var(--md-on-primary)!important}
+.studio-preview-card{background:var(--surface-container-high,var(--bg-3))!important;border-color:var(--border-2)!important}
+*{scrollbar-color:var(--md-outline-variant) transparent}
 </style>
 
 </body>
