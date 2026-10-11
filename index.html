@@ -1886,7 +1886,7 @@ if(![1,2,3,4].includes(backgroundStrength))backgroundStrength=2;
 function applyVisualSettings(){
   var root=document.documentElement;
   /* Material 3 surfaces are opaque by default. Optional blur is intentionally restrained. */
-  var blurMap={1:0,2:2,3:4,4:6};
+  var blurMap={1:2,2:3,3:4,4:6};
   var bgMap={1:'0%',2:'2%',3:'4%',4:'6%'};
   root.style.setProperty('--flux-blur',(blurMap[blurStrength]||0)+'px');
   root.style.setProperty('--flux-bg-strength',bgMap[backgroundStrength]||'0%');
@@ -2177,7 +2177,14 @@ function applyTheme(themeId){
   root.style.setProperty('--md-on-primary-container',onContainer);
   root.style.setProperty('--md-outline',isDark?'#938F99':'#79747E');
   root.style.setProperty('--md-outline-variant',isDark?'#49454F':'#CAC4D0');
-  var meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.setAttribute('content',isDark?'#141318':primary);
+  /* Theme Studio applies a complete tonal accent system, not just labels. */
+  root.style.setProperty('--flux-theme-tint',t.c1);
+  root.style.setProperty('--flux-theme-container',primaryContainer);
+  root.style.setProperty('--flux-theme-on-container',onContainer);
+  root.style.setProperty('--flux-theme-soft-surface',isDark?'color-mix(in srgb, var(--surface-container-low) 88%, '+t.c2+' 12%)':'color-mix(in srgb, var(--surface-container-low) 94%, '+t.c1+' 6%)');
+  root.style.setProperty('--flux-theme-border',isDark?'color-mix(in srgb, '+t.c2+' 28%, var(--md-outline-variant))':'color-mix(in srgb, '+t.c1+' 24%, var(--md-outline-variant))');
+  root.style.setProperty('--flux-theme-on-primary',onPrimary);
+  var meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.setAttribute('content',isDark?'#141218':primaryContainer);
   var lbl=$('theme-color-value');if(lbl)lbl.textContent=t.name;
   try{if(typeof refreshStudioPreview==='function')refreshStudioPreview();}catch(e){}
 }
@@ -2188,6 +2195,9 @@ function applyStudioStyle(persist){
   var root=document.documentElement;
   root.style.setProperty('--flux-studio-glow','none');
   root.style.setProperty('--flux-studio-radius',(['12px','16px','20px'][studioRadius]||'16px'));
+  root.style.setProperty('--r-md',(['10px','12px','16px'][studioRadius]||'12px'));
+  root.style.setProperty('--r-lg',(['14px','18px','22px'][studioRadius]||'18px'));
+  root.style.setProperty('--r-xl',(['20px','24px','28px'][studioRadius]||'24px'));
   document.body.classList.remove('flux-studio-glow','flux-radius-compact','flux-radius-soft','flux-radius-round');
   document.body.classList.add(['flux-radius-compact','flux-radius-soft','flux-radius-round'][studioRadius]||'flux-radius-soft');
   var ra=$('studio-radius'),rav=$('studio-radius-label'),bg=$('studio-bg'),bgv=$('studio-bg-label');
@@ -2212,6 +2222,21 @@ function refreshStudioPreview(){
   }
   if(palette)palette.querySelectorAll('[data-theme]').forEach(function(b){b.classList.toggle('selected',b.dataset.theme===currentTheme);b.setAttribute('aria-pressed',b.dataset.theme===currentTheme?'true':'false');});
   var hero=$('studio-hero');if(hero)hero.style.setProperty('--studio-preview-color',t.c1);
+  /* Live preview mirrors the selected theme's real surfaces and component shape. */
+  var preview=$('studio-hero');
+  if(preview){
+    preview.style.setProperty('--preview-accent',document.documentElement.style.getPropertyValue('--accent')||t.c1);
+    preview.style.setProperty('--preview-container',document.documentElement.style.getPropertyValue('--accent-soft')||t.containerLight);
+    preview.style.setProperty('--preview-on-container',document.documentElement.style.getPropertyValue('--md-on-primary-container')||t.onContainerLight);
+    preview.style.setProperty('--preview-surface',document.body.classList.contains('dark')?'#1D1B20':'#FFFBFE');
+    preview.style.setProperty('--preview-surface-high',document.body.classList.contains('dark')?'#2B2930':'#ECE6F0');
+    preview.style.setProperty('--preview-text',document.body.classList.contains('dark')?'#E6E1E9':'#1D1B20');
+    preview.style.setProperty('--preview-muted',document.body.classList.contains('dark')?'#CAC4D0':'#49454F');
+    preview.style.setProperty('--preview-radius',(['12px','16px','20px'][studioRadius]||'16px'));
+    preview.classList.toggle('preview-tonal-bg',liveBackgroundEnabled);
+    preview.classList.toggle('preview-blur',blurEnabled);
+    preview.style.setProperty('--preview-bg-strength',({1:'0%',2:'2%',3:'4%',4:'6%'}[backgroundStrength]||'0%'));
+  }
 }
 function openThemeStudio(){var sh=$('theme-sheet');if(!sh)return;sh.classList.add('show');applyStudioStyle(false);refreshStudioPreview();}
 var savedTheme=localStorage.getItem('tg_theme');setTheme(savedTheme?savedTheme==='dark':true);applyTheme(currentTheme);
@@ -4051,6 +4076,33 @@ body.flux-studio-glow .vpn-dashboard-card,body.flux-studio-glow .vpn-connect-btn
 #theme-color-value{color:var(--accent)!important;font-weight:600}
 @media(max-width:390px){.theme-studio-body{padding-left:15px!important;padding-right:15px!important}.studio-palette{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}.studio-swatch{min-height:48px}.studio-topline .profile-sheet-title{font-size:26px!important}.studio-hero{padding:11px!important}}
 @media(prefers-reduced-motion:reduce){.studio-swatch,.studio-range::-webkit-slider-thumb,.studio-switch-row .toggle::after{transition:none!important}}
+</style>
+
+
+<style id="flux-theme-studio-live-visuals">
+/* Real-time Material 3 theme propagation across the app and Studio preview. */
+.screen{background:var(--bg)!important}
+body:not(.dark) .screen{background:color-mix(in srgb,var(--bg) 97%,var(--flux-theme-tint,#6750A4) 3%)!important}
+body.dark .screen{background:color-mix(in srgb,var(--bg) 97%,var(--flux-theme-tint,#D0BCFF) 3%)!important}
+.vpn-home{background:var(--bg)!important}
+body:not(.flux-live-bg-off) .vpn-home{background:color-mix(in srgb,var(--bg) calc(100% - var(--flux-bg-strength,0%)),var(--flux-theme-tint,var(--accent)) var(--flux-bg-strength,0%))!important}
+.vpn-dashboard-card,.profile-info-card,.premium-status-card{border-color:color-mix(in srgb,var(--border-2) 70%,var(--flux-theme-tint,var(--accent)) 30%)!important}
+.vpn-key-item.selected,.vpn-chip.active,.vpn-cat-tab.active,.shop-tab.active,.nav-item.active .nav-icon-wrap{background:var(--accent-soft)!important;color:var(--md-on-primary-container)!important}
+.vpn-connect-btn,.btn-primary,.sheet-btn:not(.secondary),.modal-btn.primary,.vpn-empty-action{background:var(--accent)!important;color:var(--md-on-primary)!important}
+.studio-preview-phone{background:var(--preview-surface,var(--surface))!important;color:var(--preview-text,var(--text))!important;border-color:var(--border-2)!important}
+.studio-preview-logo,.studio-preview-ring{background:var(--preview-accent,var(--accent))!important;color:var(--md-on-primary)!important;border-radius:var(--preview-radius,16px)!important}
+.studio-preview-card{background:var(--preview-container,var(--accent-soft))!important;border-radius:var(--preview-radius,16px)!important}
+.studio-preview-state b,.studio-preview-trailing{color:var(--preview-on-container,var(--md-on-primary-container))!important}
+.studio-preview-state small{color:var(--preview-on-container,var(--md-on-primary-container))!important;opacity:.78}
+.studio-preview-heading b,.studio-preview-meta b{color:var(--preview-text,var(--text))!important}
+.studio-preview-heading small,.studio-preview-meta,.studio-preview-section-label{color:var(--preview-muted,var(--text-2))!important}
+.studio-preview-pill{background:var(--preview-surface-high,var(--surface-container-high))!important;color:var(--preview-muted,var(--text-2))!important}
+.studio-preview-pill.active{background:var(--preview-container,var(--accent-soft))!important;color:var(--preview-on-container,var(--md-on-primary-container))!important}
+#studio-hero.preview-tonal-bg{background:color-mix(in srgb,var(--surface-container-low) calc(100% - var(--preview-bg-strength,0%)),var(--preview-accent,var(--accent)) var(--preview-bg-strength,0%))!important}
+#studio-hero.preview-blur .studio-preview-phone{backdrop-filter:blur(var(--flux-blur,0px))!important;-webkit-backdrop-filter:blur(var(--flux-blur,0px))!important}
+body.flux-radius-compact .vpn-dashboard-card,body.flux-radius-compact .profile-info-card,body.flux-radius-compact .premium-status-card,body.flux-radius-compact .vpn-key-item,body.flux-radius-compact .settings-item,body.flux-radius-compact .profile-action{border-radius:12px!important}
+body.flux-radius-soft .vpn-dashboard-card,body.flux-radius-soft .profile-info-card,body.flux-radius-soft .premium-status-card,body.flux-radius-soft .vpn-key-item,body.flux-radius-soft .settings-item,body.flux-radius-soft .profile-action{border-radius:18px!important}
+body.flux-radius-round .vpn-dashboard-card,body.flux-radius-round .profile-info-card,body.flux-radius-round .premium-status-card,body.flux-radius-round .vpn-key-item,body.flux-radius-round .settings-item,body.flux-radius-round .profile-action{border-radius:24px!important}
 </style>
 
 </body>
