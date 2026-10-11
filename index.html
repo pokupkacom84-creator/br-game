@@ -1543,10 +1543,8 @@ const VPN_FREE_SOURCES = [
 ];
 const VPN_PREMIUM_SOURCES = [
   {id:'p1',name:'Premium VPN',kind:'premium',type:'vpn',urls:['https://raw.githubusercontent.com/luxxuria/harvester/main/non_ru.txt','https://raw.githubusercontent.com/luxxuria/harvester/main/speed_tested.txt']},
+  {id:'p3',name:'LTE VPN',kind:'premium',type:'vpn',github:{owner:'FLAT447',repo:'v2ray-lists',branch:'main',path:'BLACK_LTE.txt'}},
   {id:'p2',name:'Белые списки',kind:'premium',type:'vpn',github:{owner:'igareck',repo:'vpn-configs-for-russia',branch:'main',path:'WHITE-CIDR-RU-all.txt'}}
-];
-const VPN_LTE_SOURCES = [
-  {id:'l1',name:'LTE VPN',kind:'lte',type:'vpn',github:{owner:'FLAT447',repo:'v2ray-lists',branch:'main',path:'BLACK_LTE.txt'}}
 ];
 
 const VPN_FETCH_CACHE_TTL = 10 * 60 * 1000;
@@ -1910,7 +1908,7 @@ function startGlobalPremiumListener(){
 }
 
 let vpnActiveSourceId = (function(){try{return localStorage.getItem('flux_vpn_source')||'v1';}catch(e){return 'v1';}})();
-function getActiveVpnSource(){var sources=VPN_FREE_SOURCES.concat(VPN_LTE_SOURCES);if(isPremiumUserNow())sources=sources.concat(VPN_PREMIUM_SOURCES);return sources.find(function(s){return s.id===vpnActiveSourceId;})||VPN_FREE_SOURCES[0];}
+function getActiveVpnSource(){var sources=VPN_FREE_SOURCES.slice();if(isPremiumUserNow())sources=sources.concat(VPN_PREMIUM_SOURCES);return sources.find(function(s){return s.id===vpnActiveSourceId;})||VPN_FREE_SOURCES[0];}
 
 const THEMES=[
   {id:'violet',name:'Violet',c1:'#8774e1',c2:'#a291f0'},{id:'ocean',name:'Ocean',c1:'#3390ec',c2:'#57a9f5'},
@@ -3313,18 +3311,16 @@ function extractVpnMeta(raw){
   return {name:name,flag:flag};
 }
 
-function isLteVpnSource(id){return String(id||'').charAt(0)==='l';}
 function renderVpnCategoryTabs(){
   var wrap=$('vpn-category-tabs');if(!wrap)return;
   var premium=isPremiumUserNow();
   var activePremium=isPremiumVpnSource(vpnActiveSourceId);
-  var activeLte=isLteVpnSource(vpnActiveSourceId);
-  wrap.innerHTML='<button class="vpn-cat-tab'+(!activePremium&&!activeLte?' active':'')+'" data-cat="free">'+ic('tag',15)+'<span>Бесплатные</span></button>'+'<button class="vpn-cat-tab'+(activePremium?' active':'')+'" data-cat="premium"'+(premium?'':' disabled')+'>'+(premium?ic('crown',15)+'<span>Premium VPN</span>':ic('lock',15)+'<span>Premium VPN</span>')+'</button>'+'<button class="vpn-cat-tab'+(activeLte?' active':'')+'" data-cat="lte">'+ic('zap',15)+'<span>LTE VPN</span></button>';
+  wrap.innerHTML='<button class="vpn-cat-tab'+(!activePremium?' active':'')+'" data-cat="free">'+ic('tag',15)+'<span>Бесплатные</span></button>'+'<button class="vpn-cat-tab'+(activePremium?' active':'')+'" data-cat="premium"'+(premium?'':' disabled')+'>'+(premium?ic('crown',15)+'<span>Premium VPN</span>':ic('lock',15)+'<span>Premium VPN</span>')+'</button>';
   wrap.querySelectorAll('.vpn-cat-tab').forEach(function(btn){
     btn.onclick=function(){
       var cat=btn.dataset.cat;
       if(cat==='premium'&&!isPremiumUserNow()){toast('Premium VPN доступен только Premium');return;}
-      var id=cat==='premium'?(isPremiumVpnSource(vpnActiveSourceId)?vpnActiveSourceId:'p1'):cat==='lte'?(isLteVpnSource(vpnActiveSourceId)?vpnActiveSourceId:'l1'):'v1';
+      var id=cat==='premium'?(isPremiumVpnSource(vpnActiveSourceId)?vpnActiveSourceId:'p1'):'v1';
       if(vpnActiveSourceId===id)return;
       vpnActiveSourceId=id;
       try{localStorage.setItem('flux_vpn_source',vpnActiveSourceId);}catch(e){}
@@ -3339,10 +3335,9 @@ function renderVpnSources(){
   var wrap=$('vpn-sources');if(!wrap)return;
   var premium=isPremiumUserNow();
   var activePremium=isPremiumVpnSource(vpnActiveSourceId);
-  var activeLte=isLteVpnSource(vpnActiveSourceId);
-  var sources=activePremium?VPN_PREMIUM_SOURCES:(activeLte?VPN_LTE_SOURCES:VPN_FREE_SOURCES);
+  var sources=activePremium?VPN_PREMIUM_SOURCES:VPN_FREE_SOURCES;
   if(activePremium&&!premium){vpnActiveSourceId='v1';sources=VPN_FREE_SOURCES;}
-  wrap.innerHTML=sources.map(function(src){var iconName=src.kind==='premium'?'crown':(src.kind==='lte'?'zap':'tag');return '<button class="vpn-chip'+(src.id===vpnActiveSourceId?' active':'')+'" data-src="'+escAttr(src.id)+'">'+ic(iconName,14)+'<span>'+esc(src.name)+'</span></button>';}).join('');
+  wrap.innerHTML=sources.map(function(src){var iconName=src.id==='p3'?'zap':(src.kind==='premium'?'crown':'tag');return '<button class="vpn-chip'+(src.id===vpnActiveSourceId?' active':'')+'" data-src="'+escAttr(src.id)+'">'+ic(iconName,14)+'<span>'+esc(src.name)+'</span></button>';}).join('');
   wrap.querySelectorAll('.vpn-chip').forEach(function(ch){
     ch.onclick=function(){
       var id=ch.dataset.src;
