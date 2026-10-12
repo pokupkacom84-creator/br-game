@@ -271,7 +271,6 @@ body.perf-lite .bottom-nav{
 }
 .profile-avatar-big:hover{transform:scale(1.03)}
 .profile-avatar-big>svg{width:58%;height:58%;color:#fff;display:block;filter:drop-shadow(0 4px 8px rgba(0,0,0,.18))}
-.avatar-preset-item svg{width:64%;height:64%;color:#fff;display:block;filter:drop-shadow(0 3px 6px rgba(0,0,0,.18))}
 .profile-avatar-badge{
   position:absolute;bottom:16px;right:-2px;width:36px;height:36px;border-radius:50%;
   background:var(--accent-grad);color:#fff;display:flex;align-items:center;justify-content:center;
@@ -279,17 +278,6 @@ body.perf-lite .bottom-nav{
   transition:transform .2s var(--ease-out);
 }
 .profile-avatar-badge:active{transform:scale(.9)}
-.avatar-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;padding:12px 0;max-height:240px;overflow-y:auto;scrollbar-width:none;overscroll-behavior:contain}
-.avatar-grid::-webkit-scrollbar{display:none}
-.avatar-preset-item{
-  aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-size:22px;line-height:1;cursor:pointer;border:2.5px solid transparent;
-  transition:transform .18s var(--ease-out),border-color .18s,box-shadow .18s;
-  box-shadow:var(--shadow-1);
-}
-.avatar-preset-item:active{transform:scale(.92)}
-.avatar-preset-item.selected{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);transform:scale(1.05)}
-
 .crop-container{
   position:relative;width:260px;height:260px;margin:16px auto;border-radius:50%;
   overflow:hidden;box-shadow:0 0 0 9999px rgba(0,0,0,.68),0 0 0 2px var(--accent);
@@ -1066,8 +1054,6 @@ button:active,.nav-item:active,.vpn-key-item:active,.vpn-chip:active,.vpn-cat-ta
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4"/></svg>
     Загрузить из галереи
   </button>
-  <div class="profile-sheet-subtitle">Готовые аватарки</div>
-  <div class="avatar-grid" id="avatar-presets-grid"></div>
   <button class="sheet-btn secondary ripple" id="avatar-btn-initials" type="button">Использовать инициалы</button>
   <button class="sheet-btn secondary ripple" id="avatar-sheet-close" type="button" style="margin-top:10px">Отмена</button>
 </div>
@@ -1729,61 +1715,7 @@ function cycleBackgroundStrength(){
   applyVisualSettings();updateTogglesUI();
 }
 
-var PRESET_AVATAR_SVGS = {
-  a1: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.3"/><rect x="2.7" y="7" width="18.6" height="5.2" rx="2.1" fill="currentColor"/><circle cx="8" cy="9.6" r="1" fill="#1a1a1a"/><circle cx="16" cy="9.6" r="1" fill="#1a1a1a"/><path d="M9.4 16.6c.7 1 2.5 1 3.2 0"/></svg>',
-  a2: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l1.7-5L9.8 7"/><path d="M20 9l-1.7-5L14.2 7"/><path d="M3.6 13.2a8.4 8.4 0 0016.8 0v-1.4a2.4 2.4 0 00-2.4-2.4H6a2.4 2.4 0 00-2.4 2.4z"/><circle cx="9" cy="12.6" r=".75" fill="currentColor"/><circle cx="15" cy="12.6" r=".75" fill="currentColor"/><path d="M12 15v1.4M11.3 16.4h1.4"/></svg>',
-  a3: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5l3.2 6M21 5l-3.2 6"/><path d="M6.2 11c0-3.4 2.6-6 5.8-6s5.8 2.6 5.8 6-2.6 9-5.8 9-5.8-5.6-5.8-9z"/><path d="M12 8.6l-1.4 3.8h2.8z" fill="currentColor"/><circle cx="9.4" cy="11.2" r=".65" fill="currentColor"/><circle cx="14.6" cy="11.2" r=".65" fill="currentColor"/></svg>',
-  a4: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.2"/><circle cx="18" cy="6" r="2.2"/><circle cx="12" cy="13.5" r="8"/><ellipse cx="9" cy="12" rx="1.5" ry="2.1" fill="currentColor"/><ellipse cx="15" cy="12" rx="1.5" ry="2.1" fill="currentColor"/><path d="M10 16.2c.6 1 1.3 1.5 2 1.5s1.4-.5 2-1.5"/></svg>',
-  a5: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l1.6 2.6 3-.8-.6 3 3 .4-1.6 2.5 2.4 1.8-2.7 1.3.9 2.9-3-.5.1 3.1-2.8-1.3-1.7 2.6-1.7-2.6-2.8 1.3.1-3.1-3 .5.9-2.9-2.7-1.3 2.4-1.8-1.6-2.5 3-.4-.6-3 3 .8z"/><circle cx="12" cy="10.8" r="3.1"/></svg>',
-  a6: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 2.5l5.2 5.1-5.2 14-5.2-14z" fill="currentColor" fill-opacity=".32"/><path d="M12 2.5l5.2 5.1-5.2 14-5.2-14z"/><path d="M6.8 7.6h10.4M12 2.5v19M9.4 7.6L12 21.6M14.6 7.6L12 21.6"/></svg>',
-  a7: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10l-1.2-3.4 2.8.7L7 4.8l2.2 2L12 5l2.8 1.8 2-2 1.4 2.5 2.8-.7L19.8 10c0 5.8-3.5 10.5-7.8 10.5S4 15.8 4 10z"/><circle cx="9.4" cy="11" r=".8" fill="currentColor"/><circle cx="14.6" cy="11" r=".8" fill="currentColor"/><path d="M10 15.6c.6.6 1.3 1 2 1s1.4-.4 2-1"/></svg>',
-  a8: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l-2 4.5M12 2l2 4.5M12 2v4.5" fill="currentColor"/><path d="M4.5 10l2-2.8 2.8 2 2.7-2.7 2.7 2.7 2.8-2 2 2.8v2.8c0 5.2-3.5 8.4-8 8.4S4.5 18 4.5 12.8z"/><circle cx="9.4" cy="12.4" r=".7" fill="currentColor"/><circle cx="14.6" cy="12.4" r=".7" fill="currentColor"/></svg>',
-  a9: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13c0-4 4-7 9-7s9 3 9 7c0 3-2 5-5 5h-3l-2 2v-2H8c-3 0-5-2-5-5z"/><circle cx="8" cy="12.2" r=".7" fill="currentColor"/><path d="M13 6c2-1.2 4-1.2 6 0"/><path d="M15.5 4v2M18 3.5v2"/></svg>',
-  a10: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="8" r="2.6"/><circle cx="18" cy="8" r="2.6"/><circle cx="12" cy="13.5" r="7"/><circle cx="9.5" cy="12.8" r="1" fill="currentColor"/><circle cx="14.5" cy="12.8" r="1" fill="currentColor"/><ellipse cx="12" cy="16.4" rx="1.7" ry="1.1" fill="currentColor"/></svg>',
-  a11: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6l-2 2.5M19 6l2 2.5"/><path d="M5 9c0-2.2 3.1-3.2 7-3.2S19 6.8 19 9v6c0 2.2-3.1 3.2-7 3.2S5 17.2 5 15z"/><ellipse cx="9" cy="12" rx="1.3" ry="2" fill="currentColor"/><ellipse cx="15" cy="12" rx="1.3" ry="2" fill="currentColor"/><ellipse cx="12" cy="16.2" rx="2.2" ry="1.2" fill="currentColor" fill-opacity=".5"/></svg>',
-  a12: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v7M9.5 3v7M14.5 3v7M16 3v7"/><ellipse cx="12" cy="14" rx="6" ry="6.5"/><circle cx="10" cy="13" r=".7" fill="currentColor"/><circle cx="14" cy="13" r=".7" fill="currentColor"/><path d="M12 15.5l-.8 1h1.6z" fill="currentColor"/></svg>',
-  a13: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l1.5-3 2 2M20 9l-1.5-3-2 2"/><circle cx="12" cy="13" r="7.8"/><path d="M4.3 10.3h2.8M16.9 10.3h2.8M11 5.3v2.8M12 5.3v2.8"/><circle cx="9" cy="13" r=".8" fill="currentColor"/><circle cx="15" cy="13" r=".8" fill="currentColor"/><path d="M10 16.8c.6.6 1.3 1 2 1s1.4-.4 2-1"/></svg>',
-  a14: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18.5 8c-1.8 0-2.8 1.2-3 2.8-.4-2.8-2.2-4.8-4.5-4.8S7 8 6.5 10.8C6.3 9.2 5.3 8 3.5 8 2 8 1.5 9 1.5 10.2c0 3.8 3 6.2 6 6.4 1 2.5 1.3 4.4 1.3 4.4h3.4s.3-1.9 1.3-4.4c3-.2 6-2.6 6-6.4 0-1.2-.5-2.2-2-2.2z"/><circle cx="10.5" cy="9.2" r=".6" fill="currentColor"/></svg>',
-  a15: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l-2 3v7l-1 3c0 3 4 5 9 5s9-2 9-5l-1-3V7l-2-3"/><circle cx="9" cy="12" r="3"/><circle cx="15" cy="12" r="3"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/><path d="M12 13.4l-1 3h2z" fill="currentColor"/></svg>',
-  a16: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="13" rx="9" ry="7"/><path d="M3 13l3-2M21 13l-3-2M6 13h12"/><circle cx="6" cy="12" r=".8" fill="currentColor"/><path d="M4 10.2L2 11M20 10.2L22 11"/></svg>',
-  a17: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c0 0 4 3 4 9v4l2 3v2H6v-2l2-3v-4c0-6 4-9 4-9z"/><circle cx="12" cy="9" r="2"/><path d="M8 12l-3 2M16 12l3 2M8 16l-2 2M16 16l2 2"/></svg>',
-  a18: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg>',
-  a19: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c0 3-3 4-3 7 0-1-1-2-2-2 1 3 1 5 1 6 0 5 3 8 4 9 1-1 4-4 4-9 0-3-2-5-2-7-1 1-2 2-2 4 0-3 0-6 0-8z" fill="currentColor" fill-opacity=".35"/><path d="M12 22c-2.2 0-4-1.8-4-4 0-2 1-3 2-4-.5 2 .5 3 2 3s2.5-1 2-3c1 1 2 2 2 4 0 2.2-1.8 4-4 4z"/></svg>',
-  a20: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .9-5 4.7 1.2 6.9L12 17.6 5.8 21l1.2-6.9-5-4.7 7-.9z"/></svg>',
-  a21: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12c2.5 0 4.5 2 4.5 4.5S20.5 17 18 17c-1.5 0-2.5-.8-3-1.5h-6c-.5.7-1.5 1.5-3 1.5-2.5 0-4.5-2-4.5-4.5S3.5 8 6 8z"/><path d="M7 10.2v3.6M5.2 12h3.6M15.5 10.7h.01M17.5 12.7h.01"/></svg>',
-  a22: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2c0-4.4 3.6-8 8-8s8 3.6 8 8v2"/><rect x="3" y="13" width="4" height="7" rx="2"/><rect x="17" y="13" width="4" height="7" rx="2"/></svg>',
-  a23: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h12a3 3 0 010 6H6"/><path d="M3 13h15a3 3 0 010 6H8"/><path d="M3 9h9a3 3 0 010 6"/></svg>',
-  a24: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54z"/></svg>'
-};
-
-const PRESET_AVATARS=[
-  {id:'a1',svg:PRESET_AVATAR_SVGS.a1,bg:'linear-gradient(135deg,#fb7185,#e11d48)'},
-  {id:'a2',svg:PRESET_AVATAR_SVGS.a2,bg:'linear-gradient(135deg,#4ade80,#16a34a)'},
-  {id:'a3',svg:PRESET_AVATAR_SVGS.a3,bg:'linear-gradient(135deg,#facc15,#d97706)'},
-  {id:'a4',svg:PRESET_AVATAR_SVGS.a4,bg:'linear-gradient(135deg,#60a5fa,#2563eb)'},
-  {id:'a5',svg:PRESET_AVATAR_SVGS.a5,bg:'linear-gradient(135deg,#a78bfa,#7c3aed)'},
-  {id:'a6',svg:PRESET_AVATAR_SVGS.a6,bg:'linear-gradient(135deg,#818cf8,#4f46e5)'},
-  {id:'a7',svg:PRESET_AVATAR_SVGS.a7,bg:'linear-gradient(135deg,#34d399,#059669)'},
-  {id:'a8',svg:PRESET_AVATAR_SVGS.a8,bg:'linear-gradient(135deg,#f472b6,#db2777)'},
-  {id:'a9',svg:PRESET_AVATAR_SVGS.a9,bg:'linear-gradient(135deg,#38bdf8,#0284c7)'},
-  {id:'a10',svg:PRESET_AVATAR_SVGS.a10,bg:'linear-gradient(135deg,#a78bfa,#7c3aed)'},
-  {id:'a11',svg:PRESET_AVATAR_SVGS.a11,bg:'linear-gradient(135deg,#fb7185,#e11d48)'},
-  {id:'a12',svg:PRESET_AVATAR_SVGS.a12,bg:'linear-gradient(135deg,#4ade80,#16a34a)'},
-  {id:'a13',svg:PRESET_AVATAR_SVGS.a13,bg:'linear-gradient(135deg,#facc15,#d97706)'},
-  {id:'a14',svg:PRESET_AVATAR_SVGS.a14,bg:'linear-gradient(135deg,#60a5fa,#2563eb)'},
-  {id:'a15',svg:PRESET_AVATAR_SVGS.a15,bg:'linear-gradient(135deg,#a78bfa,#7c3aed)'},
-  {id:'a16',svg:PRESET_AVATAR_SVGS.a16,bg:'linear-gradient(135deg,#14b8a6,#0d9488)'},
-  {id:'a17',svg:PRESET_AVATAR_SVGS.a17,bg:'linear-gradient(135deg,#6ec9cb,#0891b2)'},
-  {id:'a18',svg:PRESET_AVATAR_SVGS.a18,bg:'linear-gradient(135deg,#faa774,#ea580c)'},
-  {id:'a19',svg:PRESET_AVATAR_SVGS.a19,bg:'linear-gradient(135deg,#fb923c,#dc2626)'},
-  {id:'a20',svg:PRESET_AVATAR_SVGS.a20,bg:'linear-gradient(135deg,#fbbf24,#d97706)'},
-  {id:'a21',svg:PRESET_AVATAR_SVGS.a21,bg:'linear-gradient(135deg,#a855f7,#7c3aed)'},
-  {id:'a22',svg:PRESET_AVATAR_SVGS.a22,bg:'linear-gradient(135deg,#22d3ee,#0891b2)'},
-  {id:'a23',svg:PRESET_AVATAR_SVGS.a23,bg:'linear-gradient(135deg,#94a3b8,#475569)'},
-  {id:'a24',svg:PRESET_AVATAR_SVGS.a24,bg:'linear-gradient(135deg,#f43f5e,#be123c)'}
-];
 const AVATAR_COLORS=['#fb7185','#4ade80','#facc15','#60a5fa','#a78bfa','#f472b6','#5eead4','#fb923c'];
-function getPresetAvatar(id){for(var i=0;i<PRESET_AVATARS.length;i++)if(PRESET_AVATARS[i].id===id)return PRESET_AVATARS[i];return null;}
 function getAvatarColorClass(name){if(!name)return 'color-0';var hash=0;for(var i=0;i<name.length;i++){hash=(hash*31+name.charCodeAt(i))>>>0;}return 'color-'+(hash%AVATAR_COLORS.length);}
 function initials(name){if(!name)return '?';var p=name.trim().split(/\s+/);return ((p[0]?p[0][0]:'')+(p[1]?p[1][0]:'')).toUpperCase()||'?';}
 function fluxAvatarLogo(){return '<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="fluxAvatarGradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#c084fc"/><stop offset="52%" stop-color="#a855f7"/><stop offset="100%" stop-color="#7c3aed"/></linearGradient></defs><path fill="url(#fluxAvatarGradient)" d="M 354 162 L 297 77 L 282 62 L 260 50 L 244 46 L 224 46 L 196 54 L 177 66 L 164 81 L 122 146 L 119 148 L 120 149 L 67 228 L 41 269 L 40 268 L 41 270 L 20 299 L 17 306 L 14 308 L 0 334 L 124 334 L 129 329 L 128 328 L 135 319 L 138 311 L 147 300 L 147 297 L 168 266 L 170 260 L 229 166 L 286 260 L 289 261 L 291 257 L 293 257 L 292 256 L 305 237 L 307 237 L 306 235 L 331 198 L 336 193 L 353 167 Z"/><path fill="url(#fluxAvatarGradient)" d="M 511 183 L 384 184 L 368 208 L 365 210 L 366 211 L 282 336 L 234 261 L 231 261 L 203 301 L 200 302 L 201 304 L 198 305 L 199 307 L 195 312 L 193 312 L 194 314 L 171 347 L 168 349 L 187 380 L 195 390 L 194 393 L 195 392 L 198 395 L 214 422 L 218 426 L 217 428 L 219 428 L 233 445 L 245 453 L 259 460 L 274 464 L 291 465 L 313 461 L 328 454 L 341 445 L 354 429 L 366 409 L 369 407 L 368 406 L 422 322 L 433 308 L 443 291 L 444 292 L 443 290 L 471 247 L 473 247 L 472 245 L 481 231 L 484 229 L 489 218 L 491 216 L 492 217 L 492 214 L 509 189 Z"/></svg>';}
@@ -1793,8 +1725,6 @@ function avatarHtml(u,size){
   var cls='avatar '+size+' ';
   if(u.photoURL)return '<div class="'+cls+'" data-avatar-url="'+escAttr(u.photoURL)+'"></div>';
   if(u.avatarId==='initials')return '<div class="'+cls+getAvatarColorClass(u.name||u.username||'?')+'">'+esc(initials(u.name||u.username||'?'))+'</div>';
-  var preset=u.avatarId?getPresetAvatar(u.avatarId):null;
-  if(preset)return '<div class="'+cls+'" style="background:'+preset.bg+';color:#fff">'+preset.svg+'</div>';
   return '<div class="'+cls+getAvatarColorClass(u.name||u.username||'?')+'">'+esc(initials(u.name||u.username||'?'))+'</div>';
 }
 function applyAvatarUrls(root){(root||document).querySelectorAll('[data-avatar-url]').forEach(function(el){try{el.style.backgroundImage='url("'+el.dataset.avatarUrl+'")';el.style.backgroundSize='cover';el.style.backgroundPosition='center';}catch(e){}});}
@@ -2236,27 +2166,8 @@ function renderAvatarSheetPreview(){
     prev.className='profile-avatar-big '+getAvatarColorClass(currentUserData.name||currentUserData.username||'?');
     prev.innerHTML='<span style="font-size:42px;font-weight:600;line-height:1">'+esc(initials(currentUserData.name||currentUserData.username||'?'))+'</span>';
   } else {
-    var p = data.avatarId ? getPresetAvatar(data.avatarId) : null;
-    if(p){ prev.style.background=p.bg; prev.style.color='#fff'; prev.innerHTML=p.svg; }
-    else { prev.className='profile-avatar-big flux-app-avatar'; prev.style.background='var(--accent-grad)'; prev.innerHTML=fluxAvatarLogo(); }
+    prev.className='profile-avatar-big flux-app-avatar'; prev.style.background='var(--accent-grad)'; prev.innerHTML=fluxAvatarLogo();
   }
-}
-
-function renderAvatarPresets(){
-  var grid=$('avatar-presets-grid'); if(!grid) return;
-  grid.innerHTML = PRESET_AVATARS.map(function(p){
-    var sel = (currentUserData.avatarId===p.id && !currentUserData.photoURL) ? ' selected' : '';
-    return '<div class="avatar-preset-item'+sel+'" data-avatar-id="'+escAttr(p.id)+'" style="background:'+p.bg+';color:#fff">'+p.svg+'</div>';
-  }).join('');
-  grid.querySelectorAll('[data-avatar-id]').forEach(function(el){
-    el.onclick=function(){
-      AVATAR_PENDING={ avatarId:el.dataset.avatarId, photoURL:null };
-      grid.querySelectorAll('.avatar-preset-item').forEach(function(x){x.classList.toggle('selected',x===el);});
-      renderAvatarSheetPreview();
-      saveAvatarSelection(AVATAR_PENDING);
-      $('avatar-sheet').classList.remove('show');
-    };
-  });
 }
 
 async function saveAvatarSelection(data){
@@ -2278,7 +2189,6 @@ function openAvatarSheet(){
   AVATAR_PENDING=null;
   var sh=$('avatar-sheet'); if(!sh) return;
   sh.classList.add('show');
-  renderAvatarPresets();
   renderAvatarSheetPreview();
 }
 
@@ -2558,16 +2468,9 @@ function updateSettingsUI(){
       bigAv.className='profile-avatar-big '+getAvatarColorClass(currentUserData.name||currentUserData.username||'?');
       bigAv.innerHTML='<span style="font-size:44px;font-weight:600;line-height:1">'+esc(initials(currentUserData.name||currentUserData.username||'?'))+'</span>';
     } else {
-      var presetBig=currentUserData.avatarId?getPresetAvatar(currentUserData.avatarId):null;
-      if(presetBig){
-        bigAv.style.background=presetBig.bg;
-        bigAv.style.color='#fff';
-        bigAv.innerHTML=presetBig.svg;
-      } else {
-        bigAv.className='profile-avatar-big flux-app-avatar';
-        bigAv.style.background='var(--accent-grad)';
-        bigAv.innerHTML=fluxAvatarLogo();
-      }
+      bigAv.className='profile-avatar-big flux-app-avatar';
+      bigAv.style.background='var(--accent-grad)';
+      bigAv.innerHTML=fluxAvatarLogo();
     }
   }
   var infoName=$('info-name');if(infoName)infoName.textContent=currentUserData.name||'—';
