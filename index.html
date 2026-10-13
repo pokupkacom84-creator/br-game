@@ -270,17 +270,30 @@ async function getTxt(s,force){
  const ck='fx-c-'+s.id;
  if(!force){try{const c=JSON.parse(localStorage.getItem(ck));if(c&&Date.now()-c.t<6e5)return c.x}catch(e){}}
  let txt='';
- if(s.urls){txt=(await Promise.allSettled(s.urls.map(ft))).map(x=>x.value||'').join('\n')}
- else{const[o,r,p]=s.gh;for(const u of[`https://raw.githubusercontent.com/${o}/${r}/main/${p}`,`https://cdn.jsdelivr.net/gh/${o}/${r}@main/${p}`,`https://cdn.statically.io/gh/${o}/${r}/main/${p}`]){try{txt=await ft(u);if(txt.length>20)break}catch(e){}}}
+ const F=u=>ft(force?u+(u.includes('?')?'&':'?')+'_='+Date.now():u);
+ if(s.urls){txt=(await Promise.allSettled(s.urls.map(F))).map(x=>x.value||'').join('\n')}
+ else{const[o,r,p]=s.gh;for(const u of[`https://raw.githubusercontent.com/${o}/${r}/main/${p}`,`https://cdn.jsdelivr.net/gh/${o}/${r}@main/${p}`,`https://cdn.statically.io/gh/${o}/${r}/main/${p}`]){try{txt=await F(u);if(txt.length>20)break}catch(e){}}}
  if(txt.length<20)throw 0;
  try{localStorage.setItem(ck,JSON.stringify({t:Date.now(),x:txt}))}catch(e){}
  return txt}
 const curSrc=()=>SRC.find(s=>s.id===srcId)||SRC[0];
+let lastTxt='',rbusy=0;
+/* автообновление списка: тихо перекачиваем файл с GitHub и перерисовываем, только если он изменился */
+async function autoRefresh(){
+ if(rbusy||!user||document.hidden||$('#app').hidden)return;
+ const s=curSrc();if(s.p&&!isPrem())return;
+ rbusy=1;
+ try{const t=await getTxt(s,true);if(t!==lastTxt){lastTxt=t;keys=parse(t);rKeys();rHome();if($('#keys').classList.contains('on'))snack('Список ключей обновлён')}}catch(e){}
+ rbusy=0}
+setInterval(autoRefresh,60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoRefresh()});
+addEventListener('online',autoRefresh);
+addEventListener('focus',autoRefresh);
 async function loadKeys(force){
  const s=curSrc(),id=++req;lim=120;
  if(s.p&&!isPrem()){keys=[];rKeys();return}
  put($('#klist'),'<div class="li" style="justify-content:center;color:var(--on-sv)">Загрузка ключей…</div>');
- let bad=0;try{const t=await getTxt(s,force);if(id!==req)return;keys=parse(t)}catch(e){if(id!==req)return;keys=[];bad=1}
+ let bad=0;try{const t=await getTxt(s,force);if(id!==req)return;lastTxt=t;keys=parse(t)}catch(e){if(id!==req)return;keys=[];bad=1}
  rKeys(bad)}
 function rKeys(bad){
  const s=curSrc(),pm=isPrem();
@@ -304,7 +317,14 @@ function toggle(){
  if(state===1)return;
  if(state===2){clearInterval(tick);setSt(0);$('#tm').textContent='00:00:00';snack('Ключ деактивирован');return}
  if(!selKey){snack('Сначала выберите ключ');tab('keys');return}
- setSt(1);setTimeout(()=>{setSt(2);t0=Date.now();upd();tick=setInterval(upd,1000);cp(selKey.raw,'Ключ скопирован. Вставьте его в Hiddify, v2rayNG или другой клиент')},800)}
+ setSt(1);const k=selKey.raw;cp(k,'Открываем Happ…');
+ setTimeout(()=>{setSt(2);t0=Date.now();upd();tick=setInterval(upd,1000);openHapp(k)},600)}
+/* открывает Happ; ключ добавляется автоматически через deep link happ://add/<ключ> */
+function openHapp(k){
+ let left=false;const f=()=>{if(document.hidden)left=true};
+ document.addEventListener('visibilitychange',f);
+ location.href='happ://add/'+k;
+ setTimeout(()=>{document.removeEventListener('visibilitychange',f);if(!left)snack('Happ не открылся. Ключ скопирован — установите Happ и вставьте его')},2200)}
 $('#pw').onclick=toggle;$('#chg').onclick=()=>tab('keys');
 function rHome(){
  $('#srv').textContent=selKey?`${selKey.flag} ${selKey.n}`:'Ключ не выбран';
