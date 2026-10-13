@@ -265,10 +265,17 @@ const isPrem=()=>gprem.active===true||(!!prem.active&&expOf(prem)>Date.now());
 /* ---------- VPN-ключи ---------- */
 function parse(t){const o=[],seen={};(String(t).replace(/\r/g,'').match(/(vless|vmess|trojan|ss|hysteria2|hy2|socks5?):\/\/[^\s"'<>]+/ig)||[]).forEach(r=>{r=r.replace(/[),;]+$/,'');if(seen[r])return;seen[r]=1;const p=r.split('://')[0].toLowerCase().replace(/^socks5$/,'socks');let n='';const h=r.indexOf('#');if(h>-1){try{n=decodeURIComponent(r.slice(h+1))}catch(e){n=r.slice(h+1)}}else if(p==='vmess'){try{n=JSON.parse(atob(r.slice(8))).ps||''}catch(e){}}
  const fm=n.match(/[\u{1F1E6}-\u{1F1FF}]{2}/u),host=(r.split('://')[1]||'').split('@').pop().split(/[:/?#]/)[0];
- o.push({raw:rename(r,p,fm?fm[0]:''),p,n:NAME,flag:fm?fm[0]:'🌐',host})});return o}
+ const fl=fm?fm[0]:'',cu=country(fl);
+ o.push({raw:rename(r,p,fl,cu),p,n:(cu?cu+' ':'')+NAME,flag:fl||'🌐',host})});return o}
+/* страна по флагу-эмодзи (🇩🇪 → «Германия») */
+function country(fl){
+ if(!fl)return'';
+ if(country.R===undefined){try{country.R=new Intl.DisplayNames(['ru'],{type:'region',fallback:'none'})}catch(e){country.R=null}}
+ if(!country.R)return'';
+ try{return country.R.of([...fl].map(ch=>String.fromCharCode(ch.codePointAt(0)-0x1F1E6+65)).join(''))||''}catch(e){return''}}
 /* единое имя для всех ключей: «<флаг> @FluxVpnClient» — и в списке, и в Happ (имя берётся из #-фрагмента / поля ps у vmess) */
-function rename(r,p,fl){
- const tag=(fl?fl+' ':'')+NAME;
+function rename(r,p,fl,cu){
+ const tag=(fl?fl+' ':'')+(cu?cu+' ':'')+NAME;
  if(p==='vmess'){try{const j=JSON.parse(decodeURIComponent(escape(atob(r.slice(8).split('#')[0].replace(/-/g,'+').replace(/_/g,'/')))));j.ps=tag;return'vmess://'+btoa(unescape(encodeURIComponent(JSON.stringify(j))))}catch(e){}}
  const h=r.indexOf('#');return(h>-1?r.slice(0,h):r)+'#'+encodeURIComponent(tag)}
 const ft=async u=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),7500);try{const r=await fetch(u,{cache:'no-store',signal:c.signal});if(!r.ok)throw 0;return await r.text()}finally{clearTimeout(t)}};
@@ -310,11 +317,11 @@ function rKeys(bad){
  if(s.p&&!pm){put(L,'<div class="li col" style="align-items:center;text-align:center"><span class="lead"><i data-i="lock"></i></span><b>Premium-ключи закрыты</b><small style="color:var(--on-sv)">Оформите Premium, чтобы открыть этот список</small><button class="fbtn rp" id="tos" style="max-width:260px">Открыть магазин</button></div>');$('#tos').onclick=()=>tab('shop');$('#kcount').textContent='Premium';return}
  $('#kcount').textContent=keys.length?`${s.n} · ${keys.length}`:s.n;
  if(!keys.length){put(L,`<div class="li" style="justify-content:center;color:var(--on-sv)">${bad?'Не удалось загрузить ключи. Проверьте сеть и нажмите «Обновить».':'В этом списке пока нет ключей.'}</div>`);return}
- put(L,keys.slice(0,lim).map((k,i)=>`<div class="li rp${selKey&&selKey.raw===k.raw?' sel':''}" data-k="${i}"><span class="lead">${k.flag}</span><span class="m"><b>${esc(k.n)}</b><small>${k.p.toUpperCase()}</small></span><button class="ib" data-cp="${i}" aria-label="Копировать ключ"><i data-i="copy"></i></button></div>`).join(''));
+ put(L,keys.slice(0,lim).map((k,i)=>`<div class="li rp${selKey&&selKey.raw===k.raw?' sel':''}" data-k="${i}"><span class="lead">${k.flag}</span><span class="m"><b>${esc(k.n)}</b><small>${k.p.toUpperCase()}</small></span></div>`).join(''));
  if(keys.length>lim){const b=document.createElement('button');b.className='tbtn more';b.textContent=`Показать ещё (${keys.length-lim})`;b.onclick=()=>{lim+=120;rKeys()};L.after(b)}}
 $('#cats').onclick=e=>{const b=e.target.closest('[data-c]');if(!b)return;const p=+b.dataset.c;if(p&&!isPrem()){srcId='p1';store.set('fx-src',srcId);loadKeys();snack('Premium VPN доступен только с Premium');return}srcId=SRC.find(x=>x.p===p).id;store.set('fx-src',srcId);loadKeys()};
 $('#srcs').onclick=e=>{if(e.target.closest('#rfr')){loadKeys(true);return}const b=e.target.closest('[data-s]');if(!b)return;srcId=b.dataset.s;store.set('fx-src',srcId);loadKeys()};
-$('#klist').onclick=e=>{const c=e.target.closest('[data-cp]');if(c){cp(keys[+c.dataset.cp].raw,'Ключ скопирован');return}const r=e.target.closest('[data-k]');if(!r)return;selKey=keys[+r.dataset.k];store.set('fx-key',selKey.raw);snack('Выбран ключ: '+selKey.n);rKeys();rHome()};
+$('#klist').onclick=e=>{const r=e.target.closest('[data-k]');if(!r)return;selKey=keys[+r.dataset.k];store.set('fx-key',selKey.raw);snack('Выбран ключ: '+selKey.n);rKeys();rHome()};
 
 /* ---------- главная ---------- */
 function setSt(s){state=s;const h=$('#hero');h.classList.toggle('on',s===2);h.classList.toggle('busy',s===1);const t=['Не активен','Подготовка…','Ключ активен'][s];$('#st').textContent=t;if(!$('#home').classList.contains('x'))$('#sub').textContent=t}
@@ -323,14 +330,19 @@ function toggle(){
  if(state===1)return;
  if(state===2){clearInterval(tick);setSt(0);$('#tm').textContent='00:00:00';snack('Ключ деактивирован');return}
  if(!selKey){snack('Сначала выберите ключ');tab('keys');return}
- setSt(1);const k=selKey.raw;cp(k,'Открываем Happ…');
+ setSt(1);const k=selKey.raw;snack('Открываем Happ…');
  setTimeout(()=>{setSt(2);t0=Date.now();upd();tick=setInterval(upd,1000);openHapp(k)},600)}
 /* открывает Happ; ключ добавляется автоматически через deep link happ://add/<ключ> */
 function openHapp(k){
  let left=false;const f=()=>{if(document.hidden)left=true};
  document.addEventListener('visibilitychange',f);
- location.href='happ://add/'+k;
- setTimeout(()=>{document.removeEventListener('visibilitychange',f);if(!left)snack('Happ не открылся. Ключ скопирован — установите Happ и вставьте его')},2200)}
+ const u='happ://add/'+k;
+ if(/; wv\)|Version\/[\d.]+.*Chrome/.test(navigator.userAgent)){
+  /* Android WebView (Sketchware): прямой переход на happ:// показывает ERR_UNKNOWN_URL_SCHEME и убирает страницу,
+     поэтому открываем ссылку в скрытом iframe — приложение остаётся на месте */
+  const fr=document.createElement('iframe');fr.style.cssText='display:none;width:0;height:0;border:0';fr.src=u;document.body.appendChild(fr);setTimeout(()=>fr.remove(),4000)}
+ else location.href=u;
+ setTimeout(()=>{document.removeEventListener('visibilitychange',f);if(!left)snack('Happ не открылся. Установите Happ и попробуйте снова')},2200)}
 $('#pw').onclick=toggle;$('#chg').onclick=()=>tab('keys');
 function rHome(){
  $('#srv').textContent=selKey?`${selKey.flag} ${selKey.n}`:'Ключ не выбран';
