@@ -337,6 +337,8 @@ function openHapp(k){
  let left=false;const f=()=>{if(document.hidden)left=true};
  document.addEventListener('visibilitychange',f);
  const u='happ://add/'+k;
+ /* в Sketchware-приложении есть мост Android.openExternalBrowser(url) — он запускает ACTION_VIEW, значит откроет и happ:// */
+ if(window.Android&&typeof Android.openExternalBrowser==='function'){try{Android.openExternalBrowser(u);document.removeEventListener('visibilitychange',f);return}catch(e){}}
  location.href=u;
  /* в WebView visibilitychange при переключении приложений не срабатывает, поэтому там «не открылся» не показываем — это была бы ложная ошибка */
  const wv=/; wv\)|Version\/[\d.]+.*Chrome/.test(navigator.userAgent);
