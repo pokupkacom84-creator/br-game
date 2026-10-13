@@ -1158,6 +1158,26 @@ body:not(#m3) .nav-item:active svg{transform:scale(.92)}
 <input id="login-password" type="password" placeholder="Пароль" autocomplete="current-password">
 <button id="login-btn" class="btn-primary ripple">Войти</button>
 <button id="go-register" class="btn-link">Создать аккаунт</button>
+<button id="phone-auth-open" class="btn-link" type="button">Продолжить с номером телефона</button>
+</div>
+<div class="auth-form hidden" id="phone-auth-form">
+  <div style="font-size:18px;font-weight:650;margin-bottom:2px">Вход по телефону</div>
+  <p style="font-size:13px;color:var(--text-2);line-height:1.45;margin:0 0 8px">Укажи номер в международном формате, например +31612345678.</p>
+  <input id="phone-number" type="tel" inputmode="tel" autocomplete="tel" placeholder="+31 6 12345678" aria-label="Номер телефона">
+  <label style="display:flex;gap:10px;align-items:flex-start;font-size:12px;line-height:1.45;color:var(--text-2)"><input id="phone-consent" type="checkbox" style="width:18px;height:18px;flex:0 0 18px;margin:1px 0 0;accent-color:var(--accent)"><span>Согласен использовать мой номер для входа и получить SMS с кодом подтверждения.</span></label>
+  <div id="recaptcha-container" style="display:flex;justify-content:center;max-width:100%;overflow:hidden"></div>
+  <button id="phone-send-code" class="btn-primary ripple" type="button">Отправить SMS-код</button>
+  <button id="phone-auth-back" class="btn-link" type="button">Назад к входу по email</button>
+  <div id="phone-auth-status" role="status" aria-live="polite" style="font-size:13px;color:var(--text-2);line-height:1.4"></div>
+</div>
+<div class="auth-form hidden" id="phone-code-form">
+  <div style="font-size:18px;font-weight:650;margin-bottom:2px">Проверь SMS</div>
+  <p id="phone-code-hint" style="font-size:13px;color:var(--text-2);line-height:1.45;margin:0 0 8px">Введи шестизначный код из SMS.</p>
+  <input id="phone-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="123456" aria-label="Код из SMS" style="text-align:center;letter-spacing:.35em;font-size:24px;font-weight:700">
+  <button id="phone-verify-code" class="btn-primary ripple" type="button">Подтвердить и войти</button>
+  <button id="phone-resend-code" class="btn-link" type="button">Отправить код ещё раз</button>
+  <button id="phone-code-back" class="btn-link" type="button">Изменить номер</button>
+  <div id="phone-code-status" role="status" aria-live="polite" style="font-size:13px;color:var(--text-2);line-height:1.4"></div>
 </div>
 <div class="auth-form hidden" id="register-form">
 <input id="reg-email" type="email" placeholder="Email" autocomplete="email">
@@ -2281,8 +2301,65 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if($('modal
 
 function authError(code){var m={'auth/invalid-email':'Неверный email','auth/user-not-found':'Пользователь не найден','auth/wrong-password':'Неверный пароль','auth/invalid-credential':'Неверные данные','auth/email-already-in-use':'Email уже используется','auth/weak-password':'Слабый пароль','auth/network-request-failed':'Нет соединения','auth/too-many-requests':'Слишком много попыток','auth/operation-not-allowed':'Email/Password выключен','auth/configuration-not-found':'Включите Email/Password','auth/api-key-not-valid':'Неверный API-ключ'};return m[code]||('Ошибка: '+code);}
 
-$('go-register').onclick=function(){$('login-form').classList.add('hidden');$('register-form').classList.remove('hidden');$('auth-subtitle').textContent='Создайте новый аккаунт';};
-$('go-login').onclick=function(){$('register-form').classList.add('hidden');$('login-form').classList.remove('hidden');$('auth-subtitle').textContent='Войдите, чтобы продолжить';};
+// Phone authentication via Firebase Auth JS SDK. In WebView, load this app from an
+// authorized HTTPS origin; file:// origins and WebViews that block reCAPTCHA won't work.
+var phoneConfirmationResult=null;
+var phoneRecaptchaVerifier=null;
+var phoneAuthBusy=false;
+function setPhoneStatus(id,message,isError){var el=$(id);if(!el)return;el.textContent=message||'';el.style.color=isError?'var(--danger)':'var(--text-2)';}
+function clearPhoneRecaptcha(){try{if(phoneRecaptchaVerifier){phoneRecaptchaVerifier.clear();}}catch(e){}phoneRecaptchaVerifier=null;var host=$('recaptcha-container');if(host)host.innerHTML='';}
+function createPhoneRecaptcha(){
+  clearPhoneRecaptcha();
+  if(!firebaseReady||!auth)throw new Error('auth/service-not-available');
+  // Visible reCAPTCHA is more reliable than invisible challenges in embedded browsers.
+  phoneRecaptchaVerifier=new firebase.auth.RecaptchaVerifier('recaptcha-container',{size:'normal',callback:function(){setPhoneStatus('phone-auth-status','Проверка пройдена. Можно запросить SMS.',false);},'expired-callback':function(){setPhoneStatus('phone-auth-status','Проверка истекла. Выполни её ещё раз.',true);}});
+  return phoneRecaptchaVerifier.render();
+}
+function showPhoneAuthStep(step){
+  ['login-form','register-form','phone-auth-form','phone-code-form'].forEach(function(id){var el=$(id);if(el)el.classList.toggle('hidden',id!==step);});
+  if(step==='phone-auth-form'){$('auth-subtitle').textContent='Войдите или зарегистрируйтесь по телефону';setPhoneStatus('phone-auth-status','',false);setTimeout(function(){if(!phoneRecaptchaVerifier){createPhoneRecaptcha().catch(function(e){setPhoneStatus('phone-auth-status','Не удалось загрузить проверку. Открой приложение с HTTPS-домена и попробуй снова.',true);console.warn('reCAPTCHA init failed',e);});}},80);}
+  else if(step==='phone-code-form'){$('auth-subtitle').textContent='Подтвердите номер телефона';}
+  else{$('auth-subtitle').textContent=step==='register-form'?'Создайте новый аккаунт':'Войдите, чтобы продолжить';clearPhoneRecaptcha();}
+}
+function phoneAuthError(code){var m={'auth/invalid-phone-number':'Проверь номер в международном формате, например +31612345678.','auth/missing-phone-number':'Введи номер телефона.','auth/invalid-verification-code':'Неверный SMS-код. Проверь код и попробуй ещё раз.','auth/code-expired':'Код истёк. Запроси новый.','auth/too-many-requests':'Слишком много запросов. Подожди и попробуй позже.','auth/quota-exceeded':'Лимит SMS для проекта исчерпан.','auth/captcha-check-failed':'Проверка reCAPTCHA не пройдена. Попробуй снова.','auth/operation-not-allowed':'В Firebase Console не включён вход по номеру телефона.','auth/unauthorized-domain':'Домен приложения не добавлен в Firebase Authorized domains.','auth/web-storage-unsupported':'WebView не поддерживает нужное хранилище авторизации.','auth/network-request-failed':'Нет соединения с интернетом.','auth/app-not-authorized':'Приложение не авторизовано для этого Firebase-проекта.','auth/invalid-app-credential':'Не удалось подтвердить приложение. Проверь HTTPS-домен и настройки Firebase.','auth/missing-app-credential':'Не хватает проверки приложения. Перезагрузи страницу и пройди reCAPTCHA.','auth/invalid-verification-id':'Сессия SMS устарела. Запроси новый код.','auth/session-expired':'Сессия проверки истекла. Запроси новый код.'};return m[code]||('Не удалось выполнить вход: '+code);}
+async function sendPhoneCode(){
+  if(phoneAuthBusy)return;
+  if(!firebaseReady||!auth){setPhoneStatus('phone-auth-status','Сервис авторизации недоступен.',true);return;}
+  var phone=$('phone-number').value.trim().replace(/[\s().-]/g,'');
+  if(!/^\+[1-9]\d{7,14}$/.test(phone)){setPhoneStatus('phone-auth-status','Введи номер в международном формате, например +31612345678.',true);return;}
+  if(!$('phone-consent').checked){setPhoneStatus('phone-auth-status','Подтверди согласие на использование номера для авторизации.',true);return;}
+  phoneAuthBusy=true;var btn=$('phone-send-code');btn.disabled=true;var old=btn.textContent;btn.textContent='Отправляем…';setPhoneStatus('phone-auth-status','Проходим защитную проверку…',false);
+  try{
+    auth.languageCode='ru';
+    if(!phoneRecaptchaVerifier)await createPhoneRecaptcha();
+    phoneConfirmationResult=await auth.signInWithPhoneNumber(phone,phoneRecaptchaVerifier);
+    window.__fluxPhoneConfirmationResult=phoneConfirmationResult;
+    $('phone-code-hint').textContent='Код отправлен на '+phone+'. Введи шестизначный код из SMS.';
+    $('phone-code').value='';setPhoneStatus('phone-code-status','SMS отправлено. Если сообщение не пришло, проверь номер и попробуй ещё раз.',false);
+    showPhoneAuthStep('phone-code-form');
+    try{$('phone-code').focus();}catch(e){}
+  }catch(e){console.warn('Phone sign-in send failed',e);setPhoneStatus('phone-auth-status',phoneAuthError(e.code||'auth/unknown'),true);clearPhoneRecaptcha();}
+  finally{phoneAuthBusy=false;btn.disabled=false;btn.textContent=old;}
+}
+$('phone-auth-open').onclick=function(){showPhoneAuthStep('phone-auth-form');};
+$('phone-auth-back').onclick=function(){showPhoneAuthStep('login-form');};
+$('phone-code-back').onclick=function(){phoneConfirmationResult=null;showPhoneAuthStep('phone-auth-form');};
+$('phone-send-code').onclick=sendPhoneCode;
+$('phone-resend-code').onclick=async function(){phoneConfirmationResult=null;showPhoneAuthStep('phone-auth-form');setPhoneStatus('phone-auth-status','Запроси новый код ниже.',false);};
+$('phone-verify-code').onclick=async function(){
+  var code=$('phone-code').value.replace(/\s/g,'');
+  if(!/^\d{6}$/.test(code)){setPhoneStatus('phone-code-status','Введи шестизначный код из SMS.',true);return;}
+  var result=phoneConfirmationResult||window.__fluxPhoneConfirmationResult;
+  if(!result){setPhoneStatus('phone-code-status','Сессия проверки истекла. Запроси код ещё раз.',true);return;}
+  var btn=this,old=btn.textContent;btn.disabled=true;btn.textContent='Проверяем…';setPhoneStatus('phone-code-status','Проверяем код…',false);
+  try{await result.confirm(code);phoneConfirmationResult=null;window.__fluxPhoneConfirmationResult=null;setPhoneStatus('phone-code-status','Номер подтверждён. Входим…',false);}
+  catch(e){console.warn('Phone sign-in confirm failed',e);setPhoneStatus('phone-code-status',phoneAuthError(e.code||'auth/unknown'),true);}
+  finally{btn.disabled=false;btn.textContent=old;}
+};
+$('phone-code').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,6);if(this.value.length===6)$('phone-verify-code').focus();});
+
+$('go-register').onclick=function(){showPhoneAuthStep('register-form');};
+$('go-login').onclick=function(){showPhoneAuthStep('login-form');};
 $('login-btn').onclick=async function(){
   if(!firebaseReady){toast('Сервис временно недоступен. Попробуйте позже.');return;}
   var email=$('login-email').value.trim(),pass=$('login-password').value;
@@ -2339,6 +2416,7 @@ if(firebaseReady&&auth){
         setSplashStatus('Проверка сессии…');
         var snap;try{snap=await db.ref('users/'+user.uid).once('value');}catch(e){toast('Не удалось подключиться. Проверьте интернет.');await whenMinSplashElapsed();goScreen('auth-screen',true);return;}
         var data=snap.val();
+        if(user.phoneNumber&&data&&!data.phoneNumber){try{await db.ref('users/'+user.uid+'/phoneNumber').set(user.phoneNumber);data.phoneNumber=user.phoneNumber;}catch(phoneSaveError){console.warn('Phone metadata could not be saved',phoneSaveError);}}
         if(data&&data.adminBlocked===true){toast('Аккаунт заблокирован');try{await auth.signOut();}catch(e){}await whenMinSplashElapsed();goScreen('auth-screen',true);return;}
         if(!data||!data.name){await whenMinSplashElapsed();goScreen('onboarding-screen',true);}
         else{
@@ -2402,10 +2480,10 @@ $('onb-continue').onclick=async function(){
     if(taken.exists()&&taken.val()!==currentUser.uid){toast('Username занят');this.disabled=false;return;}
     var globalPremium=await ensureGlobalPremiumState();
     var updates={};
-    updates['users/'+currentUser.uid]={name:name,username:username,avatarId:onbAvatarId,lastSeen:now(),online:true,bio:'',status:''};
+    updates['users/'+currentUser.uid]={name:name,username:username,avatarId:onbAvatarId,lastSeen:now(),online:true,bio:'',status:'',phoneNumber:currentUser.phoneNumber||null};
     updates['usernames/'+username]=currentUser.uid;
     await db.ref().update(updates);
-    currentUserData={uid:currentUser.uid,name:name,username:username,avatarId:onbAvatarId};
+    currentUserData={uid:currentUser.uid,name:name,username:username,avatarId:onbAvatarId,phoneNumber:currentUser.phoneNumber||null};
     window.__fluxPremiumState={};
     if(globalPremium)document.body.classList.add('flux-premium');
     goScreen('main-screen',true);
