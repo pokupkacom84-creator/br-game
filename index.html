@@ -241,19 +241,6 @@ const BOT='FluxPremPay_bot';
 /* админ определяется ТОЛЬКО по UID (как в основном приложении) или флагам в профиле — не по username */
 const ADMIN_UIDS=['7rxpLXFm32c2IhJc5vop8sDEo0T2'];
 const RES=['admin','administrator','support','flux','fluxvpnclient','moderator'];
-const AVS=[
-{id:'a1',e:'😎',bg:'linear-gradient(135deg,#fb7185,#e11d48)'},{id:'a2',e:'🐱',bg:'linear-gradient(135deg,#4ade80,#16a34a)'},
-{id:'a3',e:'🦊',bg:'linear-gradient(135deg,#facc15,#d97706)'},{id:'a4',e:'🐼',bg:'linear-gradient(135deg,#60a5fa,#2563eb)'},
-{id:'a5',e:'🦁',bg:'linear-gradient(135deg,#a78bfa,#7c3aed)'},{id:'a6',e:'💎',bg:'linear-gradient(135deg,#818cf8,#4f46e5)'},
-{id:'a7',e:'🐲',bg:'linear-gradient(135deg,#34d399,#059669)'},{id:'a8',e:'🦄',bg:'linear-gradient(135deg,#f472b6,#db2777)'},
-{id:'a9',e:'🐳',bg:'linear-gradient(135deg,#38bdf8,#0284c7)'},{id:'a10',e:'🐨',bg:'linear-gradient(135deg,#a78bfa,#7c3aed)'},
-{id:'a11',e:'🐮',bg:'linear-gradient(135deg,#fb7185,#e11d48)'},{id:'a12',e:'🐰',bg:'linear-gradient(135deg,#4ade80,#16a34a)'},
-{id:'a13',e:'🐯',bg:'linear-gradient(135deg,#facc15,#d97706)'},{id:'a14',e:'🐿',bg:'linear-gradient(135deg,#60a5fa,#2563eb)'},
-{id:'a15',e:'🦉',bg:'linear-gradient(135deg,#a78bfa,#7c3aed)'},{id:'a16',e:'🐢',bg:'linear-gradient(135deg,#14b8a6,#0d9488)'},
-{id:'a17',e:'🚀',bg:'linear-gradient(135deg,#6ec9cb,#0891b2)'},{id:'a18',e:'⚡',bg:'linear-gradient(135deg,#faa774,#ea580c)'},
-{id:'a19',e:'🔥',bg:'linear-gradient(135deg,#fb923c,#dc2626)'},{id:'a20',e:'⭐',bg:'linear-gradient(135deg,#fbbf24,#d97706)'},
-{id:'a21',e:'🎮',bg:'linear-gradient(135deg,#a855f7,#7c3aed)'},{id:'a22',e:'🎧',bg:'linear-gradient(135deg,#22d3ee,#0891b2)'},
-{id:'a23',e:'🌪',bg:'linear-gradient(135deg,#94a3b8,#475569)'},{id:'a24',e:'💎',bg:'linear-gradient(135deg,#818cf8,#4f46e5)'}];
 const NAME='@FluxVpnClient';
 const PLANS=[{id:'pm_month',t:'1 месяц',d:30,r:199},{id:'pm_quarter',t:'3 месяца',d:90,r:499,pop:1},{id:'pm_year',t:'1 год',d:365,r:1490}];
 const MR='https://raw.githubusercontent.com/luxxuria/harvester/main/';
@@ -397,7 +384,7 @@ function rMe(){
  <div class="lbl">Реферальная программа</div>
  <div class="refc"><b style="font-size:20px">15 ₽ за каждого приглашённого друга</b><div style="margin-top:6px;font-size:14px;opacity:.85">Баланс: ${refBal} ₽ · Друзей: ${+refSt.totalInvited||0} · Заработано: ${+refSt.totalBonus||0} ₽</div><div class="lnk">${esc(ref)}</div><div class="row2"><button class="btn rp" id="rcp"><i data-i="copy"></i>Копировать</button><button class="btn f rp" id="rsh"><i data-i="share"></i>Поделиться</button></div></div>
  <div class="lbl">Аккаунт</div>
- <div class="grp"><button class="li rp" id="ed"><span class="lead"><i data-i="edit"></i></span><span class="m"><b>Редактировать профиль</b><small>Имя, username и статус</small></span></button><button class="li rp" id="av2"><span class="lead"><i data-i="photo"></i></span><span class="m"><b>Сменить аватар</b><small>Эмодзи, инициалы или своё фото</small></span></button>${isAdmin()?'<button class="li rp" id="adm"><span class="lead"><i data-i="shield"></i></span><span class="m"><b>Админ-панель</b><small>Пользователи, платежи, промокоды</small></span></button>':''}<button class="li rp" id="lo"><span class="lead"><i data-i="logout"></i></span><span class="m"><b>Выйти</b><small>${esc(user.email||'')}</small></span></button></div>`);
+ <div class="grp"><button class="li rp" id="ed"><span class="lead"><i data-i="edit"></i></span><span class="m"><b>Редактировать профиль</b><small>Имя, username и статус</small></span></button><button class="li rp" id="av2"><span class="lead"><i data-i="photo"></i></span><span class="m"><b>Сменить аватар</b><small>Своё фото или инициалы</small></span></button>${isAdmin()?'<button class="li rp" id="adm"><span class="lead"><i data-i="shield"></i></span><span class="m"><b>Админ-панель</b><small>Пользователи, платежи, промокоды</small></span></button>':''}<button class="li rp" id="lo"><span class="lead"><i data-i="logout"></i></span><span class="m"><b>Выйти</b><small>${esc(user.email||'')}</small></span></button></div>`);
  $('#rcp').onclick=()=>cp(ref,'Ссылка скопирована');
  $('#rsh').onclick=()=>openUrl('https://t.me/share/url?url='+encodeURIComponent(ref)+'&text='+encodeURIComponent('Заходи в Flux! За каждого приглашённого друга начисляется 15 ₽ на баланс.'));
  $('#lo').onclick=()=>auth.signOut();$('#av').onclick=openAv;$('#av2').onclick=openAv;if(isAdmin())$('#adm').onclick=openAdmin;
@@ -409,22 +396,19 @@ function rAll(){
  rHome();rShop();rMe();if(!$('#keys').classList.contains('x')){const s=curSrc();if(s.p)rKeys()}}
 
 /* ---------- аватары ---------- */
-function avParts(u){u=u||{};if(u.photoURL)return{img:u.photoURL};const a=u.avatarId&&u.avatarId!=='initials'?AVS.find(x=>x.id===u.avatarId):null;if(a)return{bg:a.bg,txt:a.e};return{txt:((u.name||u.username||'F').trim()[0]||'F').toUpperCase()}}
-function avStyle(u){const a=avParts(u);return a.img?`background:url(${esc(a.img)}) center/cover`:a.bg?`background:${a.bg}`:''}
+function avParts(u){u=u||{};if(u.photoURL)return{img:u.photoURL};return{txt:((u.name||u.username||'F').trim()[0]||'F').toUpperCase()}}
+function avStyle(u){const a=avParts(u);return a.img?`background:url(${esc(a.img)}) center/cover`:''}
 function avTxt(u){const a=avParts(u);return a.img?'':esc(a.txt)}
-function paintAv(el,u){if(!el)return;const a=avParts(u);el.style.background=a.img?`url(${a.img}) center/cover`:(a.bg||'');el.textContent=a.img?'':a.txt}
+function paintAv(el,u){if(!el)return;const a=avParts(u);el.style.background=a.img?`url(${a.img}) center/cover`:'';el.textContent=a.img?'':a.txt}
 function openAv(){
- const sel=id=>ud.avatarId===id&&!ud.photoURL;
  dlg(`<h3>Аватар</h3><div style="display:grid;place-items:center"><div class="avb" id="avp" style="width:96px;height:96px;font-size:42px;cursor:default"></div></div>
- <div class="agrid">${AVS.map(a=>`<button class="ap${sel(a.id)?' on':''}" data-a="${a.id}" style="background:${a.bg}" aria-label="Аватар">${a.e}</button>`).join('')}</div>
- <div class="row2"><button class="btn rp" id="avu"><i data-i="photo"></i>Своё фото</button><button class="btn rp" id="avi">Инициалы</button></div>
+ <div class="row2"><button class="btn rp" id="avu"><i data-i="photo"></i>Своё фото</button><button class="btn rp" id="avi">Убрать фото</button></div>
  <input type="file" id="avf" accept="image/*" hidden>
  <div class="row2" style="justify-content:flex-end;margin-top:8px"><button class="tbtn" id="avx">Закрыть</button></div>`);
  paintAv($('#avp'),ud);
  const save=async d=>{try{await db.ref('users/'+user.uid).update(d);closeDlg();snack('Аватар обновлён')}catch(e){snack('Не удалось сохранить аватар')}};
  $('#avx').onclick=closeDlg;
  $('#avi').onclick=()=>save({avatarId:'initials',photoURL:null});
- $('#dlg').querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>save({avatarId:b.dataset.a,photoURL:null}));
  $('#avu').onclick=()=>$('#avf').click();
  /* фото обрезается по центру до квадрата 256×256 и хранится в профиле (как в основном приложении) */
  $('#avf').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;if(f.size>12*1048576){snack('Файл слишком большой (до 12 МБ)');return}
