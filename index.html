@@ -23,7 +23,7 @@ body{background:var(--s);color:var(--on-s);font:400 16px/1.5 "Roboto Flex",Robot
 button,input{font:inherit;letter-spacing:inherit}
 svg.ic{width:24px;height:24px;fill:currentColor;flex:none}
 .rp{position:relative;overflow:hidden}
-.rip{position:absolute;border-radius:50%;background:currentColor;opacity:.16;transform:scale(0);animation:rip .55s ease-out forwards;pointer-events:none}
+.rip{position:absolute;border-radius:50%;background:currentColor;opacity:.16;transform:scale(0);animation:rip .65s cubic-bezier(.2,0,0,1) forwards;pointer-events:none}
 @keyframes rip{to{transform:scale(1);opacity:0}}
 /* app bar */
 .bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--s);transition:background .25s}
@@ -139,6 +139,60 @@ nav button.on{color:var(--on-s);font-weight:700}nav button.on .pill{background:v
 .refc .btn{background:var(--s);color:var(--on-s);height:44px;padding:0 18px}.refc .btn.f{background:var(--p);color:var(--on-p)}
 .row2{display:flex;gap:8px;flex-wrap:wrap}
 .more{display:block;margin:10px auto}
+
+/* ===== Material 3 Expressive: движение ===== */
+:root{--em:cubic-bezier(.2,0,0,1);--emd:cubic-bezier(.3,0,.8,.15);--spring:cubic-bezier(.34,1.56,.64,1)}
+@keyframes scrin{from{opacity:0;transform:translateX(var(--dx,0px)) scale(.985)}}
+@keyframes rise{from{opacity:0;transform:translateY(18px) scale(.97)}}
+@keyframes pop{0%{transform:scale(.7)}60%{transform:scale(1.18)}100%{transform:scale(1)}}
+@keyframes dlgc{from{opacity:0;transform:translateY(10px)}}
+@keyframes ring{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--p) 45%,transparent)}100%{box-shadow:0 0 0 24px color-mix(in srgb,var(--p) 0%,transparent)}}
+body{transition:background-color .4s var(--em),color .4s var(--em)}
+/* переход между экранами: fade-through + сдвиг по оси */
+.scr.on{animation:scrin .42s var(--em)}
+/* большая кнопка: пружинная морфинг-форма и пульсация при активном ключе */
+.pw{transition:border-radius .55s var(--spring),transform .3s var(--spring),background .3s}
+.pw:active{transform:scale(.9)}
+.hero.on .pw{animation:ring 2.4s var(--em) infinite}
+/* элементы списков и кнопки: пружинное нажатие + смена формы углов */
+.li{transition:background .3s var(--em),transform .3s var(--spring),border-radius .3s var(--em)}
+.grp>button.li:active,.grp>.li.rp:active{transform:scale(.985);border-radius:22px}
+.lead{transition:background .3s var(--em),transform .4s var(--spring)}
+.li.sel .lead{transform:scale(1.1)}
+.btn,.fbtn,.tbtn{transition:transform .3s var(--spring),background .25s,opacity .2s}
+.btn:active,.fbtn:active{transform:scale(.96)}
+.tbtn:active{transform:scale(.94)}
+.ib{transition:transform .3s var(--spring),background .2s}.ib:active{transform:scale(.88)}
+.avb{transition:transform .35s var(--spring)}.avb:active{transform:scale(.93)}
+.ava{transition:transform .35s var(--spring)}.ava:active{transform:scale(.88)}
+/* чипы */
+.chp{transition:background .3s var(--em),color .3s,border-color .3s,border-radius .3s var(--em),transform .3s var(--spring)}
+.chp:active{transform:scale(.93)}.chp.on{border-radius:17px}
+/* переключатели и сегменты */
+.sw{transition:background .25s,border-color .25s}
+.sw::after{transition:all .4s var(--spring)}
+.seg button{transition:background .3s var(--em),color .3s}
+.tile{transition:border-color .25s,transform .35s var(--spring)}.tile:active{transform:scale(.9)}
+.dot svg{transform:scale(.4);transition:opacity .2s,transform .4s var(--spring)}.tile.on .dot svg{transform:none}
+/* нижняя навигация: индикатор-«пилюля» разворачивается пружиной */
+.pill{position:relative}
+.pill::before{content:"";position:absolute;inset:0;border-radius:16px;background:var(--sc);opacity:0;transform:scaleX(.35);transition:transform .5s var(--spring),opacity .2s}
+.pill svg{position:relative}
+nav button.on .pill{background:none;color:var(--on-sc)}
+nav button.on .pill::before{opacity:1;transform:none}
+nav button.on .pill svg{animation:pop .5s var(--spring)}
+nav button:not(.on):active .pill::before{opacity:.55;transform:scaleX(.8)}
+/* снэкбар */
+#snack{transform:translate(-50%,24px) scale(.94);transition:opacity .2s,transform .45s var(--spring)}
+#snack.show{transform:translate(-50%,0) scale(1)}
+/* нижние окна: шторка выезжает, затемнение плавно появляется */
+.scrim{background:rgba(0,0,0,0);transition:background .35s var(--em)}
+.scrim.open{background:rgba(0,0,0,.45)}
+.dlg{transform:translateY(100%);transition:transform .3s var(--emd)}
+.scrim.open .dlg{transform:none;transition:transform .5s var(--em)}
+.dlg>*{animation:dlgc .4s var(--em) both}
+/* экран входа */
+.gbox{animation:rise .6s var(--em) both}
 </style>
 </head>
 <body>
@@ -333,7 +387,7 @@ $('#srcs').onclick=e=>{if(e.target.closest('#rfr')){loadKeys(true);return}const 
 $('#klist').onclick=e=>{const r=e.target.closest('[data-k]');if(!r)return;selKey=keys[+r.dataset.k];store.set('fx-key',selKey.raw);snack('Выбран ключ: '+selKey.n);rKeys();rHome()};
 
 /* ---------- главная ---------- */
-function setSt(s){state=s;const h=$('#hero');h.classList.toggle('on',s===2);h.classList.toggle('busy',s===1);const t=['Не активен','Подготовка…','Ключ активен'][s];$('#st').textContent=t;if(!$('#home').classList.contains('x'))$('#sub').textContent=t}
+function setSt(s){state=s;const h=$('#hero');h.classList.toggle('on',s===2);h.classList.toggle('busy',s===1);const t=['Не активен','Подготовка…','Ключ активен'][s];$('#st').textContent=t;$('#st').animate&&$('#st').animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:350,easing:'cubic-bezier(.2,0,0,1)'});if(!$('#home').classList.contains('x'))$('#sub').textContent=t}
 function upd(){const e=Math.floor((Date.now()-t0)/1000);$('#tm').textContent=`${pad(e/3600|0)}:${pad(e/60%60|0)}:${pad(e%60)}`}
 function toggle(){
  if(state===1)return;
@@ -374,8 +428,8 @@ function rShop(){
 async function loadHist(){try{const a=(await db.ref('payments/'+user.uid).once('value')).val()||{};hist=Object.values(a).filter(x=>x&&x.type==='premium'&&x.status==='confirmed').sort((a,b)=>(+b.confirmedAt||+b.createdAt||0)-(+a.confirmedAt||+a.createdAt||0)).slice(0,8)}catch(e){hist=[]}rShop()}
 
 /* ---------- профиль и рефералы ---------- */
-function dlg(h){put($('#dlg'),h);$('#scrim').hidden=false}
-const closeDlg=()=>{$('#scrim').hidden=true};
+function dlg(h){put($('#dlg'),h);const s=$('#scrim');s.hidden=false;void s.offsetWidth;s.classList.add('open')}
+const closeDlg=()=>{const s=$('#scrim');s.classList.remove('open');setTimeout(()=>{if(!s.classList.contains('open'))s.hidden=true},320)};
 $('#scrim').onclick=e=>{if(e.target.id==='scrim')closeDlg()};
 function rMe(){
  if(!user)return;
@@ -534,13 +588,20 @@ auth.onAuthStateChanged(u=>{
 
 /* ---------- навигация ---------- */
 const TT={home:'Flux Client',keys:'Ключи VPN',shop:'Магазин',me:'Профиль'};
-function tab(t){
+const ORD=['home','keys','shop','me'];let curTab='home';
+/* появление элементов экрана каскадом (WAAPI — перерисованные позже узлы не мигают) */
+function enter(sec){
+ if(!Element.prototype.animate||matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+ const E='cubic-bezier(.2,0,0,1)';let i=0;
+ sec.querySelectorAll('.hero,.phero,.refc,.lbl,.stat,.chips,.grp>*,.scr>.btn').forEach(e=>e.animate([{opacity:0,transform:'translateY(18px) scale(.97)'},{opacity:1,transform:'none'}],{duration:550,delay:Math.min(i++,14)*40,easing:E,fill:'backwards'}));
+ $('#h1').animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:350,easing:E})}
+function tab(t){const dir=ORD.indexOf(t)>=ORD.indexOf(curTab)?1:-1,sec=$('#'+t);curTab=t;sec.style.setProperty('--dx',dir*28+'px');
  $$('nav button').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
  $$('.scr').forEach(s=>s.classList.toggle('on',s.id===t));
  $('#h1').textContent=TT[t];$('#sub').textContent=t==='home'?['Не активен','Подготовка…','Ключ активен'][state]:'';
  $('#sub').style.display=t==='home'?'':'none';scrollTo(0,0);
  if(t==='shop'&&user)loadHist();
- if(t==='keys')rKeys()}
+ if(t==='keys')rKeys();enter(sec)}
 $$('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
 $('#ava').onclick=()=>tab('me');
 
