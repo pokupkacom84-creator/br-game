@@ -14,6 +14,11 @@
 :root[data-theme="dark"]{--s:#141218;--on-s:#e6e0e9;--p:#d0bcff;--pc:#4f378b}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;min-height:100%}
+/* запрет выделения текста и системного меню «Копировать / Выбрать все» */
+html,body,*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea{-webkit-user-select:text;user-select:text}
+::selection{background:transparent}
+input::selection,textarea::selection{background:var(--pc)}
 body{background:var(--s);color:var(--on-s);font:400 16px/1.5 "Roboto Flex",Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.01em}
 button,input{font:inherit;letter-spacing:inherit}
 svg.ic{width:24px;height:24px;fill:currentColor;flex:none}
@@ -421,6 +426,8 @@ $('#sws').onclick=e=>{const b=e.target.closest('.tile[data-h]');if(!b)return;hue
 $('#sws').addEventListener('change',e=>{if(e.target.id!=='cc')return;hue=hueOf(e.target.value);store.set('fx-h',hue);apply()});
 $$('.sw').forEach(c=>{c.checked=store.get('fx-'+c.dataset.k,'0')==='1';c.onchange=()=>store.set('fx-'+c.dataset.k,c.checked?'1':'0')});
 document.addEventListener('pointerdown',e=>{const t=e.target.closest('.rp');if(!t)return;const r=t.getBoundingClientRect(),s=Math.max(r.width,r.height)*1.4,x=document.createElement('span');x.className='rip';x.style.cssText=`width:${s}px;height:${s}px;left:${e.clientX-r.left-s/2}px;top:${e.clientY-r.top-s/2}px`;t.appendChild(x);x.onanimationend=()=>x.remove()});
+document.addEventListener('contextmenu',e=>{if(!e.target.closest('input,textarea'))e.preventDefault()});
+document.addEventListener('selectstart',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault()});
 addEventListener('scroll',()=>$('#bar').classList.toggle('sc',scrollY>8),{passive:true});
 icons(document);apply();gate('login');
 
