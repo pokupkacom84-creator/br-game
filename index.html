@@ -138,7 +138,7 @@ nav button.on{color:var(--on-s);font-weight:700}nav button.on .pill{background:v
 </style>
 </head>
 <body>
-<div id="gate" class="gate"><div class="gbox" id="gbox"></div></div>
+<div id="gate" class="gate" hidden><div class="gbox" id="gbox"></div></div>
 <div id="app" hidden>
 <header class="bar" id="bar"><div class="in"><div class="t"><h1 id="h1">Flux Client</h1><p id="sub">Не активен</p></div><button class="ava rp" id="ava" aria-label="Профиль">F</button></div></header>
 <div class="app">
@@ -413,11 +413,11 @@ function listen(){
  L('users/'+user.uid+'/refBalance/rub',v=>refBal=+v||0);L('users/'+user.uid+'/refStats',v=>refSt=v||{})}
 function off(){subs.forEach(r=>r.off());subs=[]}
 function enter(){
- $('#gate').hidden=true;$('#app').hidden=false;listen();loadHist();loadKeys();rAll();tab('home');
+ store.set('fx-li','1');$('#gate').hidden=true;$('#app').hidden=false;listen();loadHist();loadKeys();rAll();tab('home');
  if(store.get('fx-auto','0')==='1'&&selKey)setTimeout(toggle,900)}
 auth.onAuthStateChanged(u=>{
  if(hold)return;user=u;
- if(!u){off();clearInterval(tick);state=0;ud={};prem={};hist=null;gate('login');return}
+ if(!u){store.set('fx-li','0');off();clearInterval(tick);state=0;ud={};prem={};hist=null;gate('login');return}
  boot().catch(()=>{snack('Не удалось загрузить профиль');gate('login')})});
 
 /* ---------- навигация ---------- */
@@ -449,7 +449,9 @@ document.addEventListener('pointerdown',e=>{const t=e.target.closest('.rp');if(!
 document.addEventListener('contextmenu',e=>{if(!e.target.closest('input,textarea'))e.preventDefault()});
 document.addEventListener('selectstart',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault()});
 addEventListener('scroll',()=>$('#bar').classList.toggle('sc',scrollY>8),{passive:true});
-icons(document);apply();gate('login');
+icons(document);apply();
+/* если пользователь уже входил — сразу показываем приложение, не дожидаясь ответа Firebase */
+if(store.get('fx-li','0')==='1')$('#app').hidden=false;
 
 </script>
 </body>
