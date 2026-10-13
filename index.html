@@ -233,6 +233,7 @@ const CFG={apiKey:"AIzaSyAfNoV7tt_6eP1gRQxLc4Yk5FJzwVxDMQw",authDomain:"game-cd0
 firebase.initializeApp(CFG);
 const auth=firebase.auth(),db=firebase.database();
 const BOT='FluxPremPay_bot';
+const NAME='@FluxVpnClient';
 const PLANS=[{id:'pm_month',t:'1 месяц',d:30,r:199},{id:'pm_quarter',t:'3 месяца',d:90,r:499,pop:1},{id:'pm_year',t:'1 год',d:365,r:1490}];
 const MR='https://raw.githubusercontent.com/luxxuria/harvester/main/';
 const SRC=[
@@ -264,7 +265,12 @@ const isPrem=()=>gprem.active===true||(!!prem.active&&expOf(prem)>Date.now());
 /* ---------- VPN-ключи ---------- */
 function parse(t){const o=[],seen={};(String(t).replace(/\r/g,'').match(/(vless|vmess|trojan|ss|hysteria2|hy2|socks5?):\/\/[^\s"'<>]+/ig)||[]).forEach(r=>{r=r.replace(/[),;]+$/,'');if(seen[r])return;seen[r]=1;const p=r.split('://')[0].toLowerCase().replace(/^socks5$/,'socks');let n='';const h=r.indexOf('#');if(h>-1){try{n=decodeURIComponent(r.slice(h+1))}catch(e){n=r.slice(h+1)}}else if(p==='vmess'){try{n=JSON.parse(atob(r.slice(8))).ps||''}catch(e){}}
  const fm=n.match(/[\u{1F1E6}-\u{1F1FF}]{2}/u),host=(r.split('://')[1]||'').split('@').pop().split(/[:/?#]/)[0];
- o.push({raw:r,p,n:n.replace(/[\u{1F1E6}-\u{1F1FF}]{2}/gu,'').trim()||host,flag:fm?fm[0]:'🌐',host})});return o}
+ o.push({raw:rename(r,p,fm?fm[0]:''),p,n:NAME,flag:fm?fm[0]:'🌐',host})});return o}
+/* единое имя для всех ключей: «<флаг> @FluxVpnClient» — и в списке, и в Happ (имя берётся из #-фрагмента / поля ps у vmess) */
+function rename(r,p,fl){
+ const tag=(fl?fl+' ':'')+NAME;
+ if(p==='vmess'){try{const j=JSON.parse(decodeURIComponent(escape(atob(r.slice(8).split('#')[0].replace(/-/g,'+').replace(/_/g,'/')))));j.ps=tag;return'vmess://'+btoa(unescape(encodeURIComponent(JSON.stringify(j))))}catch(e){}}
+ const h=r.indexOf('#');return(h>-1?r.slice(0,h):r)+'#'+encodeURIComponent(tag)}
 const ft=async u=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),7500);try{const r=await fetch(u,{cache:'no-store',signal:c.signal});if(!r.ok)throw 0;return await r.text()}finally{clearTimeout(t)}};
 async function getTxt(s,force){
  const ck='fx-c-'+s.id;
@@ -304,7 +310,7 @@ function rKeys(bad){
  if(s.p&&!pm){put(L,'<div class="li col" style="align-items:center;text-align:center"><span class="lead"><i data-i="lock"></i></span><b>Premium-ключи закрыты</b><small style="color:var(--on-sv)">Оформите Premium, чтобы открыть этот список</small><button class="fbtn rp" id="tos" style="max-width:260px">Открыть магазин</button></div>');$('#tos').onclick=()=>tab('shop');$('#kcount').textContent='Premium';return}
  $('#kcount').textContent=keys.length?`${s.n} · ${keys.length}`:s.n;
  if(!keys.length){put(L,`<div class="li" style="justify-content:center;color:var(--on-sv)">${bad?'Не удалось загрузить ключи. Проверьте сеть и нажмите «Обновить».':'В этом списке пока нет ключей.'}</div>`);return}
- put(L,keys.slice(0,lim).map((k,i)=>`<div class="li rp${selKey&&selKey.raw===k.raw?' sel':''}" data-k="${i}"><span class="lead">${k.flag}</span><span class="m"><b>${esc(k.n)}</b><small>${k.p.toUpperCase()} · ${esc(k.host)}</small></span><button class="ib" data-cp="${i}" aria-label="Копировать ключ"><i data-i="copy"></i></button></div>`).join(''));
+ put(L,keys.slice(0,lim).map((k,i)=>`<div class="li rp${selKey&&selKey.raw===k.raw?' sel':''}" data-k="${i}"><span class="lead">${k.flag}</span><span class="m"><b>${esc(k.n)}</b><small>${k.p.toUpperCase()}</small></span><button class="ib" data-cp="${i}" aria-label="Копировать ключ"><i data-i="copy"></i></button></div>`).join(''));
  if(keys.length>lim){const b=document.createElement('button');b.className='tbtn more';b.textContent=`Показать ещё (${keys.length-lim})`;b.onclick=()=>{lim+=120;rKeys()};L.after(b)}}
 $('#cats').onclick=e=>{const b=e.target.closest('[data-c]');if(!b)return;const p=+b.dataset.c;if(p&&!isPrem()){srcId='p1';store.set('fx-src',srcId);loadKeys();snack('Premium VPN доступен только с Premium');return}srcId=SRC.find(x=>x.p===p).id;store.set('fx-src',srcId);loadKeys()};
 $('#srcs').onclick=e=>{if(e.target.closest('#rfr')){loadKeys(true);return}const b=e.target.closest('[data-s]');if(!b)return;srcId=b.dataset.s;store.set('fx-src',srcId);loadKeys()};
