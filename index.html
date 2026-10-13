@@ -1153,21 +1153,21 @@ body:not(#m3) .nav-item:active svg{transform:scale(.92)}
 </svg></div>
 <h1 class="auth-title">Flux Client</h1>
 <p class="auth-subtitle" id="auth-subtitle">Войдите, чтобы продолжить</p>
-<div class="auth-form" id="login-form">
+<div class="auth-form hidden" id="login-form">
 <input id="login-email" type="email" placeholder="Email" autocomplete="email">
 <input id="login-password" type="password" placeholder="Пароль" autocomplete="current-password">
 <button id="login-btn" class="btn-primary ripple">Войти</button>
 <button id="go-register" class="btn-link">Создать аккаунт</button>
-<button id="phone-auth-open" class="btn-link" type="button">Продолжить с номером телефона</button>
+<button id="phone-auth-open" class="btn-link" type="button">Войти по номеру телефона</button>
 </div>
-<div class="auth-form hidden" id="phone-auth-form">
+<div class="auth-form" id="phone-auth-form">
   <div style="font-size:18px;font-weight:650;margin-bottom:2px">Вход по телефону</div>
   <p style="font-size:13px;color:var(--text-2);line-height:1.45;margin:0 0 8px">Укажи номер в международном формате, например +31612345678.</p>
   <input id="phone-number" type="tel" inputmode="tel" autocomplete="tel" placeholder="+31 6 12345678" aria-label="Номер телефона">
   <label style="display:flex;gap:10px;align-items:flex-start;font-size:12px;line-height:1.45;color:var(--text-2)"><input id="phone-consent" type="checkbox" style="width:18px;height:18px;flex:0 0 18px;margin:1px 0 0;accent-color:var(--accent)"><span>Согласен использовать мой номер для входа и получить SMS с кодом подтверждения.</span></label>
   <div id="recaptcha-container" style="display:flex;justify-content:center;max-width:100%;overflow:hidden"></div>
   <button id="phone-send-code" class="btn-primary ripple" type="button">Отправить SMS-код</button>
-  <button id="phone-auth-back" class="btn-link" type="button">Назад к входу по email</button>
+  <button id="phone-auth-back" class="btn-link" type="button">Другие способы входа</button>
   <div id="phone-auth-status" role="status" aria-live="polite" style="font-size:13px;color:var(--text-2);line-height:1.4"></div>
 </div>
 <div class="auth-form hidden" id="phone-code-form">
@@ -2342,6 +2342,8 @@ async function sendPhoneCode(){
   finally{phoneAuthBusy=false;btn.disabled=false;btn.textContent=old;}
 }
 $('phone-auth-open').onclick=function(){showPhoneAuthStep('phone-auth-form');};
+// Phone number is the primary sign-in method; email remains available as a secondary option.
+setTimeout(function(){if(!currentUser && $('auth-screen') && !$('auth-screen').classList.contains('hidden'))showPhoneAuthStep('phone-auth-form');},250);
 $('phone-auth-back').onclick=function(){showPhoneAuthStep('login-form');};
 $('phone-code-back').onclick=function(){phoneConfirmationResult=null;showPhoneAuthStep('phone-auth-form');};
 $('phone-send-code').onclick=sendPhoneCode;
