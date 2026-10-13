@@ -97,23 +97,15 @@ nav button{flex:1;border:0;background:none;color:var(--on-sv);font-size:12px;fon
 .pill{width:64px;height:32px;border-radius:16px;display:grid;place-items:center;transition:background .25s}
 nav button.on{color:var(--on-s);font-weight:700}nav button.on .pill{background:var(--sc);color:var(--on-sc)}
 :focus-visible{outline:3px solid var(--p);outline-offset:2px}
-#snack{position:fixed;left:50%;bottom:calc(104px + env(safe-area-inset-bottom,0px));transform:translate(-50%,16px);background:var(--inv);color:var(--on-inv);padding:14px 20px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;white-space:nowrap}
-#snack.show{opacity:1;transform:translate(-50%,0)}
-/* Material You motion — conservative version, avoids layout/transform conflicts */
+/* Safe Material You motion: color-only, no layout transforms. */
 :root{--motion-standard:cubic-bezier(.2,0,0,1)}
 button,.li,.tile,.chp,.lead,.pill,.ava,.avb,.pw,.btn,.fbtn,.tbtn{
-  transition:background-color .22s var(--motion-standard),color .22s var(--motion-standard),border-color .22s var(--motion-standard),box-shadow .22s var(--motion-standard)
+ transition:background-color .18s var(--motion-standard),color .18s var(--motion-standard),border-color .18s var(--motion-standard)
 }
-button,.li,.tile,.chp{-webkit-tap-highlight-color:transparent}
-button:active,.li:active,.tile:active,.chp:active{filter:brightness(.97)}
-.scr.on{animation:screen-fade-in .18s ease-out both}
-@keyframes screen-fade-in{from{opacity:.75}to{opacity:1}}
-nav button .pill{transition:background-color .22s var(--motion-standard),color .22s var(--motion-standard)}
-.scrim:not([hidden]){animation:scrim-fade-in .18s ease-out both}
-@keyframes scrim-fade-in{from{opacity:0}to{opacity:1}}
-#snack.show{transition:opacity .2s ease-out,transform .2s ease-out;box-shadow:0 4px 18px #00000018}
-.tile.on .dot{animation:color-pop .2s ease-out}
-@keyframes color-pop{from{opacity:.75}to{opacity:1}}
+/* Keep the shop completely stable while payment options are being used. */
+#shop button,#shop .li,#shop .lead{transition:none!important;animation:none!important;filter:none!important}
+#snack{position:fixed;left:50%;bottom:calc(104px + env(safe-area-inset-bottom,0px));transform:translate(-50%,16px);background:var(--inv);color:var(--on-inv);padding:14px 20px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;white-space:nowrap}
+#snack.show{opacity:1;transform:translate(-50%,0)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 [hidden]{display:none!important}
@@ -408,7 +400,7 @@ function rMe(){
 function rAll(){
  if(!user)return;
  paintAv($('#ava'),Object.assign({},ud,{name:ud.name||user.email}));
- rHome();rShop();rMe();if(!$('#keys').classList.contains('x')){const s=curSrc();if(s.p)rKeys()}}
+ rHome();rMe();if(!$('#keys').classList.contains('x')){const s=curSrc();if(s.p)rKeys()}}
 
 /* ---------- аватары ---------- */
 function avParts(u){u=u||{};if(u.photoURL)return{img:u.photoURL};return{txt:((u.name||u.username||'F').trim()[0]||'F').toUpperCase()}}
@@ -554,7 +546,7 @@ function tab(t){
  $$('.scr').forEach(s=>s.classList.toggle('on',s.id===t));
  $('#h1').textContent=TT[t];$('#sub').textContent=t==='home'?['Не активен','Подготовка…','Ключ активен'][state]:'';
  $('#sub').style.display=t==='home'?'':'none';scrollTo(0,0);
- if(t==='shop'&&user)loadHist();
+ if(t==='shop'&&user){rShop();loadHist();}
  if(t==='keys')rKeys()}
 $$('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
 $('#ava').onclick=()=>tab('me');
