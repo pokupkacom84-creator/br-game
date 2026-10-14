@@ -13,7 +13,12 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--s:#141218;--on-s:#e6e0e9;--p:#d0bcff;--pc:#4f378b}}
 :root[data-theme="dark"]{--s:#141218;--on-s:#e6e0e9;--p:#d0bcff;--pc:#4f378b}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;min-height:100%}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none}
+/* своя прокрутка: страница неподвижна, скроллится только контейнер .app (без резинового «уезжания» браузера) */
+#app{display:flex;flex-direction:column;height:100dvh}
+#app>.bar{flex:none}
+#gate{height:100dvh;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.dlg{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 /* запрет выделения текста и системного меню «Копировать / Выбрать все» */
 html,body,*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea{-webkit-user-select:text;user-select:text}
@@ -36,7 +41,8 @@ h1{margin:0;font-size:34px;font-weight:500;line-height:1.15;letter-spacing:0;tra
 #sub{margin:2px 0 0;font-size:14px;color:var(--on-sv);max-height:24px;overflow:hidden;transition:max-height .25s,margin .25s,opacity .25s}
 .bar.sc #sub{max-height:0;margin:0;opacity:0}
 .ava{width:40px;height:40px;border-radius:50%;background:var(--tc);color:var(--on-tc);display:grid;place-items:center;font-weight:600}
-.app{max-width:560px;margin:0 auto;padding:8px 16px 128px}
+.app{width:100%;max-width:560px;margin:0 auto;padding:8px 16px 128px;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-y}
+.app::-webkit-scrollbar{display:none}
 .scr{display:none}.scr.on{display:block}
 /* переход между вкладками: плавное появление со смещением по направлению перехода */
 .scr.on.go{animation:scrIn .32s cubic-bezier(.05,.7,.1,1) both}
@@ -564,7 +570,7 @@ function tab(t){
   tab.cur=t}
  $$('.scr').forEach(s=>s.classList.toggle('on',s.id===t));
  $('#h1').textContent=TT[t];$('#sub').textContent=t==='home'?['Не активен','Подготовка…','Ключ активен'][state]:'';
- $('#sub').style.display=t==='home'?'':'none';scrollTo(0,0);
+ $('#sub').style.display=t==='home'?'':'none';$('.app').scrollTop=0;$('#bar').classList.remove('sc');
  if(t==='shop'&&user){rShop();loadHist();}
  if(t==='keys')rKeys()}
 $$('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
@@ -586,7 +592,7 @@ $$('.sw').forEach(c=>{c.checked=store.get('fx-'+c.dataset.k,'0')==='1';c.onchang
 document.addEventListener('pointerdown',e=>{const t=e.target.closest('.rp');if(!t)return;const r=t.getBoundingClientRect(),s=Math.max(r.width,r.height)*1.4,x=document.createElement('span');x.className='rip';x.style.cssText=`width:${s}px;height:${s}px;left:${e.clientX-r.left-s/2}px;top:${e.clientY-r.top-s/2}px`;t.appendChild(x);x.onanimationend=()=>x.remove()});
 document.addEventListener('contextmenu',e=>{if(!e.target.closest('input,textarea'))e.preventDefault()});
 document.addEventListener('selectstart',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault()});
-addEventListener('scroll',()=>$('#bar').classList.toggle('sc',scrollY>8),{passive:true});
+$('.app').addEventListener('scroll',e=>$('#bar').classList.toggle('sc',e.target.scrollTop>8),{passive:true});
 icons(document);apply();
 /* если пользователь уже входил — сразу показываем приложение, не дожидаясь ответа Firebase */
 if(store.get('fx-li','0')==='1')$('#app').hidden=false;
