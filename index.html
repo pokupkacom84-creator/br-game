@@ -109,6 +109,15 @@ nav button:active .pill{background:color-mix(in srgb,var(--on-s) 12%,transparent
 nav button.on{color:var(--on-s);font-weight:700}nav button.on .pill,nav button.on:active .pill{background:var(--sc);color:var(--on-sc)}
 .bdg{position:absolute;top:4px;right:17px;width:8px;height:8px;border-radius:50%;background:var(--p)}
 nav button.on .bdg{background:var(--on-sc)}
+.nav-av{width:26px;height:26px;border-radius:50%;background:var(--tc);color:var(--on-tc);display:grid;place-items:center;font-size:13px;font-weight:600;line-height:1;overflow:hidden;transition:box-shadow .2s var(--motion-standard)}
+.nav-av svg{width:20px;height:20px}
+nav button.on .nav-av{box-shadow:0 0 0 2px var(--p)}
+/* волнистый индикатор загрузки (Material 3 Expressive) */
+.wv{position:relative;width:240px;max-width:100%;height:12px;overflow:hidden;color:var(--p)}
+.wv::before{content:"";position:absolute;left:0;right:0;top:5px;height:2px;border-radius:1px;background:var(--pc)}
+.wv svg{position:absolute;left:0;top:0;width:288px;height:12px;animation:wvmove .9s linear infinite}
+.wv path{fill:none;stroke:currentColor;stroke-width:3.5;stroke-linecap:round}
+@keyframes wvmove{to{transform:translateX(-24px)}}
 @media (max-width:360px){nav button{font-size:11px}.pill{width:56px}}
 :focus-visible{outline:3px solid var(--p);outline-offset:2px}
 /* Safe Material You motion: color-only, no layout transforms. */
@@ -193,7 +202,7 @@ button,.li,.tile,.chp,.lead,.pill,.ava,.avb,.pw,.btn,.fbtn,.tbtn{
  <button data-t="home" class="on" role="tab" aria-selected="true"><span class="pill rp"><i data-i="home"></i></span><span class="lb">Главная</span></button>
  <button data-t="keys" role="tab" aria-selected="false"><span class="pill rp"><i data-i="key"></i></span><span class="lb">Ключи</span></button>
  <button data-t="shop" role="tab" aria-selected="false"><span class="pill rp"><i data-i="shop"></i><span class="bdg" id="shopdot" hidden></span></span><span class="lb">Магазин</span></button>
- <button data-t="me" role="tab" aria-selected="false"><span class="pill rp"><i data-i="user"></i></span><span class="lb">Профиль</span></button>
+ <button data-t="me" role="tab" aria-selected="false"><span class="pill rp"><span class="nav-av" id="navav"><i data-i="user"></i></span></span><span class="lb">Профиль</span></button>
 </nav>
 </div>
 <div class="scrim" id="scrim" hidden><div class="dlg" id="dlg"></div></div>
@@ -339,7 +348,7 @@ addEventListener('focus',autoRefresh);
 async function loadKeys(force){
  const s=curSrc(),id=++req;lim=120;
  if(s.p&&!isPrem()){keys=[];rKeys();return}
- put($('#klist'),'<div class="li" style="justify-content:center;color:var(--on-sv)">Загрузка ключей…</div>');
+ put($('#klist'),`<div class="li" style="justify-content:center;padding:36px 20px;cursor:default">${WV('Загрузка ключей')}</div>`);
  let bad=0;try{const t=await getTxt(s,force);if(id!==req)return;lastTxt=t;keys=parse(t)}catch(e){if(id!==req)return;keys=[];bad=1}
  rKeys(bad)}
 function rKeys(bad){
@@ -418,10 +427,17 @@ function rMe(){
   $('#dx').onclick=closeDlg;$('#ds').onclick=saveProfile}}
 function rAll(){
  if(!user)return;
- paintAv($('#ava'),Object.assign({},ud,{name:ud.name||user.email}));
+ paintAv($('#ava'),Object.assign({},ud,{name:ud.name||user.email}));navAv();
  rHome();rMe();if(!$('#keys').classList.contains('x')){const s=curSrc();if(s.p)rKeys()}}
 
+/* ---------- волнистый индикатор ---------- */
+function WV(label){return`<div class="wv" role="progressbar" aria-label="${esc(label||'Загрузка')}"><svg viewBox="0 0 288 12" aria-hidden="true"><path d="M0 6q6 -6 12 0${'t12 0'.repeat(23)}"/></svg></div>`}
 /* ---------- аватары ---------- */
+/* аватарка в иконке «Профиль» нижней панели */
+function navAv(){
+ const el=$('#navav');if(!el||!user)return;
+ const a=avParts(Object.assign({},ud,{name:ud.name||user.email}));
+ if(a.img){el.style.background=`url(${a.img}) center/cover`;el.textContent=''}else{el.style.background='';el.textContent=a.txt}}
 function avParts(u){u=u||{};if(u.photoURL)return{img:u.photoURL};return{txt:((u.name||u.username||'F').trim()[0]||'F').toUpperCase()}}
 function avStyle(u){const a=avParts(u);return a.img?`background:url(${esc(a.img)}) center/cover`:''}
 function avTxt(u){const a=avParts(u);return a.img?'':esc(a.txt)}
