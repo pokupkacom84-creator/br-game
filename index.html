@@ -92,10 +92,15 @@ h1{margin:0;font-size:34px;font-weight:500;line-height:1.15;letter-spacing:0;tra
 .dot svg{width:20px;height:20px;opacity:0;transition:opacity .2s}.tile.on .dot svg{opacity:1}
 .tile input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 /* nav */
-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:560px;background:var(--s1);display:flex;padding:12px 8px calc(16px + env(safe-area-inset-bottom,0px))}
-nav button{flex:1;border:0;background:none;color:var(--on-sv);font-size:12px;font-weight:500;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
-.pill{width:64px;height:32px;border-radius:16px;display:grid;place-items:center;transition:background .25s}
-nav button.on{color:var(--on-s);font-weight:700}nav button.on .pill{background:var(--sc);color:var(--on-sc)}
+nav{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:560px;z-index:6;background:var(--s2);border-radius:28px 28px 0 0;box-shadow:0 -1px 0 var(--olv),0 -6px 18px rgba(0,0,0,.08);display:flex;gap:4px;padding:10px 8px calc(14px + env(safe-area-inset-bottom,0px))}
+nav button{flex:1;min-width:0;min-height:60px;border:0;background:none;color:var(--on-sv);font-size:12px;font-weight:500;line-height:16px;letter-spacing:.02em;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;padding:2px 0 0;cursor:pointer;border-radius:20px}
+nav button span.lb{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{position:relative;overflow:hidden;width:64px;height:32px;border-radius:16px;display:grid;place-items:center;transition:background-color .2s var(--motion-standard),color .2s var(--motion-standard)}
+nav button:active .pill{background:color-mix(in srgb,var(--on-s) 12%,transparent)}
+nav button.on{color:var(--on-s);font-weight:700}nav button.on .pill,nav button.on:active .pill{background:var(--sc);color:var(--on-sc)}
+.bdg{position:absolute;top:4px;right:17px;width:8px;height:8px;border-radius:50%;background:var(--p)}
+nav button.on .bdg{background:var(--on-sc)}
+@media (max-width:360px){nav button{font-size:11px}.pill{width:56px}}
 :focus-visible{outline:3px solid var(--p);outline-offset:2px}
 /* Safe Material You motion: color-only, no layout transforms. */
 :root{--motion-standard:cubic-bezier(.2,0,0,1)}
@@ -175,11 +180,11 @@ button,.li,.tile,.chp,.lead,.pill,.ava,.avb,.pw,.btn,.fbtn,.tbtn{
   </div>
  </section>
 </div>
-<nav>
- <button data-t="home" class="on"><span class="pill"><i data-i="home"></i></span>Главная</button>
- <button data-t="keys"><span class="pill"><i data-i="key"></i></span>Ключи</button>
- <button data-t="shop"><span class="pill"><i data-i="shop"></i></span>Магазин</button>
- <button data-t="me"><span class="pill"><i data-i="user"></i></span>Профиль</button>
+<nav role="tablist" aria-label="Навигация">
+ <button data-t="home" class="on" role="tab" aria-selected="true"><span class="pill rp"><i data-i="home"></i></span><span class="lb">Главная</span></button>
+ <button data-t="keys" role="tab" aria-selected="false"><span class="pill rp"><i data-i="key"></i></span><span class="lb">Ключи</span></button>
+ <button data-t="shop" role="tab" aria-selected="false"><span class="pill rp"><i data-i="shop"></i><span class="bdg" id="shopdot" hidden></span></span><span class="lb">Магазин</span></button>
+ <button data-t="me" role="tab" aria-selected="false"><span class="pill rp"><i data-i="user"></i></span><span class="lb">Профиль</span></button>
 </nav>
 </div>
 <div class="scrim" id="scrim" hidden><div class="dlg" id="dlg"></div></div>
@@ -367,7 +372,8 @@ $('#pw').onclick=toggle;$('#chg').onclick=()=>tab('keys');
 function rHome(){
  $('#srv').textContent=selKey?`${selKey.flag} ${selKey.n}`:'Ключ не выбран';
  $('#n-keys').textContent=keys.length;$('#n-proto').textContent=selKey?selKey.p.toUpperCase():'—';
- $('#n-prem').textContent=isPrem()?'Да':'Нет'}
+ $('#n-prem').textContent=isPrem()?'Да':'Нет';
+ const dot=$('#shopdot');if(dot)dot.hidden=isPrem()}
 
 /* ---------- магазин ---------- */
 function rShop(){
@@ -546,7 +552,8 @@ auth.onAuthStateChanged(u=>{
 /* ---------- навигация ---------- */
 const TT={home:'Flux Client',keys:'Ключи VPN',shop:'Магазин',me:'Профиль'};
 function tab(t){
- $$('nav button').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
+ $$('nav button').forEach(x=>{const a=x.dataset.t===t;x.classList.toggle('on',a);x.setAttribute('aria-selected',a)});
+ if(navigator.vibrate&&t!==tab.cur){try{navigator.vibrate(8)}catch(e){}}tab.cur=t;
  $$('.scr').forEach(s=>s.classList.toggle('on',s.id===t));
  $('#h1').textContent=TT[t];$('#sub').textContent=t==='home'?['Не активен','Подготовка…','Ключ активен'][state]:'';
  $('#sub').style.display=t==='home'?'':'none';scrollTo(0,0);
