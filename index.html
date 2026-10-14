@@ -101,6 +101,7 @@ h1{margin:0;font-size:34px;font-weight:500;line-height:1.15;letter-spacing:0;tra
 .tile.on{border-color:var(--p)}
 .dot{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#fff}
 .dot svg{width:20px;height:20px;opacity:0;transition:opacity .2s}.tile.on .dot svg{opacity:1}
+.tile.sy .dot svg{opacity:1}
 .tile input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 /* nav */
 nav{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:560px;z-index:6;background:var(--s2);border-radius:28px 28px 0 0;box-shadow:0 -1px 0 var(--olv),0 -6px 18px rgba(0,0,0,.08);display:flex;gap:4px;padding:10px 8px calc(14px + env(safe-area-inset-bottom,0px))}
@@ -657,17 +658,24 @@ $$('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
 $('#ava').onclick=()=>tab('me');
 
 /* ---------- тема ---------- */
+/* системный акцентный цвет (CSS-ключевое слово AccentColor), если браузер/WebView его отдаёт */
+function sysHue(){try{const e=document.createElement('i');e.style.cssText='position:fixed;left:-9px;color:rgb(1,2,3)';document.body.appendChild(e);e.style.color='AccentColor';const c=getComputedStyle(e).color;e.remove();
+ const m=c.match(/\d+(\.\d+)?/g);if(!m||c==='rgb(1, 2, 3)')return null;const[r,g,b]=m.slice(0,3).map(Number);if(Math.max(r,g,b)-Math.min(r,g,b)<12)return null;
+ return hueOf('#'+[r,g,b].map(v=>Math.round(v).toString(16).padStart(2,'0')).join(''))}catch(e){return null}}
 const dq=matchMedia('(prefers-color-scheme: dark)');
 function apply(){
+ const SY=sysHue(),sy=SY!==null&&store.get('fx-sys','0')==='1';if(sy)hue=SY;
  const d=mode==='dark'||(mode==='auto'&&dq.matches),r=document.documentElement,c=scheme(hue,d);
  r.dataset.theme=d?'dark':'light';for(const k in c)r.style.setProperty('--'+k,c[k]);r.style.setProperty('--olv',c.ol+'55');
  $$('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.m===mode));
- const HU=[293,255,195,145,60,350];
- put($('#sws'),HU.map(h=>{const s=scheme(h,d);return`<button class="tile rp${Math.abs(h-hue)<1?' on':''}" data-h="${h}" aria-label="Цвет ${h}" style="background:${s.sc}"><span class="dot" style="background:conic-gradient(${s.p} 0 50%,${s.t} 50% 75%,${s.pc} 75%)"><i data-i="check"></i></span></button>`}).join('')+`<label class="tile" style="background:${c.s3}" aria-label="Свой цвет"><span class="dot" style="color:var(--on-sv)"><i data-i="plus"></i></span><input type="color" id="cc" value="${hex(tl(d?80:40),.15,hue)}"></label>`)}
+ const HU=[293,270,255,220,195,170,145,110,85,60,40,25,5,350,325];
+ const sysT=SY!==null?(()=>{const s=scheme(SY,d);return`<button class="tile sy rp${sy?' on':''}" data-sys="1" title="Цвет системы" aria-label="Цвет системы" style="background:${s.sc}"><span class="dot" style="background:conic-gradient(${s.p} 0 50%,${s.t} 50% 75%,${s.pc} 75%);color:${s['on-p']}"><i data-i="palette"></i></span></button>`})():'';
+ put($('#sws'),sysT+HU.map(h=>{const s=scheme(h,d);return`<button class="tile rp${!sy&&Math.abs(h-hue)<1?' on':''}" data-h="${h}" aria-label="Цвет ${h}" style="background:${s.sc}"><span class="dot" style="background:conic-gradient(${s.p} 0 50%,${s.t} 50% 75%,${s.pc} 75%)"><i data-i="check"></i></span></button>`}).join('')+`<label class="tile" style="background:${c.s3}" aria-label="Свой цвет"><span class="dot" style="color:var(--on-sv)"><i data-i="plus"></i></span><input type="color" id="cc" value="${hex(tl(d?80:40),.15,hue)}"></label>`)}
 dq.addEventListener('change',apply);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&store.get('fx-sys','0')==='1')apply()});
 $('#seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;mode=b.dataset.m;store.set('fx-mode',mode);apply()};
-$('#sws').onclick=e=>{const b=e.target.closest('.tile[data-h]');if(!b)return;hue=+b.dataset.h;store.set('fx-h',hue);apply()};
-$('#sws').addEventListener('change',e=>{if(e.target.id!=='cc')return;hue=hueOf(e.target.value);store.set('fx-h',hue);apply()});
+$('#sws').onclick=e=>{const y=e.target.closest('.tile[data-sys]');if(y){store.set('fx-sys','1');apply();return}const b=e.target.closest('.tile[data-h]');if(!b)return;hue=+b.dataset.h;store.set('fx-sys','0');store.set('fx-h',hue);apply()};
+$('#sws').addEventListener('change',e=>{if(e.target.id!=='cc')return;hue=hueOf(e.target.value);store.set('fx-sys','0');store.set('fx-h',hue);apply()});
 /* уведомления включены по умолчанию (можно выключить в профиле) */
 if(store.get('fx-notif','x')==='x')store.set('fx-notif','1');
 $$('.sw').forEach(c=>{c.checked=store.get('fx-'+c.dataset.k,'0')==='1';c.onchange=()=>{store.set('fx-'+c.dataset.k,c.checked?'1':'0');if(c.dataset.k==='notif'&&c.checked)askNotif()}});
