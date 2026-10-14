@@ -277,9 +277,7 @@ const NAME='@FluxVpnClient';
 const PLANS=[{id:'pm_month',t:'1 месяц',d:30,r:199},{id:'pm_quarter',t:'3 месяца',d:90,r:499,pop:1},{id:'pm_year',t:'1 год',d:365,r:1490}];
 const MR='https://raw.githubusercontent.com/luxxuria/harvester/main/';
 const SRC=[
- {id:'v1',n:'Бесплатный 1',p:0,gh:['AvenCores','goida-vpn-configs','githubmirror/26.txt']},
- {id:'v2',n:'Бесплатный 2',p:0,gh:['AvenCores','goida-vpn-configs','githubmirror/25.txt']},
- {id:'v3',n:'Бесплатный 3',p:0,gh:['AvenCores','goida-vpn-configs','githubmirror/24.txt']},
+ {id:'free',n:'Free VPN',p:0,gh:['igareck','vpn-configs-for-russia','BLACK_SS_WEAK_DPI_RUS.txt']},
  {id:'p1',n:'Premium VPN',p:1,urls:[MR+'non_ru.txt',MR+'speed_tested.txt']},
  {id:'p4',n:'Recommend VPN',p:1,gh:['pokupkacom84-creator','Prem-VpnKey','Vpn']},
  {id:'p3',n:'LTE VPN',p:1,gh:['FLAT447','v2ray-lists','BLACK_LTE.txt']},
@@ -295,7 +293,7 @@ const openUrl=u=>{window.open(u,'_blank','noopener')||(location.href=u)};
 
 /* ---------- состояние ---------- */
 let user=null,ud={},prem={},gprem={active:false},refBal=0,refSt={},hist=null,subs=[],hold=false,creds=null;
-let keys=[],srcId=store.get('fx-src','v1'),selKey=null,lim=120,req=0,state=0,t0=0,tick,hue=+store.get('fx-h',293),mode=store.get('fx-mode','auto');
+let keys=[],srcId=store.get('fx-src','free'),selKey=null,lim=120,req=0,state=0,t0=0,tick,hue=+store.get('fx-h',293),mode=store.get('fx-mode','auto');
 try{const r=store.get('fx-key','');if(r)selKey=parse(r)[0]||null}catch(e){}
 
 /* ---------- Premium (логика как в index.html) ---------- */
@@ -592,7 +590,6 @@ const T={
  login:{h:'Вход',s:'Войдите в аккаунт Flux',f:TF('e','Email','email','autocomplete="email"')+TF('p','Пароль','password','autocomplete="current-password"'),b:'Войти',alt:['Создать аккаунт','reg']},
  reg:{h:'Регистрация',s:'Создайте новый аккаунт',f:TF('e','Email','email','autocomplete="email"')+TF('p','Пароль (от 6 символов)','password','autocomplete="new-password"')+TF('p2','Повторите пароль','password','autocomplete="new-password"'),b:'Создать аккаунт',alt:['Уже есть аккаунт','login']},
  tf:{h:'Код подтверждения',s:'Введите 6 цифр из приложения-аутентификатора',f:TF('c','Код','text','inputmode="numeric" maxlength="6" autocomplete="one-time-code"'),b:'Подтвердить',alt:['Отмена','login']},
- verify:{h:'Подтвердите email',s:'',f:'<button class="tbtn" id="rs" style="margin-bottom:4px">Отправить письмо ещё раз</button>',b:'Я подтвердил',alt:['Выйти','out']},
  onb:{h:'Ваш профиль',s:'Выберите имя и username',f:TF('n','Имя','text','maxlength="40"')+TF('u','Username (латиница, цифры, _)','text','maxlength="24" autocapitalize="none"'),b:'Продолжить',alt:['Выйти','out']}};
 function gate(m){
  const t=T[m];$('#gate').hidden=false;$('#app').hidden=true;
@@ -607,11 +604,7 @@ const H={
    if(tw&&tw.enabled&&!localStorage.getItem('fx-2fa-'+c.user.uid)){await auth.signOut();creds={e,p};hold=false;gate('tf');return}
    hold=false;user=c.user;await boot()}catch(x){hold=false;throw x}},
  async reg(){const e=$('#e').value.trim(),p=$('#p').value;if(!e||!p)throw{m:'Заполните все поля'};if(p.length<6)throw{m:'Пароль минимум 6 символов'};if(p!==$('#p2').value)throw{m:'Пароли не совпадают'};
-  hold=true;try{const c=await auth.createUserWithEmailAndPassword(e,p);try{auth.languageCode='ru';await c.user.sendEmailVerification()}catch(x){}hold=false;user=c.user;await boot()}catch(x){hold=false;throw x}},
- async verify(){const u=auth.currentUser;if(!u)throw{m:'Войдите заново'};
-  await u.reload();if(!u.emailVerified)throw{m:'Email ещё не подтверждён. Откройте ссылку в письме'};
-  try{await u.getIdToken(true)}catch(e){}
-  user=u;await boot()},
+  hold=true;try{const c=await auth.createUserWithEmailAndPassword(e,p);hold=false;user=c.user;await boot()}catch(x){hold=false;throw x}},
  async tf(){const code=$('#c').value.replace(/\D/g,'');if(code.length!==6)throw{m:'Код из 6 цифр'};
   hold=true;try{const c=await auth.signInWithEmailAndPassword(creds.e,creds.p);const tw=await tsec(c.user.uid);
    if(tw&&tw.secret&&await okTotp(tw.secret,code)){localStorage.setItem('fx-2fa-'+c.user.uid,'1');hold=false;user=c.user;creds=null;await boot()}
@@ -624,21 +617,7 @@ const b32=s=>{let b='';for(const c of s.toUpperCase().replace(/[^A-Z2-7]/g,''))b
 async function totp(sec,t){const k=await crypto.subtle.importKey('raw',b32(sec),{name:'HMAC',hash:'SHA-1'},false,['sign']),c=Math.floor(t/30),bf=new ArrayBuffer(8),v=new DataView(bf);v.setUint32(0,Math.floor(c/4294967296));v.setUint32(4,c>>>0);const h=new Uint8Array(await crypto.subtle.sign('HMAC',k,bf)),o=h[19]&15;return String((((h[o]&127)<<24)|(h[o+1]<<16)|(h[o+2]<<8)|h[o+3])%1e6).padStart(6,'0')}
 async function okTotp(sec,code){const n=Math.floor(Date.now()/1000);for(const i of[-1,0,1])if(await totp(sec,n+i*30)===code)return true;return false}
 
-/* подтверждение email требуется только для аккаунтов, созданных после этой даты (старые пользователи не теряют доступ).
-   Чтобы требовать для всех — замените тело на: u&&!u.emailVerified */
-const VERIFY_FROM=new Date('2026-10-14T19:30:00+03:00').getTime();
-const needVerify=u=>!!u&&!u.emailVerified&&new Date(u.metadata.creationTime).getTime()>=VERIFY_FROM;
-let vLast=0;
-function showVerify(u){
- gate('verify');
- $('#gbox p').textContent='Письмо со ссылкой отправлено на '+u.email+'. Откройте его (проверьте «Спам»), затем нажмите «Я подтвердил».';
- $('#rs').onclick=async()=>{
-  if(Date.now()-vLast<60000){snack('Подождите минуту перед повторной отправкой');return}
-  vLast=Date.now();
-  try{auth.languageCode='ru';await u.sendEmailVerification();snack('Письмо отправлено')}catch(e){snack(aerr(e))}}}
 async function boot(){
- const cu=auth.currentUser;
- if(needVerify(cu)){showVerify(cu);return}
  const s=await db.ref('users/'+user.uid).once('value');
  if(!s.exists()){gate('onb');return}if(s.val()&&s.val().adminBlocked===true){snack('Аккаунт заблокирован');await auth.signOut();return}
  enter()}
