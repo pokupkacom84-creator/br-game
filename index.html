@@ -38,6 +38,9 @@ h1{margin:0;font-size:34px;font-weight:500;line-height:1.15;letter-spacing:0;tra
 .ava{width:40px;height:40px;border-radius:50%;background:var(--tc);color:var(--on-tc);display:grid;place-items:center;font-weight:600}
 .app{max-width:560px;margin:0 auto;padding:8px 16px 128px}
 .scr{display:none}.scr.on{display:block}
+/* переход между вкладками: плавное появление со смещением по направлению перехода */
+.scr.on.go{animation:scrIn .32s cubic-bezier(.05,.7,.1,1) both}
+@keyframes scrIn{from{opacity:0;transform:translateX(var(--dx,0px))}to{opacity:1;transform:none}}
 /* hero */
 .hero{background:var(--s2);color:var(--on-s);border-radius:32px;padding:24px;display:flex;align-items:center;gap:16px;transition:background .4s,color .4s}
 .hero.on{background:var(--pc);color:var(--on-pc)}
@@ -553,7 +556,12 @@ auth.onAuthStateChanged(u=>{
 const TT={home:'Flux Client',keys:'Ключи VPN',shop:'Магазин',me:'Профиль'};
 function tab(t){
  $$('nav button').forEach(x=>{const a=x.dataset.t===t;x.classList.toggle('on',a);x.setAttribute('aria-selected',a)});
- if(navigator.vibrate&&t!==tab.cur){try{navigator.vibrate(8)}catch(e){}}tab.cur=t;
+ if(t!==tab.cur){
+  if(navigator.vibrate){try{navigator.vibrate(8)}catch(e){}}
+  /* анимируем только реальную смену вкладки, не первый показ */
+  if(tab.cur){const O=['home','keys','shop','me'],el=document.getElementById(t);
+   if(el){el.style.setProperty('--dx',(O.indexOf(t)>O.indexOf(tab.cur)?28:-28)+'px');el.classList.remove('go');void el.offsetWidth;el.classList.add('go');el.onanimationend=()=>el.classList.remove('go')}}
+  tab.cur=t}
  $$('.scr').forEach(s=>s.classList.toggle('on',s.id===t));
  $('#h1').textContent=TT[t];$('#sub').textContent=t==='home'?['Не активен','Подготовка…','Ключ активен'][state]:'';
  $('#sub').style.display=t==='home'?'':'none';scrollTo(0,0);
