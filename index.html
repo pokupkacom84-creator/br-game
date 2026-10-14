@@ -28,6 +28,8 @@ body{background:var(--s);color:var(--on-s);font:400 16px/1.5 "Roboto Flex",Robot
 button,input{font:inherit;letter-spacing:inherit}
 svg.ic{width:24px;height:24px;fill:currentColor;flex:none}
 .rp{position:relative;overflow:hidden}
+:root{--err:#b3261e}:root[data-theme="dark"]{--err:#f2b8b5}
+.lead.dng{background:color-mix(in srgb,var(--err) 18%,transparent);color:var(--err)}
 .rip{position:absolute;border-radius:50%;background:currentColor;opacity:.16;transform:scale(0);animation:rip .55s ease-out forwards;pointer-events:none}
 @keyframes rip{to{transform:scale(1);opacity:0}}
 /* app bar */
@@ -188,7 +190,7 @@ button,.li,.tile,.chp,.lead,.pill,.ava,.avb,.pw,.btn,.fbtn,.tbtn{
   <div class="lbl">Приложение</div>
   <div class="grp">
    <label class="li rp"><span class="lead"><i data-i="sync"></i></span><span class="m"><b>Автоактивация</b><small>Активировать выбранный ключ при запуске</small></span><input class="sw" type="checkbox" data-k="auto"></label>
-   <label class="li rp"><span class="lead"><i data-i="bell"></i></span><span class="m"><b>Уведомления</b><small>Сообщать о смене статуса</small></span><input class="sw" type="checkbox" data-k="notif"></label>
+   <label class="li rp"><span class="lead"><i data-i="bell"></i></span><span class="m"><b>Уведомления</b><small>Новые ключи и окончание Premium</small></span><input class="sw" type="checkbox" data-k="notif"></label>
   </div>
   <div class="lbl">Оформление</div>
   <div class="grp">
@@ -339,7 +341,10 @@ async function autoRefresh(){
  if(rbusy||!user||document.hidden||$('#app').hidden)return;
  const s=curSrc();if(s.p&&!isPrem())return;
  rbusy=1;
- try{const t=await getTxt(s,true);if(t!==lastTxt){lastTxt=t;keys=parse(t);rKeys();rHome();if($('#keys').classList.contains('on'))snack('Список ключей обновлён')}}catch(e){}
+ try{const t=await getTxt(s,true);if(t!==lastTxt){const old=new Set(keys.map(k=>k.raw)),had=keys.length>0;lastTxt=t;keys=parse(t);const nw=keys.filter(k=>!old.has(k.raw)).length;rKeys();rHome();
+  /* push о новых ключах — не чаще раза в 30 минут */
+  if(had&&nw>0&&Date.now()-(+store.get('fx-nk-t',0))>18e5){store.set('fx-nk-t',Date.now());notify('Новые ключи','В списке «'+s.n+'» добавлено ключей: '+nw)}
+  if($('#keys').classList.contains('on'))snack('Список ключей обновлён')}}catch(e){}
  rbusy=0}
 setInterval(autoRefresh,60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoRefresh()});
@@ -419,10 +424,10 @@ function rMe(){
  <div class="lbl">Реферальная программа</div>
  <div class="refc"><b style="font-size:20px">15 ₽ за каждого приглашённого друга</b><div style="margin-top:6px;font-size:14px;opacity:.85">Баланс: ${refBal} ₽ · Друзей: ${+refSt.totalInvited||0} · Заработано: ${+refSt.totalBonus||0} ₽</div><div class="lnk">${esc(ref)}</div><div class="row2"><button class="btn rp" id="rcp"><i data-i="copy"></i>Копировать</button><button class="btn f rp" id="rsh"><i data-i="share"></i>Поделиться</button></div></div>
  <div class="lbl">Аккаунт</div>
- <div class="grp"><button class="li rp" id="ed"><span class="lead"><i data-i="edit"></i></span><span class="m"><b>Редактировать профиль</b><small>Имя, username и статус</small></span></button><button class="li rp" id="av2"><span class="lead"><i data-i="photo"></i></span><span class="m"><b>Сменить аватар</b><small>Своё фото или инициалы</small></span></button>${isAdmin()?'<button class="li rp" id="adm"><span class="lead"><i data-i="shield"></i></span><span class="m"><b>Админ-панель</b><small>Пользователи, платежи, промокоды</small></span></button>':''}<button class="li rp" id="lo"><span class="lead"><i data-i="logout"></i></span><span class="m"><b>Выйти</b><small>${esc(user.email||'')}</small></span></button></div>`);
+ <div class="grp"><button class="li rp" id="ed"><span class="lead"><i data-i="edit"></i></span><span class="m"><b>Редактировать профиль</b><small>Имя, username и статус</small></span></button><button class="li rp" id="av2"><span class="lead"><i data-i="photo"></i></span><span class="m"><b>Сменить аватар</b><small>Своё фото или инициалы</small></span></button>${isAdmin()?'<button class="li rp" id="adm"><span class="lead"><i data-i="shield"></i></span><span class="m"><b>Админ-панель</b><small>Пользователи, платежи, промокоды</small></span></button>':''}<button class="li rp" id="del"><span class="lead dng"><i data-i="trash"></i></span><span class="m"><b style="color:var(--err)">Удалить аккаунт</b><small>Профиль, Premium и баланс будут удалены</small></span></button><button class="li rp" id="lo"><span class="lead"><i data-i="logout"></i></span><span class="m"><b>Выйти</b><small>${esc(user.email||'')}</small></span></button></div>`);
  $('#rcp').onclick=()=>cp(ref,'Ссылка скопирована');
  $('#rsh').onclick=()=>openUrl('https://t.me/share/url?url='+encodeURIComponent(ref)+'&text='+encodeURIComponent('Заходи в Flux! За каждого приглашённого друга начисляется 15 ₽ на баланс.'));
- $('#lo').onclick=()=>auth.signOut();$('#av').onclick=openAv;$('#av2').onclick=openAv;if(isAdmin())$('#adm').onclick=openAdmin;
+ $('#del').onclick=openDel;$('#lo').onclick=()=>auth.signOut();$('#av').onclick=openAv;$('#av2').onclick=openAv;if(isAdmin())$('#adm').onclick=openAdmin;
  $('#ed').onclick=()=>{dlg(`<h3>Профиль</h3>${TF('en','Имя','text',`value="${esc(ud.name||'')}"`)}${TF('eu','Username','text',`value="${esc(ud.username||'')}" maxlength="24" autocapitalize="none"`)}${TF('es','Статус','text',`value="${esc(ud.status||'')}"`)}<div class="row2" style="justify-content:flex-end"><button class="tbtn" id="dx">Отмена</button><button class="tbtn" id="ds">Сохранить</button></div>`);
   $('#dx').onclick=closeDlg;$('#ds').onclick=saveProfile}}
 function rAll(){
@@ -430,6 +435,62 @@ function rAll(){
  paintAv($('#ava'),Object.assign({},ud,{name:ud.name||user.email}));navAv();
  rHome();rMe();if(!$('#keys').classList.contains('x')){const s=curSrc();if(s.p)rKeys()}}
 
+/* ---------- удаление аккаунта ---------- */
+function openDel(){
+ dlg(`<h3 style="color:var(--err)">Удаление аккаунта</h3><p style="margin:0 0 16px;color:var(--on-sv)">Действие необратимо: будут удалены ваш профиль, username, Premium и реферальные данные. Историю платежей мы сохраняем как финансовую запись.</p>${TF('dp','Пароль','password','autocomplete="current-password"')}${TF('dc','Введите слово УДАЛИТЬ','text','autocapitalize="characters" autocomplete="off"')}<div class="row2" style="justify-content:flex-end"><button class="tbtn" id="dcx">Отмена</button><button class="tbtn" id="ddo" style="color:var(--err)">Удалить навсегда</button></div>`);
+ $('#dcx').onclick=closeDlg;$('#ddo').onclick=deleteAccount}
+async function deleteAccount(){
+ const u=auth.currentUser,pw=$('#dp').value,cf=$('#dc').value.trim().toUpperCase();
+ if(!u)return;
+ if(!pw){snack('Введите пароль');return}
+ if(cf!=='УДАЛИТЬ'){snack('Введите слово УДАЛИТЬ');return}
+ const b=$('#ddo');b.disabled=true;
+ let dbDone=false;
+ try{
+  /* 1) повторная проверка пароля (требуется Firebase для удаления) */
+  await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,pw));
+  const uid=u.uid,un=ud.username;
+  hold=true;off();
+  /* 2) данные в базе: профиль и занятый username */
+  const up={};up['users/'+uid]=null;if(un)up['usernames/'+un]=null;
+  await db.ref().update(up);dbDone=true;
+  /* 3) сам аккаунт */
+  await u.delete();
+  try{localStorage.removeItem('fx-2fa-'+uid)}catch(e){}
+  hold=false;user=null;store.set('fx-li','0');clearInterval(tick);clearInterval(pn);state=0;ud={};prem={};hist=null;refBal=0;refSt={};
+  closeDlg();gate('login');snack('Аккаунт удалён')
+ }catch(e){
+  hold=false;
+  if(!dbDone&&auth.currentUser)listen();
+  snack(e&&(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential')?'Неверный пароль':(dbDone?'Данные удалены, но аккаунт удалить не удалось — войдите и повторите':(AE[e&&e.code]||'Не удалось удалить аккаунт')));
+  b.disabled=false}}
+/* ---------- уведомления ---------- */
+/* В Sketchware-приложении используется нативный мост Android.showNotification, в обычном браузере — Notification API.
+   Работают, пока приложение открыто (фонового push без сервера нет). */
+let pn;
+IC.trash="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z";
+function notify(t,m){
+ if(store.get('fx-notif','0')!=='1')return;
+ try{
+  if(window.Android&&typeof Android.showNotification==='function'){Android.showNotification(t,m);return}
+  if('Notification' in window&&Notification.permission==='granted')new Notification(t,{body:m})
+ }catch(e){}}
+function askNotif(){
+ try{
+  if(window.Android&&typeof Android.requestNotifPermission==='function'){Android.requestNotifPermission();return}
+  if('Notification' in window&&Notification.permission==='default')Notification.requestPermission()
+ }catch(e){}}
+/* Premium: напоминание за 3, 2, 1 день до конца и после окончания (каждое — один раз) */
+function chkPrem(){
+ if(!user||gprem.active===true||!prem||!prem.active||store.get('fx-notif','0')!=='1')return;
+ const e=expOf(prem);if(!e)return;
+ const left=e-Date.now(),days=Math.ceil(left/864e5);
+ let key,t,m;
+ if(left<=0){if(left<-6048e5)return;key='exp-'+e;t='Premium закончился';m='Продлите подписку в магазине Flux'}
+ else if(days<=3){key='d'+days+'-'+e;t='Premium скоро закончится';m=days===1?'Остался 1 день':'Осталось дней: '+days}
+ else return;
+ if(store.get('fx-pn-'+key,'0')==='1')return;
+ store.set('fx-pn-'+key,'1');notify(t,m)}
 /* ---------- волнистый индикатор ---------- */
 function WV(label){return`<div class="wv" role="progressbar" aria-label="${esc(label||'Загрузка')}"><svg viewBox="0 0 288 12" aria-hidden="true"><path d="M0 6q6 -6 12 0${'t12 0'.repeat(23)}"/></svg></div>`}
 /* ---------- аватары ---------- */
@@ -568,10 +629,11 @@ function listen(){
 function off(){subs.forEach(r=>r.off());subs=[]}
 function enter(){
  store.set('fx-li','1');$('#gate').hidden=true;$('#app').hidden=false;listen();loadHist();loadKeys();rAll();tab('home');
+ clearInterval(pn);pn=setInterval(chkPrem,18e5);setTimeout(chkPrem,4000);
  if(store.get('fx-auto','0')==='1'&&selKey)setTimeout(toggle,900)}
 auth.onAuthStateChanged(u=>{
  if(hold)return;user=u;
- if(!u){store.set('fx-li','0');off();clearInterval(tick);state=0;ud={};prem={};hist=null;gate('login');return}
+ if(!u){store.set('fx-li','0');off();clearInterval(tick);clearInterval(pn);state=0;ud={};prem={};hist=null;gate('login');return}
  boot().catch(()=>{snack('Не удалось загрузить профиль');gate('login')})});
 
 /* ---------- навигация ---------- */
@@ -604,7 +666,9 @@ dq.addEventListener('change',apply);
 $('#seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;mode=b.dataset.m;store.set('fx-mode',mode);apply()};
 $('#sws').onclick=e=>{const b=e.target.closest('.tile[data-h]');if(!b)return;hue=+b.dataset.h;store.set('fx-h',hue);apply()};
 $('#sws').addEventListener('change',e=>{if(e.target.id!=='cc')return;hue=hueOf(e.target.value);store.set('fx-h',hue);apply()});
-$$('.sw').forEach(c=>{c.checked=store.get('fx-'+c.dataset.k,'0')==='1';c.onchange=()=>store.set('fx-'+c.dataset.k,c.checked?'1':'0')});
+/* уведомления включены по умолчанию (можно выключить в профиле) */
+if(store.get('fx-notif','x')==='x')store.set('fx-notif','1');
+$$('.sw').forEach(c=>{c.checked=store.get('fx-'+c.dataset.k,'0')==='1';c.onchange=()=>{store.set('fx-'+c.dataset.k,c.checked?'1':'0');if(c.dataset.k==='notif'&&c.checked)askNotif()}});
 document.addEventListener('pointerdown',e=>{const t=e.target.closest('.rp');if(!t)return;const r=t.getBoundingClientRect(),s=Math.max(r.width,r.height)*1.4,x=document.createElement('span');x.className='rip';x.style.cssText=`width:${s}px;height:${s}px;left:${e.clientX-r.left-s/2}px;top:${e.clientY-r.top-s/2}px`;t.appendChild(x);x.onanimationend=()=>x.remove()});
 document.addEventListener('contextmenu',e=>{if(!e.target.closest('input,textarea'))e.preventDefault()});
 document.addEventListener('selectstart',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault()});
