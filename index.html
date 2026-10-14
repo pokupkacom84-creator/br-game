@@ -576,10 +576,13 @@ function adminUser(u){
  if(!u)return;
  dlg(`<h3>Управление</h3><div class="li" style="border-radius:24px;cursor:default;margin-bottom:12px"><span class="lead" style="${avStyle(u)}">${avTxt(u)}</span><span class="m"><b>${esc(u.name||'Без имени')}</b><small>${esc(u.username?'@'+u.username:u.uid)} · Premium: ${premOn(u.premium)?'есть':'нет'}</small></span></div>
  <div class="lbl">Выдать Premium</div><div class="row2">${[7,30,90,365].map(d=>`<button class="btn rp" data-d="${d}">${d} дн.</button>`).join('')}</div>
+ ${premOn(u.premium)?'<div class="row2" style="margin-top:12px"><button class="btn rp dng" id="aur" style="color:var(--err)">Забрать Premium</button></div>':''}
  <div class="row2" style="margin-top:12px"><button class="btn rp" id="aub">${u.adminBlocked?'Разблокировать':'Заблокировать'}</button></div>
  <div class="row2" style="justify-content:flex-end;margin-top:8px"><button class="tbtn" id="aux">Назад</button></div>`);
  $('#aux').onclick=openAdmin;
  $('#dlg').querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{const days=+b.dataset.d;try{const ref=db.ref('users/'+u.uid+'/premium'),p=(await ref.once('value')).val()||{},st=Date.now(),base=premOn(p)?Math.max(st,expOf(p)):st;await ref.update({active:true,expiresAt:base+days*864e5,globalPauseBaselineMs:gTot(),plan:'admin',updatedAt:st,grantedBy:user.uid});snack('Premium выдан на '+days+' дн.');openAdmin()}catch(e){snack('Не удалось выдать Premium')}});
+ const ar=$('#aur');if(ar){let sure=0;ar.onclick=async()=>{if(!sure){sure=1;ar.textContent='Нажмите ещё раз для подтверждения';setTimeout(()=>{if(ar.isConnected){sure=0;ar.textContent='Забрать Premium'}},4000);return}
+  try{await db.ref('users/'+u.uid+'/premium').update({active:false,expiresAt:0,revokedAt:Date.now(),revokedBy:user.uid});snack('Premium отозван');openAdmin()}catch(e){snack('Не удалось забрать Premium')}}}
  $('#aub').onclick=async()=>{if(u.uid===user.uid){snack('Нельзя заблокировать себя');return}try{await db.ref('users/'+u.uid+'/adminBlocked').set(!u.adminBlocked);snack(u.adminBlocked?'Разблокирован':'Заблокирован');openAdmin()}catch(e){snack('Не удалось изменить')}}}
 
 /* ---------- вход, регистрация, 2FA ---------- */
