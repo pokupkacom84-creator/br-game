@@ -295,7 +295,7 @@ const openUrl=u=>{window.open(u,'_blank','noopener')||(location.href=u)};
 /* ---------- состояние ---------- */
 let user=null,ud={},prem={},gprem={active:false},refBal=0,refSt={},hist=null,subs=[],hold=false,creds=null;
 let keys=[],srcId=store.get('fx-src','free'),selKey=null,lim=120,req=0,state=0,t0=0,tick,hue=+store.get('fx-h',293),mode=store.get('fx-mode','auto');
-try{const r=store.get('fx-key','');if(r)selKey=parse(r)[0]||null}catch(e){}
+try{const r=store.get('fx-key','');if(r){selKey=parse(r)[0]||null;if(selKey)selKey.sig=store.get('fx-ksig','')||selKey.sig}}catch(e){}
 
 /* ---------- Premium (логика как в index.html) ---------- */
 const gTot=()=>Math.max(0,+gprem.totalPausedMs||0)+(gprem.active===true&&+gprem.activeSince>0?Math.max(0,Date.now()-gprem.activeSince):0);
@@ -304,10 +304,16 @@ const isPrem=()=>gprem.active===true||(!!prem.active&&expOf(prem)>Date.now());
 const isAdmin=()=>!!user&&(ADMIN_UIDS.includes(user.uid)||ud.isAdmin===true||ud.role==='admin'||ud.admin===true);
 
 /* ---------- VPN-ключи ---------- */
-function parse(t){const o=[],seen={};(String(t).replace(/\r/g,'').match(/(vless|vmess|trojan|ss|hysteria2|hy2|socks5?):\/\/[^\s"'<>]+/ig)||[]).forEach(r=>{r=r.replace(/[),;]+$/,'');if(seen[r])return;seen[r]=1;const p=r.split('://')[0].toLowerCase().replace(/^socks5$/,'socks');let n='';const h=r.indexOf('#');if(h>-1){try{n=decodeURIComponent(r.slice(h+1))}catch(e){n=r.slice(h+1)}}else if(p==='vmess'){try{n=JSON.parse(atob(r.slice(8))).ps||''}catch(e){}}
+function parse(t,num){const o=[],seen={},cnt={};(String(t).replace(/\r/g,'').match(/(vless|vmess|trojan|ss|hysteria2|hy2|socks5?):\/\/[^\s"'<>]+/ig)||[]).forEach(r=>{r=r.replace(/[),;]+$/,'');if(seen[r])return;seen[r]=1;const p=r.split('://')[0].toLowerCase().replace(/^socks5$/,'socks');let n='';const h=r.indexOf('#');if(h>-1){try{n=decodeURIComponent(r.slice(h+1))}catch(e){n=r.slice(h+1)}}else if(p==='vmess'){try{n=JSON.parse(decodeURIComponent(escape(atob(r.slice(8).split('#')[0].replace(/-/g,'+').replace(/_/g,'/'))))).ps||''}catch(e){}}
  const fm=n.match(/[\u{1F1E6}-\u{1F1FF}]{2}/u),host=(r.split('://')[1]||'').split('@').pop().split(/[:/?#]/)[0];
- const fl=fm?fm[0]:'',cu=speedOf(n)||country(fl);
- o.push({raw:rename(r,p,fl,cu),p,n:(cu?cu+' ':'')+NAME,flag:fl||'🌐',host})});return o}
+ const fl=fm?fm[0]:'';
+ /* ключ уже переименован («Нидерланды #1 @FluxVpnClient») — например, при восстановлении выбранного ключа: номер не трогаем */
+ const dn=n.match(/^(?:[\u{1F1E6}-\u{1F1FF}]{2}\s*)?(.+? #\d+) @FluxVpnClient$/u);
+ if(dn&&!num){o.push({raw:r,sig:r,p,n:dn[1]+' '+NAME,flag:fl||'🌐',host});return}
+ /* бесплатный список: нумерация по странам — «Нидерланды #1 @FluxVpnClient», «Нидерланды #2 …» (и в списке, и в Happ) */
+ if(num){const b=country(fl)||'Сервер';cnt[b]=(cnt[b]||0)+1;const nm=b+' #'+cnt[b];o.push({raw:rename(r,p,fl,nm),sig:r,p,n:nm+' '+NAME,flag:fl||'🌐',host});return}
+ const cu=speedOf(n)||country(fl);
+ o.push({raw:rename(r,p,fl,cu),sig:r,p,n:(cu?cu+' ':'')+NAME,flag:fl||'🌐',host})});return o}
 /* скорость из исходного названия ключа: «172 Mbps», «172Mb», «172 Мб/с» → «172Mb» */
 function speedOf(n){
  const m=String(n).match(/(\d+(?:[.,]\d+)?)\s*(?:mbit\/?s?|mbps|mb\/?s|mb|мбит\/?с?|мб\/?с?)(?![a-zа-я])/i);
@@ -341,7 +347,7 @@ async function autoRefresh(){
  if(rbusy||!user||document.hidden||$('#app').hidden)return;
  const s=curSrc();if(s.p&&!isPrem())return;
  rbusy=1;
- try{const t=await getTxt(s,true);if(t!==lastTxt){const old=new Set(keys.map(k=>k.raw)),had=keys.length>0;lastTxt=t;keys=parse(t);const nw=keys.filter(k=>!old.has(k.raw)).length;rKeys();rHome();
+ try{const t=await getTxt(s,true);if(t!==lastTxt){const old=new Set(keys.map(k=>k.sig||k.raw)),had=keys.length>0;lastTxt=t;keys=parse(t,!s.p);const nw=keys.filter(k=>!old.has(k.sig||k.raw)).length;rKeys();rHome();
   /* push о новых ключах — не чаще раза в 30 минут */
   if(had&&nw>0&&Date.now()-(+store.get('fx-nk-t',0))>18e5){store.set('fx-nk-t',Date.now());notify('Новые ключи','В списке «'+s.n+'» добавлено ключей: '+nw)}
   if($('#keys').classList.contains('on'))snack('Список ключей обновлён')}}catch(e){}
@@ -354,7 +360,7 @@ async function loadKeys(force){
  const s=curSrc(),id=++req;lim=120;
  if(s.p&&!isPrem()){keys=[];rKeys();return}
  put($('#klist'),`<div class="li" style="justify-content:center;padding:36px 20px;cursor:default">${WV('Загрузка ключей')}</div>`);
- let bad=0;try{const t=await getTxt(s,force);if(id!==req)return;lastTxt=t;keys=parse(t)}catch(e){if(id!==req)return;keys=[];bad=1}
+ let bad=0;try{const t=await getTxt(s,force);if(id!==req)return;lastTxt=t;keys=parse(t,!s.p)}catch(e){if(id!==req)return;keys=[];bad=1}
  rKeys(bad)}
 function rKeys(bad){
  const s=curSrc(),pm=isPrem();
@@ -365,11 +371,11 @@ function rKeys(bad){
  if(s.p&&!pm){put(L,'<div class="li col" style="align-items:center;text-align:center"><span class="lead"><i data-i="lock"></i></span><b>Premium-ключи закрыты</b><small style="color:var(--on-sv)">Оформите Premium, чтобы открыть этот список</small><button class="fbtn rp" id="tos" style="max-width:260px">Открыть магазин</button></div>');$('#tos').onclick=()=>tab('shop');$('#kcount').textContent='Premium';return}
  $('#kcount').textContent=keys.length?`${s.n} · ${keys.length}`:s.n;
  if(!keys.length){put(L,`<div class="li" style="justify-content:center;color:var(--on-sv)">${bad?'Не удалось загрузить ключи. Проверьте сеть и нажмите «Обновить».':'В этом списке пока нет ключей.'}</div>`);return}
- put(L,keys.slice(0,lim).map((k,i)=>`<div class="li rp${selKey&&selKey.raw===k.raw?' sel':''}" data-k="${i}"><span class="lead">${k.flag}</span><span class="m"><b>${esc(k.n)}</b><small>${k.p.toUpperCase()}</small></span></div>`).join(''));
+ put(L,keys.slice(0,lim).map((k,i)=>`<div class="li rp${selKey&&(selKey.raw===k.raw||(selKey.sig&&selKey.sig===k.sig))?' sel':''}" data-k="${i}"><span class="lead">${k.flag}</span><span class="m"><b>${esc(k.n)}</b><small>${k.p.toUpperCase()}</small></span></div>`).join(''));
  if(keys.length>lim){const b=document.createElement('button');b.className='tbtn more';b.textContent=`Показать ещё (${keys.length-lim})`;b.onclick=()=>{lim+=120;rKeys()};L.after(b)}}
 $('#cats').onclick=e=>{const b=e.target.closest('[data-c]');if(!b)return;const p=+b.dataset.c;if(p&&!isPrem()){srcId='p1';store.set('fx-src',srcId);loadKeys();snack('Premium VPN доступен только с Premium');return}srcId=SRC.find(x=>x.p===p).id;store.set('fx-src',srcId);loadKeys()};
 $('#srcs').onclick=e=>{if(e.target.closest('#rfr')){loadKeys(true);return}const b=e.target.closest('[data-s]');if(!b)return;srcId=b.dataset.s;store.set('fx-src',srcId);loadKeys()};
-$('#klist').onclick=e=>{const r=e.target.closest('[data-k]');if(!r)return;selKey=keys[+r.dataset.k];store.set('fx-key',selKey.raw);snack('Выбран ключ: '+selKey.n);rKeys();rHome()};
+$('#klist').onclick=e=>{const r=e.target.closest('[data-k]');if(!r)return;selKey=keys[+r.dataset.k];store.set('fx-key',selKey.raw);store.set('fx-ksig',selKey.sig||'');snack('Выбран ключ: '+selKey.n);rKeys();rHome()};
 
 /* ---------- главная ---------- */
 function setSt(s){state=s;const h=$('#hero');h.classList.toggle('on',s===2);h.classList.toggle('busy',s===1);const t=['Не активен','Подготовка…','Ключ активен'][s];$('#st').textContent=t;if(!$('#home').classList.contains('x'))$('#sub').textContent=t}
