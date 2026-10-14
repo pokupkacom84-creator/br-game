@@ -281,8 +281,12 @@ const isAdmin=()=>!!user&&(ADMIN_UIDS.includes(user.uid)||ud.isAdmin===true||ud.
 /* ---------- VPN-ключи ---------- */
 function parse(t){const o=[],seen={};(String(t).replace(/\r/g,'').match(/(vless|vmess|trojan|ss|hysteria2|hy2|socks5?):\/\/[^\s"'<>]+/ig)||[]).forEach(r=>{r=r.replace(/[),;]+$/,'');if(seen[r])return;seen[r]=1;const p=r.split('://')[0].toLowerCase().replace(/^socks5$/,'socks');let n='';const h=r.indexOf('#');if(h>-1){try{n=decodeURIComponent(r.slice(h+1))}catch(e){n=r.slice(h+1)}}else if(p==='vmess'){try{n=JSON.parse(atob(r.slice(8))).ps||''}catch(e){}}
  const fm=n.match(/[\u{1F1E6}-\u{1F1FF}]{2}/u),host=(r.split('://')[1]||'').split('@').pop().split(/[:/?#]/)[0];
- const fl=fm?fm[0]:'',cu=country(fl);
+ const fl=fm?fm[0]:'',cu=speedOf(n)||country(fl);
  o.push({raw:rename(r,p,fl,cu),p,n:(cu?cu+' ':'')+NAME,flag:fl||'🌐',host})});return o}
+/* скорость из исходного названия ключа: «172 Mbps», «172Mb», «172 Мб/с» → «172Mb» */
+function speedOf(n){
+ const m=String(n).match(/(\d+(?:[.,]\d+)?)\s*(?:mbit\/?s?|mbps|mb\/?s|mb|мбит\/?с?|мб\/?с?)(?![a-zа-я])/i);
+ return m?Math.round(parseFloat(m[1].replace(',','.')))+'Mb':''}
 /* страна по флагу-эмодзи (🇩🇪 → «Германия») */
 function country(fl){
  if(!fl)return'';
