@@ -202,6 +202,11 @@ button,.li,.tile,.chp,.lead,.pill,.ava,.avb,.pw,.btn,.fbtn,.tbtn{
 .cnt{min-width:20px;height:20px;border-radius:10px;padding:0 6px;background:var(--p);color:var(--on-p);font-size:12px;font-weight:600;display:grid;place-items:center}
 nav .pill .cnt{position:absolute;top:0;right:6px;min-width:16px;height:16px;font-size:10px;padding:0 4px;background:var(--err);color:var(--s)}
 #sup .m b,#sup .m small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#scrim{z-index:50}
+.eb{flex:none;display:flex;align-items:center;gap:12px;padding:6px 8px 6px 16px;background:var(--s2);color:var(--p);border-top:1px solid var(--olv)}
+.eb[hidden]{display:none}.eb svg{width:22px;height:22px}.eb .m b{font-size:14px;color:var(--p)}
+.eb .m small{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.b.me[data-m]{cursor:pointer}
 </style>
 </head>
 <body>
@@ -242,7 +247,7 @@ nav .pill .cnt{position:absolute;top:0;right:6px;min-width:16px;height:16px;font
 </div>
 <div class="scrim" id="scrim" hidden><div class="dlg" id="dlg"></div></div>
 <div id="snack" role="status"></div>
-<div id="chat" hidden><header class="ch"><button class="ib rp" id="cb" aria-label="Назад"><i data-i="back"></i></button><span class="cav" id="cav"></span><div class="m"><b id="cn"></b><small id="cs"></small></div></header><div class="cm" id="cm"></div><div class="cf"><div class="ci"><textarea id="ct" rows="1" maxlength="2000" placeholder="Сообщение"></textarea></div><button class="cs rp" id="cx" aria-label="Отправить" disabled><i data-i="send"></i></button></div></div>
+<div id="chat" hidden><header class="ch"><button class="ib rp" id="cb" aria-label="Назад"><i data-i="back"></i></button><span class="cav" id="cav"></span><div class="m"><b id="cn"></b><small id="cs"></small></div></header><div class="cm" id="cm"></div><div class="eb" id="eb" hidden><i data-i="edit"></i><div class="m"><b>Редактирование</b><small id="et"></small></div><button class="ib rp" id="ex" aria-label="Отмена"><i data-i="close"></i></button></div><div class="cf"><div class="ci"><textarea id="ct" rows="1" maxlength="2000" placeholder="Сообщение"></textarea></div><button class="cs rp" id="cx" aria-label="Отправить" disabled><i data-i="send"></i></button></div></div>
 
 <script>
 
@@ -725,8 +730,8 @@ document.addEventListener('selectstart',e=>{if(!e.target.closest||!e.target.clos
 $('.app').addEventListener('scroll',e=>$('#bar').classList.toggle('sc',e.target.scrollTop>8),{passive:true});
 /* ---------- чат поддержки ---------- */
 Object.assign(IC,{back:"M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z",send:"M2.01 21L23 12 2.01 3 2 10l15 2-15 2z",chat:"M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z",dall:"M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"});
-const TSV=()=>firebase.database.ServerValue.TIMESTAMP;
-let sms={},sprev=null,cu=null,cref=null,csm=[],cfirst=0,adm0=null;
+IC.close="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z";const TSV=()=>firebase.database.ServerValue.TIMESTAMP;
+let ed=null,sms={},sprev=null,cu=null,cref=null,csm=[],cfirst=0,adm0=null;
 const tmf=t=>new Date(+t).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
 const dky=t=>{const d=new Date(+t);return d.getFullYear()*400+d.getMonth()*32+d.getDate()};
 const dlab=t=>{const k=dky(t),n=Date.now();return k===dky(n)?'Сегодня':k===dky(n-864e5)?'Вчера':new Date(+t).toLocaleDateString('ru-RU',{day:'numeric',month:'long'})};
@@ -755,7 +760,7 @@ async function openChat(uid){
  cref&&cref.off();cref=db.ref('supportMsgs/'+uid).limitToLast(200);
  cref.on('value',s=>{csm=[];s.forEach(c=>{csm.push(Object.assign({id:c.key},c.val()))});rChat()},()=>snack('Нет доступа к чату — проверьте правила Firebase'));
  rChat()}
-function closeChat(){if(cref){cref.off();cref=null}cu=null;const c=$('#chat');if(c)c.hidden=true}
+function closeChat(){if(cref){cref.off();cref=null}cu=null;ed=null;const eb=$("#eb");if(eb)eb.hidden=true;const c=$('#chat');if(c)c.hidden=true}
 function markRead(){
  if(!cu||document.hidden)return;const a=isAdmin(),P='supportMeta/'+cu+'/',o={};
  o[P+(a?'aR':'uR')]=TSV();o[P+(a?'uA':'uU')]=0;db.ref().update(o).catch(()=>{})}
@@ -765,7 +770,7 @@ function rChat(){
  csm.forEach((x,i)=>{const nx=csm[i+1],pv=csm[i-1],d=dky(x.ts),mine=x.f===me,
   tl=!nx||nx.f!==x.f||nx.ts-x.ts>3e5||dky(nx.ts)!==d,sp=!pv||pv.f!==x.f||x.ts-pv.ts>3e5||dky(pv.ts)!==d;
   if(!pv||dky(pv.ts)!==d)h+=`<div class="dc">${dlab(x.ts)}</div>`;
-  h+=`<div class="mg ${mine?'me':'th'}${sp?' sp':''}"><div class="b ${mine?'me':'th'}${tl?' tl':''}">${esc(x.t)}<span class="mt">${tmf(x.ts)}${mine?`<span class="${x.ts<=rd?'rd':''}"><i data-i="${x.ts<=rd?'dall':'check'}"></i></span>`:''}</span></div></div>`});
+  h+=`<div class="mg ${mine?'me':'th'}${sp?' sp':''}"><div class="b ${mine?'me':'th'}${tl?' tl':''}"${mine?` data-m="${x.id}"`:''}>${esc(x.t)}<span class="mt">${x.ed?'изм. ':''}${tmf(x.ts)}${mine?`<span class="${x.ts<=rd?'rd':''}"><i data-i="${x.ts<=rd?'dall':'check'}"></i></span>`:''}</span></div></div>`});
  const el=$('#cm'),nb=cfirst||el.scrollHeight-el.scrollTop-el.clientHeight<80;
  put(el,h);if(nb)el.scrollTop=el.scrollHeight;cfirst=0;
  el.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{$('#ct').value=b.dataset.q;fit();$('#ct').focus()});
@@ -773,12 +778,22 @@ function rChat(){
 function fit(){const t=$('#ct');t.style.height='auto';t.style.height=Math.min(t.scrollHeight,120)+'px';$('#cx').disabled=!t.value.trim()}
 async function sendMsg(){
  const ta=$('#ct'),t=ta.value.trim().slice(0,2000);if(!t||!cu)return;
+ if(ed){const id=ed,old=csm.find(x=>x.id===id);stopEd();if(!old||old.t===t)return;
+  const P='supportMeta/'+cu+'/',up={};up['supportMsgs/'+cu+'/'+id+'/t']=t;up['supportMsgs/'+cu+'/'+id+'/ed']=TSV();
+  if(csm[csm.length-1].id===id)up[P+'last']=t.slice(0,80);
+  try{await db.ref().update(up)}catch(e){snack('Не удалось изменить')}return}
  const a=isAdmin(),s=a?'a':'u',P='supportMeta/'+cu+'/',up={};
  up['supportMsgs/'+cu+'/'+db.ref('supportMsgs/'+cu).push().key]={f:s,t,ts:TSV()};
  up[P+'last']=t.slice(0,80);up[P+'lastTs']=TSV();up[P+'lastF']=s;up[P+(a?'aR':'uR')]=TSV();up[P+(a?'uA':'uU')]=0;
  if(!a){up[P+'name']=ud.name||user.email||'Пользователь';up[P+'username']=ud.username||''}
  ta.value='';fit();
  try{await db.ref().update(up);db.ref(P+(a?'uU':'uA')).transaction(v=>(v||0)+1)}catch(e){snack('Не удалось отправить');ta.value=t;fit()}}
+function stopEd(){ed=null;$('#eb').hidden=true;$('#ct').value='';fit()}
+$('#ex').onclick=stopEd;
+$('#cm').onclick=e=>{const b=e.target.closest('.b.me[data-m]');if(!b)return;const id=b.dataset.m,x=csm.find(m=>m.id===id);if(!x)return;
+ dlg(`<h3>Сообщение</h3><div class="grp"><button class="li rp" id="m1"><span class="lead"><i data-i="edit"></i></span><span class="m"><b>Изменить</b></span></button><button class="li rp" id="m2"><span class="lead"><i data-i="copy"></i></span><span class="m"><b>Копировать</b></span></button></div>`);
+ $('#m1').onclick=()=>{closeDlg();ed=id;$('#ct').value=x.t;fit();$('#et').textContent=x.t.slice(0,80);$('#eb').hidden=false;$('#ct').focus()};
+ $('#m2').onclick=()=>{closeDlg();cp(x.t)}};
 $('#cb').onclick=closeChat;$('#cx').onclick=sendMsg;$('#ct').oninput=fit;
 $('#ct').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&matchMedia('(pointer:fine)').matches){e.preventDefault();sendMsg()}};
 $('nav [data-t="sup"]').onclick=()=>isAdmin()?tab('sup'):openChat(user.uid);
