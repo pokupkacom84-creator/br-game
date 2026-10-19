@@ -190,6 +190,8 @@ button,.li,.tile,.chp,.lead,.pill,.ava,.avb,.pw,.btn,.fbtn,.tbtn{
  <section id="me" class="scr"><div id="mbox"></div>
   <div class="lbl">Приложение</div>
   <div class="grp">
+   <div class="li col"><div style="display:flex;align-items:center;gap:16px"><span class="lead"><i data-i="shield"></i></span><span class="m"><b>VPN-клиент</b><small>Приложение, в котором откроется выбранный ключ</small></span></div>
+    <div class="seg" id="cli"><button data-c="happ"><i data-i="check"></i>Happ</button><button data-c="incy"><i data-i="check"></i>Incy</button></div></div>
    <label class="li rp"><span class="lead"><i data-i="sync"></i></span><span class="m"><b>Автоактивация</b><small>Активировать выбранный ключ при запуске</small></span><input class="sw" type="checkbox" data-k="auto"></label>
    <label class="li rp"><span class="lead"><i data-i="bell"></i></span><span class="m"><b>Уведомления</b><small>Новые ключи и окончание Premium</small></span><input class="sw" type="checkbox" data-k="notif"></label>
   </div>
@@ -384,19 +386,23 @@ function toggle(){
  if(state===1)return;
  if(state===2){clearInterval(tick);setSt(0);$('#tm').textContent='00:00:00';snack('Ключ деактивирован');return}
  if(!selKey){snack('Сначала выберите ключ');tab('keys');return}
- setSt(1);const k=selKey.raw;snack('Открываем Happ…');
- setTimeout(()=>{setSt(2);t0=Date.now();upd();tick=setInterval(upd,1000);openHapp(k)},600)}
-/* открывает Happ; ключ добавляется автоматически через deep link happ://add/<ключ> */
-function openHapp(k){
+ setSt(1);const k=selKey.raw;snack('Открываем '+CLI[client()].n+'…');
+ setTimeout(()=>{setSt(2);t0=Date.now();upd();tick=setInterval(upd,1000);openClient(k)},600)}
+/* выбор VPN-клиента: Happ или Incy (llc.itdev.incy). Оба принимают deep link вида <схема>://add/<ключ> */
+const CLI={happ:{n:'Happ',s:'happ'},incy:{n:'Incy',s:'incy',pkg:'llc.itdev.incy'}};
+const client=()=>CLI[store.get('fx-client','happ')]?store.get('fx-client','happ'):'happ';
+/* открывает выбранный клиент; ключ добавляется автоматически через deep link */
+function openClient(k){
+ const C=CLI[client()];
  let left=false;const f=()=>{if(document.hidden)left=true};
  document.addEventListener('visibilitychange',f);
- const u='happ://add/'+k;
+ const u=C.s+'://add/'+k;
  /* в Sketchware-приложении есть мост Android.openExternalBrowser(url) — он запускает ACTION_VIEW, значит откроет и happ:// */
  if(window.Android&&typeof Android.openExternalBrowser==='function'){try{Android.openExternalBrowser(u);document.removeEventListener('visibilitychange',f);return}catch(e){}}
  location.href=u;
  /* в WebView visibilitychange при переключении приложений не срабатывает, поэтому там «не открылся» не показываем — это была бы ложная ошибка */
  const wv=/; wv\)|Version\/[\d.]+.*Chrome/.test(navigator.userAgent);
- setTimeout(()=>{document.removeEventListener('visibilitychange',f);if(!left&&!wv)snack('Happ не открылся. Установите Happ и попробуйте снова')},2200)}
+ setTimeout(()=>{document.removeEventListener('visibilitychange',f);if(!left&&!wv)snack(C.n+' не открылся. Установите '+C.n+' и попробуйте снова')},2200)}
 $('#pw').onclick=toggle;$('#chg').onclick=()=>tab('keys');
 function rHome(){
  $('#srv').textContent=selKey?`${selKey.flag} ${selKey.n}`:'Ключ не выбран';
@@ -679,6 +685,9 @@ function apply(){
  put($('#sws'),sysT+HU.map(h=>{const s=scheme(h,d);return`<button class="tile rp${!sy&&Math.abs(h-hue)<1?' on':''}" data-h="${h}" aria-label="Цвет ${h}" style="background:${s.sc}"><span class="dot" style="background:conic-gradient(${s.p} 0 50%,${s.t} 50% 75%,${s.pc} 75%)"><i data-i="check"></i></span></button>`}).join('')+`<label class="tile" style="background:${c.s3}" aria-label="Свой цвет"><span class="dot" style="color:var(--on-sv)"><i data-i="plus"></i></span><input type="color" id="cc" value="${hex(tl(d?80:40),.15,hue)}"></label>`)}
 dq.addEventListener('change',apply);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&store.get('fx-sys','0')==='1')apply()});
+const paintCli=()=>$$('#cli button').forEach(b=>b.classList.toggle('on',b.dataset.c===client()));
+$('#cli').onclick=e=>{const b=e.target.closest('button');if(!b)return;store.set('fx-client',b.dataset.c);paintCli();snack('VPN-клиент: '+CLI[b.dataset.c].n)};
+paintCli();
 $('#seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;mode=b.dataset.m;store.set('fx-mode',mode);apply()};
 $('#sws').onclick=e=>{const y=e.target.closest('.tile[data-sys]');if(y){store.set('fx-sys','1');apply();return}const b=e.target.closest('.tile[data-h]');if(!b)return;hue=+b.dataset.h;store.set('fx-sys','0');store.set('fx-h',hue);apply()};
 $('#sws').addEventListener('change',e=>{if(e.target.id!=='cc')return;hue=hueOf(e.target.value);store.set('fx-sys','0');store.set('fx-h',hue);apply()});
