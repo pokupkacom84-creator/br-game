@@ -172,6 +172,8 @@ button,.li,.tile,.chp,.lead,.pill,.ava,.avb,.pw,.btn,.fbtn,.tbtn{
 .refc .btn{background:var(--s);color:var(--on-s);height:44px;padding:0 18px}.refc .btn.f{background:var(--p);color:var(--on-p)}
 .row2{display:flex;gap:8px;flex-wrap:wrap}
 .more{display:block;margin:10px auto}
+.uh{display:block;margin:-4px 12px 12px;font-size:13px;line-height:1.35;color:var(--on-sv)}
+.uh.er{color:var(--err)}.uh.ok{color:var(--p)}
 </style>
 </head>
 <body>
@@ -288,6 +290,30 @@ const SRC=[
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const put=(el,h)=>{el.innerHTML=h;icons(el)};
+/* правила @username как в Telegram: 5–32 символа, латиница/цифры/_, первая — буква, без «__», не оканчивается на «_» */
+function unameErr(u){
+ if(!u)return'Введите username';
+ if(!/^[a-z0-9_]+$/.test(u))return'Только латинские буквы, цифры и _';
+ if(!/^[a-z]/.test(u))return'Username должен начинаться с латинской буквы';
+ if(u.length<5)return'Минимум 5 символов';
+ if(u.length>32)return'Максимум 32 символа';
+ if(/__/.test(u))return'Нельзя использовать два _ подряд';
+ if(u.endsWith('_'))return'Username не может заканчиваться на _';
+ if(RES.includes(u)&&!isAdmin())return'Этот username зарезервирован';
+ return''}
+/* живая проверка поля username: фильтр символов, правила и занятость (как в Telegram) */
+let uct;
+document.addEventListener('input',e=>{
+ const t=e.target;if(!t||(t.id!=='u'&&t.id!=='eu'))return;
+ const v=t.value.replace(/[^A-Za-z0-9_]/g,'').toLowerCase();if(v!==t.value)t.value=v;
+ const h=$('#uh');if(!h)return;clearTimeout(uct);
+ const set=(x,c)=>{h.textContent=x;h.className='uh'+(c?' '+c:'')};
+ if(!v){set('Латиница, цифры и _. От 5 до 32 символов, первая — буква');return}
+ if(t.id==='eu'&&v===(ud.username||'')){set('Это ваш текущий username');return}
+ const er=unameErr(v);if(er){set(er,'er');return}
+ set('Проверяем…');
+ uct=setTimeout(async()=>{try{const s=await db.ref('usernames/'+v).once('value');if(t.value!==v||!$('#uh'))return;
+  if(s.exists()&&s.val()!==(user&&user.uid))set('Username занят','er');else set('@'+v+' свободен','ok')}catch(x){if($('#uh'))set('')}},400)});
 const dt=ms=>new Date(+ms).toLocaleDateString('ru-RU',{day:'2-digit',month:'long',year:'numeric'});
 const pad=n=>String(n).padStart(2,'0');
 let sn;const snack=t=>{const s=$('#snack');s.textContent=t;s.classList.add('show');clearTimeout(sn);sn=setTimeout(()=>s.classList.remove('show'),2600)};
@@ -440,7 +466,7 @@ function rMe(){
  $('#rcp').onclick=()=>cp(ref,'Ссылка скопирована');
  $('#rsh').onclick=()=>openUrl('https://t.me/share/url?url='+encodeURIComponent(ref)+'&text='+encodeURIComponent('Заходи в Flux! За каждого приглашённого друга начисляется 15 ₽ на баланс.'));
  $('#del').onclick=openDel;$('#lo').onclick=()=>auth.signOut();$('#av').onclick=openAv;$('#av2').onclick=openAv;if(isAdmin())$('#adm').onclick=openAdmin;
- $('#ed').onclick=()=>{dlg(`<h3>Профиль</h3>${TF('en','Имя','text',`value="${esc(ud.name||'')}"`)}${TF('eu','Username','text',`value="${esc(ud.username||'')}" maxlength="24" autocapitalize="none"`)}${TF('es','Статус','text',`value="${esc(ud.status||'')}"`)}<div class="row2" style="justify-content:flex-end"><button class="tbtn" id="dx">Отмена</button><button class="tbtn" id="ds">Сохранить</button></div>`);
+ $('#ed').onclick=()=>{dlg(`<h3>Профиль</h3>${TF('en','Имя','text',`value="${esc(ud.name||'')}"`)}${TF('eu','Username','text',`value="${esc(ud.username||'')}" maxlength="32" autocapitalize="none" autocomplete="off" spellcheck="false"`)}<small id="uh" class="uh">Латиница, цифры и _. От 5 до 32 символов, первая — буква</small>${TF('es','Статус','text',`value="${esc(ud.status||'')}"`)}<div class="row2" style="justify-content:flex-end"><button class="tbtn" id="dx">Отмена</button><button class="tbtn" id="ds">Сохранить</button></div>`);
   $('#dx').onclick=closeDlg;$('#ds').onclick=saveProfile}}
 function rAll(){
  if(!user)return;
@@ -533,9 +559,7 @@ function openAv(){
 async function saveProfile(){
  const n=$('#en').value.trim(),u=$('#eu').value.trim().replace(/^@/,'').toLowerCase(),old=ud.username||'';
  if(!n){snack('Введите имя');return}
- if(u.length<3){snack('Username минимум 3 символа');return}
- if(!/^[a-z0-9_]+$/.test(u)){snack('Только латиница, цифры и _');return}
- if(u!==old&&RES.includes(u)&&!isAdmin()){snack('Этот username зарезервирован');return}
+ if(u!==old){const er=unameErr(u);if(er){snack(er);return}}
  const b=$('#ds');b.disabled=true;
  try{
   const up={};up['users/'+user.uid+'/name']=n.slice(0,40);up['users/'+user.uid+'/status']=$('#es').value.trim().slice(0,80);
@@ -606,7 +630,7 @@ const T={
  login:{h:'Вход',s:'Войдите в аккаунт Flux',f:TF('e','Email','email','autocomplete="email"')+TF('p','Пароль','password','autocomplete="current-password"'),b:'Войти',alt:['Создать аккаунт','reg']},
  reg:{h:'Регистрация',s:'Создайте новый аккаунт',f:TF('e','Email','email','autocomplete="email"')+TF('p','Пароль (от 6 символов)','password','autocomplete="new-password"')+TF('p2','Повторите пароль','password','autocomplete="new-password"'),b:'Создать аккаунт',alt:['Уже есть аккаунт','login']},
  tf:{h:'Код подтверждения',s:'Введите 6 цифр из приложения-аутентификатора',f:TF('c','Код','text','inputmode="numeric" maxlength="6" autocomplete="one-time-code"'),b:'Подтвердить',alt:['Отмена','login']},
- onb:{h:'Ваш профиль',s:'Выберите имя и username',f:TF('n','Имя','text','maxlength="40"')+TF('u','Username (латиница, цифры, _)','text','maxlength="24" autocapitalize="none"'),b:'Продолжить',alt:['Выйти','out']}};
+ onb:{h:'Ваш профиль',s:'Выберите имя и username',f:TF('n','Имя','text','maxlength="40"')+TF('u','Username','text','maxlength="32" autocapitalize="none" autocomplete="off" spellcheck="false"')+'<small id="uh" class="uh">Латиница, цифры и _. От 5 до 32 символов, первая — буква</small>',b:'Продолжить',alt:['Выйти','out']}};
 function gate(m){
  const t=T[m];$('#gate').hidden=false;$('#app').hidden=true;
  put($('#gbox'),`<div class="logo"><i data-i="bolt"></i></div><h2>${t.h}</h2><p>${t.s}</p>${t.f}<button class="fbtn rp" id="go">${t.b}</button><button class="tbtn" id="alt">${t.alt[0]}</button>`);
@@ -626,7 +650,7 @@ const H={
    if(tw&&tw.secret&&await okTotp(tw.secret,code)){localStorage.setItem('fx-2fa-'+c.user.uid,'1');hold=false;user=c.user;creds=null;await boot()}
    else{await auth.signOut();hold=false;gate('login');throw{m:'Неверный код'}}}catch(x){hold=false;throw x}},
  async onb(){const n=$('#n').value.trim(),u=$('#u').value.trim().toLowerCase();
-  if(!n)throw{m:'Введите имя'};if(u.length<3)throw{m:'Username минимум 3 символа'};if(!/^[a-z0-9_]+$/.test(u))throw{m:'Только латиница, цифры и _'};if(RES.includes(u)&&!ADMIN_UIDS.includes(user.uid))throw{m:'Этот username зарезервирован'};
+  if(!n)throw{m:'Введите имя'};{const er=unameErr(u);if(er)throw{m:er}}
   const t=await db.ref('usernames/'+u).once('value');if(t.exists()&&t.val()!==user.uid)throw{m:'Username занят'};
   await db.ref().update({['users/'+user.uid]:{name:n,username:u,avatarId:'initials',lastSeen:Date.now(),online:true,bio:'',status:''},['usernames/'+u]:user.uid});enter()}};
 const b32=s=>{let b='';for(const c of s.toUpperCase().replace(/[^A-Z2-7]/g,''))b+='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'.indexOf(c).toString(2).padStart(5,'0');const o=[];for(let i=0;i+8<=b.length;i+=8)o.push(parseInt(b.substr(i,8),2));return new Uint8Array(o)};
