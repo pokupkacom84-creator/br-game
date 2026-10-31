@@ -447,12 +447,9 @@ function dialog(title,text,field,ok,cb){
   if(field!==null&&field!==undefined)setTimeout(function(){var f=$("#dfield");f&&f.focus()},250);
 }
 function dlgOk(){var f=$("#dfield"),v=f?f.value.trim():null,cb=dlgCb;if(f&&!v&&!dlgOpt)return;closeAll();cb&&cb(v)}
-function newChatDlg(){dialog.ph="email / @username";dialog("Новый чат","Введите email или @username собеседника","","Начать",function(v){
-  v=v.trim();if(/^@?[A-Za-z][A-Za-z0-9_]{4,31}$/.test(v))return byUser(v.replace("@",""));if(!/^\S+@\S+\.\S+$/.test(v)){toast("Неверный email");return}
-  if(ekey(v)===ekey(ME.email)){openChat(cidOf(ME.uid,ME.uid));return}
-  db.ref("emails/"+ekey(v)).once("value").then(function(sn){var u=sn.val();if(!u){toast("Пользователь не найден");return}
-    var cid=cidOf(ME.uid,u);return db.ref("userChats/"+ME.uid+"/"+cid+"/peer").set(u).then(function(){var t=0;(function w(){if(chat(cid)||t++>30){S.tab="chats";renderMain();openChat(cid)}else setTimeout(w,100)})()})}).catch(dberr)})}
-function renameDlg(){dialog.ph="Имя";dialog("Ваше имя","",S.name,"Сохранить",function(n){S.name=n;db.ref("users/"+ME.uid+"/name").set(n).catch(dberr);renderSettings()})}
+function newChatDlg(){dialog.ph="@username";dialog("Новый чат","Введите @username собеседника","","Начать",function(v){
+  v=v.trim().replace(/^@/,"");if(!/^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(v)){toast("Введите корректный @username");return}byUser(v)})}
+function renameDlg(){dialog.ph="Имя";dialog("Ваше имя","",S.name,"Сохранить",function(n){S.name=n;db.ref("users/"+ME.uid+"/name").set(n).catch(dberr);db.ref("userIndex/"+ME.uid+"/name").set(n).catch(function(){});renderSettings()})}
 function resetDlg(){dialog("Выйти из аккаунта?","Вы сможете войти снова по номеру телефона.",null,"Выйти",function(){logout()})}
 
 /* ---------- chat screen ---------- */
@@ -464,7 +461,7 @@ function toggleEmo(){$("#emo").classList.toggle("show");scrollEnd()}
 function openChat(id){
   var c=chat(id);if(!c)return;S.open=id;S.reply=null;S.edit=null;S.msel=[];S.cq="";S.csearch=false;c.unread=0;
   $("#ta").value=getDraft(id);$("#emo").classList.remove("show");onType();renderReply();
-  renderChatHdr();renderMsgs();
+  renderChatHdr();$("#msgs").innerHTML="";renderMsgs();
   var ro=c.type==="channel";
   $("#comp").style.display=ro?"none":"block";
   var chn=$("#chn");chn.style.display=ro?"block":"none";
@@ -486,18 +483,31 @@ function clearHist(){dialog("Очистить историю?","Все сооб�
 function delChat(){var c=chat(S.open);if(c.type==="saved")return clearHist();dialog("Удалить чат?","Чат пропадёт из списка. Переписка у собеседника сохранится.",null,"Удалить",function(){var id=S.open;closeChat();db.ref("userChats/"+ME.uid+"/"+id).remove().catch(dberr)})}
 function bars(id,n){var s="",x=(typeof id==="number"?id:hueOf(String(id))+7)*9301+49297;for(var i=0;i<n;i++){x=(x*9301+49297)%233280;s+='<i style="height:'+(18+Math.floor(x/233280*82))+'%"></i>'}return s}
 function renderMsgs(keep){
-  var c=chat(S.open);if(!c)return;var el=$("#msgs"),h="",ld="";pinBar(c);
+  var c=chat(S.open);if(!c)return;var el=$("#msgs"),items=[],ld="";pinBar(c);
   var atEnd=el.scrollHeight-el.scrollTop-el.clientHeight<80;
-  if(!c.msgs.length)h='<div class="empty" style="margin:auto"><div class="big">'+ic("chat",44)+'</div>Здесь пока пусто.<br>Напишите первое сообщение!</div>';
+  if(!c.msgs.length)items.push({k:"e",h:'<div class="empty" style="margin:auto"><div class="big">'+ic("chat",44)+'</div>Здесь пока пусто.<br>Напишите первое сообщение!</div>'});
   c.msgs.forEach(function(m){
-    if(!okMsg(m))return;var dl=dayLabel(m.t);if(dl!==ld){h+='<div class="day">'+dl+'</div>';ld=dl}
+    if(!okMsg(m))return;var dl=dayLabel(m.t);if(dl!==ld){items.push({k:"d"+dl,h:'<div class="day">'+dl+'</div>'});ld=dl}
     var q="";if(m.reply){var o=null;c.msgs.forEach(function(x){if(x.id===m.reply)o=x});if(o)q='<div class="q" data-rid="'+o.id+'"><b>'+(o.out?"Вы":esc(o.from||c.name))+'</b><span>'+(o.voice?"🎤 Голосовое":o.img?"🖼 Фото":esc(o.text||""))+'</span></div>'}
     var body=m.sticker?'<div style="font-size:84px;line-height:1.15">'+m.sticker+'</div>':m.imgs?albumHtml(m):m.file?fileCard(m):m.img?'<img class="pic" src="'+m.img+'">'+'<div class="tx">'+esc(m.text||"")+'</div>':m.voice?'<div class="vc"><button class="pb" id="pb'+m.id+'" onclick="event.stopPropagation();playVoice(\''+m.id+'\')">'+ic("play")+'</button><div><div class="wv" id="wv'+m.id+'">'+bars(m.id,28)+'<div class="pg" id="pg'+m.id+'">'+bars(m.id,28)+'</div></div><div class="vd">0:'+pad(m.dur)+' <b onclick="event.stopPropagation();cycSpd()" style="cursor:pointer">'+VS+'x</b></div></div></div>':'<div class="tx">'+fmt(m.text)+'</div>'+linkPrev(m.text);
     var meta='<span class="mt">'+(m.edited?"изм. ":"")+hm(m.t)+(m.out?'<span style="display:flex;color:'+(m.read?"var(--p)":"inherit")+'">'+ic(m.read?"done":"check",16)+'</span>':"")+'</span>';
-    h+='<div class="m '+(m.out?"out":"in")+(m.sticker?" st":"")+(S.msel.indexOf(m.id)>=0?" sel":"")+'" data-mid="'+m.id+'">'+(c.type==="group"&&!m.out&&m.from?'<div class="fr">'+esc(m.from)+'</div>':"")+q+fwOf(m)+body+rxOf(m)+meta+'</div>';
+    items.push({k:"m"+m.id,h:'<div class="m '+(m.out?"out":"in")+(m.sticker?" st":"")+(S.msel.indexOf(m.id)>=0?" sel":"")+'" data-mid="'+m.id+'">'+(c.type==="group"&&!m.out&&m.from?'<div class="fr">'+esc(m.from)+'</div>':"")+q+fwOf(m)+body+rxOf(m)+meta+'</div>'});
   });
-  el.innerHTML=h;
+  patchMsgs(el,items);
   if(keep===undefined||atEnd)scrollEnd();
+}
+function patchMsgs(el,items){
+  var map={},n,cur,tp=document.createElement("div");
+  for(n=el.firstChild;n;n=n.nextSibling)if(n.__k)map[n.__k]=n;
+  cur=el.firstChild;
+  items.forEach(function(it){
+    var old=map[it.k],node;delete map[it.k];
+    if(old&&old.__h===it.h)node=old;
+    else{tp.innerHTML=it.h;node=tp.firstElementChild;node.__h=it.h;node.__k=it.k;if(old){if(old===cur)cur=cur.nextSibling;el.removeChild(old)}}
+    if(node===cur)cur=cur.nextSibling;else el.insertBefore(node,cur);
+  });
+  Object.keys(map).forEach(function(k){if(map[k].parentNode===el)el.removeChild(map[k])});
+  for(n=el.firstChild;n;){var nx=n.nextSibling;if(!n.__k)el.removeChild(n);n=nx}
 }
 function scrollEnd(){var el=$("#msgs");setTimeout(function(){el.scrollTop=el.scrollHeight},30)}
 $("#msgs").addEventListener("click",function(e){
@@ -656,7 +666,7 @@ function resetPass(){
 }
 function saveName(){
   var n=$("#nm").value.trim().slice(0,30);if(!n)return;busy("Сохранение…");
-  var up={};up["users/"+ME.uid]={name:n,email:ME.email,online:true};up["emails/"+ekey(ME.email)]=ME.uid;
+  var up={};up["users/"+ME.uid]={name:n,online:true};up["userPrivate/"+ME.uid+"/email"]=ME.email;up["userIndex/"+ME.uid]={name:n,t:TS};
   db.ref().update(up).then(function(){startApp(auth.currentUser,{name:n})}).catch(aerr);
 }
 
@@ -667,10 +677,15 @@ function startApp(u,p){
   var pr=db.ref("users/"+ME.uid);
   db.ref(".info/connected").on("value",function(s){if(s.val()){pr.child("online").onDisconnect().set(false);pr.child("last").onDisconnect().set(TS);pr.child("online").set(true)}});
   db.ref("userChats/"+ME.uid).on("value",onUC,dberr);
+  var mg={};if(p.email){mg["users/"+ME.uid+"/email"]=null;mg["emails/"+ekey(p.email)]=null;delete p.email}
+  mg["userPrivate/"+ME.uid+"/email"]=ME.email;mg["userIndex/"+ME.uid+"/name"]=p.name||null;mg["userIndex/"+ME.uid+"/username"]=p.username||null;
+  db.ref().update(mg).catch(function(){});
+  S.admin=false;db.ref("admins/"+ME.uid).once("value").then(function(x){S.admin=x.val()===true;if(S.tab==="settings")renderSettings()}).catch(function(){});
+  BANR=db.ref("bans/"+ME.uid);BANR.on("value",function(x){var b=x.val();if(b)showBan(b);else hideBan()},function(){});
 }
 function logout(){
   if(!ME)return;closeChat();
-  var out=function(){S.chats.forEach(detach);db.ref("userChats/"+ME.uid).off();db.ref(".info/connected").off();S.chats=[];ME=null;auth.signOut()};
+  var out=function(){S.chats.forEach(detach);db.ref("userChats/"+ME.uid).off();db.ref(".info/connected").off();if(BANR){BANR.off();BANR=null}S.admin=false;S.chats=[];ME=null;auth.signOut()};
   db.ref("users/"+ME.uid+"/online").set(false).then(out,out);
 }
 
@@ -700,7 +715,7 @@ function watchChat(c){
   var rd=db.ref("chats/"+c.id+"/read");rd.on("value",function(s){c.reads=s.val()||{};if(c.ready)refresh(c)},dberr);
   var pn=db.ref("chats/"+c.id+"/pin"),hd=db.ref("chats/"+c.id+"/hide/"+ME.uid);pn.on("value",function(s){c.pin=s.val();if(S.open===c.id)renderMsgs(1)});hd.on("value",function(s){c.hid=s.val()||{};if(c.ready&&S.open===c.id)renderMsgs(1)});c.refs=[q,rd,pn,hd];
   if(c.type==="user"){
-    var u=db.ref("users/"+c.peer);u.on("value",function(s){var x=s.val()||{};c.name=x.name||x.email||"Пользователь";c.u=x;c.uname=x.username;c.photo=vis(x,"photo",c.peer)?x.avatar:null;c.online=vis(x,"seen",c.peer)&&!!x.online;if(S.open===c.id)renderChatHdr();softMain()},dberr);
+    var u=db.ref("users/"+c.peer);u.on("value",function(s){var x=s.val()||{};c.name=x.name||"Пользователь";c.u=x;c.uname=x.username;c.photo=vis(x,"photo",c.peer)?x.avatar:null;c.online=vis(x,"seen",c.peer)&&!!x.online;if(S.open===c.id)renderChatHdr();softMain()},dberr);
     var t=db.ref("chats/"+c.id+"/typing/"+c.peer);t.on("value",function(s){c.typing=!!s.val();if(S.open===c.id)renderChatHdr();softMain()},dberr);
     c.refs.push(u,t);
   }
@@ -855,13 +870,13 @@ function openProfile(id){
   else Promise.all([db.ref("users/"+id).once("value"),db.ref("covers/"+id).once("value")]).then(function(r){var u=r[0].val()||{};go(u,vis(u,"photo",id)?r[1].val():null,1)}).catch(dberr)
 }
 function renderProfile(id,u,cv,fw){
-  var me=id===ME.uid,nm=u.name||u.email||"Пользователь",av=vis(u,"photo",id)?u.avatar:null,on=vis(u,"seen",id)&&u.online,bd=u.bday&&vis(u,"bday",id)?u.bday:"",t=isBday(bd);
+  var me=id===ME.uid,nm=u.name||"Пользователь",av=vis(u,"photo",id)?u.avatar:null,on=vis(u,"seen",id)&&u.online,bd=u.bday&&vis(u,"bday",id)?u.bday:"",t=isBday(bd);
   var h='<div class="pcov" style="'+(cv?"background-image:url("+cv+")":"")+'">'+(me?'<button class="ib pedit" onclick="mediaSheet(\'cover\')">'+ic("image")+'</button>':"")+'</div><div class="pav"><div class="av xl" style="--h:'+hueOf(id)+(av?";background-image:url("+av+")":"")+'">'+(av?"":esc(initials(nm)))+'</div>'+(me?'<button class="ib pcam" onclick="mediaSheet(\'avatar\')">'+ic("add")+'</button>':"")+'</div><div class="pn"><b>'+esc(nm)+'</b><span>'+(me||on?"в сети":"был(а) недавно")+'</span></div>'+(t?'<div class="bdb"><span>🎂</span> <span>Сегодня день рождения!</span></div>':"")+'<div class="card">';
   if(me)h+=R(ic("person"),esc(nm),"Имя","editName()");
   if(u.username||me)h+=R("@",u.username?esc(u.username):"Не задано","Имя пользователя",me?"editUser()":"");
   if(me||(u.bio&&vis(u,"bio",id)))h+=R(ic("info"),u.bio?esc(u.bio):"Не задано","О себе",me?"editBio()":"");
   if(me||bd)h+=R("🎂",bd?fmtDate(bd):"Не задано","День рождения",me?"editBday()":"");
-  if(me||vis(u,"email",id))h+=R("✉",esc(u.email||""),"Email");
+  if(me)h+=R("✉",esc(ME.email||""),"Email (виден только вам)");
   h+='</div>';
   if(me)h+='<p style="padding:8px 24px 24px;color:var(--osv);font-size:13px;line-height:1.4">'+UH+'</p>';
   page("Профиль",h);
@@ -871,7 +886,7 @@ function refreshMe(){if(PG===ME.uid)renderProfile(ME.uid,S.me,S.cover,0);if(S.ta
 function mediaSheet(k){var has=k==="avatar"?S.me.avatar:S.cover;sheet('<button class="si" onclick="closeAll();pickMedia(\''+k+'\')">'+ic("image")+'Выбрать из галереи</button>'+(has?'<button class="si" onclick="closeAll();putMedia(\''+k+'\',null)">'+ic("del")+'Удалить</button>':""))}
 function pickMedia(k){pickImg(k==="avatar"?256:900,k==="avatar"?.8:.7,k==="avatar",function(d){putMedia(k,d)})}
 function putMedia(k,d){db.ref(k==="avatar"?"users/"+ME.uid+"/avatar":"covers/"+ME.uid).set(d||null).then(function(){if(k==="avatar")S.me.avatar=d;else S.cover=d;refreshMe()}).catch(dberr)}
-function editName(){dialog.ph="Имя";dialog.ml=30;dialog("Ваше имя","",S.name,"Сохранить",function(n){S.name=n;S.me.name=n;db.ref("users/"+ME.uid+"/name").set(n).catch(dberr);refreshMe()})}
+function editName(){dialog.ph="Имя";dialog.ml=30;dialog("Ваше имя","",S.name,"Сохранить",function(n){S.name=n;S.me.name=n;db.ref("users/"+ME.uid+"/name").set(n).catch(dberr);db.ref("userIndex/"+ME.uid+"/name").set(n).catch(function(){});refreshMe()})}
 function editBio(){dialog.ph="О себе";dialog.ml=70;dialog.opt=1;dialog("О себе","Напишите о себе пару слов",S.me.bio||"","Сохранить",function(v){S.me.bio=v||null;db.ref("users/"+ME.uid+"/bio").set(v||null).catch(dberr);refreshMe()})}
 function editBday(){dialog.ty="date";dialog.opt=1;dialog("День рождения","",S.me.bday||"","Сохранить",function(v){if(v&&(v>new Date().toISOString().slice(0,10)||v<"1900"))return toast("Неверная дата");S.me.bday=v||null;db.ref("users/"+ME.uid+"/bday").set(v||null).catch(dberr);refreshMe()})}
 /* username: a-z 0-9 _, от 5 символов, начинается с буквы, уникальный */
@@ -890,14 +905,14 @@ function editUser(){
 function setUser(v){
   var old=S.me.username||"";if(v===old)return;
   if(v&&!uOk(v))return toast("Недопустимое имя пользователя");
-  var fin=function(){var up={};up["users/"+ME.uid+"/username"]=v||null;if(old)up["usernames/"+old]=null;db.ref().update(up).then(function(){S.me.username=v||null;refreshMe();toast("Сохранено")}).catch(dberr)};
+  var fin=function(){var up={};up["users/"+ME.uid+"/username"]=v||null;up["userIndex/"+ME.uid+"/username"]=v||null;if(old)up["usernames/"+old]=null;db.ref().update(up).then(function(){S.me.username=v||null;refreshMe();toast("Сохранено")}).catch(dberr)};
   if(!v)return fin();
   db.ref("usernames/"+v).transaction(function(c){return c?undefined:ME.uid}).then(function(r){if(!r.committed&&r.snapshot.val()!==ME.uid)return toast("Имя пользователя занято");fin()}).catch(dberr)
 }
 function startWith(u){var cid=cidOf(ME.uid,u);return db.ref("userChats/"+ME.uid+"/"+cid+"/peer").set(u).then(function(){var t=0;(function w(){if(chat(cid)||t++>30){S.tab="chats";renderMain();openChat(cid)}else setTimeout(w,100)})()})}
 function byUser(n){db.ref("usernames/"+n.toLowerCase()).once("value").then(function(s){var u=s.val();if(!u){toast("Пользователь не найден");return}if(u===ME.uid)return startWith(ME.uid);return startWith(u)}).catch(dberr)}
 /* конфиденциальность */
-var PR=[["seen","Был(а) в сети"],["photo","Фото профиля"],["bio","О себе"],["bday","День рождения"],["email","Email"]],PL={all:"Все пользователи",contacts:"Мои контакты",nobody:"Никто"};
+var PR=[["seen","Был(а) в сети"],["photo","Фото профиля"],["bio","О себе"],["bday","День рождения"]],PL={all:"Все пользователи",contacts:"Мои контакты",nobody:"Никто"};
 function privPage(){var p=S.me.priv||{};page("Конфиденциальность",'<div class="sec">Кто может видеть мои данные</div><div class="card">'+PR.map(function(x){return '<div class="row" onclick="privPick(\''+x[0]+'\')"><div class="t">'+x[1]+'<small>'+PL[p[x[0]]||"all"]+'</small></div></div>'}).join("")+'</div>')}
 function privPick(k){var cur=(S.me.priv||{})[k]||"all";sheet(["all","contacts","nobody"].map(function(v){return '<button class="si" onclick="setPriv(\''+k+'\',\''+v+'\')">'+PL[v]+(cur===v?'<span style="margin-left:auto;color:var(--p)">'+ic("check")+'</span>':"")+'</button>'}).join(""))}
 function setPriv(k,v){closeAll();S.me.priv=S.me.priv||{};S.me.priv[k]=v;db.ref("users/"+ME.uid+"/priv/"+k).set(v).catch(dberr);privPage()}
@@ -912,7 +927,7 @@ function storPage(){
   if(navigator.storage&&navigator.storage.estimate)navigator.storage.estimate().then(function(e){var d=$("#dev");if(d)d.textContent=fmtB(e.usage||0)+" / "+fmtB(e.quota||0)})
 }
 function moreCards(){var L={ru:"Русский",en:"English",be:"Беларуская",ar:"العربية"};
-  return '<div class="card"><div class="row" style="padding:0 0 4px"><div class="ico">'+ic("text")+'</div><div class="t">Язык</div></div><div class="seg">'+Object.keys(L).map(function(k){return '<button class="'+(S.lang===k?"on":"")+'" onclick="setLang(\''+k+'\')">'+L[k]+'</button>'}).join("")+'</div></div><div class="card"><div class="row" style="padding:4px 0" onclick="privPage()"><div class="ico">'+ic("lock")+'</div><div class="t">Конфиденциальность</div></div><div class="row" style="padding:4px 0" onclick="storPage()"><div class="ico">'+ic("file")+'</div><div class="t">Память</div></div></div>'}
+  return '<div class="card"><div class="row" style="padding:0 0 4px"><div class="ico">'+ic("text")+'</div><div class="t">Язык</div></div><div class="seg">'+Object.keys(L).map(function(k){return '<button class="'+(S.lang===k?"on":"")+'" onclick="setLang(\''+k+'\')">'+L[k]+'</button>'}).join("")+'</div></div><div class="card"><div class="row" style="padding:4px 0" onclick="privPage()"><div class="ico">'+ic("lock")+'</div><div class="t">Конфиденциальность</div></div><div class="row" style="padding:4px 0" onclick="storPage()"><div class="ico">'+ic("file")+'</div><div class="t">Память</div></div></div>'+(S.admin?'<div class="card"><div class="row" style="padding:4px 0" onclick="adminPage()"><div class="ico">'+ic("shield")+'</div><div class="t">Админ-панель<small>Пользователи, блокировки, жалобы</small></div></div></div>':"")}
 /* языки: ru / en / be / ar (ar — RTL) */
 function setLang(l){S.lang=l;save();applyLang();renderMain()}
 function applyLang(){var h=document.documentElement;h.lang=S.lang;h.dir=S.lang==="ar"?"rtl":"ltr";if(auth)auth.languageCode=S.lang;
@@ -981,6 +996,7 @@ function msgMenu2(mid){var m=findMsg(mid);if(!m)return;var c=chat(S.open);
   h+=si("reply","Ответить","setReply('"+mid+"')");
   if(m.text&&!m.voice)h+=si("copy","Копировать","copyMsg('"+mid+"')");
   h+=si("send","Переслать","fwdDlg(['"+mid+"'])")+si("pin",c.pin===mid?"Открепить":"Закрепить","pinMsg('"+mid+"')");
+  if(m.img||m.imgs||m.voice||(m.file&&m.mid))h+=si("download","Сохранить в память","saveMedia('"+mid+"')");
   if(m.out&&m.text&&!m.voice&&!m.img&&!m.imgs&&!m.file&&!m.sticker)h+=si("edit","Изменить","editMsg('"+mid+"')");
   h+=si("check","Выбрать","toggleMsel('"+mid+"')")+si("del","Удалить","delDlg(['"+mid+"'])");
   sheet(h)}
@@ -1041,11 +1057,11 @@ $("#fi").multiple=true;
 $("#fi").onchange=function(){var fs=Array.prototype.slice.call(this.files,0,10);this.value="";if(!fs.length)return;var one=fs.length===1;Promise.all(fs.map(function(f){return shrink(f,one?900:640,one?.7:.6)})).then(function(a){if(one)pushMsg({img:a[0]});else pushMsg({imgs:a})})};
 function albumHtml(m){return '<div class="alb">'+m.imgs.map(function(i){return '<img class="pic" src="'+i+'">'}).join("")+'</div>'}
 function openViewer(src){var v=document.createElement("div");v.style.cssText="position:absolute;left:0;top:0;right:0;bottom:0;z-index:95;background:#000;touch-action:none;overflow:hidden";
-  v.innerHTML='<img style="position:absolute;left:50%;top:50%;max-width:100%;max-height:100%;transform:translate(-50%,-50%)" src="'+src+'"><button class="ib" style="position:absolute;top:calc(8px + env(safe-area-inset-top));left:8px;color:#fff;background:rgba(0,0,0,.45);z-index:2">'+ic("close")+'</button>';
+  v.innerHTML='<img style="position:absolute;left:50%;top:50%;max-width:100%;max-height:100%;transform:translate(-50%,-50%)" src="'+src+'"><button class="ib" style="position:absolute;top:calc(8px + env(safe-area-inset-top));left:8px;color:#fff;background:rgba(0,0,0,.45);z-index:2">'+ic("close")+'</button><button class="ib" id="vsv" style="position:absolute;top:calc(8px + env(safe-area-inset-top));right:8px;color:#fff;background:rgba(0,0,0,.45);z-index:2">'+ic("download")+'</button>';
   $("#app").appendChild(v);var im=v.firstChild,sc=1,tx=0,ty=0,d0=0,s0=1,lx=0,ly=0,lt=0;
   function ap(){im.style.transform="translate(calc(-50% + "+tx+"px),calc(-50% + "+ty+"px)) scale("+sc+")"}
   function dist(e){return Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)}
-  v.querySelector("button").onclick=function(){v.remove()};
+  v.querySelector("button").onclick=function(){v.remove()};v.querySelector("#vsv").onclick=function(e){e.stopPropagation();dlData(src,"photo_"+Date.now()+"."+dlExt(src))};
   v.addEventListener("touchstart",function(e){if(e.touches.length===2){d0=dist(e);s0=sc}else{lx=e.touches[0].clientX;ly=e.touches[0].clientY;var n=Date.now();if(n-lt<300){sc=sc>1?1:2.5;tx=ty=0;ap()}lt=n}},{passive:true});
   v.addEventListener("touchmove",function(e){if(e.touches.length===2){sc=Math.max(1,Math.min(6,s0*dist(e)/d0));ap()}else if(sc>1){tx+=e.touches[0].clientX-lx;ty+=e.touches[0].clientY-ly;lx=e.touches[0].clientX;ly=e.touches[0].clientY;ap()}},{passive:true});
   v.addEventListener("click",function(e){if(e.target===v&&sc===1)v.remove()})}
@@ -1100,6 +1116,63 @@ function blockLbl(){var c=chat(S.open);return c&&iBlock(c)?"Разблокиро
 function toggleBlock(){var c=chat(S.open),b=iBlock(c);db.ref("users/"+ME.uid+"/blocked/"+c.peer).set(b?null:true).then(function(){S.me.blocked=S.me.blocked||{};if(b)delete S.me.blocked[c.peer];else S.me.blocked[c.peer]=true;renderMsgs(1);toast(b?"Разблокирован":"Заблокирован")}).catch(dberr)}
 function reportDlg(){var c=chat(S.open);dialog.ph="Причина";dialog("Пожаловаться","Опишите причину жалобы","","Отправить",function(v){db.ref("reports").push({from:ME.uid,peer:c.peer,cid:c.id,reason:v,t:TS}).then(function(){toast("Жалоба отправлена")}).catch(dberr)})}
 
+
+/* ===== сохранение медиа ===== */
+I.download="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z";
+I.shield="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 15l-4-4 1.41-1.41L11 13.17l5.59-5.59L18 9l-7 7z";
+function dlExt(d){var m=/^data:([^;,]+)/.exec(d||""),t=m?m[1]:"",M={"image/jpeg":"jpg","image/png":"png","image/gif":"gif","image/webp":"webp","video/webm":"webm","video/mp4":"mp4","audio/webm":"webm","audio/ogg":"ogg","audio/mpeg":"mp3","audio/mp4":"m4a","audio/wav":"wav"};return M[t]||(t.split("/")[1]||"bin")}
+function dlData(d,name){
+  if(window.Android&&Android.saveFile){Android.saveFile(name,d);toast("Сохранено: "+name);return}
+  var a=document.createElement("a");a.download=name;a.style.display="none";document.body.appendChild(a);
+  try{var i=d.indexOf(","),mime=d.slice(5,i).split(";")[0],bin=atob(d.slice(i+1)),u=new Uint8Array(bin.length);for(var k=0;k<bin.length;k++)u[k]=bin.charCodeAt(k);
+    a.href=URL.createObjectURL(new Blob([u],{type:mime}));a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},4000)}
+  catch(e){a.href=d;a.click();a.remove()}
+  toast("Сохранено: "+name)}
+function saveMedia(id){var m=findMsg(id);if(!m)return;var t=Date.now();
+  if(m.img)return dlData(m.img,"photo_"+t+"."+dlExt(m.img));
+  if(m.imgs){m.imgs.forEach(function(x,i){setTimeout(function(){dlData(x,"photo_"+t+"_"+(i+1)+"."+dlExt(x))},i*400)});return}
+  if(m.voice&&m.audio)return dlData(m.audio,"voice_"+t+"."+dlExt(m.audio));
+  if(m.file&&m.mid){var go=function(d){dlData(d,m.file.n||("file_"+t+"."+dlExt(d)))};
+    if(MC[m.mid])return go(MC[m.mid]);toast("Загрузка…");
+    db.ref("media/"+m.mid).once("value").then(function(x){var d=x.val();if(!d)return toast("Файл недоступен");MC[m.mid]=d;go(d)}).catch(dberr)}}
+
+/* ===== бан и админ-панель ===== */
+var BANR=null,banEl=null,AD={tab:"u",users:[],bans:{},mail:{},reports:[],q:"",ok:0};
+function showBan(b){if(banEl)return;banEl=document.createElement("div");
+  banEl.style.cssText="position:fixed;left:0;top:0;right:0;bottom:0;z-index:9999;background:var(--s);color:var(--os);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px;gap:14px;font-family:inherit";
+  banEl.innerHTML='<div style="width:96px;height:96px;border-radius:50%;background:var(--tc);color:var(--ontc);display:flex;align-items:center;justify-content:center">'+ic("lock",44)+'</div><h2 style="font-weight:500">Аккаунт заблокирован</h2><p style="color:var(--osv);line-height:1.4">'+esc(b.reason||"Нарушение правил")+'</p><button class="tb f" onclick="banOut()">Выйти</button>';
+  document.body.appendChild(banEl)}
+function hideBan(){if(banEl){banEl.remove();banEl=null}}
+function banOut(){hideBan();logout()}
+function adminPage(){AD.tab="u";AD.q="";AD.ok=0;adminRender();
+  Promise.all([db.ref("userIndex").once("value"),db.ref("bans").once("value"),db.ref("userPrivate").once("value"),db.ref("reports").limitToLast(200).once("value")]).then(function(r){
+    var m={};r[0].forEach(function(x){var v=x.val()||{};m[x.key]={id:x.key,name:v.name||"Без имени",un:v.username||"",t:v.t||0}});
+    AD.mail={};var pv=r[2].val()||{};Object.keys(pv).forEach(function(k){AD.mail[k]=(pv[k]||{}).email||"";if(!m[k])m[k]={id:k,name:"Без имени",un:"",t:0}});
+    AD.users=Object.keys(m).map(function(k){return m[k]}).sort(function(a,b){return b.t-a.t||a.name.localeCompare(b.name)});
+    AD.bans=r[1].val()||{};AD.reports=[];r[3].forEach(function(x){var v=x.val()||{};v.id=x.key;AD.reports.push(v)});AD.reports.reverse();
+    AD.ok=1;adminRender()}).catch(function(e){dberr(e);$("#adl").innerHTML='<div class="empty">Нет доступа. Проверьте, что ваш UID добавлен в admins и правила Firebase обновлены.</div>'})}
+function adminTab(t){AD.tab=t;adminRender()}
+function adminRender(){
+  page("Админ-панель",'<div class="seg" style="margin:8px 16px"><button class="'+(AD.tab==="u"?"on":"")+'" onclick="adminTab(\'u\')">Пользователи'+(AD.ok?" ("+AD.users.length+")":"")+'</button><button class="'+(AD.tab==="r"?"on":"")+'" onclick="adminTab(\'r\')">Жалобы'+(AD.ok?" ("+AD.reports.length+")":"")+'</button></div>'+
+   (AD.tab==="u"?'<div class="field" style="margin:8px 16px"><input id="adq" placeholder="Поиск: имя, @username, email" value="'+esc(AD.q)+'" oninput="AD.q=this.value;adminList()"></div>':"")+'<div id="adl"></div>');
+  adminList()}
+function adName(id){for(var i=0;i<AD.users.length;i++)if(AD.users[i].id===id)return AD.users[i].name+(AD.users[i].un?" @"+AD.users[i].un:"");return id}
+function adminList(){var el=$("#adl");if(!el)return;if(!AD.ok){el.innerHTML='<div class="empty">Загрузка…</div>';return}
+  var h="";
+  if(AD.tab==="u"){var q=AD.q.trim().toLowerCase().replace(/^@/,"");
+    AD.users.forEach(function(u){var em=AD.mail[u.id]||"";if(q&&(u.name+" "+u.un+" "+em+" "+u.id).toLowerCase().indexOf(q)<0)return;
+      var b=AD.bans[u.id];
+      h+='<div class="row" style="padding:8px 16px"><div class="av" style="--h:'+hueOf(u.id)+'">'+esc(initials(u.name))+'</div><div class="t" style="min-width:0;overflow:hidden;text-overflow:ellipsis">'+esc(u.name)+(b?' <span style="color:#d93025">· заблокирован</span>':"")+'<small>'+(u.un?"@"+esc(u.un)+" · ":"")+esc(em||u.id)+(b&&b.reason?" · "+esc(b.reason):"")+'</small></div><button class="tb'+(b?"":" f")+'" onclick="adminBan(\''+u.id+'\')">'+(b?"Разблок.":"Блок")+'</button></div>'});
+    if(!h)h='<div class="empty">Никого не найдено</div>'}
+  else{AD.reports.forEach(function(r){var b=AD.bans[r.peer];
+      h+='<div class="card"><div style="font-weight:500">'+esc(adName(r.from))+' → '+esc(adName(r.peer))+(b?' <span style="color:#d93025">· заблокирован</span>':"")+'</div><div style="margin:6px 0;line-height:1.4">'+esc(r.reason||"Без причины")+'</div><small style="color:var(--osv)">'+(r.t?new Date(r.t).toLocaleString("ru-RU"):"")+'</small><div style="display:flex;gap:8px;margin-top:10px"><button class="tb'+(b?"":" f")+'" onclick="adminBan(\''+r.peer+'\')">'+(b?"Разблокировать":"Заблокировать")+'</button><button class="tb" onclick="adminDelRep(\''+r.id+'\')">Закрыть</button></div></div>'});
+    if(!h)h='<div class="empty">Жалоб нет</div>'}
+  el.innerHTML=h}
+function adminBan(uid){if(!uid)return;if(uid===ME.uid)return toast("Нельзя заблокировать себя");
+  if(AD.bans[uid])return dialog("Разблокировать?",esc(adName(uid)),null,"Разблокировать",function(){db.ref("bans/"+uid).remove().then(function(){delete AD.bans[uid];adminList();toast("Разблокирован")}).catch(dberr)});
+  dialog.ph="Причина";dialog.opt=1;dialog("Заблокировать?",esc(adName(uid)),"","Заблокировать",function(v){var b={reason:v||"Нарушение правил",t:TS,by:ME.uid};db.ref("bans/"+uid).set(b).then(function(){AD.bans[uid]={reason:b.reason};adminList();toast("Заблокирован")}).catch(dberr)})}
+function adminDelRep(id){db.ref("reports/"+id).remove().then(function(){AD.reports=AD.reports.filter(function(r){return r.id!==id});adminList()}).catch(dberr)}
+
 /* boot */
 applyTheme();applyLang();
 if(typeof firebase==="undefined"){showLogin("load");$("#login p").textContent="Не удалось загрузить Firebase SDK. Проверьте интернет."}
@@ -1108,7 +1181,7 @@ else{
   auth=firebase.auth();db=firebase.database();TS=firebase.database.ServerValue.TIMESTAMP;auth.languageCode=S.lang;
   showLogin("load");
   auth.onAuthStateChanged(function(u){
-    if(!u){ME=null;showLogin("auth");return}
+    if(!u){ME=null;hideBan();showLogin("auth");return}
     showLogin("load");
     db.ref("users/"+u.uid).once("value").then(function(sn){
       var p=sn.val();
