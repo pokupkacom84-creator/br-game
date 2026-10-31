@@ -411,10 +411,10 @@ function dialog(title,text,field,ok,cb){
   if(field!==null&&field!==undefined)setTimeout(function(){var f=$("#dfield");f&&f.focus()},250);
 }
 function dlgOk(){var f=$("#dfield"),v=f?f.value.trim():null,cb=dlgCb;if(f&&!v)return;closeAll();cb&&cb(v)}
-function newChatDlg(){dialog.ph="+7 900 123-45-67";dialog("Новый чат","Введите номер телефона собеседника","","Начать",function(v){
-  var d=normPhone(v);if(!d){toast("Неверный номер");return}
-  if(d===ME.phone.replace(/\D/g,"")){openChat(cidOf(ME.uid,ME.uid));return}
-  db.ref("phones/"+d).once("value").then(function(sn){var u=sn.val();if(!u){toast("Пользователь не найден");return}
+function newChatDlg(){dialog.ph="email@example.com";dialog("Новый чат","Введите email собеседника (он должен быть зарегистрирован)","","Начать",function(v){
+  v=v.trim();if(!/^\S+@\S+\.\S+$/.test(v)){toast("Неверный email");return}
+  if(ekey(v)===ekey(ME.email)){openChat(cidOf(ME.uid,ME.uid));return}
+  db.ref("emails/"+ekey(v)).once("value").then(function(sn){var u=sn.val();if(!u){toast("Пользователь не найден");return}
     var cid=cidOf(ME.uid,u);return db.ref("userChats/"+ME.uid+"/"+cid+"/peer").set(u).then(function(){var t=0;(function w(){if(chat(cid)||t++>30){S.tab="chats";renderMain();openChat(cid)}else setTimeout(w,100)})()})}).catch(dberr)})}
 function renameDlg(){dialog.ph="Имя";dialog("Ваше имя","",S.name,"Сохранить",function(n){S.name=n;db.ref("users/"+ME.uid+"/name").set(n).catch(dberr);renderSettings()})}
 function resetDlg(){dialog("Выйти из аккаунта?","Вы сможете войти снова по номеру телефона.",null,"Выйти",function(){logout()})}
@@ -579,44 +579,54 @@ function cidOf(a,b){return [a,b].sort().join("_")}
 function normPhone(v){var d=String(v).replace(/\D/g,"");if(d.length===11&&d[0]==="8")d="7"+d.slice(1);else if(d.length===10)d="7"+d;return d.length>=8&&d.length<=15?d:null}
 function plain(m){return m.voice?"🎤 Голосовое":m.img?"🖼 Фото":m.text}
 
-/* login UI */
-function showLogin(step){
+/* login UI (email + пароль) */
+var LM="in";
+function ekey(e){return String(e).trim().toLowerCase().replace(/\./g,",")}
+function showLogin(step,mode){
+  if(mode)LM=mode;
   var el=$("#login");el.style.display="flex";
-  var h='<div class="auth"><div class="big">'+ic("chat",44)+'</div><h2>Telegram You</h2>',bt="";
-  if(step==="phone"){bt="Получить код";h+='<p>Введите номер телефона — мы отправим код в SMS</p><div class="afield"><input id="ph" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 900 123-45-67" onkeydown="if(event.keyCode===13)sendCode()"></div>'}
-  else if(step==="code"){bt="Войти";h+='<p>Код отправлен на '+esc(PHN)+'</p><div class="afield"><input id="cd" type="tel" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000" onkeydown="if(event.keyCode===13)confirmCode()"></div>'}
-  else if(step==="name"){bt="Продолжить";h+='<p>Как вас зовут? Это имя увидят собеседники</p><div class="afield"><input id="nm" maxlength="30" placeholder="Имя" onkeydown="if(event.keyCode===13)saveName()"></div>'}
+  var up=LM==="up",h='<div class="auth"><div class="big">'+ic("chat",44)+'</div><h2>Telegram You</h2>',bt="",fn="";
+  if(step==="auth"){
+    bt=up?"Зарегистрироваться":"Войти";fn="doAuth";
+    h+='<p>'+(up?"Создайте аккаунт по email":"Войдите по email и паролю")+'</p><div class="afield"><input id="em" type="email" inputmode="email" autocomplete="email" placeholder="Email" onkeydown="if(event.keyCode===13)doAuth()"></div><div class="afield"><input id="pw" type="password" autocomplete="'+(up?"new-password":"current-password")+'" placeholder="Пароль (мин. 6 символов)" onkeydown="if(event.keyCode===13)doAuth()"></div>';
+  }else if(step==="name"){bt="Продолжить";fn="saveName";h+='<p>Как вас зовут? Это имя увидят собеседники</p><div class="afield"><input id="nm" maxlength="30" placeholder="Имя" onkeydown="if(event.keyCode===13)saveName()"></div>'}
   else h+='<p>Загрузка…</p>';
-  if(bt)h+='<button class="tb f aw" id="ab" data-t="'+bt+'" onclick="'+({phone:"sendCode",code:"confirmCode",name:"saveName"})[step]+'()">'+bt+'</button>';
-  if(step==="code")h+='<button class="tb alink" onclick="showLogin(\'phone\')">Изменить номер</button>';
+  if(bt)h+='<button class="tb f aw" id="ab" data-t="'+bt+'" onclick="'+fn+'()">'+bt+'</button>';
+  if(step==="auth"){
+    h+='<button class="tb alink" onclick="showLogin(\'auth\',\''+(up?"in":"up")+'\')">'+(up?"Уже есть аккаунт? Войти":"Создать аккаунт")+'</button>';
+    if(!up)h+='<br><button class="tb alink" onclick="resetPass()">Забыли пароль?</button>';
+  }
+  if(step==="name")h+='<br><button class="tb alink" onclick="auth.signOut()">Выйти</button>';
   el.innerHTML=h+'<div class="aerr" id="aerr"></div></div>';
   var f=el.querySelector("input");if(f)setTimeout(function(){f.focus()},100);
 }
 function aerr(e){
-  var M={"auth/invalid-phone-number":"Неверный номер телефона","auth/too-many-requests":"Слишком много попыток, попробуйте позже","auth/invalid-verification-code":"Неверный код","auth/code-expired":"Код истёк, запросите новый","auth/captcha-check-failed":"Проверка reCAPTCHA не пройдена","auth/unauthorized-domain":"Домен не добавлен в Authorized domains (Firebase Console → Authentication → Settings)","auth/operation-not-allowed":"Вход по телефону не включён в Firebase Console","auth/billing-not-enabled":"Для SMS нужен тариф Blaze — или добавьте тестовые номера в консоли"};
-  var el=$("#aerr");if(el)el.textContent=M[e&&e.code]||(e&&e.message)||"Ошибка";
+  var M={"auth/invalid-email":"Неверный адрес email","auth/weak-password":"Пароль должен быть не короче 6 символов","auth/email-already-in-use":"Этот email уже зарегистрирован — нажмите «Войти»","auth/user-not-found":"Аккаунт не найден","auth/wrong-password":"Неверный пароль","auth/invalid-credential":"Неверный email или пароль","auth/too-many-requests":"Слишком много попыток, попробуйте позже","auth/network-request-failed":"Нет соединения с сетью","auth/operation-not-allowed":"Вход по Email/Password не включён в Firebase Console","auth/unauthorized-domain":"Домен не добавлен в Authorized domains (Firebase Console → Authentication → Settings)"};
+  var el=$("#aerr");if(el){el.style.color="";el.textContent=M[e&&e.code]||(e&&e.message)||"Ошибка"}
   var b=$("#ab");if(b){b.disabled=false;b.textContent=b.dataset.t}
 }
-function busy(t){var b=$("#ab");if(b){b.disabled=true;b.textContent=t}var e=$("#aerr");if(e)e.textContent=""}
-function sendCode(){
-  var d=normPhone($("#ph").value);if(!d)return aerr({code:"auth/invalid-phone-number"});
-  if(location.protocol==="file:")return aerr({message:"Phone Auth не работает с file://. Откройте страницу через https (Firebase Hosting) или http://localhost"});
-  PHN="+"+d;busy("Отправка…");
-  try{if(rv)rv.clear()}catch(e){}
-  $("#rc").innerHTML="";
-  rv=new firebase.auth.RecaptchaVerifier("rc",{size:"invisible"});
-  auth.signInWithPhoneNumber(PHN,rv).then(function(r){CR=r;showLogin("code")}).catch(aerr);
+function busy(t){var b=$("#ab");if(b){b.disabled=true;b.textContent=t}var e=$("#aerr");if(e){e.style.color="";e.textContent=""}}
+function doAuth(){
+  var e=$("#em").value.trim(),p=$("#pw").value;
+  if(!/^\S+@\S+\.\S+$/.test(e))return aerr({code:"auth/invalid-email"});
+  if(p.length<6)return aerr({code:"auth/weak-password"});
+  busy("Подождите…");
+  (LM==="up"?auth.createUserWithEmailAndPassword(e,p):auth.signInWithEmailAndPassword(e,p)).catch(aerr);
 }
-function confirmCode(){var c=$("#cd").value.trim();if(c.length<6)return aerr({code:"auth/invalid-verification-code"});busy("Проверка…");CR.confirm(c).catch(aerr)}
+function resetPass(){
+  var e=$("#em").value.trim();
+  if(!/^\S+@\S+\.\S+$/.test(e))return aerr({message:"Введите email и снова нажмите «Забыли пароль?»"});
+  auth.sendPasswordResetEmail(e).then(function(){var x=$("#aerr");x.style.color="var(--p)";x.textContent="Письмо для сброса пароля отправлено"}).catch(aerr);
+}
 function saveName(){
   var n=$("#nm").value.trim().slice(0,30);if(!n)return;busy("Сохранение…");
-  var up={};up["users/"+ME.uid]={name:n,phone:ME.phone,online:true};up["phones/"+ME.phone.replace(/\D/g,"")]=ME.uid;
+  var up={};up["users/"+ME.uid]={name:n,email:ME.email,online:true};up["emails/"+ekey(ME.email)]=ME.uid;
   db.ref().update(up).then(function(){startApp(auth.currentUser,{name:n})}).catch(aerr);
 }
 
 /* session */
 function startApp(u,p){
-  ME={uid:u.uid,name:p.name,phone:u.phoneNumber};S.name=ME.name;S.phone=ME.phone;S.chats=[];S.tab="chats";S.open=null;
+  ME={uid:u.uid,name:p.name,email:u.email};S.name=ME.name;S.phone=ME.email;S.chats=[];S.tab="chats";S.open=null;
   $("#login").style.display="none";renderMain();
   var pr=db.ref("users/"+ME.uid);
   db.ref(".info/connected").on("value",function(s){if(s.val()){pr.child("online").onDisconnect().set(false);pr.child("last").onDisconnect().set(TS);pr.child("online").set(true)}});
@@ -654,7 +664,7 @@ function watchChat(c){
   var rd=db.ref("chats/"+c.id+"/read");rd.on("value",function(s){c.reads=s.val()||{};if(c.ready)refresh(c)},dberr);
   c.refs=[q,rd];
   if(c.type==="user"){
-    var u=db.ref("users/"+c.peer);u.on("value",function(s){var x=s.val()||{};c.name=x.name||x.phone||"Пользователь";c.online=!!x.online;if(S.open===c.id)renderChatHdr();softMain()},dberr);
+    var u=db.ref("users/"+c.peer);u.on("value",function(s){var x=s.val()||{};c.name=x.name||x.email||"Пользователь";c.online=!!x.online;if(S.open===c.id)renderChatHdr();softMain()},dberr);
     var t=db.ref("chats/"+c.id+"/typing/"+c.peer);t.on("value",function(s){c.typing=!!s.val();if(S.open===c.id)renderChatHdr();softMain()},dberr);
     c.refs.push(u,t);
   }
@@ -688,13 +698,13 @@ else{
   auth=firebase.auth();db=firebase.database();TS=firebase.database.ServerValue.TIMESTAMP;auth.languageCode="ru";
   showLogin("load");
   auth.onAuthStateChanged(function(u){
-    if(!u){ME=null;showLogin("phone");return}
+    if(!u){ME=null;showLogin("auth");return}
     showLogin("load");
     db.ref("users/"+u.uid).once("value").then(function(sn){
       var p=sn.val();
-      if(!p){ME={uid:u.uid,phone:u.phoneNumber};showLogin("name");return}
+      if(!p){ME={uid:u.uid,email:u.email};showLogin("name");return}
       startApp(u,p);
-    }).catch(function(e){showLogin("phone");aerr(e)});
+    }).catch(function(e){showLogin("auth");aerr(e)});
   });
 }
 </script>
