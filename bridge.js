@@ -82,6 +82,9 @@ function loginHtml(step, info) {
   let h = '<div class="auth"><div class="big">' + (img ? '<img src="' + img + '" alt="">' : "") + "</div><h2>Telegram You</h2><p>" + T[0] + "</p>";
   h += '<div class="afield"><input id="tgi" ' + (step === "password" ? 'type="password"' : "") + ' inputmode="' + T[3] + '" placeholder="' + T[2] + '" autocomplete="off"></div>';
   h += '<button class="tb f aw" id="tgb">Далее</button>';
+  if (step === "phone") {
+    h += '<button class="tb aw" id="tgqr" style="margin-top:8px">Войти без кода (через приложение Telegram)</button>';
+  }
   if (step === "code") {
     h += '<button class="tb aw" id="tgr" style="margin-top:8px">Отправить код повторно' + (info.next ? " (" + (NEXT[info.next] || "") + ")" : "") + "</button>";
     h += '<button class="tb aw" id="tgback" style="margin-top:4px">Другой номер</button>';
@@ -105,6 +108,8 @@ function ask(step, err, info) {
     inp.onkeydown = (e) => { if (e.keyCode === 13) go(); };
     if (rb) rb.onclick = () => { rb.disabled = true; rb.textContent = "…"; res({ resend: true }); };
     if (bb) bb.onclick = () => res({ back: true });
+    const qb = $("#tgqr");
+    if (qb) qb.onclick = () => res({ qr: true });
     setTimeout(() => inp.focus(), 100);
   });
 }
@@ -127,6 +132,43 @@ async function signInPassword(A) {
   }
 }
 
+function b64url(buf) {
+  return buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+// Вход без кода: открываем tg://login?token=... в приложении Telegram и подтверждаем вход там
+async function qrLogin(A) {
+  const el = $("#login");
+  el.style.display = "flex";
+  el.innerHTML = '<div class="auth"><h2>Telegram You</h2>' +
+    "<p>Нажмите кнопку. Откроется Telegram и спросит, подтвердить ли вход. Нажмите «Подтвердить», потом вернитесь сюда.</p>" +
+    '<button class="tb f aw" id="tgq">Открыть Telegram</button>' +
+    '<button class="tb aw" id="tgqback" style="margin-top:8px">Назад</button>' +
+    '<div id="tgqt" style="user-select:all;word-break:break-all;font-size:10px;opacity:.5;margin-top:12px;text-align:left"></div>' +
+    '<div id="tgst" style="white-space:pre-wrap;font-size:11px;opacity:.6;margin-top:12px;text-align:left"></div>' +
+    '<div class="aerr" id="aerr"></div></div>';
+  let link = "", pwErr = "", qerr = null, cancelled = false;
+  $("#tgq").onclick = () => { if (link) location.href = link; };
+  $("#tgqback").onclick = () => { cancelled = true; location.reload(); };
+  dbg("вход через приложение: ждём токен…");
+  try {
+    await client.signInUserWithQrCode(A, {
+      qrCode: async ({ token }) => {
+        link = "tg://login?token=" + b64url(token);
+        const t = $("#tgqt"); if (t) t.textContent = link;
+        dbg("токен получен, жмите «Открыть Telegram»");
+      },
+      password: async () => (await ask("password", pwErr)).v,
+      onError: async (e) => {
+        const m = String((e && e.errorMessage) || (e && e.message) || e);
+        if (m === "PASSWORD_HASH_INVALID") { pwErr = ERR[m]; return false; }
+        qerr = e; return true;
+      },
+    });
+  } catch (e) { throw qerr || e; }
+  if (cancelled) throw new Error("Отменено");
+}
+
 async function connect() {
   const saved = localStorage.getItem(SKEY) || "";
   client = new TelegramClient(new StringSession(saved), API_ID, API_HASH, { connectionRetries: 5, useWSS: true });
@@ -147,8 +189,11 @@ async function connect() {
       // шаг 1: номер + отправка кода
       let phone, hash, info;
       while (true) {
-        const { v } = await ask("phone", err); err = "";
-        phone = cleanPhone(v);
+        const a0 = await ask("phone", err); err = "";
+        if (a0.qr) {
+          try { await qrLogin(A); break outer; } catch (e) { err = tr(e); continue; }
+        }
+        phone = cleanPhone(a0.v);
         dbg("запрос кода на " + phone + "…");
         try {
           const r = await client.sendCode(A, phone);
