@@ -261,6 +261,48 @@ async function connect() {
   localStorage.setItem(SKEY, client.session.save());
 }
 
+/* ---------- локальная «база» профиля в режиме Telegram ----------
+   В режиме Telegram нет входа в Firebase (auth = null), поэтому любая запись
+   в Firebase даёт permission denied. Подменяем db на локальное хранилище. */
+const LKEY = "tgyou_local_db";
+let LDB = null;
+function mkLocalDb() {
+  let tree = {};
+  try { tree = JSON.parse(localStorage.getItem(LKEY) || "{}") || {}; } catch (e) {}
+  const keys = (p) => String(p || "").split("/").filter(Boolean);
+  const get = (p) => keys(p).reduce((o, k) => (o == null || typeof o !== "object" ? undefined : o[k]), tree);
+  const save = () => { try { localStorage.setItem(LKEY, JSON.stringify(tree)); } catch (e) { W.toast("Не хватает памяти для сохранения"); } };
+  const put = (p, v) => {
+    const ks = keys(p); if (!ks.length) return;
+    let o = tree;
+    for (let i = 0; i < ks.length - 1; i++) { if (o[ks[i]] == null || typeof o[ks[i]] !== "object") o[ks[i]] = {}; o = o[ks[i]]; }
+    if (v == null) delete o[ks[ks.length - 1]]; else o[ks[ks.length - 1]] = v;
+  };
+  const snap = (p) => { const v = get(p); return { val: () => (v === undefined ? null : v), exists: () => v !== undefined }; };
+  const ref = (p) => {
+    p = p || "";
+    const r = {
+      key: keys(p).pop() || null,
+      child: (c) => ref(p + "/" + c),
+      set: (v) => { put(p, v); save(); return Promise.resolve(); },
+      update: (u) => { Object.keys(u || {}).forEach((k) => put(p + "/" + k, u[k])); save(); return Promise.resolve(); },
+      remove: () => { put(p, null); save(); return Promise.resolve(); },
+      once: () => Promise.resolve(snap(p)),
+      on: () => {}, off: () => {},
+      push: () => ref(p + "/" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+      transaction: (fn) => {
+        const cur = get(p); const nv = fn(cur === undefined ? null : cur);
+        if (nv !== undefined) { put(p, nv); save(); }
+        return Promise.resolve({ committed: nv !== undefined, snapshot: snap(p) });
+      },
+      onDisconnect: () => ({ set: () => Promise.resolve(), remove: () => Promise.resolve() }),
+    };
+    r.limitToLast = () => r;
+    return r;
+  };
+  return { ref, val: (p) => { const v = get(p); return v === undefined ? null : v; } };
+}
+
 /* ---------- конвертация данных Telegram -> формат приложения ---------- */
 function kindOf(d) {
   if (d.isUser) return d.entity && d.entity.bot ? "bot" : "user";
@@ -366,13 +408,18 @@ async function startTG() {
   TGME = W.ME;
   W.S.name = name;
   W.S.phone = W.ME.email;
-  W.S.me = { name, username: me.username || "", bio: "", priv: {}, blocked: {} };
-  W.S.cover = null; W.S.tab = "chats"; W.S.open = null; W.S.chats = [];
+  LDB = LDB || mkLocalDb();
+  W.db = LDB; // профиль, аватар и фон хранятся локально, без Firebase
+  const lu = LDB.val("users/me") || {};
+  W.S.me = { name: lu.name || name, username: lu.username || me.username || "", bio: lu.bio || "", bday: lu.bday || null, priv: lu.priv || {}, blocked: lu.blocked || {} };
+  if (lu.avatar) W.S.me.avatar = lu.avatar;
+  W.S.name = W.S.me.name;
+  W.S.cover = LDB.val("covers/me") || null; W.S.tab = "chats"; W.S.open = null; W.S.chats = [];
   W.S.admin = false;
   $("#login").style.display = "none";
   W.renderMain();
   client.downloadProfilePhoto("me", { isBig: false }).then((b) => {
-    if (b && b.length) { W.S.me.avatar = "data:image/jpeg;base64," + btoa(String.fromCharCode(...new Uint8Array(b))); W.refreshMe(); }
+    if (b && b.length && !W.S.me.avatar) { W.S.me.avatar = "data:image/jpeg;base64," + btoa(String.fromCharCode(...new Uint8Array(b))); W.refreshMe(); }
   }).catch(() => {});
   try { await loadDialogs(); } catch (e) { console.error("[TG] dialogs", e); W.toast("Не удалось загрузить чаты"); }
   hookEvents();
@@ -569,7 +616,7 @@ function patch() {
     if (!TGM) return O.logout();
     W.closeChat();
     client.invoke(new Api.auth.LogOut()).catch(() => {}).finally(() => {
-      localStorage.removeItem(SKEY); location.reload();
+      localStorage.removeItem(SKEY); localStorage.removeItem(LKEY); location.reload();
     });
   };
 
