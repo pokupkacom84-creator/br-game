@@ -3,7 +3,6 @@ import { StringSession } from "telegram/sessions";
 import { NewMessage } from "telegram/events";
 import { EditedMessage } from "telegram/events/EditedMessage";
 import { DeletedMessage } from "telegram/events/DeletedMessage";
-import qrcode from "qrcode-generator";
 
 const API_ID = 37903917;
 const API_HASH = "4e2c9b6a239fefd89a6749fde0f39aad";
@@ -133,8 +132,20 @@ async function signInPassword(A) {
   }
 }
 
-function qrSvg(text) {
-  const q = qrcode(0, "M"); q.addData(text); q.make();
+// библиотека QR подгружается только когда нужна, чтобы её сбой не ломал остальное
+function loadQr() {
+  if (W.qrcode) return Promise.resolve(W.qrcode);
+  return new Promise((res, rej) => {
+    const sc = document.createElement("script");
+    sc.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js";
+    sc.onload = () => (W.qrcode ? res(W.qrcode) : rej(new Error("библиотека QR не найдена")));
+    sc.onerror = () => rej(new Error("не удалось загрузить библиотеку QR"));
+    document.head.appendChild(sc);
+  });
+}
+
+function qrSvg(lib, text) {
+  const q = lib(0, "M"); q.addData(text); q.make();
   const n = q.getModuleCount(), m = 4;
   let d = "";
   for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) d += "M" + (c + m) + " " + (r + m) + "h1v1h-1z";
@@ -165,8 +176,10 @@ async function qrLogin(A) {
       qrCode: async ({ token }) => {
         link = "tg://login?token=" + b64url(token);
         const t = $("#tgqt"); if (t) t.textContent = link;
-        const box = $("#tgqr"); if (box) box.innerHTML = qrSvg(link);
-        dbg("QR обновлён, сканируйте");
+        loadQr().then((lib) => {
+          const box = $("#tgqr"); if (box) box.innerHTML = qrSvg(lib, link);
+          dbg("QR обновлён, сканируйте");
+        }).catch((e) => dbg("ОШИБКА QR: " + e.message));
       },
       password: async () => (await ask("password", pwErr)).v,
       onError: async (e) => {
