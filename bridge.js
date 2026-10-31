@@ -3,6 +3,7 @@ import { StringSession } from "telegram/sessions";
 import { NewMessage } from "telegram/events";
 import { EditedMessage } from "telegram/events/EditedMessage";
 import { DeletedMessage } from "telegram/events/DeletedMessage";
+import qrcode from "qrcode-generator";
 
 const API_ID = 37903917;
 const API_HASH = "4e2c9b6a239fefd89a6749fde0f39aad";
@@ -132,6 +133,15 @@ async function signInPassword(A) {
   }
 }
 
+function qrSvg(text) {
+  const q = qrcode(0, "M"); q.addData(text); q.make();
+  const n = q.getModuleCount(), m = 4;
+  let d = "";
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) d += "M" + (c + m) + " " + (r + m) + "h1v1h-1z";
+  const size = n + m * 2;
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + " " + size + '" shape-rendering="crispEdges" style="width:100%;max-width:280px;background:#fff;border-radius:12px"><path d="' + d + '" fill="#000"/></svg>';
+}
+
 function b64url(buf) {
   return buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
@@ -141,14 +151,13 @@ async function qrLogin(A) {
   const el = $("#login");
   el.style.display = "flex";
   el.innerHTML = '<div class="auth"><h2>Telegram You</h2>' +
-    "<p>Нажмите кнопку. Откроется Telegram и спросит, подтвердить ли вход. Нажмите «Подтвердить», потом вернитесь сюда.</p>" +
-    '<button class="tb f aw" id="tgq">Открыть Telegram</button>' +
+    "<p>Откройте этот сайт на другом экране (компьютер или второй телефон) и отсканируйте QR в Telegram: Настройки → Устройства → Сканировать QR.</p>" +
+    '<div id="tgqr" style="margin:12px auto;max-width:280px;min-height:120px"></div>' +
     '<button class="tb aw" id="tgqback" style="margin-top:8px">Назад</button>' +
-    '<div id="tgqt" style="user-select:all;word-break:break-all;font-size:10px;opacity:.5;margin-top:12px;text-align:left"></div>' +
+    '<div id="tgqt" style="user-select:all;word-break:break-all;font-size:10px;opacity:.4;margin-top:12px;text-align:left"></div>' +
     '<div id="tgst" style="white-space:pre-wrap;font-size:11px;opacity:.6;margin-top:12px;text-align:left"></div>' +
     '<div class="aerr" id="aerr"></div></div>';
   let link = "", pwErr = "", qerr = null, cancelled = false;
-  $("#tgq").onclick = () => { if (link) location.href = link; };
   $("#tgqback").onclick = () => { cancelled = true; location.reload(); };
   dbg("вход через приложение: ждём токен…");
   try {
@@ -156,7 +165,8 @@ async function qrLogin(A) {
       qrCode: async ({ token }) => {
         link = "tg://login?token=" + b64url(token);
         const t = $("#tgqt"); if (t) t.textContent = link;
-        dbg("токен получен, жмите «Открыть Telegram»");
+        const box = $("#tgqr"); if (box) box.innerHTML = qrSvg(link);
+        dbg("QR обновлён, сканируйте");
       },
       password: async () => (await ask("password", pwErr)).v,
       onError: async (e) => {
