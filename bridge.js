@@ -20,56 +20,156 @@ const sid = (x) => (x == null ? "" : String(x));
 const hue = (s) => { let h = 0; s = String(s); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; };
 
 /* ---------- экран входа ---------- */
-function loginHtml(step, err) {
+const ERR = {
+  PHONE_CODE_INVALID: "Неверный код",
+  PHONE_CODE_EXPIRED: "Код устарел, запросите новый",
+  PHONE_CODE_EMPTY: "Введите код",
+  PASSWORD_HASH_INVALID: "Неверный пароль",
+  PHONE_NUMBER_INVALID: "Неверный номер",
+  PHONE_NUMBER_BANNED: "Этот номер заблокирован в Telegram",
+  PHONE_NUMBER_FLOOD: "Слишком много запросов кода для этого номера. Подождите несколько часов",
+  PHONE_NUMBER_UNOCCUPIED: "Этот номер не зарегистрирован в Telegram",
+  API_ID_INVALID: "Неверные API ID / API HASH",
+  API_ID_PUBLISHED_FLOOD: "Ключ API временно заблокирован из-за лимитов. Нужен свой API ID",
+  SEND_CODE_UNAVAILABLE: "Telegram больше не может отправить код. Подождите и попробуйте позже",
+  FLOOD: "Слишком много попыток, подождите",
+};
+
+function tr(e) {
+  console.error("[TG login]", e);
+  if (e && e.seconds) return "Слишком много попыток. Подождите " + e.seconds + " сек.";
+  const m = String((e && e.errorMessage) || (e && e.message) || e);
+  return ERR[m] || m;
+}
+
+function typeName(t) {
+  const n = (t && (t.className || (t.constructor && t.constructor.name))) || "";
+  if (!n) return "";
+  if (/App/.test(n)) return "app";
+  if (/Sms/.test(n)) return "sms";
+  if (/FlashCall|MissedCall/.test(n)) return "flash";
+  if (/Call/.test(n)) return "call";
+  if (/Email/.test(n)) return "email";
+  return "other";
+}
+
+const HOW = {
+  app: "Код отправлен в приложение Telegram: откройте чат «Telegram» на устройстве, где вы уже вошли",
+  sms: "Код отправлен по SMS",
+  call: "Telegram позвонит и продиктует код",
+  flash: "Код — последние цифры номера входящего звонка",
+  email: "Код отправлен на вашу почту",
+  other: "Код отправлен. Проверьте приложение Telegram и SMS",
+};
+const NEXT = { app: "в приложение", sms: "по SMS", call: "звонком", flash: "звонком", email: "на почту", other: "другим способом" };
+
+function loginHtml(step, info) {
   const T = {
     phone: ["Введите номер телефона в международном формате", "phone", "+7 900 000 00 00", "tel"],
-    code: ["Код отправлен в приложение Telegram или по SMS", "code", "Код", "numeric"],
+    code: [HOW[info.type] || HOW.other, "code", "Код", "numeric"],
     password: ["Включена двухэтапная проверка. Введите пароль", "pw", "Пароль", "text"],
-    load: ["Подключение к Telegram…", null],
   }[step];
   const img = (document.querySelector("#login img") || {}).src || "";
   let h = '<div class="auth"><div class="big">' + (img ? '<img src="' + img + '" alt="">' : "") + "</div><h2>Telegram You</h2><p>" + T[0] + "</p>";
-  if (T[1]) {
-    h += '<div class="afield"><input id="tgi" ' + (step === "password" ? 'type="password"' : "") + ' inputmode="' + T[3] + '" placeholder="' + T[2] + '" autocomplete="off"></div>';
-    h += '<button class="tb f aw" id="tgb">Далее</button>';
+  h += '<div class="afield"><input id="tgi" ' + (step === "password" ? 'type="password"' : "") + ' inputmode="' + T[3] + '" placeholder="' + T[2] + '" autocomplete="off"></div>';
+  h += '<button class="tb f aw" id="tgb">Далее</button>';
+  if (step === "code") {
+    h += '<button class="tb aw" id="tgr" style="margin-top:8px">Отправить код повторно' + (info.next ? " (" + (NEXT[info.next] || "") + ")" : "") + "</button>";
+    h += '<button class="tb aw" id="tgback" style="margin-top:4px">Другой номер</button>';
   }
-  h += '<div class="aerr" id="aerr">' + (err || "") + "</div></div>";
+  h += '<div class="aerr" id="aerr"></div></div>';
   return h;
 }
 
-function ask(step, err) {
+// возвращает {v} (введённое значение) | {resend:true} | {back:true}
+function ask(step, err, info) {
   return new Promise((res) => {
     const el = $("#login");
     el.style.display = "flex";
-    el.innerHTML = loginHtml(step, err);
-    const inp = $("#tgi"), btn = $("#tgb");
-    const go = () => { const v = inp.value.trim(); if (!v) return; btn.disabled = true; btn.textContent = "…"; res(v); };
+    el.innerHTML = loginHtml(step, info || {});
+    $("#aerr").textContent = err || "";
+    const inp = $("#tgi"), btn = $("#tgb"), rb = $("#tgr"), bb = $("#tgback");
+    const go = () => { const v = inp.value.trim(); if (!v) return; btn.disabled = true; btn.textContent = "…"; res({ v }); };
     btn.onclick = go;
     inp.onkeydown = (e) => { if (e.keyCode === 13) go(); };
+    if (rb) rb.onclick = () => { rb.disabled = true; rb.textContent = "…"; res({ resend: true }); };
+    if (bb) bb.onclick = () => res({ back: true });
     setTimeout(() => inp.focus(), 100);
   });
+}
+
+function cleanPhone(raw) {
+  let d = raw.replace(/\D/g, "");
+  if (d.length === 11 && d[0] === "8") d = "7" + d.slice(1); // 8 900... -> +7 900...
+  return "+" + d;
+}
+
+async function signInPassword(A) {
+  let err = "";
+  while (true) {
+    const { v } = await ask("password", err);
+    let perr = null;
+    try {
+      await client.signInWithPassword(A, { password: async () => v, onError: async (e) => { perr = e; return true; } });
+      return;
+    } catch (e) { err = tr(perr || e); }
+  }
 }
 
 async function connect() {
   const saved = localStorage.getItem(SKEY) || "";
   client = new TelegramClient(new StringSession(saved), API_ID, API_HASH, { connectionRetries: 5, useWSS: true });
-  let lastErr = "";
-  await client.start({
-    phoneNumber: () => ask("phone", lastErr),
-    phoneCode: () => ask("code", lastErr),
-    password: () => ask("password", lastErr),
-    onError: (e) => {
-      const m = String((e && e.errorMessage) || (e && e.message) || e);
-      lastErr = ({
-        PHONE_CODE_INVALID: "Неверный код",
-        PHONE_CODE_EXPIRED: "Код устарел",
-        PASSWORD_HASH_INVALID: "Неверный пароль",
-        PHONE_NUMBER_INVALID: "Неверный номер",
-        FLOOD: "Слишком много попыток, подождите",
-      })[m] || m;
-      return false; // повторить шаг
-    },
-  });
+  await client.connect();
+
+  if (!(await client.checkAuthorization())) {
+    const A = { apiId: API_ID, apiHash: API_HASH };
+    let err = "";
+    outer: while (true) {
+      // шаг 1: номер + отправка кода
+      let phone, hash, info;
+      while (true) {
+        const { v } = await ask("phone", err); err = "";
+        phone = cleanPhone(v);
+        try {
+          const r = await client.sendCode(A, phone);
+          console.log("[TG login] sendCode:", r);
+          hash = r.phoneCodeHash;
+          info = { type: r.isCodeViaApp ? "app" : "sms", next: "" };
+          break;
+        } catch (e) { err = tr(e); }
+      }
+      // шаг 2: код / повтор / смена номера
+      while (true) {
+        const a = await ask("code", err, info); err = "";
+        if (a.back) continue outer;
+        if (a.resend) {
+          try {
+            const r = await client.invoke(new Api.auth.ResendCode({ phoneNumber: phone, phoneCodeHash: hash }));
+            console.log("[TG login] resend:", r);
+            hash = r.phoneCodeHash || hash;
+            info = { type: typeName(r.type) || "other", next: typeName(r.nextType) };
+            err = "Код отправлен повторно";
+          } catch (e) { err = tr(e); }
+          continue;
+        }
+        try {
+          const res = await client.invoke(new Api.auth.SignIn({ phoneNumber: phone, phoneCodeHash: hash, phoneCode: a.v }));
+          if (res && res.className === "auth.AuthorizationSignUpRequired") {
+            err = "Этот номер не зарегистрирован в Telegram. Сначала зарегистрируйтесь в официальном приложении";
+            continue outer;
+          }
+          break outer;
+        } catch (e) {
+          if (e && e.errorMessage === "SESSION_PASSWORD_NEEDED") {
+            await signInPassword(A);
+            break outer;
+          }
+          err = tr(e);
+          if (e && e.errorMessage === "PHONE_CODE_EXPIRED") info = { type: info.type, next: info.next };
+        }
+      }
+    }
+  }
   localStorage.setItem(SKEY, client.session.save());
 }
 
