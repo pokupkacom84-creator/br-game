@@ -11,6 +11,34 @@ const SKEY = "tgyou_mtproto_session";
 const AKEY = "tgyou_ayu";
 const W = window;
 
+/* =====================================================================
+   ПРОКСИ ДЛЯ ОБХОДА БЛОКИРОВОК
+   Все WebSocket-подключения gramjs к *.web.telegram.org (путь /apiws)
+   перенаправляются на ваш WebSocket-релей (см. relay-worker.js / relay-node.js).
+   ===================================================================== */
+const PKEY = "tgyou_proxy";
+const getProxy = () => { try { return (localStorage.getItem(PKEY) || "").trim(); } catch (e) { return ""; } };
+(function () {
+  const NativeWS = W.WebSocket;
+  if (!NativeWS || NativeWS.__tgProxy) return;
+  function PWS(url, protocols) {
+    const p = getProxy();
+    try {
+      const u = new URL(url);
+      if (p && (/(^|\.)web\.telegram\.org$/.test(u.hostname) || /\/apiws$/.test(u.pathname))) {
+        const b = new URL(p);
+        b.searchParams.set("h", u.hostname);
+        url = b.toString();
+      }
+    } catch (e) {}
+    return protocols !== undefined ? new NativeWS(url, protocols) : new NativeWS(url);
+  }
+  PWS.prototype = NativeWS.prototype;
+  ["CONNECTING", "OPEN", "CLOSING", "CLOSED"].forEach((k) => { PWS[k] = NativeWS[k]; });
+  PWS.__tgProxy = true;
+  W.WebSocket = PWS;
+})();
+
 let client = null;
 let TGM = false; // режим Telegram включён
 let TGME = null;
@@ -667,8 +695,18 @@ function ayuCard() {
     SWROW("keepDeleted", "del", "Сохранять удалённые", "Удалённые собеседником сообщения остаются с пометкой") +
     SWROW("keepEdits", "edit", "История изменений", "Хранить прежние версии отредактированных сообщений") +
     SWROW("keepMedia", "image", "Сохранять медиа", "Кэшировать фото и голосовые для удалённых сообщений") +
+    '<div class="row" style="padding:4px 0" onclick="AYU_proxy()"><div class="ico">' + W.ic("lock") + '</div><div class="t">Прокси<small>' + (getProxy() ? esc(getProxy()) : "Не настроен — обход блокировок") + '</small></div></div>' +
     '<div class="row" style="padding:4px 0" onclick="AYU_log()"><div class="ico">' + W.ic("file") + '</div><div class="t">Журнал удалённых<small>Все сохранённые удалённые сообщения</small></div></div></div>';
 }
+W.AYU_proxy = () => {
+  W.dialog.ph = "wss://relay.example.com/"; W.dialog.ml = 200; W.dialog.opt = 1;
+  W.dialog("Прокси (WebSocket-релей)", "Адрес вашего релея вида wss://… Пустое поле — без прокси. Приложение перезагрузится.", getProxy(), "Сохранить", (v) => {
+    v = (v || "").trim();
+    if (v && !/^wss?:\/\//i.test(v)) return toast("Адрес должен начинаться с wss://");
+    try { if (v) localStorage.setItem(PKEY, v); else localStorage.removeItem(PKEY); } catch (e) {}
+    location.reload();
+  });
+};
 W.AYU_t = (k) => {
   AYU[k] = !AYU[k]; saveAyu();
   if (k === "ghostOnline" && AYU[k]) setOffline();
@@ -744,6 +782,11 @@ function patch() {
       b.className = "tb f aw"; b.style.marginTop = "12px"; b.textContent = "Войти через Telegram";
       b.onclick = startTG;
       el.insertBefore(b, el.querySelector("#aerr"));
+      const pb = document.createElement("button");
+      pb.className = "tb"; pb.style.marginTop = "6px";
+      pb.textContent = getProxy() ? "Прокси: включён" : "Настроить прокси";
+      pb.onclick = () => W.AYU_proxy();
+      el.insertBefore(pb, el.querySelector("#aerr"));
     }
   };
 
