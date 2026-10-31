@@ -331,7 +331,13 @@ async function fetchMedia(c) {
 async function startTG() {
   TGM = true;
   try { await connect(); } catch (e) { TGM = false; W.showLogin("auth"); W.aerr && W.aerr({ message: String(e.message || e) }); return; }
-  const me = await client.getMe();
+  let me;
+  try { me = await client.getMe(); } catch (e) {
+    console.error("[TG] getMe failed", e);
+    localStorage.removeItem(SKEY); TGM = false;
+    W.showLogin("auth"); W.aerr && W.aerr({ message: "Сессия недействительна, войдите заново" });
+    return;
+  }
   const name = [me.firstName, me.lastName].filter(Boolean).join(" ") || me.username || "Я";
   W.ME = { uid: "me", name, email: me.phone ? "+" + me.phone : "" };
   TGME = W.ME;
@@ -345,7 +351,7 @@ async function startTG() {
   client.downloadProfilePhoto("me", { isBig: false }).then((b) => {
     if (b && b.length) { W.S.me.avatar = "data:image/jpeg;base64," + btoa(String.fromCharCode(...new Uint8Array(b))); W.refreshMe(); }
   }).catch(() => {});
-  await loadDialogs();
+  try { await loadDialogs(); } catch (e) { console.error("[TG] dialogs", e); W.toast("Не удалось загрузить чаты"); }
   hookEvents();
   W.toast("Подключено к Telegram");
 }
@@ -439,6 +445,19 @@ async function send(c, o) {
 
 const NOPE = () => W.toast("В режиме Telegram это пока недоступно");
 
+function addTgBtn() {
+  if (TGM) return;
+  const lg = $("#login");
+  if (!lg || getComputedStyle(lg).display === "none") return;
+  const el = lg.querySelector(".auth");
+  if (!el || el.querySelector("#tgstart")) return;
+  const b = document.createElement("button");
+  b.id = "tgstart"; b.className = "tb f aw"; b.style.marginTop = "12px"; b.textContent = "Войти через Telegram";
+  b.onclick = startTG;
+  const er = el.querySelector("#aerr");
+  if (er) el.insertBefore(b, er); else el.appendChild(b);
+}
+
 function patch() {
   const O = {};
   ["hideBan", "showLogin", "openChat", "pushMsg", "pushTo", "sbClick", "markRead", "doDel", "logout", "getMedia",
@@ -447,13 +466,7 @@ function patch() {
   W.showLogin = function (step, mode) {
     if (TGM) return; // Firebase не должен перекрывать вход через Telegram
     O.showLogin(step, mode);
-    if (step === "auth" && !TGM) {
-      const el = $("#login .auth"); if (!el) return;
-      const b = document.createElement("button");
-      b.className = "tb f aw"; b.style.marginTop = "12px"; b.textContent = "Войти через Telegram";
-      b.onclick = startTG;
-      el.insertBefore(b, el.querySelector("#aerr"));
-    }
+    addTgBtn();
   };
 
   // Firebase при отсутствии своего пользователя сбрасывает ME=null и зовёт hideBan() – возвращаем нашего
@@ -545,6 +558,7 @@ function patch() {
 /* ---------- автозапуск ---------- */
 function boot() {
   patch();
+  setInterval(addTgBtn, 600); // кнопка входа через Telegram всегда на экране входа
   if (localStorage.getItem(SKEY)) {
     // есть сохранённая сессия Telegram – входим автоматически
     const t = setInterval(() => { if (typeof W.S === "object" && W.chat) { clearInterval(t); startTG(); } }, 50);
