@@ -233,7 +233,7 @@ const ACT = {
   MessageActionContactSignUp: "присоединился(-ась) к Telegram", MessageActionHistoryClear: "история очищена", MessageActionPhoneCall: "📞 звонок",
 };
 
-function convMsg(m, c) {
+function convMsgRaw(m, c) {
   let fwd;
   if (m.fwdFrom) {
     try { fwd = (m.forward && ((m.forward.chat && m.forward.chat.title) || (m.forward.sender && m.forward.sender.firstName))) || m.fwdFrom.fromName || "пользователя"; }
@@ -268,6 +268,14 @@ function convMsg(m, c) {
     }
   } catch (e) {}
   return o;
+}
+
+function convMsg(m, c) {
+  try { return convMsgRaw(m, c); }
+  catch (e) {
+    console.error("convMsg", e, m);
+    return { id: sid(m.id), tg: true, out: !!m.out, text: m.message || "", t: (m.date || Date.now() / 1000) * 1000, from: m.out ? "me" : c.name, raw: m };
+  }
 }
 
 function statusOf(ent) {
@@ -445,6 +453,8 @@ async function startTG() {
   await loadDialogs();
   hookEvents();
   setInterval(() => { if (AYU.ghostOnline) setOffline(); }, 15000);
+  setInterval(pollChat, 3000);
+  setInterval(pollDialogs, 12000);
   if (AYU.ghostOnline) setOffline();
   W.toast("Подключено к Telegram");
 }
@@ -490,8 +500,7 @@ async function onDeleted(ev) {
   W.softMain();
 }
 
-function hookEvents() {
-  client.addEventHandler(async (ev) => {
+async function onNew(ev) {
     let c = chatOf(ev);
     const m = ev.message;
     if (!c) { await loadDialogs(); c = chatOf(ev); if (!c) return; }
@@ -507,7 +516,11 @@ function hookEvents() {
     }
     if (W.S.open === c.id) { W.renderMsgs(1); fetchMedia(c); if (m.out) W.scrollEnd(); }
     W.softMain();
-  }, new NewMessage({}));
+  }
+
+function hookEvents() {
+  client.addEventHandler((ev) => { onNew(ev).catch((e) => console.error("NewMessage", e)); }, new NewMessage({}));
+  client.invoke(new Api.updates.GetState()).catch(() => {}); // запускает поток обновлений
 
   client.addEventHandler((ev) => { const c = chatOf(ev); if (c) applyEdit(c, ev.message); }, new EditedMessage({}));
 
@@ -548,6 +561,75 @@ function hookEvents() {
   });
 }
 
+
+/* =====================================================================
+   ОПРОС — запасной канал, если поток обновлений gramjs молчит
+   ===================================================================== */
+function mergeLive(c, list) {
+  if (!list || !list.length) return;
+  const items = list.slice().reverse(); // старые -> новые
+  const ids = items.map((m) => Number(m.id));
+  const lo = Math.min(...ids), hi = Math.max(...ids);
+  let changed = false;
+  const seen = new Set();
+  items.forEach((m) => {
+    const cm = convMsg(m, c); seen.add(cm.id);
+    const old = c.msgs.find((x) => x.id === cm.id);
+    if (!old) {
+      c.msgs.push(cm); cacheMsg(c, cm); changed = true;
+      if (!m.out) {
+        if (W.S.open === c.id && !AYU.ghostRead) markRead(c); else if (W.S.open !== c.id) c.unread++;
+      }
+    } else if (!old.deleted) {
+      if (cm.editT && cm.editT !== old.editT) { applyEdit(c, m); }
+      else if (JSON.stringify(cm.react || {}) !== JSON.stringify(old.react || {})) { old.react = cm.react; changed = true; }
+    }
+  });
+  const now = Date.now();
+  c.msgs.forEach((m) => {
+    const n = Number(m.id);
+    if (m.pending || m.deleted || isNaN(n) || n < lo || n > hi || seen.has(m.id)) return;
+    m.deleted = true; m.delT = now; cacheMsg(c, m); changed = true; // исчезло с сервера
+  });
+  if (!AYU.keepDeleted) c.msgs = c.msgs.filter((m) => !m.deleted);
+  if (changed) {
+    c.msgs.sort(byTime);
+    if (W.S.open === c.id) { const atEnd = true; W.renderMsgs(1); if (atEnd) W.scrollEnd(); fetchMedia(c); }
+    W.softMain();
+  }
+}
+let polling = false, pollingD = false;
+async function pollChat() {
+  if (!client || !TGM || polling) return;
+  const c = W.chat(W.S.open);
+  if (!c || !c.tg || !c.hist || c.loadingOld) return;
+  polling = true;
+  try { mergeLive(c, await client.getMessages(ents[c.id], { limit: 25 })); } catch (e) {} finally { polling = false; }
+}
+async function pollDialogs() {
+  if (!client || !TGM || pollingD) return;
+  pollingD = true;
+  try {
+    const ds = await client.getDialogs({ limit: 40 });
+    let added = false;
+    for (const d of ds) {
+      if (d.archived) continue;
+      const id = sid(d.id), c = chatById(id);
+      if (!c) { const nc = mkChat(d); W.S.chats.push(nc); loadAvatar(nc); added = true; continue; }
+      const dl = d.dialog || {};
+      if (dl.readOutboxMaxId != null) { c.readOut = Number(dl.readOutboxMaxId) || c.readOut; c.msgs.forEach((m) => { if (m.out && Number(m.id) <= c.readOut) m.read = true; }); }
+      if (W.S.open !== c.id) c.unread = d.unreadCount || 0;
+      c.online = false; c.seen = undefined; Object.assign(c, statusOf(d.entity));
+      if (d.message) {
+        const cm = convMsg(d.message, c);
+        if (!c.msgs.some((x) => x.id === cm.id)) { if (c.hist) c.msgs.push(cm); else c.msgs = [cm]; cacheMsg(c, cm); }
+      }
+    }
+    W.softMain();
+    if (W.S.open) W.renderChatHdr();
+  } catch (e) {} finally { pollingD = false; }
+}
+
 /* =====================================================================
    ДЕЙСТВИЯ
    ===================================================================== */
@@ -578,7 +660,7 @@ function addSent(c, m) {
     cacheMsg(c, cm);
     if (W.S.open === c.id) { W.renderMsgs(1); W.scrollEnd(); fetchMedia(c); }
     W.softMain();
-  } catch (e) {}
+  } catch (e) { console.error("addSent", e); }
 }
 function addSentAny(c, r) { (Array.isArray(r) ? r : [r]).forEach((m) => addSent(c, m)); }
 function applyEdit(c, m) {
@@ -594,10 +676,26 @@ function applyEdit(c, m) {
   W.softMain();
 }
 
+function addPending(c, o, label) {
+  const p = { id: "p" + Date.now() + Math.random().toString(36).slice(2, 5), tg: true, out: true, pending: true, from: "me", t: Date.now(),
+    text: o.img || o.voice ? "" : (label || o.text || o.sticker || ""), reply: o.reply || undefined };
+  if (o.img) { p.img = o.img; }
+  if (o.voice) { p.voice = true; p.dur = o.dur || 1; p.audio = o.audio; }
+  c.msgs.push(p);
+  if (W.S.open === c.id) { W.renderMsgs(1); W.scrollEnd(); }
+  W.softMain();
+  return p;
+}
+function dropPending(c, p) {
+  c.msgs = c.msgs.filter((x) => x !== p);
+  if (W.S.open === c.id) W.renderMsgs(1);
+}
+
 async function send(c, o) {
   const ent = ents[c.id];
   const replyTo = o.reply ? Number(o.reply) : undefined;
   let r;
+  const pend = (o.text || o.sticker || o.img || o.voice) ? addPending(c, o) : null;
   try {
     if (o.img) {
       const f = new File([dataToBuf(o.img)], "photo.jpg", { type: "image/jpeg" });
@@ -612,7 +710,8 @@ async function send(c, o) {
       try { r = await client.sendMessage(ent, { message, replyTo, silent: !!o.silent, parseMode: "md" }); }
       catch (e1) { r = await client.sendMessage(ent, { message, replyTo, silent: !!o.silent }); } // запасной вариант без разметки
     }
-  } catch (e) { console.error("send", e); return W.toast("Ошибка отправки: " + errTxt(e)); }
+  } catch (e) { console.error("send", e); if (pend) dropPending(c, pend); return W.toast("Ошибка отправки: " + errTxt(e)); }
+  if (pend) c.msgs = c.msgs.filter((x) => x !== pend);
   addSentAny(c, r);
   try { afterSend(c); } catch (e) {}
 }
@@ -917,9 +1016,10 @@ function patch() {
     const replyTo = W.S.reply ? Number(W.S.reply) : undefined;
     W.S.reply = null; W.renderReply();
     W.toast("Отправка…");
+    const pend = addPending(c, {}, "📎 " + name + " (отправка…)");
     const f = new File([b], name, { type: b.type || "application/octet-stream" });
     client.sendFile(ents[c.id], { file: f, forceDocument: k === "f", supportsStreaming: true, replyTo })
-      .then((r) => { W.toast("Отправлено"); addSentAny(c, r); try { afterSend(c); } catch (e) {} }).catch((e) => W.toast("Ошибка отправки: " + errTxt(e)));
+      .then((r) => { W.toast("Отправлено"); c.msgs = c.msgs.filter((x) => x !== pend); addSentAny(c, r); try { afterSend(c); } catch (e) {} }).catch((e) => { dropPending(c, pend); W.toast("Ошибка отправки: " + errTxt(e)); });
   };
   W.sendFile = function (k) {
     if (!TGM) return O.sendFile(k);
