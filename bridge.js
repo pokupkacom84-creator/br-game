@@ -509,19 +509,7 @@ function hookEvents() {
     W.softMain();
   }, new NewMessage({}));
 
-  client.addEventHandler((ev) => {
-    const c = chatOf(ev); if (!c) return;
-    const m = ev.message, i = c.msgs.findIndex((x) => x.id === sid(m.id));
-    if (i < 0) return;
-    const old = c.msgs[i], nw = convMsg(m, c);
-    nw.edits = old.edits;
-    if (AYU.keepEdits && old.text !== nw.text && old.text) nw.edits = (old.edits || []).concat([{ t: old.editT || old.t, text: old.text }]);
-    ["img", "audio", "mediaDone"].forEach((k) => { if (old[k] !== undefined && (old.img || old.audio)) nw[k] = old[k]; });
-    if (nw.img) nw.photoPending = false;
-    c.msgs[i] = nw; cacheMsg(c, nw);
-    if (W.S.open === c.id) W.renderMsgs(1);
-    W.softMain();
-  }, new EditedMessage({}));
+  client.addEventHandler((ev) => { const c = chatOf(ev); if (c) applyEdit(c, ev.message); }, new EditedMessage({}));
 
   client.addEventHandler(onDeleted, new DeletedMessage({}));
 
@@ -581,22 +569,52 @@ function dataToBuf(d) {
 }
 const mimeOf = (d) => (/^data:([^;,]+)/.exec(d || "") || [])[1] || "";
 
+// gramjs не присылает NewMessage/EditedMessage на то, что отправили мы сами — добавляем из ответа вручную
+function addSent(c, m) {
+  try {
+    if (!m || m.id == null) return;
+    const cm = convMsg(m, c);
+    if (!c.msgs.some((x) => x.id === cm.id)) c.msgs.push(cm);
+    cacheMsg(c, cm);
+    if (W.S.open === c.id) { W.renderMsgs(1); W.scrollEnd(); fetchMedia(c); }
+    W.softMain();
+  } catch (e) {}
+}
+function addSentAny(c, r) { (Array.isArray(r) ? r : [r]).forEach((m) => addSent(c, m)); }
+function applyEdit(c, m) {
+  const i = c.msgs.findIndex((x) => x.id === sid(m.id));
+  if (i < 0) return;
+  const old = c.msgs[i], nw = convMsg(m, c);
+  nw.edits = old.edits;
+  if (AYU.keepEdits && old.text !== nw.text && old.text) nw.edits = (old.edits || []).concat([{ t: old.editT || old.t, text: old.text }]);
+  ["img", "audio", "mediaDone"].forEach((k) => { if (old[k] !== undefined && (old.img || old.audio)) nw[k] = old[k]; });
+  if (nw.img) nw.photoPending = false;
+  c.msgs[i] = nw; cacheMsg(c, nw);
+  if (W.S.open === c.id) W.renderMsgs(1);
+  W.softMain();
+}
+
 async function send(c, o) {
   const ent = ents[c.id];
   const replyTo = o.reply ? Number(o.reply) : undefined;
+  let r;
   try {
     if (o.img) {
       const f = new File([dataToBuf(o.img)], "photo.jpg", { type: "image/jpeg" });
-      await client.sendFile(ent, { file: f, forceDocument: false, replyTo });
+      r = await client.sendFile(ent, { file: f, forceDocument: false, replyTo });
     } else if (o.voice && o.audio) {
       const mt = mimeOf(o.audio) || "audio/ogg";
       const f = new File([dataToBuf(o.audio)], "voice." + (/ogg/.test(mt) ? "ogg" : /mp4/.test(mt) ? "m4a" : "webm"), { type: mt });
-      await client.sendFile(ent, { file: f, voiceNote: true, attributes: [new Api.DocumentAttributeAudio({ voice: true, duration: o.dur || 1 })], replyTo });
+      r = await client.sendFile(ent, { file: f, voiceNote: true, attributes: [new Api.DocumentAttributeAudio({ voice: true, duration: o.dur || 1 })], replyTo });
     } else {
-      await client.sendMessage(ent, { message: o.text || o.sticker || "", replyTo, silent: !!o.silent, parseMode: "md" });
+      const message = o.text || o.sticker || "";
+      if (!message) return;
+      try { r = await client.sendMessage(ent, { message, replyTo, silent: !!o.silent, parseMode: "md" }); }
+      catch (e1) { r = await client.sendMessage(ent, { message, replyTo, silent: !!o.silent }); } // запасной вариант без разметки
     }
-    afterSend(c);
-  } catch (e) { W.toast("Ошибка отправки: " + errTxt(e)); }
+  } catch (e) { console.error("send", e); return W.toast("Ошибка отправки: " + errTxt(e)); }
+  addSentAny(c, r);
+  try { afterSend(c); } catch (e) {}
 }
 
 const NOPE = () => W.toast("Звонки через MTProto в браузере недоступны");
@@ -825,7 +843,9 @@ function patch() {
     const ta = $("#ta");
     if (W.S.edit) {
       const v = ta.value.trim(), c = W.chat(W.S.open), id = Number(W.S.edit);
-      if (v) client.editMessage(ents[c.id], { message: id, text: v, parseMode: "md" }).catch((e) => W.toast(errTxt(e) || "Ошибка"));
+      if (v) client.editMessage(ents[c.id], { message: id, text: v, parseMode: "md" })
+        .catch(() => client.editMessage(ents[c.id], { message: id, text: v }))
+        .then((m) => m && applyEdit(c, m)).catch((e) => W.toast(errTxt(e) || "Ошибка"));
       W.S.edit = null; ta.value = ""; W.renderReply(); W.onType(); return;
     }
     return O.sbClick();
@@ -846,7 +866,7 @@ function patch() {
     const src = W.chat(W.S.open), to = W.chat(cid);
     const ids = W.S.fwdIds.filter((i) => { const m = W.findMsg(i); return m && !m.deleted; }).map(Number);
     if (!ids.length) { W.clrMsel(); return toast("Нечего пересылать"); }
-    client.forwardMessages(ents[to.id], { messages: ids, fromPeer: ents[src.id] }).then(() => toast("Переслано")).catch((e) => toast(errTxt(e)));
+    client.forwardMessages(ents[to.id], { messages: ids, fromPeer: ents[src.id] }).then((r) => { addSentAny(to, r); toast("Переслано"); }).catch((e) => toast(errTxt(e)));
     W.clrMsel();
   };
 
@@ -899,7 +919,7 @@ function patch() {
     W.toast("Отправка…");
     const f = new File([b], name, { type: b.type || "application/octet-stream" });
     client.sendFile(ents[c.id], { file: f, forceDocument: k === "f", supportsStreaming: true, replyTo })
-      .then(() => { W.toast("Отправлено"); afterSend(c); }).catch((e) => W.toast("Ошибка отправки: " + errTxt(e)));
+      .then((r) => { W.toast("Отправлено"); addSentAny(c, r); try { afterSend(c); } catch (e) {} }).catch((e) => W.toast("Ошибка отправки: " + errTxt(e)));
   };
   W.sendFile = function (k) {
     if (!TGM) return O.sendFile(k);
