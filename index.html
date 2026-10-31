@@ -185,6 +185,22 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:8px;height
 .aerr{color:#d93025;font-size:14px;margin-top:14px;min-height:20px}
 .alink{margin-top:8px}
 .pic{display:block;max-width:100%;max-height:320px;border-radius:12px;margin-bottom:4px}
+
+.av{background-size:cover;background-position:center}
+.av.xl{width:104px;height:104px;font-size:38px}
+#pf{transform:translateX(100%);z-index:8}#pf.open{transform:none}
+html[dir=rtl] #pf,html[dir=rtl] #chat{transform:translateX(-100%)}html[dir=rtl] #pf.open,html[dir=rtl] #chat.open{transform:none}
+html[dir=rtl] .ib svg{transform:scaleX(-1)}
+.pcov{height:180px;background:linear-gradient(135deg,var(--p),var(--tc));background-size:cover;background-position:center;position:relative}
+.pedit{position:absolute;inset-inline-end:8px;top:8px;background:rgba(0,0,0,.4);color:#fff}
+.pav{margin:-52px 0 0;margin-inline-start:20px;position:relative;width:104px}
+.pav .av{border:4px solid var(--s)}
+.pcam{position:absolute;inset-inline-end:-8px;bottom:0;width:36px;height:36px;background:var(--p);color:var(--onp)}
+.pn{padding:8px 20px 4px}.pn b{font-size:24px;font-weight:500;display:block}.pn span{color:var(--osv);font-size:14px}
+.bdb{margin:8px 16px;padding:12px 16px;border-radius:20px;background:var(--tc);color:var(--ontc);font-weight:500}
+.sbar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--s4);margin:12px 0}.sbar i{display:block;height:100%}
+.sd{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.ico{font-weight:500}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -219,6 +235,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:8px;height
     <div class="chn" id="chn" style="display:none"></div>
   </section>
 
+  <section id="pf" class="screen"></section>
   <div id="scrim" onclick="closeAll()"></div>
   <aside id="drawer"></aside>
   <div id="sheet"></div>
@@ -239,9 +256,9 @@ function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").repl
 /* ---------- state / storage ---------- */
 var KEY="tgyou_fb1";
 var now=Date.now(),MIN=60000,HR=3600000,DAY=86400000;
-var S={tab:"chats",filter:"all",q:"",searching:false,open:null,sel:[],theme:"auto",hue:262,tsize:16,rad:20,notif:true,name:"",phone:"",reply:null,edit:null,nextId:1000,chats:[]};
-try{var o=JSON.parse(localStorage.getItem(KEY)||"{}");["theme","hue","tsize","rad","notif"].forEach(function(k){if(o[k]!==undefined)S[k]=o[k]})}catch(e){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify({theme:S.theme,hue:S.hue,tsize:S.tsize,rad:S.rad,notif:S.notif}))}catch(e){}}
+var S={lang:"ru",me:null,cover:null,tab:"chats",filter:"all",q:"",searching:false,open:null,sel:[],theme:"auto",hue:262,tsize:16,rad:20,notif:true,name:"",phone:"",reply:null,edit:null,nextId:1000,chats:[]};
+try{var o=JSON.parse(localStorage.getItem(KEY)||"{}");["theme","hue","tsize","rad","notif","lang"].forEach(function(k){if(o[k]!==undefined)S[k]=o[k]})}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({theme:S.theme,hue:S.hue,tsize:S.tsize,rad:S.rad,notif:S.notif,lang:S.lang}))}catch(e){}}
 function uid(){return ++S.nextId}
 function chat(id){for(var i=0;i<S.chats.length;i++)if(S.chats[i].id===id)return S.chats[i]}
 function last(c){return c.msgs[c.msgs.length-1]}
@@ -264,12 +281,12 @@ if(window.matchMedia){try{window.matchMedia("(prefers-color-scheme: dark)").addL
 function pad(n){return n<10?"0"+n:n}
 function hm(t){var d=new Date(t);return pad(d.getHours())+":"+pad(d.getMinutes())}
 var MON=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"],WD=["Вс","Пн","Вт","Ср","Чт","Пт","Сб"];
-function listTime(t){var d=new Date(t),n=new Date();if(d.toDateString()===n.toDateString())return hm(t);if(n-d<7*DAY)return WD[d.getDay()];return pad(d.getDate())+"."+pad(d.getMonth()+1)}
-function dayLabel(t){var d=new Date(t),n=new Date();if(d.toDateString()===n.toDateString())return "Сегодня";if(new Date(n-DAY).toDateString()===d.toDateString())return "Вчера";return d.getDate()+" "+MON[d.getMonth()]}
+function listTime(t){var d=new Date(t),n=new Date();if(d.toDateString()===n.toDateString())return hm(t);if(n-d<7*DAY)return d.toLocaleDateString(LOC(),{weekday:"short"});return pad(d.getDate())+"."+pad(d.getMonth()+1)}
+function dayLabel(t){var d=new Date(t),n=new Date();if(d.toDateString()===n.toDateString())return "Сегодня";if(new Date(n-DAY).toDateString()===d.toDateString())return "Вчера";return d.toLocaleDateString(LOC(),{day:"numeric",month:"long"})}
 function initials(n){var p=String(n||"?").trim().split(/\s+/);return ((p[0][0]||"?")+(p[1]?p[1][0]:"")).toUpperCase()}
 function avatar(c,cls,extra){
   if(c.type==="saved")return '<div class="av sv '+(cls||"")+'">'+ic("bm",cls==="lg"?36:26)+(extra||"")+'</div>';
-  return '<div class="av '+(cls||"")+'" style="--h:'+c.hue+'">'+esc(initials(c.name))+(extra||"")+'</div>';
+  return '<div class="av '+(cls||"")+'" style="--h:'+c.hue+(c.photo?";background-image:url("+c.photo+")":"")+'">'+(c.photo?"":esc(initials(c.name)))+(extra||"")+'</div>';
 }
 function preview(c){
   var m=last(c);if(!m)return "Нет сообщений";
@@ -346,7 +363,7 @@ function renderCalls(){
 var HUES=[262,210,170,130,60,28,350,310];
 function renderSettings(){
   var th=[["auto","Авто"],["light","Светлая"],["dark","Тёмная"]];
-  $("#body").innerHTML='<div class="prof" onclick="renameDlg()">'+'<div class="av lg" style="--h:'+S.hue+';background:var(--p);color:var(--onp)">'+esc(initials(S.name))+'</div><div><b>'+esc(S.name)+'</b><span>'+esc(S.phone)+'</span></div></div>'+
+  $("#body").innerHTML='<div class="prof" onclick="openProfile(ME.uid)">'+myAv("lg")+'<div><b>'+esc(S.name)+'</b><span>'+(S.me&&S.me.username?"@"+esc(S.me.username):esc(S.phone))+'</span></div></div>'+moreCards()+
    '<div class="card"><div class="row" style="padding:0 0 4px"><div class="ico">'+ic("moon")+'</div><div class="t">Тема<small>Светлая, тёмная или как в системе</small></div></div><div class="seg">'+th.map(function(x){return '<button class="'+(S.theme===x[0]?"on":"")+'" onclick="setTheme(\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div></div>'+
    '<div class="card"><div class="row" style="padding:0"><div class="ico">'+ic("palette")+'</div><div class="t">Динамические цвета<small>Выберите основной цвет — палитра соберётся автоматически</small></div></div><div class="swatches">'+HUES.map(function(h){return '<button class="swatch'+(S.hue===h?" on":"")+'" style="background:hsl('+h+',62%,45%)" onclick="setHue('+h+')">'+(S.hue===h?ic("check"):"")+'</button>'}).join("")+'</div><input type="range" class="hue" min="0" max="359" value="'+S.hue+'" oninput="setHue(+this.value,true)"></div>'+
    '<div class="card"><div class="row" style="padding:0"><div class="ico">'+ic("text")+'</div><div class="t">Размер текста<small id="tsv">'+S.tsize+' px</small></div></div><input type="range" min="13" max="22" value="'+S.tsize+'" oninput="S.tsize=+this.value;$(\'#tsv\').textContent=S.tsize+\' px\';applyTheme();save()">'+
@@ -393,7 +410,7 @@ function toggleSel(id){var i=S.sel.indexOf(id);if(i<0)S.sel.push(id);else S.sel.
 function openDrawer(){
   var me=S.name;
   var it=[["chats","chat","Все чаты"],["contacts","people","Контакты"],["calls","call","Звонки"]];
-  $("#drawer").innerHTML='<div class="dh"><div class="av lg" style="background:var(--p);color:var(--onp)">'+esc(initials(me))+'</div><b>'+esc(me)+'</b><span>'+esc(S.phone)+'</span></div>'+
+  $("#drawer").innerHTML='<div class="dh" onclick="closeAll();openProfile(ME.uid)">'+myAv("lg")+'<b>'+esc(me)+'</b><span>'+esc(S.phone)+'</span></div>'+
     it.map(function(x){return '<button class="di'+(S.tab===x[0]?" on":"")+'" onclick="closeAll();setTab(\''+x[0]+'\')">'+ic(x[1])+x[2]+'</button>'}).join("")+
     '<button class="di" onclick="closeAll();newChatDlg()">'+ic("people")+'Новый чат</button>'+
     '<button class="di" onclick="closeAll();openChat(\'c0\')">'+ic("bm")+'Избранное</button><div class="dv"></div>'+
@@ -406,13 +423,13 @@ function closeAll(){$("#scrim").classList.remove("show");$("#drawer").classList.
 function sheet(html){$("#sheet").innerHTML='<div class="grab"></div>'+html;$("#scrim").classList.add("show");$("#sheet").classList.add("show")}
 var dlgCb=null;
 function dialog(title,text,field,ok,cb){
-  $("#dlg").innerHTML='<h3>'+title+'</h3>'+(text?'<p>'+text+'</p>':"")+(field!==null&&field!==undefined?'<div class="field"><input id="dfield" value="'+esc(field)+'" placeholder="'+(dialog.ph||"Имя")+'"></div>':"")+'<div class="ac"><button class="tb" onclick="closeAll()">Отмена</button><button class="tb f" onclick="dlgOk()">'+ok+'</button></div>';
-  dlgCb=cb;dialog.ph=null;$("#scrim").classList.add("show");$("#dlg").classList.add("show");
+  $("#dlg").innerHTML='<h3>'+title+'</h3>'+(text?'<p>'+text+'</p>':"")+(field!==null&&field!==undefined?'<div class="field"><input id="dfield" type="'+(dialog.ty||"text")+'" maxlength="'+(dialog.ml||100)+'" value="'+esc(field)+'" placeholder="'+(dialog.ph||"Имя")+'"></div>':"")+'<div class="ac"><button class="tb" onclick="closeAll()">Отмена</button><button class="tb f" onclick="dlgOk()">'+ok+'</button></div>';
+  dlgCb=cb;dlgOpt=dialog.opt;dialog.opt=0;dialog.ph=null;dialog.ty=null;dialog.ml=0;$("#scrim").classList.add("show");$("#dlg").classList.add("show");
   if(field!==null&&field!==undefined)setTimeout(function(){var f=$("#dfield");f&&f.focus()},250);
 }
-function dlgOk(){var f=$("#dfield"),v=f?f.value.trim():null,cb=dlgCb;if(f&&!v)return;closeAll();cb&&cb(v)}
-function newChatDlg(){dialog.ph="email@example.com";dialog("Новый чат","Введите email собеседника (он должен быть зарегистрирован)","","Начать",function(v){
-  v=v.trim();if(!/^\S+@\S+\.\S+$/.test(v)){toast("Неверный email");return}
+function dlgOk(){var f=$("#dfield"),v=f?f.value.trim():null,cb=dlgCb;if(f&&!v&&!dlgOpt)return;closeAll();cb&&cb(v)}
+function newChatDlg(){dialog.ph="email / @username";dialog("Новый чат","Введите email или @username собеседника","","Начать",function(v){
+  v=v.trim();if(/^@?[A-Za-z][A-Za-z0-9_]{4,31}$/.test(v))return byUser(v.replace("@",""));if(!/^\S+@\S+\.\S+$/.test(v)){toast("Неверный email");return}
   if(ekey(v)===ekey(ME.email)){openChat(cidOf(ME.uid,ME.uid));return}
   db.ref("emails/"+ekey(v)).once("value").then(function(sn){var u=sn.val();if(!u){toast("Пользователь не найден");return}
     var cid=cidOf(ME.uid,u);return db.ref("userChats/"+ME.uid+"/"+cid+"/peer").set(u).then(function(){var t=0;(function w(){if(chat(cid)||t++>30){S.tab="chats";renderMain();openChat(cid)}else setTimeout(w,100)})()})}).catch(dberr)})}
@@ -439,7 +456,7 @@ function openChat(id){
 function closeChat(){if(tyOn)setTyping(false);S.open=null;cancelRec(true);$("#chat").classList.remove("open");$("#main").classList.remove("back");renderMain()}
 function renderChatHdr(){
   var c=chat(S.open);if(!c)return;
-  $("#chdr").innerHTML='<button class="ib" onclick="closeChat()">'+ic("back")+'</button><div class="who" onclick="toast(\''+esc(c.name)+' · '+(c.type==="user"?"профиль":"информация")+'\')">'+avatar(c,"sm")+'<div style="min-width:0"><div class="nm">'+esc(c.name)+'</div><div class="st'+(c.typing?" ty":"")+'">'+statusText(c)+'</div></div></div>'+
+  $("#chdr").innerHTML='<button class="ib" onclick="closeChat()">'+ic("back")+'</button><div class="who"'+(c.type==="user"?' onclick="openProfile(\''+c.peer+'\')"':"")+'>'+avatar(c,"sm")+'<div style="min-width:0"><div class="nm">'+esc(c.name)+'</div><div class="st'+(c.typing?" ty":"")+'">'+statusText(c)+'</div></div></div>'+
    '<button class="ib" onclick="toast(\'Звонок '+esc(c.name)+'…\')">'+ic("call")+'</button><button class="ib" onclick="chatMenu()">'+ic("more")+'</button>';
 }
 function chatMenu(){var c=chat(S.open);
@@ -555,7 +572,7 @@ function playVoice(id){
 /* system back (Android WebView: вызовите window.onBackPressedJS() из Java/блока) */
 window.onBackPressedJS=function(){
   if($("#sheet").classList.contains("show")||$("#drawer").classList.contains("show")||$("#dlg").classList.contains("show")){closeAll();return "1"}
-  if(S.open){closeChat();return "1"}
+  if($("#pf").classList.contains("open")){closePage();return "1"}if(S.open){closeChat();return "1"}
   if(S.sel.length){clearSel();return "1"}
   if(S.searching){toggleSearch();return "1"}
   if(S.tab!=="chats"){setTab("chats");return "1"}
@@ -626,7 +643,7 @@ function saveName(){
 
 /* session */
 function startApp(u,p){
-  ME={uid:u.uid,name:p.name,email:u.email};S.name=ME.name;S.phone=ME.email;S.chats=[];S.tab="chats";S.open=null;
+  ME={uid:u.uid,name:p.name,email:u.email};S.name=ME.name;S.me=p;S.cover=null;S.phone=ME.email;S.chats=[];S.tab="chats";S.open=null;
   $("#login").style.display="none";renderMain();
   var pr=db.ref("users/"+ME.uid);
   db.ref(".info/connected").on("value",function(s){if(s.val()){pr.child("online").onDisconnect().set(false);pr.child("last").onDisconnect().set(TS);pr.child("online").set(true)}});
@@ -664,7 +681,7 @@ function watchChat(c){
   var rd=db.ref("chats/"+c.id+"/read");rd.on("value",function(s){c.reads=s.val()||{};if(c.ready)refresh(c)},dberr);
   c.refs=[q,rd];
   if(c.type==="user"){
-    var u=db.ref("users/"+c.peer);u.on("value",function(s){var x=s.val()||{};c.name=x.name||x.email||"Пользователь";c.online=!!x.online;if(S.open===c.id)renderChatHdr();softMain()},dberr);
+    var u=db.ref("users/"+c.peer);u.on("value",function(s){var x=s.val()||{};c.name=x.name||x.email||"Пользователь";c.u=x;c.uname=x.username;c.photo=vis(x,"photo",c.peer)?x.avatar:null;c.online=vis(x,"seen",c.peer)&&!!x.online;if(S.open===c.id)renderChatHdr();softMain()},dberr);
     var t=db.ref("chats/"+c.id+"/typing/"+c.peer);t.on("value",function(s){c.typing=!!s.val();if(S.open===c.id)renderChatHdr();softMain()},dberr);
     c.refs.push(u,t);
   }
@@ -690,12 +707,219 @@ function markRead(c,force){if(!c||c.type==="saved"||(!force&&S.open!==c.id))retu
 function setTyping(v){var c=chat(S.open);if(!c||c.type==="saved")return;var r=db.ref("chats/"+c.id+"/typing/"+ME.uid);if(v){r.onDisconnect().remove();r.set(true)}else r.remove();tyOn=v}
 function typingPing(){if(!tyOn)setTyping(true);clearTimeout(tyT);tyT=setTimeout(function(){setTyping(false)},3000)}
 
+
+/* ===== profile / usernames / privacy / storage / languages ===== */
+I.lock="M18 8h-1V6a5 5 0 00-10 0v2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V10a2 2 0 00-2-2zm-6 9a2 2 0 110-4 2 2 0 010 4zm3.1-9H8.9V6a3.1 3.1 0 016.2 0v2z";
+var PG=null,ut=null,dlgOpt=0,xo=null,xp=0;
+var UH="Вы можете выбрать публичное имя пользователя в Telegram. В этом случае другие люди смогут найти Вас по такому имени и связаться, не зная Вашего телефона.<br><br>Можно использовать символы а-z, 0-9 и подчёркивания. Минимальная длина — 5 символов.";
+var TR=`Чаты|Chats|Чаты|الدردشات
+Контакты|Contacts|Кантакты|جهات الاتصال
+Звонки|Calls|Званкі|المكالمات
+Настройки|Settings|Налады|الإعدادات
+Все чаты|All chats|Усе чаты|كل الدردشات
+Новый чат|New chat|Новы чат|دردشة جديدة
+Избранное|Saved messages|Выбранае|المحفوظات
+Поиск|Search|Пошук|بحث
+Все|All|Усе|الكل
+Личные|Private|Асабістыя|الخاصة
+Непрочитанные|Unread|Непрачытаныя|غير المقروءة
+Сообщение|Message|Паведамленне|رسالة
+Отмена|Cancel|Адмена|إلغاء
+Сегодня|Today|Сёння|اليوم
+Вчера|Yesterday|Учора|أمس
+в сети|online|у сетцы|متصل
+был(а) недавно|last seen recently|быў(ла) нядаўна|شوهد مؤخرًا
+печатает…|typing…|друкуе…|يكتب…
+Вы|You|Вы|أنت
+Вы:|You:|Вы:|أنت:
+Нет сообщений|No messages|Няма паведамленняў|لا توجد رسائل
+Чатов пока нет|No chats yet|Чатаў пакуль няма|لا توجد دردشات بعد
+Нажмите на кнопку, чтобы начать общение|Tap the button to start chatting|Націсніце кнопку, каб пачаць зносіны|اضغط على الزر لبدء المحادثة
+Ничего не найдено|Nothing found|Нічога не знойдзена|لم يتم العثور على شيء
+Попробуйте другой запрос|Try another query|Паспрабуйце іншы запыт|جرّب استعلامًا آخر
+Здесь пока пусто.|Nothing here yet.|Тут пакуль пуста.|لا شيء هنا بعد.
+Напишите первое сообщение!|Write the first message!|Напішыце першае паведамленне!|اكتب أول رسالة!
+Контакты на Telegram|Contacts on Telegram|Кантакты ў Telegram|جهات الاتصال على Telegram
+Добавить контакт|Add contact|Дадаць кантакт|إضافة جهة اتصال
+Недавние|Recent|Нядаўнія|الأخيرة
+Тема|Theme|Тэма|السمة
+Светлая|Light|Светлая|فاتحة
+Тёмная|Dark|Цёмная|داكنة
+Авто|Auto|Аўта|تلقائي
+Светлая, тёмная или как в системе|Light, dark or system default|Светлая, цёмная або як у сістэме|فاتح أو داكن أو حسب النظام
+Динамические цвета|Dynamic colors|Дынамічныя колеры|ألوان ديناميكية
+Выберите основной цвет — палитра соберётся автоматически|Pick a base color — the palette builds itself|Абярыце асноўны колер — палітра збярэцца аўтаматычна|اختر اللون الأساسي وستُنشأ اللوحة تلقائيًا
+Размер текста|Text size|Памер тэксту|حجم النص
+Скругление пузырей|Bubble roundness|Закругленне бурбалак|استدارة الفقاعات
+Уведомления|Notifications|Апавяшчэнні|الإشعارات
+Показывать о новых сообщениях|Show for new messages|Паказваць пра новыя паведамленні|إظهار الرسائل الجديدة
+Выйти из аккаунта|Log out|Выйсці з акаўнта|تسجيل الخروج
+О приложении|About|Пра праграму|حول التطبيق
+Версия 1.0|Version 1.0|Версія 1.0|الإصدار 1.0
+Язык|Language|Мова|اللغة
+Конфиденциальность|Privacy|Прыватнасць|الخصوصية
+Память|Storage|Памяць|التخزين
+Профиль|Profile|Профіль|الملف الشخصي
+Имя пользователя|Username|Імя карыстальніка|اسم المستخدم
+О себе|About|Пра сябе|نبذة عني
+День рождения|Birthday|Дзень нараджэння|تاريخ الميلاد
+Имя|Name|Імя|الاسم
+Ваше имя|Your name|Ваша імя|اسمك
+Сохранить|Save|Захаваць|حفظ
+Сохранено|Saved|Захавана|تم الحفظ
+Не задано|Not set|Не зададзена|غير محدد
+Удалить|Delete|Выдаліць|حذف
+Выбрать из галереи|Choose from gallery|Абраць з галерэі|اختيار من المعرض
+Напишите о себе пару слов|Write a few words about yourself|Напішыце пра сябе некалькі слоў|اكتب بضع كلمات عن نفسك
+Сегодня день рождения!|It's a birthday today!|Сёння дзень нараджэння!|اليوم عيد ميلاد!
+Фото|Photo|Фота|صورة
+Геопозиция|Location|Геапазіцыя|الموقع
+Ответить|Reply|Адказаць|رد
+Копировать|Copy|Капіяваць|نسخ
+Изменить|Edit|Змяніць|تعديل
+Без звука|Mute|Без гуку|كتم
+Включить звук|Unmute|Уключыць гук|إلغاء الكتم
+Выключить звук|Mute|Выключыць гук|كتم الصوت
+Закрепить|Pin|Замацаваць|تثبيت
+Открепить|Unpin|Адмацаваць|إلغاء التثبيت
+Очистить историю|Clear history|Ачысціць гісторыю|مسح السجل
+Удалить чат|Delete chat|Выдаліць чат|حذف الدردشة
+Начать|Start|Пачаць|ابدأ
+Введите email или @username собеседника|Enter the email or @username of the person|Увядзіце email або @username субяседніка|أدخل البريد الإلكتروني أو @username
+Пользователь не найден|User not found|Карыстальнік не знойдзены|المستخدم غير موجود
+Неверный email|Invalid email|Няправільны email|بريد إلكتروني غير صالح
+Войти|Log in|Увайсці|دخول
+Зарегистрироваться|Sign up|Зарэгістравацца|تسجيل
+Создать аккаунт|Create account|Стварыць акаўнт|إنشاء حساب
+Уже есть аккаунт? Войти|Have an account? Log in|Ужо ёсць акаўнт? Увайсці|لديك حساب؟ سجّل الدخول
+Забыли пароль?|Forgot password?|Забылі пароль?|نسيت كلمة المرور؟
+Продолжить|Continue|Працягнуць|متابعة
+Загрузка…|Loading…|Загрузка…|جارٍ التحميل…
+Создайте аккаунт по email|Create an account with email|Стварыце акаўнт па email|أنشئ حسابًا بالبريد الإلكتروني
+Войдите по email и паролю|Log in with email and password|Увайдзіце па email і паролі|سجّل الدخول بالبريد وكلمة المرور
+Пароль (мин. 6 символов)|Password (min. 6 characters)|Пароль (мін. 6 сімвалаў)|كلمة المرور (6 أحرف على الأقل)
+Как вас зовут? Это имя увидят собеседники|What's your name? Others will see it|Як вас завуць? Гэта імя ўбачаць субяседнікі|ما اسمك؟ سيراه الآخرون
+Вы можете выбрать публичное имя пользователя в Telegram. В этом случае другие люди смогут найти Вас по такому имени и связаться, не зная Вашего телефона.|You can choose a public username on Telegram. People will be able to find you by this username and contact you without knowing your phone number.|Вы можаце абраць публічнае імя карыстальніка ў Telegram. У гэтым выпадку іншыя людзі змогуць знайсці Вас па такім імені і звязацца, не ведаючы Вашага тэлефона.|يمكنك اختيار اسم مستخدم عام على Telegram. عندها يمكن للآخرين العثور عليك والتواصل معك دون معرفة رقم هاتفك.
+Можно использовать символы а-z, 0-9 и подчёркивания. Минимальная длина — 5 символов.|You can use a-z, 0-9 and underscores. Minimum length is 5 characters.|Можна выкарыстоўваць сімвалы a-z, 0-9 і падкрэсліванні. Мінімальная даўжыня — 5 сімвалаў.|يمكنك استخدام الأحرف a-z والأرقام 0-9 والشرطة السفلية. الحد الأدنى للطول 5 أحرف.
+Имя пользователя свободно|Username is available|Імя карыстальніка вольнае|اسم المستخدم متاح
+Имя пользователя занято|Username is already taken|Імя карыстальніка занятае|اسم المستخدم مستخدم بالفعل
+Слишком короткое имя (минимум 5 символов)|Too short (minimum 5 characters)|Занадта кароткае імя (мінімум 5 сімвалаў)|الاسم قصير جدًا (5 أحرف على الأقل)
+Имя пользователя должно начинаться с буквы|Username must start with a letter|Імя карыстальніка павінна пачынацца з літары|يجب أن يبدأ اسم المستخدم بحرف
+Недопустимое имя пользователя|Invalid username|Недапушчальнае імя карыстальніка|اسم مستخدم غير صالح
+Неверная дата|Invalid date|Няправільная дата|تاريخ غير صالح
+Кто может видеть мои данные|Who can see my info|Хто можа бачыць мае даныя|من يمكنه رؤية بياناتي
+Был(а) в сети|Last seen|Быў(ла) у сетцы|آخر ظهور
+Фото профиля|Profile photo|Фота профілю|صورة الملف الشخصي
+Все пользователи|Everybody|Усе карыстальнікі|الجميع
+Мои контакты|My contacts|Мае кантакты|جهات اتصالي
+Никто|Nobody|Ніхто|لا أحد
+Голосовые сообщения|Voice messages|Галасавыя паведамленні|الرسائل الصوتية
+Видео|Video|Відэа|فيديو
+Файлы|Files|Файлы|الملفات
+Другое|Other|Іншае|أخرى
+Данные загруженных чатов|Loaded chats data|Даныя загружаных чатаў|بيانات الدردشات المحمّلة
+Занято на устройстве|Used on device|Занята на прыладзе|المستخدم على الجهاز
+`.split("\n").filter(Boolean).map(function(l){return l.split("|")}),TM={},LI={en:1,be:2,ar:3};
+TR.forEach(function(r){TM[r[0]]=r});
+function LOC(){return S.lang}
+function vis(u,k,id){if(!u||(ME&&id===ME.uid))return true;var p=(u.priv||{})[k]||"all";return p==="all"||(p==="contacts"&&S.chats.some(function(c){return c.peer===id&&c.type==="user"}))}
+function myAv(cls){var a=S.me&&S.me.avatar;return '<div class="av '+cls+'" style="'+(a?"background-image:url("+a+")":"background:var(--p);color:var(--onp)")+'">'+(a?"":esc(initials(S.name)))+'</div>'}
+function page(title,html){var p=$("#pf");p.innerHTML='<div class="bar"><button class="ib" onclick="closePage()">'+ic("back")+'</button><h1>'+title+'</h1></div><div class="body">'+html+'</div>';p.classList.add("open")}
+function closePage(){$("#pf").classList.remove("open");PG=null}
+function pickImg(max,q,sq,cb){var i=document.createElement("input");i.type="file";i.accept="image/*";i.onchange=function(){var f=i.files[0];if(!f)return;var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var cv=document.createElement("canvas"),x=cv.getContext("2d");if(sq){var s=Math.min(im.width,im.height);cv.width=cv.height=Math.min(max,s);x.drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,cv.width,cv.height)}else{var k=Math.min(1,max/Math.max(im.width,im.height));cv.width=Math.round(im.width*k);cv.height=Math.round(im.height*k);x.drawImage(im,0,0,cv.width,cv.height)}cb(cv.toDataURL("image/jpeg",q))};im.src=r.result};r.readAsDataURL(f)};i.click()}
+function R(i,v,l,oc){return '<div class="row"'+(oc?' onclick="'+oc+'"':"")+'><div class="ico">'+i+'</div><div class="t">'+v+'<small>'+l+'</small></div></div>'}
+function fmtDate(s){var p=s.split("-");return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString(LOC(),{day:"numeric",month:"long",year:"numeric"})}
+function isBday(s){if(!s)return false;var p=s.split("-"),d=new Date();return +p[1]===d.getMonth()+1&&+p[2]===d.getDate()}
+function openProfile(id){
+  PG=id;var go=function(u,cv,fw){if(PG===id)renderProfile(id,u,cv,fw)};
+  if(id===ME.uid){go(S.me,S.cover,1);db.ref("covers/"+id).once("value").then(function(s){S.cover=s.val();go(S.me,S.cover,0)}).catch(function(){})}
+  else Promise.all([db.ref("users/"+id).once("value"),db.ref("covers/"+id).once("value")]).then(function(r){var u=r[0].val()||{};go(u,vis(u,"photo",id)?r[1].val():null,1)}).catch(dberr)
+}
+function renderProfile(id,u,cv,fw){
+  var me=id===ME.uid,nm=u.name||u.email||"Пользователь",av=vis(u,"photo",id)?u.avatar:null,on=vis(u,"seen",id)&&u.online,bd=u.bday&&vis(u,"bday",id)?u.bday:"",t=isBday(bd);
+  var h='<div class="pcov" style="'+(cv?"background-image:url("+cv+")":"")+'">'+(me?'<button class="ib pedit" onclick="mediaSheet(\'cover\')">'+ic("image")+'</button>':"")+'</div><div class="pav"><div class="av xl" style="--h:'+hueOf(id)+(av?";background-image:url("+av+")":"")+'">'+(av?"":esc(initials(nm)))+'</div>'+(me?'<button class="ib pcam" onclick="mediaSheet(\'avatar\')">'+ic("add")+'</button>':"")+'</div><div class="pn"><b>'+esc(nm)+'</b><span>'+(me||on?"в сети":"был(а) недавно")+'</span></div>'+(t?'<div class="bdb"><span>🎂</span> <span>Сегодня день рождения!</span></div>':"")+'<div class="card">';
+  if(me)h+=R(ic("person"),esc(nm),"Имя","editName()");
+  if(u.username||me)h+=R("@",u.username?esc(u.username):"Не задано","Имя пользователя",me?"editUser()":"");
+  if(me||(u.bio&&vis(u,"bio",id)))h+=R(ic("info"),u.bio?esc(u.bio):"Не задано","О себе",me?"editBio()":"");
+  if(me||bd)h+=R("🎂",bd?fmtDate(bd):"Не задано","День рождения",me?"editBday()":"");
+  if(me||vis(u,"email",id))h+=R("✉",esc(u.email||""),"Email");
+  h+='</div>';
+  if(me)h+='<p style="padding:8px 24px 24px;color:var(--osv);font-size:13px;line-height:1.4">'+UH+'</p>';
+  page("Профиль",h);
+  if(t&&fw)setTimeout(fireworks,350);
+}
+function refreshMe(){if(PG===ME.uid)renderProfile(ME.uid,S.me,S.cover,0);if(S.tab==="settings")renderSettings()}
+function mediaSheet(k){var has=k==="avatar"?S.me.avatar:S.cover;sheet('<button class="si" onclick="closeAll();pickMedia(\''+k+'\')">'+ic("image")+'Выбрать из галереи</button>'+(has?'<button class="si" onclick="closeAll();putMedia(\''+k+'\',null)">'+ic("del")+'Удалить</button>':""))}
+function pickMedia(k){pickImg(k==="avatar"?256:900,k==="avatar"?.8:.7,k==="avatar",function(d){putMedia(k,d)})}
+function putMedia(k,d){db.ref(k==="avatar"?"users/"+ME.uid+"/avatar":"covers/"+ME.uid).set(d||null).then(function(){if(k==="avatar")S.me.avatar=d;else S.cover=d;refreshMe()}).catch(dberr)}
+function editName(){dialog.ph="Имя";dialog.ml=30;dialog("Ваше имя","",S.name,"Сохранить",function(n){S.name=n;S.me.name=n;db.ref("users/"+ME.uid+"/name").set(n).catch(dberr);refreshMe()})}
+function editBio(){dialog.ph="О себе";dialog.ml=70;dialog.opt=1;dialog("О себе","Напишите о себе пару слов",S.me.bio||"","Сохранить",function(v){S.me.bio=v||null;db.ref("users/"+ME.uid+"/bio").set(v||null).catch(dberr);refreshMe()})}
+function editBday(){dialog.ty="date";dialog.opt=1;dialog("День рождения","",S.me.bday||"","Сохранить",function(v){if(v&&(v>new Date().toISOString().slice(0,10)||v<"1900"))return toast("Неверная дата");S.me.bday=v||null;db.ref("users/"+ME.uid+"/bday").set(v||null).catch(dberr);refreshMe()})}
+/* username: a-z 0-9 _, от 5 символов, начинается с буквы, уникальный */
+function uOk(v){return /^[a-z][a-z0-9_]{4,31}$/.test(v)&&!/__|_$/.test(v)}
+function uh(t,bad){var e=$("#uh");if(e){e.textContent=t;e.style.color=bad?"#d93025":"#2fb457"}}
+function chkUser(v){var e=$("#uh");if(!e)return;clearTimeout(ut);e.textContent="";if(!v||v===(S.me.username||""))return;
+  if(!/^[a-z]/.test(v))return uh("Имя пользователя должно начинаться с буквы",1);
+  if(v.length<5)return uh("Слишком короткое имя (минимум 5 символов)",1);
+  if(!uOk(v))return uh("Недопустимое имя пользователя",1);
+  ut=setTimeout(function(){db.ref("usernames/"+v).once("value").then(function(s){var f=$("#dfield");if(f&&f.value===v){var x=s.val()&&s.val()!==ME.uid;uh(x?"Имя пользователя занято":"Имя пользователя свободно",x)}})},300)}
+function editUser(){
+  dialog.ph="username";dialog.opt=1;dialog.ml=32;
+  dialog("Имя пользователя",UH+'<br><br><b id="uh"></b>',S.me.username||"","Сохранить",function(v){setUser(v.toLowerCase())});
+  var f=$("#dfield");f.oninput=function(){var v=f.value.toLowerCase().replace(/[^a-z0-9_]/g,"");if(f.value!==v)f.value=v;chkUser(v)}
+}
+function setUser(v){
+  var old=S.me.username||"";if(v===old)return;
+  if(v&&!uOk(v))return toast("Недопустимое имя пользователя");
+  var fin=function(){var up={};up["users/"+ME.uid+"/username"]=v||null;if(old)up["usernames/"+old]=null;db.ref().update(up).then(function(){S.me.username=v||null;refreshMe();toast("Сохранено")}).catch(dberr)};
+  if(!v)return fin();
+  db.ref("usernames/"+v).transaction(function(c){return c?undefined:ME.uid}).then(function(r){if(!r.committed&&r.snapshot.val()!==ME.uid)return toast("Имя пользователя занято");fin()}).catch(dberr)
+}
+function startWith(u){var cid=cidOf(ME.uid,u);return db.ref("userChats/"+ME.uid+"/"+cid+"/peer").set(u).then(function(){var t=0;(function w(){if(chat(cid)||t++>30){S.tab="chats";renderMain();openChat(cid)}else setTimeout(w,100)})()})}
+function byUser(n){db.ref("usernames/"+n.toLowerCase()).once("value").then(function(s){var u=s.val();if(!u){toast("Пользователь не найден");return}if(u===ME.uid)return startWith(ME.uid);return startWith(u)}).catch(dberr)}
+/* конфиденциальность */
+var PR=[["seen","Был(а) в сети"],["photo","Фото профиля"],["bio","О себе"],["bday","День рождения"],["email","Email"]],PL={all:"Все пользователи",contacts:"Мои контакты",nobody:"Никто"};
+function privPage(){var p=S.me.priv||{};page("Конфиденциальность",'<div class="sec">Кто может видеть мои данные</div><div class="card">'+PR.map(function(x){return '<div class="row" onclick="privPick(\''+x[0]+'\')"><div class="t">'+x[1]+'<small>'+PL[p[x[0]]||"all"]+'</small></div></div>'}).join("")+'</div>')}
+function privPick(k){var cur=(S.me.priv||{})[k]||"all";sheet(["all","contacts","nobody"].map(function(v){return '<button class="si" onclick="setPriv(\''+k+'\',\''+v+'\')">'+PL[v]+(cur===v?'<span style="margin-left:auto;color:var(--p)">'+ic("check")+'</span>':"")+'</button>'}).join(""))}
+function setPriv(k,v){closeAll();S.me.priv=S.me.priv||{};S.me.priv[k]=v;db.ref("users/"+ME.uid+"/priv/"+k).set(v).catch(dberr);privPage()}
+/* память */
+function fmtB(n){n=Math.round(n);return n<1024?n+" B":n<1048576?(n/1024).toFixed(1)+" KB":(n/1048576).toFixed(1)+" MB"}
+function storPage(){
+  var c=[["Фото","#4a90e2",0],["Голосовые сообщения","#2fb457",0],["Видео","#e8a317",0],["Файлы","#9b59b6",0],["Другое","#9aa0a6",0]];
+  S.chats.forEach(function(ch){ch.msgs.forEach(function(m){if(m.img)c[0][2]+=m.img.length*.75;else if(m.audio)c[1][2]+=m.audio.length*.75;else c[4][2]+=(m.text||"").length*2})});
+  c[4][2]+=((S.me.avatar||"").length+(S.cover||"").length)*.75;
+  var raw=c.reduce(function(a,x){return a+x[2]},0),tot=raw||1;
+  page("Память",'<div class="card"><div style="font-size:28px;font-weight:500">'+fmtB(raw)+'</div><small style="color:var(--osv)">Данные загруженных чатов</small><div class="sbar">'+c.map(function(x){return '<i style="width:'+(x[2]/tot*100)+'%;background:'+x[1]+'"></i>'}).join("")+'</div>'+c.map(function(x){return '<div class="row" style="padding:6px 0"><span class="sd" style="background:'+x[1]+'"></span><div class="t">'+x[0]+'</div><span>'+fmtB(x[2])+' · '+Math.round(x[2]/tot*100)+'%</span></div>'}).join("")+'</div><div class="card"><div class="t"><span id="dev">…</span><small style="display:block;color:var(--osv)">Занято на устройстве</small></div></div>');
+  if(navigator.storage&&navigator.storage.estimate)navigator.storage.estimate().then(function(e){var d=$("#dev");if(d)d.textContent=fmtB(e.usage||0)+" / "+fmtB(e.quota||0)})
+}
+function moreCards(){var L={ru:"Русский",en:"English",be:"Беларуская",ar:"العربية"};
+  return '<div class="card"><div class="row" style="padding:0 0 4px"><div class="ico">'+ic("text")+'</div><div class="t">Язык</div></div><div class="seg">'+Object.keys(L).map(function(k){return '<button class="'+(S.lang===k?"on":"")+'" onclick="setLang(\''+k+'\')">'+L[k]+'</button>'}).join("")+'</div></div><div class="card"><div class="row" style="padding:4px 0" onclick="privPage()"><div class="ico">'+ic("lock")+'</div><div class="t">Конфиденциальность</div></div><div class="row" style="padding:4px 0" onclick="storPage()"><div class="ico">'+ic("file")+'</div><div class="t">Память</div></div></div>'}
+/* языки: ru / en / be / ar (ar — RTL) */
+function setLang(l){S.lang=l;save();applyLang();renderMain()}
+function applyLang(){var h=document.documentElement;h.lang=S.lang;h.dir=S.lang==="ar"?"rtl":"ltr";if(auth)auth.languageCode=S.lang;
+  if(!xo&&window.MutationObserver)xo=new MutationObserver(function(){if(S.lang!=="ru"&&!xp){xp=1;requestAnimationFrame(function(){xp=0;xl()})}});xl()}
+function xl(){if(xo)xo.disconnect();var i=LI[S.lang],tw=document.createTreeWalker($("#app"),NodeFilter.SHOW_TEXT),n;
+  while(n=tw.nextNode()){var k=n.__ru!==undefined?n.__ru:n.nodeValue,r=TM[k.trim()],v=r&&i?k.replace(k.trim(),function(){return r[i]}):k;if(v!==k||n.__ru!==undefined){n.__ru=k;if(n.nodeValue!==v)n.nodeValue=v}}
+  document.querySelectorAll("[placeholder]").forEach(function(e){var k=e.__ph!==undefined?e.__ph:e.placeholder,r=TM[k.trim()],v=r&&i?r[i]:k;if(v!==k||e.__ph!==undefined){e.__ph=k;if(e.placeholder!==v)e.placeholder=v}});
+  if(xo)xo.observe($("#app"),{childList:true,subtree:true,characterData:true})}
+/* фейерверк */
+function fireworks(){
+  var cv=document.createElement("canvas");cv.style.cssText="position:absolute;left:0;top:0;z-index:90;pointer-events:none";cv.width=innerWidth;cv.height=innerHeight;$("#app").appendChild(cv);
+  var x=cv.getContext("2d"),P=[],t0=Date.now(),lb=-999;
+  function boom(){var cx=cv.width*(.15+Math.random()*.7),cy=cv.height*(.12+Math.random()*.4),h=Math.random()*360;for(var i=0;i<80;i++){var a=Math.random()*6.283,s=1.5+Math.random()*5;P.push({x:cx,y:cy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:1,h:h+Math.random()*40})}}
+  (function f(){var T=Date.now()-t0;
+    x.globalCompositeOperation="destination-out";x.fillStyle="rgba(0,0,0,.18)";x.fillRect(0,0,cv.width,cv.height);x.globalCompositeOperation="lighter";
+    if(T<3800&&T-lb>380){boom();lb=T}
+    P=P.filter(function(p){p.x+=p.vx;p.y+=p.vy;p.vx*=.985;p.vy=p.vy*.985+.07;p.l-=.011;if(p.l<=0)return false;x.fillStyle="hsla("+p.h+",100%,60%,"+p.l+")";x.beginPath();x.arc(p.x,p.y,2.4,0,6.283);x.fill();return true});
+    if(T<6000||P.length)requestAnimationFrame(f);else cv.remove()})();
+}
+
 /* boot */
-applyTheme();
+applyTheme();applyLang();
 if(typeof firebase==="undefined"){showLogin("load");$("#login p").textContent="Не удалось загрузить Firebase SDK. Проверьте интернет."}
 else{
   firebase.initializeApp(firebaseConfig);
-  auth=firebase.auth();db=firebase.database();TS=firebase.database.ServerValue.TIMESTAMP;auth.languageCode="ru";
+  auth=firebase.auth();db=firebase.database();TS=firebase.database.ServerValue.TIMESTAMP;auth.languageCode=S.lang;
   showLogin("load");
   auth.onAuthStateChanged(function(u){
     if(!u){ME=null;showLogin("auth");return}
