@@ -35,8 +35,17 @@ const ERR = {
   FLOOD: "Слишком много попыток, подождите",
 };
 
+const LOG = [];
+function dbg(m) {
+  console.log("[TG login]", m);
+  LOG.push(m);
+  const e = $("#tgst");
+  if (e) e.textContent = LOG.slice(-6).join("\n");
+}
+
 function tr(e) {
   console.error("[TG login]", e);
+  LOG.push("ОШИБКА: " + String((e && (e.errorMessage || e.message)) || e));
   if (e && e.seconds) return "Слишком много попыток. Подождите " + e.seconds + " сек.";
   const m = String((e && e.errorMessage) || (e && e.message) || e);
   return ERR[m] || m;
@@ -77,6 +86,7 @@ function loginHtml(step, info) {
     h += '<button class="tb aw" id="tgr" style="margin-top:8px">Отправить код повторно' + (info.next ? " (" + (NEXT[info.next] || "") + ")" : "") + "</button>";
     h += '<button class="tb aw" id="tgback" style="margin-top:4px">Другой номер</button>';
   }
+  h += '<div id="tgst" style="white-space:pre-wrap;font-size:11px;opacity:.6;margin-top:12px;text-align:left;word-break:break-all"></div>';
   h += '<div class="aerr" id="aerr"></div></div>';
   return h;
 }
@@ -88,6 +98,7 @@ function ask(step, err, info) {
     el.style.display = "flex";
     el.innerHTML = loginHtml(step, info || {});
     $("#aerr").textContent = err || "";
+    const st = $("#tgst"); if (st) st.textContent = LOG.slice(-6).join("\n");
     const inp = $("#tgi"), btn = $("#tgb"), rb = $("#tgr"), bb = $("#tgback");
     const go = () => { const v = inp.value.trim(); if (!v) return; btn.disabled = true; btn.textContent = "…"; res({ v }); };
     btn.onclick = go;
@@ -119,7 +130,15 @@ async function signInPassword(A) {
 async function connect() {
   const saved = localStorage.getItem(SKEY) || "";
   client = new TelegramClient(new StringSession(saved), API_ID, API_HASH, { connectionRetries: 5, useWSS: true });
-  await client.connect();
+  const el = $("#login");
+  el.style.display = "flex";
+  el.innerHTML = '<div class="auth"><h2>Telegram You</h2><p>Подключение к Telegram…</p><div id="tgst" style="white-space:pre-wrap;font-size:11px;opacity:.6;margin-top:12px;text-align:left"></div></div>';
+  dbg("1/3 подключение к серверам Telegram…");
+  await Promise.race([
+    client.connect(),
+    new Promise((_, rej) => setTimeout(() => rej(new Error("Нет соединения с Telegram (таймаут 20 с). Проверьте интернет или VPN")), 20000)),
+  ]);
+  dbg("2/3 соединение есть");
 
   if (!(await client.checkAuthorization())) {
     const A = { apiId: API_ID, apiHash: API_HASH };
@@ -130,9 +149,10 @@ async function connect() {
       while (true) {
         const { v } = await ask("phone", err); err = "";
         phone = cleanPhone(v);
+        dbg("запрос кода на " + phone + "…");
         try {
           const r = await client.sendCode(A, phone);
-          console.log("[TG login] sendCode:", r);
+          dbg("3/3 код запрошен. В приложение: " + (r.isCodeViaApp ? "да" : "нет (SMS)"));
           hash = r.phoneCodeHash;
           info = { type: r.isCodeViaApp ? "app" : "sms", next: "" };
           break;
@@ -145,7 +165,7 @@ async function connect() {
         if (a.resend) {
           try {
             const r = await client.invoke(new Api.auth.ResendCode({ phoneNumber: phone, phoneCodeHash: hash }));
-            console.log("[TG login] resend:", r);
+            dbg("повтор: способ=" + typeName(r.type) + ", дальше=" + (typeName(r.nextType) || "нет"));
             hash = r.phoneCodeHash || hash;
             info = { type: typeName(r.type) || "other", next: typeName(r.nextType) };
             err = "Код отправлен повторно";
