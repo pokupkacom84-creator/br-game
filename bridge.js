@@ -355,6 +355,7 @@ function mkChat(d) {
     members: (d.entity && d.entity.participantsCount) || 0, u: {}, uname: d.entity && d.entity.username,
   };
   if (d.message) c.msgs.push(convMsg(d.message, c));
+  c._pin = c.pinned; c._mute = c.muted;
   return c;
 }
 
@@ -429,6 +430,13 @@ async function startTG() {
   } catch (e) { console.error("[TG] full user", e); }
   W.S.me = { name, username: me.username || "", bio: about, bday, priv: lu.priv || {}, blocked: {} };
   W.S.name = name;
+  try {
+    const bl = await client.invoke(new Api.contacts.GetBlocked({ offset: 0, limit: 200 }));
+    (bl.blocked || []).forEach((b) => {
+      const pid = b.peerId && (b.peerId.userId || b.peerId.channelId || b.peerId.chatId);
+      if (pid != null) W.S.me.blocked[sid(pid)] = true;
+    });
+  } catch (e) { console.error("[TG] blocked", e); }
   W.S.cover = LDB.val("covers/me") || null; W.S.tab = "chats"; W.S.open = null; W.S.chats = [];
   W.S.admin = false;
   $("#login").style.display = "none";
@@ -515,20 +523,55 @@ function dataToBuf(d) {
 async function send(c, o) {
   const ent = ents[c.id];
   const replyTo = o.reply ? Number(o.reply) : undefined;
+  // показываем отправленное сразу, не завися от входящих событий
+  const echo = (m) => {
+    if (!m || m.id == null) return;
+    if (!c.msgs.some((x) => x.id === sid(m.id))) c.msgs.push(convMsg(m, c));
+    if (W.S.open === c.id) { W.renderMsgs(1); W.scrollEnd(); fetchMedia(c); }
+    W.softMain();
+  };
   try {
     if (o.img) {
       const f = new File([dataToBuf(o.img)], "photo.jpg", { type: "image/jpeg" });
-      await client.sendFile(ent, { file: f, forceDocument: false, replyTo });
+      echo(await client.sendFile(ent, { file: f, forceDocument: false, replyTo }));
     } else if (o.voice && o.audio) {
       const f = new File([dataToBuf(o.audio)], "voice.ogg", { type: "audio/ogg" });
-      await client.sendFile(ent, { file: f, voiceNote: true, attributes: [new Api.DocumentAttributeAudio({ voice: true, duration: o.dur || 1 })], replyTo });
+      echo(await client.sendFile(ent, { file: f, voiceNote: true, attributes: [new Api.DocumentAttributeAudio({ voice: true, duration: o.dur || 1 })], replyTo }));
     } else {
-      await client.sendMessage(ent, { message: o.text || o.sticker || "", replyTo, silent: !!o.silent });
+      echo(await client.sendMessage(ent, { message: o.text || o.sticker || "", replyTo, silent: !!o.silent }));
     }
   } catch (e) { W.toast("Ошибка отправки: " + (e.errorMessage || e.message)); }
 }
 
 const NOPE = () => W.toast("В режиме Telegram это пока недоступно");
+
+/* ---------- открытие чата по @username, удаление чата ---------- */
+async function openPeer(key) {
+  let ent;
+  try { ent = await client.getEntity(key); } catch (e) { console.error("[TG] getEntity", e); return W.toast("Пользователь не найден"); }
+  const id = sid(ent.id);
+  let c = W.S.chats.find((x) => x.id === id);
+  if (!c) {
+    const cn = ent.className;
+    c = mkChat({
+      id: ent.id, entity: ent, inputEntity: ent, isUser: cn === "User", isChannel: cn === "Channel",
+      isGroup: cn === "Chat" || (cn === "Channel" && !!ent.megagroup),
+      name: [ent.firstName, ent.lastName].filter(Boolean).join(" ") || ent.title || ent.username || "Без имени",
+      pinned: false, unreadCount: 0, message: null, dialog: null,
+    });
+    W.S.chats.unshift(c);
+    loadAvatar(c);
+  }
+  W.S.tab = "chats"; W.renderMain(); W.openChat(id);
+}
+
+async function removeChat(c) {
+  const ent = ents[c.id], cn = ent && ent.className;
+  if (cn === "InputPeerChannel" || cn === "Channel") return client.invoke(new Api.channels.LeaveChannel({ channel: ent }));
+  if (cn === "InputPeerChat" || cn === "Chat") return client.invoke(new Api.messages.DeleteChatUser({ chatId: ent.chatId || ent.id, userId: new Api.InputUserSelf() }));
+  let r;
+  do { r = await client.invoke(new Api.messages.DeleteHistory({ peer: ent, maxId: 0, revoke: false })); } while (r && r.offset > 0);
+}
 
 function addTgBtn() {
   if (TGM) return;
@@ -547,7 +590,8 @@ function patch() {
   const O = {};
   ["hideBan", "showLogin", "openChat", "pushMsg", "pushTo", "sbClick", "markRead", "doDel", "logout", "getMedia",
     "react", "pinMsg", "setTyping", "typingPing", "startCall", "newChatDlg", "toggleBlock", "clearHist", "delChat",
-    "putMedia", "editName", "renameDlg", "editBio", "editBday", "setUser", "chkUser"].forEach((n) => { O[n] = W[n]; });
+    "putMedia", "editName", "renameDlg", "editBio", "editBday", "setUser", "chkUser",
+    "persist", "selDel", "reportDlg", "mention", "byUser"].forEach((n) => { O[n] = W[n]; });
 
   W.showLogin = function (step, mode) {
     if (TGM) return; // Firebase не должен перекрывать вход через Telegram
@@ -723,9 +767,94 @@ function patch() {
     }).catch(fail);
   };
 
-  ["startCall", "newChatDlg", "toggleBlock", "clearHist", "delChat"].forEach((n) => {
-    W[n] = function () { return TGM ? NOPE() : O[n].apply(this, arguments); };
-  });
+  /* ---- основные функции чатов через Telegram ---- */
+  W.newChatDlg = function () {
+    if (!TGM) return O.newChatDlg();
+    W.dialog.ph = "@username";
+    W.dialog("Новый чат", "Введите @username собеседника", "", "Начать", function (v) {
+      v = String(v || "").trim().replace(/^@/, "");
+      if (!/^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(v)) return W.toast("Введите корректный @username");
+      openPeer(v);
+    });
+  };
+  W.byUser = function (n) { if (!TGM) return O.byUser(n); openPeer(String(n).replace(/^@/, "")); };
+  W.mention = function (n) { if (!TGM) return O.mention(n); openPeer(String(n).replace(/^@/, "")); };
+
+  W.clearHist = function () {
+    if (!TGM) return O.clearHist();
+    const c = W.chat(W.S.open); if (!c) return;
+    if (c.type !== "user" && c.type !== "bot") return W.toast("Для групп и каналов очистка истории недоступна");
+    W.dialog("Очистить историю?", "Все сообщения будут удалены у обоих участников.", null, "Очистить", function () {
+      (async () => {
+        let r;
+        do { r = await client.invoke(new Api.messages.DeleteHistory({ peer: ents[c.id], maxId: 0, revoke: true, justClear: true })); } while (r && r.offset > 0);
+        c.msgs = []; W.renderMsgs(1); W.softMain(); W.toast("История очищена");
+      })().catch(fail);
+    });
+  };
+
+  W.delChat = function () {
+    if (!TGM) return O.delChat();
+    const c = W.chat(W.S.open); if (!c) return;
+    const leave = c.type === "group" || c.type === "channel";
+    W.dialog(leave ? "Покинуть чат?" : "Удалить чат?", leave ? "Вы выйдете из этого чата." : "Чат пропадёт из списка. Переписка у собеседника сохранится.", null, leave ? "Покинуть" : "Удалить", function () {
+      removeChat(c).then(() => {
+        W.closeChat(); W.S.chats = W.S.chats.filter((x) => x.id !== c.id); W.softMain(); W.toast("Готово");
+      }).catch(fail);
+    });
+  };
+
+  W.selDel = function () {
+    if (!TGM) return O.selDel();
+    const n = W.S.sel.length;
+    W.dialog("Удалить " + (n > 1 ? n + " чата(ов)" : "чат") + "?", "Чаты исчезнут из списка, из групп и каналов вы выйдете.", null, "Удалить", function () {
+      const ids = W.S.sel.slice();
+      Promise.all(ids.map((i) => { const c = W.chat(i); return c ? removeChat(c).catch(() => {}) : null; })).then(() => {
+        W.S.chats = W.S.chats.filter((x) => ids.indexOf(x.id) < 0); W.S.sel = []; W.renderMain(); W.toast("Удалено");
+      });
+    });
+  };
+
+  W.toggleBlock = function () {
+    if (!TGM) return O.toggleBlock();
+    const c = W.chat(W.S.open); if (!c) return;
+    const b = !!(W.S.me.blocked && W.S.me.blocked[c.peer]);
+    client.invoke(b ? new Api.contacts.Unblock({ id: ents[c.id] }) : new Api.contacts.Block({ id: ents[c.id] })).then(() => {
+      W.S.me.blocked = W.S.me.blocked || {};
+      if (b) delete W.S.me.blocked[c.peer]; else W.S.me.blocked[c.peer] = true;
+      W.renderMsgs(1); W.toast(b ? "Разблокирован" : "Заблокирован");
+    }).catch(fail);
+  };
+
+  W.reportDlg = function () {
+    if (!TGM) return O.reportDlg();
+    const c = W.chat(W.S.open); if (!c) return;
+    W.dialog.ph = "Причина";
+    W.dialog("Пожаловаться", "Опишите причину жалобы", "", "Отправить", function (v) {
+      client.invoke(new Api.account.ReportPeer({ peer: ents[c.id], reason: new Api.InputReportReasonOther(), message: String(v || "") }))
+        .then(() => W.toast("Жалоба отправлена")).catch(fail);
+    });
+  };
+
+  // закрепление и отключение звука — в настоящем Telegram
+  W.persist = function (c) {
+    if (!TGM || !c || !c.tg) return O.persist(c);
+    const ent = ents[c.id];
+    if (c._pin !== !!c.pinned) {
+      const want = !!c.pinned;
+      client.invoke(new Api.messages.ToggleDialogPin({ peer: new Api.InputDialogPeer({ peer: ent }), pinned: want }))
+        .then(() => { c._pin = want; })
+        .catch((e) => { c.pinned = c._pin; W.softMain(); fail(e); });
+    }
+    if (c._mute !== !!c.muted) {
+      const want = !!c.muted;
+      client.invoke(new Api.account.UpdateNotifySettings({ peer: new Api.InputNotifyPeer({ peer: ent }), settings: new Api.InputPeerNotifySettings({ muteUntil: want ? 2147483647 : 0 }) }))
+        .then(() => { c._mute = want; })
+        .catch((e) => { c.muted = c._mute; W.softMain(); fail(e); });
+    }
+  };
+
+  W.startCall = function () { return TGM ? W.toast("Звонки пока недоступны") : O.startCall.apply(this, arguments); };
 }
 
 /* ---------- автозапуск ---------- */
