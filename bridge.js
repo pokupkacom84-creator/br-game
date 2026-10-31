@@ -545,6 +545,23 @@ async function send(c, o) {
 
 const NOPE = () => W.toast("В режиме Telegram это пока недоступно");
 
+/* ---------- подгрузка старых сообщений при прокрутке вверх ---------- */
+async function loadOlder(c, el) {
+  const first = c.msgs.length ? Number(c.msgs[0].id) : 0;
+  if (!first) return;
+  c.loadingOld = true;
+  try {
+    const list = await client.getMessages(ents[c.id], { limit: 40, offsetId: first });
+    if (!list.length) { c.noMore = true; return; }
+    const have = new Set(c.msgs.map((m) => m.id));
+    const older = list.reverse().map((m) => convMsg(m, c)).filter((m) => !have.has(m.id));
+    if (!older.length) { c.noMore = true; return; }
+    const h0 = el.scrollHeight, t0 = el.scrollTop;
+    c.msgs = older.concat(c.msgs);
+    if (W.S.open === c.id) { W.renderMsgs(1); el.scrollTop = t0 + (el.scrollHeight - h0); fetchMedia(c); }
+  } catch (e) { console.error("[TG] older", e); } finally { c.loadingOld = false; }
+}
+
 /* ---------- открытие чата по @username, удаление чата ---------- */
 async function openPeer(key) {
   let ent;
@@ -591,7 +608,7 @@ function patch() {
   ["hideBan", "showLogin", "openChat", "pushMsg", "pushTo", "sbClick", "markRead", "doDel", "logout", "getMedia",
     "react", "pinMsg", "setTyping", "typingPing", "startCall", "newChatDlg", "toggleBlock", "clearHist", "delChat",
     "putMedia", "editName", "renameDlg", "editBio", "editBday", "setUser", "chkUser",
-    "persist", "selDel", "reportDlg", "mention", "byUser"].forEach((n) => { O[n] = W[n]; });
+    "persist", "selDel", "reportDlg", "mention", "byUser", "doFwd"].forEach((n) => { O[n] = W[n]; });
 
   W.showLogin = function (step, mode) {
     if (TGM) return; // Firebase не должен перекрывать вход через Telegram
@@ -854,6 +871,22 @@ function patch() {
     }
   };
 
+  // пересылка настоящими средствами Telegram (фото, файлы, голосовые уходят как пересланные)
+  W.doFwd = function (cid) {
+    if (!TGM) return O.doFwd(cid);
+    W.closeAll();
+    const src = W.chat(W.S.open), to = W.chat(cid);
+    const ids = (W.S.fwdIds || []).map(Number).filter(Boolean);
+    if (!src || !to || !ids.length) return;
+    client.forwardMessages(ents[to.id], { messages: ids, fromPeer: ents[src.id] }).then((r) => {
+      (Array.isArray(r) ? r : [r]).forEach((m) => {
+        if (m && m.id != null && !to.msgs.some((x) => x.id === sid(m.id))) to.msgs.push(convMsg(m, to));
+      });
+      if (W.S.open === to.id) W.renderMsgs(1);
+      W.softMain(); W.clrMsel(); W.toast("Переслано");
+    }).catch(fail);
+  };
+
   W.startCall = function () { return TGM ? W.toast("Звонки пока недоступны") : O.startCall.apply(this, arguments); };
 }
 
@@ -861,6 +894,12 @@ function patch() {
 function boot() {
   patch();
   setInterval(addTgBtn, 600); // кнопка входа через Telegram всегда на экране входа
+  const box = $("#msgs");
+  if (box) box.addEventListener("scroll", () => {
+    if (!TGM || box.scrollTop > 80) return;
+    const c = W.S && W.S.open && W.chat(W.S.open);
+    if (c && c.tg && c.hist && !c.noMore && !c.loadingOld) loadOlder(c, box);
+  });
   if (localStorage.getItem(SKEY)) {
     // есть сохранённая сессия Telegram – входим автоматически
     const t = setInterval(() => { if (typeof W.S === "object" && W.chat) { clearInterval(t); startTG(); } }, 50);
