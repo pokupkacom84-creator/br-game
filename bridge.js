@@ -33,6 +33,15 @@ const ERR = {
   API_ID_PUBLISHED_FLOOD: "Ключ API временно заблокирован из-за лимитов. Нужен свой API ID",
   SEND_CODE_UNAVAILABLE: "Telegram больше не может отправить код. Подождите и попробуйте позже",
   FLOOD: "Слишком много попыток, подождите",
+  USERNAME_OCCUPIED: "Имя пользователя занято",
+  USERNAME_PURCHASE_AVAILABLE: "Имя пользователя занято",
+  USERNAME_INVALID: "Недопустимое имя пользователя",
+  USERNAME_NOT_MODIFIED: "Это уже ваше имя пользователя",
+  FIRSTNAME_INVALID: "Недопустимое имя",
+  ABOUT_TOO_LONG: "Слишком длинное описание",
+  BIRTHDAY_INVALID: "Неверная дата рождения",
+  IMAGE_PROCESS_FAILED: "Telegram не смог обработать изображение",
+  PHOTO_EXT_INVALID: "Неподдерживаемый формат изображения",
 };
 
 const LOG = [];
@@ -409,11 +418,17 @@ async function startTG() {
   W.S.name = name;
   W.S.phone = W.ME.email;
   LDB = LDB || mkLocalDb();
-  W.db = LDB; // профиль, аватар и фон хранятся локально, без Firebase
+  W.db = LDB; // то, чего нет в Telegram (фон, приватность), хранится локально, без Firebase
   const lu = LDB.val("users/me") || {};
-  W.S.me = { name: lu.name || name, username: lu.username || me.username || "", bio: lu.bio || "", bday: lu.bday || null, priv: lu.priv || {}, blocked: lu.blocked || {} };
-  if (lu.avatar) W.S.me.avatar = lu.avatar;
-  W.S.name = W.S.me.name;
+  let about = "", bday = null;
+  try {
+    const fu = await client.invoke(new Api.users.GetFullUser({ id: new Api.InputUserSelf() }));
+    const f = (fu && fu.fullUser) || {};
+    about = f.about || "";
+    if (f.birthday && f.birthday.day) bday = (f.birthday.year || 2000) + "-" + String(f.birthday.month).padStart(2, "0") + "-" + String(f.birthday.day).padStart(2, "0");
+  } catch (e) { console.error("[TG] full user", e); }
+  W.S.me = { name, username: me.username || "", bio: about, bday, priv: lu.priv || {}, blocked: {} };
+  W.S.name = name;
   W.S.cover = LDB.val("covers/me") || null; W.S.tab = "chats"; W.S.open = null; W.S.chats = [];
   W.S.admin = false;
   $("#login").style.display = "none";
@@ -531,7 +546,8 @@ function addTgBtn() {
 function patch() {
   const O = {};
   ["hideBan", "showLogin", "openChat", "pushMsg", "pushTo", "sbClick", "markRead", "doDel", "logout", "getMedia",
-    "react", "pinMsg", "setTyping", "typingPing", "startCall", "newChatDlg", "toggleBlock", "clearHist", "delChat"].forEach((n) => { O[n] = W[n]; });
+    "react", "pinMsg", "setTyping", "typingPing", "startCall", "newChatDlg", "toggleBlock", "clearHist", "delChat",
+    "putMedia", "editName", "renameDlg", "editBio", "editBday", "setUser", "chkUser"].forEach((n) => { O[n] = W[n]; });
 
   W.showLogin = function (step, mode) {
     if (TGM) return; // Firebase не должен перекрывать вход через Telegram
@@ -618,6 +634,93 @@ function patch() {
     client.invoke(new Api.auth.LogOut()).catch(() => {}).finally(() => {
       localStorage.removeItem(SKEY); localStorage.removeItem(LKEY); location.reload();
     });
+  };
+
+  /* ---- профиль: изменения применяются в настоящем Telegram ---- */
+  const fail = (e) => W.toast(tr(e));
+  const splitName = (n) => { const a = String(n).trim().split(/\s+/); return { firstName: a.shift() || "", lastName: a.join(" ") }; };
+
+  W.putMedia = function (k, d) {
+    if (!TGM) return O.putMedia(k, d);
+    if (k !== "avatar") { // у Telegram нет фото-фона профиля, поэтому фон виден только в этом приложении
+      LDB.ref("covers/me").set(d || null).then(() => { W.S.cover = d || null; W.refreshMe(); W.toast("Фон виден только в этом приложении"); });
+      return;
+    }
+    W.toast("Загрузка…");
+    (async () => {
+      if (d) {
+        const f = new File([dataToBuf(d)], "avatar.jpg", { type: "image/jpeg" });
+        const file = await client.uploadFile({ file: f, workers: 1 });
+        await client.invoke(new Api.photos.UploadProfilePhoto({ file }));
+      } else {
+        const r = await client.invoke(new Api.photos.GetUserPhotos({ userId: new Api.InputUserSelf(), offset: 0, maxId: 0, limit: 1 }));
+        const ph = r.photos && r.photos[0];
+        if (ph) await client.invoke(new Api.photos.DeletePhotos({ id: [new Api.InputPhoto({ id: ph.id, accessHash: ph.accessHash, fileReference: ph.fileReference })] }));
+      }
+      W.S.me.avatar = d || null;
+      W.refreshMe();
+      W.toast("Аватарка обновлена в Telegram");
+    })().catch(fail);
+  };
+
+  W.editName = W.renameDlg = function () {
+    if (!TGM) return O.editName.apply(this, arguments);
+    W.dialog.ph = "Имя"; W.dialog.ml = 30;
+    W.dialog("Ваше имя", "", W.S.name, "Сохранить", function (n) {
+      n = String(n || "").trim(); if (!n) return;
+      client.invoke(new Api.account.UpdateProfile(splitName(n))).then(() => {
+        W.S.name = n; W.S.me.name = n; if (W.ME) W.ME.name = n; W.refreshMe(); W.toast("Имя обновлено в Telegram");
+      }).catch(fail);
+    });
+  };
+
+  W.editBio = function () {
+    if (!TGM) return O.editBio();
+    W.dialog.ph = "О себе"; W.dialog.ml = 70; W.dialog.opt = 1;
+    W.dialog("О себе", "Напишите о себе пару слов", W.S.me.bio || "", "Сохранить", function (v) {
+      v = String(v || "").trim();
+      client.invoke(new Api.account.UpdateProfile({ about: v })).then(() => {
+        W.S.me.bio = v || null; W.refreshMe(); W.toast("Описание обновлено в Telegram");
+      }).catch(fail);
+    });
+  };
+
+  W.editBday = function () {
+    if (!TGM) return O.editBday();
+    W.dialog.ty = "date"; W.dialog.opt = 1;
+    W.dialog("День рождения", "", W.S.me.bday || "", "Сохранить", function (v) {
+      if (v && (v > new Date().toISOString().slice(0, 10) || v < "1900")) return W.toast("Неверная дата");
+      if (!Api.account.UpdateBirthday || !Api.Birthday) return W.toast("Эта версия библиотеки не поддерживает день рождения");
+      const b = v ? new Api.Birthday({ day: +v.slice(8, 10), month: +v.slice(5, 7), year: +v.slice(0, 4) }) : undefined;
+      client.invoke(new Api.account.UpdateBirthday({ birthday: b })).then(() => {
+        W.S.me.bday = v || null; W.refreshMe(); W.toast("Дата рождения обновлена в Telegram");
+      }).catch(fail);
+    });
+  };
+
+  W.chkUser = function (v) {
+    if (!TGM) return O.chkUser(v);
+    const e = $("#uh"); if (!e) return;
+    clearTimeout(W.ut); e.textContent = "";
+    if (!v || v === (W.S.me.username || "")) return;
+    if (!/^[a-z]/.test(v)) return W.uh("Имя пользователя должно начинаться с буквы", 1);
+    if (v.length < 5) return W.uh("Слишком короткое имя (минимум 5 символов)", 1);
+    if (!W.uOk(v)) return W.uh("Недопустимое имя пользователя", 1);
+    W.ut = setTimeout(() => {
+      client.invoke(new Api.account.CheckUsername({ username: v })).then((ok) => {
+        const f = $("#dfield");
+        if (f && f.value === v) W.uh(ok ? "Имя пользователя свободно" : "Имя пользователя занято", !ok);
+      }).catch(() => {});
+    }, 300);
+  };
+
+  W.setUser = function (v) {
+    if (!TGM) return O.setUser(v);
+    const old = W.S.me.username || ""; if (v === old) return;
+    if (v && !W.uOk(v)) return W.toast("Недопустимое имя пользователя");
+    client.invoke(new Api.account.UpdateUsername({ username: v || "" })).then(() => {
+      W.S.me.username = v || null; W.refreshMe(); W.toast("Имя пользователя обновлено в Telegram");
+    }).catch(fail);
   };
 
   ["startCall", "newChatDlg", "toggleBlock", "clearHist", "delChat"].forEach((n) => {
