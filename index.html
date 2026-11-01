@@ -282,13 +282,7 @@ const NAME='@FluxVpnClient';
 const PLANS=[{id:'pm_month',t:'1 месяц',d:30,r:199},{id:'pm_quarter',t:'3 месяца',d:90,r:499,pop:1},{id:'pm_year',t:'1 год',d:365,r:1490}];
 const MR='https://raw.githubusercontent.com/luxxuria/harvester/main/';
 const SRC=[
- {id:'free',n:'Свежие',p:0,urls:['https://raw.githubusercontent.com/SoliSpirit/mtproto/master/all_proxies.txt']},
- {id:'kudts',n:'Kudts',p:0,urls:['https://raw.githubusercontent.com/Kudts/mtproto/main/all_proxies.txt','https://raw.githubusercontent.com/Kudts/mtproto/master/all_proxies.txt']},
- {id:'alii',n:'ALIILAPRO',p:0,urls:['https://raw.githubusercontent.com/ALIILAPRO/MTProtoProxy/main/mtproto.txt']},
- {id:'argh',n:'Argh94',p:0,urls:['https://raw.githubusercontent.com/Argh94/Proxy-List/main/mtproto.txt']},
- {id:'mine',n:'Мои',p:0,local:1}
- /* Premium-список (свой файл с tg://proxy-ссылками) — раскомментируйте и подставьте URL:
- ,{id:'p1',n:'Premium прокси',p:1,urls:['https://raw.githubusercontent.com/ВАШ_АККАУНТ/РЕПО/main/premium.txt']} */
+ {id:'proxy',n:'Proxy',p:0,urls:['https://raw.githubusercontent.com/pokupkacom84-creator/Prem-VpnKey/4e4499ef22a3488c03e3c6534f14d9b6a2203ced/Vpn']}
 ];
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -325,7 +319,7 @@ const openUrl=u=>{window.open(u,'_blank','noopener')||(location.href=u)};
 
 /* ---------- состояние ---------- */
 let user=null,ud={},prem={},gprem={active:false},refBal=0,refSt={},hist=null,subs=[],hold=false,creds=null;
-let keys=[],srcId=store.get('fx-src','free'),selKey=null,lim=120,req=0,state=0,t0=0,tick,hue=+store.get('fx-h',293),mode=store.get('fx-mode','auto');
+let keys=[],srcId=store.get('fx-src','proxy'),selKey=null,lim=120,req=0,state=0,t0=0,tick,hue=+store.get('fx-h',293),mode=store.get('fx-mode','auto');
 try{const r=store.get('fx-key','');if(r){selKey=parse(r)[0]||null;if(selKey)selKey.sig=store.get('fx-ksig','')||selKey.sig}}catch(e){}
 
 /* ---------- Premium (логика как в index.html) ---------- */
@@ -389,7 +383,7 @@ function rKeys(bad){
  const s=curSrc(),pm=isPrem();
  document.querySelectorAll('.more').forEach(x=>x.remove());
  put($('#cats'),`<button class="chp rp${s.p?'':' on'}" data-c="0"><i data-i="key"></i>Бесплатные</button>${SRC.some(x=>x.p)?`<button class="chp rp${s.p?' on':''}" data-c="1"><i data-i="${pm?'crown':'lock'}"></i>Premium</button>`:''}`);
- put($('#srcs'),SRC.filter(x=>x.p===s.p).map(x=>`<button class="chp rp${x.id===s.id?' on':''}" data-s="${x.id}">${x.n}</button>`).join('')+'<button class="chp rp" id="addp"><i data-i="plus"></i>Добавить</button><button class="chp rp" id="rfr"><i data-i="refresh"></i>Обновить</button>');
+ put($('#srcs'),SRC.filter(x=>x.p===s.p).map(x=>`<button class="chp rp${x.id===s.id?' on':''}" data-s="${x.id}">${x.n}</button>`).join('')+'<button class="chp rp" id="rfr"><i data-i="refresh"></i>Обновить</button>');
  const L=$('#klist');
  if(s.p&&!pm){put(L,'<div class="li col" style="align-items:center;text-align:center"><span class="lead"><i data-i="lock"></i></span><b>Premium-список закрыт</b><small style="color:var(--on-sv)">Оформите Premium, чтобы открыть этот список</small><button class="fbtn rp" id="tos" style="max-width:260px">Открыть магазин</button></div>');$('#tos').onclick=()=>tab('shop');$('#kcount').textContent='Premium';return}
  $('#kcount').textContent=keys.length?`${s.n} · ${keys.length}`:s.n;
@@ -402,9 +396,8 @@ $('#klist').onclick=e=>{const r=e.target.closest('[data-k]');if(!r)return;openPx
 function openPx(k){
  selKey=k;store.set('fx-key',k.raw);store.set('fx-ksig',k.sig||'');rKeys();rHome();
  const mine=curSrc().local;
- dlg(`<h3>${esc(k.server)}</h3><div class="grp"><div class="li" style="cursor:default"><span class="m"><b>Порт</b><small>${k.port}</small></span></div><div class="li" style="cursor:default"><span class="m"><b>Тип секрета</b><small>${k.tp}</small></span></div></div><button class="fbtn rp" id="pxg" style="margin-top:16px">Подключить в Telegram</button><div class="row2" style="justify-content:flex-end"><button class="tbtn" id="pxc">Копировать ссылку</button>${mine?'<button class="tbtn" id="pxd">Удалить</button>':''}<button class="tbtn" id="pxx">Закрыть</button></div>`);
+ dlg(`<h3>${esc(k.server)}</h3><div class="grp"><div class="li" style="cursor:default"><span class="m"><b>Порт</b><small>${k.port}</small></span></div><div class="li" style="cursor:default"><span class="m"><b>Тип секрета</b><small>${k.tp}</small></span></div></div><button class="fbtn rp" id="pxg" style="margin-top:16px">Подключить в Telegram</button><div class="row2" style="justify-content:flex-end">${mine?'<button class="tbtn" id="pxd">Удалить</button>':''}<button class="tbtn" id="pxx">Закрыть</button></div>`);
  $('#pxg').onclick=()=>{closeDlg();openClient(k.raw)};
- $('#pxc').onclick=()=>cp(k.raw.replace('tg://proxy','https://t.me/proxy'),'Ссылка скопирована');
  $('#pxx').onclick=closeDlg;
  if(mine)$('#pxd').onclick=()=>{store.set('fx-mine',store.get('fx-mine','').split('\n').filter(l=>l&&(parse(l)[0]||{}).sig!==k.sig).join('\n'));if(selKey&&selKey.sig===k.sig){selKey=null;store.set('fx-key','');store.set('fx-ksig','')}closeDlg();loadKeys();rHome();snack('Удалено')}}
 function addProxy(){
