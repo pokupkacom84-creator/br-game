@@ -223,7 +223,7 @@ code{font-family:monospace;background:rgba(127,127,127,.25);padding:0 4px;border
 :root{--em:cubic-bezier(.2,0,0,1);--emd:cubic-bezier(.05,.7,.1,1);--spr:cubic-bezier(.34,1.56,.64,1)}
 .screen{transition:transform .5s var(--emd),opacity .3s,filter .4s,border-radius .4s}
 #chat:not(.open),#pf:not(.open){transition-timing-function:var(--em)}
-#chat,#pf{box-shadow:-10px 0 36px rgba(0,0,0,.2)}
+#chat,#pf{box-shadow:none}#chat.open,#pf.open{box-shadow:-10px 0 36px rgba(0,0,0,.2)}
 #main.back{transform:translateX(-22%) scale(.94);opacity:.5;border-radius:28px;filter:blur(1.5px)}
 #scrim{transition:opacity .35s var(--em);backdrop-filter:blur(2px)}
 #drawer,#sheet{transition:transform .5s var(--emd)}
@@ -347,6 +347,12 @@ code{font-family:monospace;background:rgba(127,127,127,.25);padding:0 4px;border
 .nv .av.sm{width:30px;height:30px;font-size:12px}
 .nv .pill{width:64px}
 .rxe{font-size:17px}
+
+/* fixes */
+#app{overflow:clip}
+.spl{background:rgba(127,127,127,.6);color:transparent;border-radius:4px;cursor:pointer;transition:background .25s,color .25s}
+.spl.on{background:none;color:inherit}
+@media(min-width:760px){body{background:var(--s3)}#app{left:50%;right:auto;width:440px;margin-left:-220px;box-shadow:0 0 0 1px var(--olv),0 12px 48px rgba(0,0,0,.28)}}
 </style>
 </head>
 <body>
@@ -1178,12 +1184,12 @@ function doDel(all){var c=chat(S.open),up={};S.delIds.forEach(function(id){if(al
 var URE=/https?:\/\/[^\s<>"'`\\]+/g;
 function fmt(t){var s=esc(t||""),L=[];
   s=s.replace(URE,function(u){L.push(u);return "\u0001"+(L.length-1)+"\u0001"});
-  s=s.replace(/`([^`\n]+)`/g,"<code>$1</code>").replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/__(.+?)__/g,"<i>$1</i>");
+  s=s.replace(/`([^`\n]+)`/g,"<code>$1</code>").replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/__(.+?)__/g,"<i>$1</i>").replace(/~~(.+?)~~/g,"<s>$1</s>").replace(/\|\|(.+?)\|\|/g,'<span class="spl" onclick="event.stopPropagation();this.classList.add(\'on\')">$1</span>');
   s=s.replace(/(^|[\s>])@([A-Za-z][A-Za-z0-9_]{4,31})/g,'$1<span class="mn" onclick="event.stopPropagation();mention(\'$2\')">@$2</span>');
   s=s.replace(/\u0001(\d+)\u0001/g,function(_,i){var u=L[i];return '<a class="lk" data-u="'+u+'" onclick="event.stopPropagation();openLink(this.dataset.u);return false">'+u+'</a>'});
   return s.replace(/\n/g,"<br>")}
 function linkPrev(t){var m=(t||"").match(/https?:\/\/[^\s<>"'`\\]+/);if(!m)return "";var u=m[0],d=u.replace(/^https?:\/\//,"").split("/")[0];
-  return '<div class="lp" data-u="'+esc(u)+'" onclick="event.stopPropagation();openLink(this.dataset.u)"><b>'+esc(d)+'</b><span>'+esc(u.replace(/^https?:\/\/[^\/]*/,"").slice(0,60)||"/")+'</span></div>'}
+  return '<div class="lp" data-u="'+esc(u)+'" onclick="event.stopPropagation();openLink(this.dataset.u)"><b>'+esc(d)+'</b>'+(function(p){return p&&p!=="/"?'<span>'+esc(p)+'</span>':""})(u.replace(/^https?:\/\/[^\/]*/,"").slice(0,60))+'</div>'}
 function openLink(u){if(!/^https?:\/\//.test(u))return;if(window.Android&&Android.openExternalBrowser)Android.openExternalBrowser(u);else window.open(u,"_blank")}
 function mention(n){db.ref("usernames/"+n.toLowerCase()).once("value").then(function(s){if(s.val())openProfile(s.val());else toast("Пользователь не найден")}).catch(dberr)}
 /* черновики */
@@ -1458,6 +1464,7 @@ function renderCalls(){var L=[];S.chats.forEach(function(c){if(c.type==="user")c
   $("#body").innerHTML=L.length?'<div class="sec">Недавние</div>'+L.slice(0,60).map(function(x){var c=x[0],m=x[1],ms=callMissed(m),k=m.call;
     return '<div class="ci" onclick="openChat(\''+c.id+'\')">'+avatar(c,"")+'<div class="cm"><div class="r1"><b'+(ms?' style="color:var(--err,#d93025)"':"")+'>'+esc(c.name)+'</b></div><div class="r2"><span class="pv" style="display:flex;gap:4px;align-items:center;color:'+(ms?"var(--err,#d93025)":"var(--osv)")+'">'+ic(ms?"cmiss":m.out?"cmade":"crecv",16)+dayLabel(m.t)+", "+hm(m.t)+(k.d?" · "+cdur(k.d):"")+'</span></div></div><button class="ib" style="color:var(--p)" onclick="event.stopPropagation();startCall('+!!k.v+',\''+c.id+'\')">'+ic(k.v?"videocam":"call")+'</button></div>'}).join(""):
     '<div class="empty"><div class="big">'+ic("call",44)+'</div><b>Звонков пока нет</b><p style="margin-top:6px">Нажмите на трубку в шапке чата, чтобы позвонить</p></div>'}
+(function(){var a=document.getElementById("app");if(a)a.addEventListener("scroll",function(){if(a.scrollLeft||a.scrollTop){a.scrollLeft=0;a.scrollTop=0}},{passive:true})})();
 </script>
 <script src="tg-bridge.js"></script>
 </body>
