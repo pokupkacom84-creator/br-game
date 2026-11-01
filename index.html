@@ -174,6 +174,18 @@ button,.li,.tile,.chp,.lead,.pill,.ava,.avb,.pw,.btn,.fbtn,.tbtn{
 .more{display:block;margin:10px auto}
 .uh{display:block;margin:-4px 12px 12px;font-size:13px;line-height:1.35;color:var(--on-sv)}
 .uh.er{color:var(--err)}.uh.ok{color:var(--p)}
+
+.pnote{display:flex;align-items:center;gap:12px;background:var(--tc);color:var(--on-tc);border-radius:24px;padding:14px 16px;margin-top:8px}
+.pnote.warn{background:color-mix(in srgb,var(--err) 16%,var(--s2));color:var(--on-s)}
+.pnote .m small{color:inherit;opacity:.8}
+.pnote .btn{height:40px;padding:0 16px;background:var(--p);color:var(--on-p)}
+.vt{display:flex;gap:10px;align-items:center;flex:none;font-size:13px;color:var(--on-sv)}
+.vt>span{display:inline-flex;align-items:center;gap:3px}
+.vt svg{width:16px;height:16px}
+.vt .me{color:var(--p);font-weight:600}
+.vrow{display:flex;gap:8px;margin-top:16px}
+.vb{flex:1;height:48px;border:1px solid var(--ol);border-radius:24px;background:none;color:var(--on-s);display:flex;align-items:center;justify-content:center;gap:8px;font-weight:500;cursor:pointer}
+.vb.on{background:var(--sc);color:var(--on-sc);border-color:transparent}
 </style>
 </head>
 <body>
@@ -183,6 +195,7 @@ button,.li,.tile,.chp,.lead,.pill,.ava,.avb,.pw,.btn,.fbtn,.tbtn{
 <div class="app">
  <section id="home" class="scr on">
   <div class="hero" id="hero"><div class="m"><div class="big" id="st">Не подключён</div><div class="sup" id="srv">Прокси не выбран</div></div><button class="pw rp" id="pw" aria-label="Подключить прокси"><i data-i="power"></i></button></div>
+  <div id="pnote"></div>
   <div class="lbl">Сводка</div>
   <div class="stats"><div class="stat a"><i data-i="key"></i><b id="n-keys">0</b><small>прокси в списке</small></div><div class="stat b"><i data-i="dns"></i><b id="n-proto">—</b><small>тип</small></div><div class="stat c"><i data-i="crown"></i><b id="n-prem">Нет</b><small>Premium</small></div></div>
   <button class="btn rp" id="chg"><i data-i="key"></i>Выбрать прокси</button>
@@ -317,6 +330,7 @@ const openUrl=u=>{window.open(u,'_blank','noopener')||(location.href=u)};
 
 /* ---------- состояние ---------- */
 let user=null,ud={},prem={},gprem={active:false},refBal=0,refSt={},hist=null,subs=[],hold=false,creds=null;
+let votesRaw={},curPx=null;
 let keys=[],srcId=store.get('fx-src','proxy'),selKey=null,lim=120,req=0,state=0,t0=0,tick,hue=+store.get('fx-h',293),mode=store.get('fx-mode','auto');
 try{const r=store.get('fx-key','');if(r){selKey=parse(r)[0]||null;if(selKey)selKey.sig=store.get('fx-ksig','')||selKey.sig}}catch(e){}
 
@@ -328,11 +342,14 @@ const isAdmin=()=>!!user&&(ADMIN_UIDS.includes(user.uid)||ud.isAdmin===true||ud.
 
 /* ---------- VPN-ключи ---------- */
 const ptxt=x=>{try{return decodeURIComponent(x)}catch(e){return x}};
+function hid(str){let h1=0xdeadbeef,h2=0x41c6ce57;for(let i=0;i<str.length;i++){const c=str.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677)}
+ h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+ return(h2>>>0).toString(16).padStart(8,'0')+(h1>>>0).toString(16).padStart(8,'0')}
 function mkProxy(server,port,secret){
  server=String(server||'').trim();port=parseInt(port,10);secret=String(secret||'').trim();
  if(!/^[A-Za-z0-9.\-]+$/.test(server)||!(port>0&&port<65536)||!/^[A-Za-z0-9_\-+\/=]{16,}$/.test(secret))return null;
  const tp=/^ee/i.test(secret)?'FakeTLS':/^dd/i.test(secret)?'Secure':'Classic';
- return{raw:'tg://proxy?server='+server+'&port='+port+'&secret='+encodeURIComponent(secret),sig:server.toLowerCase()+':'+port+':'+secret,server,port,secret,tp,p:'mtproto',host:server,flag:'📡',n:server+':'+port}}
+ const k={raw:'tg://proxy?server='+server+'&port='+port+'&secret='+encodeURIComponent(secret),sig:server.toLowerCase()+':'+port+':'+secret,server,port,secret,tp,p:'mtproto',host:server,flag:'📡',n:server+':'+port};k.pid=hid(k.sig);return k}
 /* понимает tg://proxy?…, https://t.me/proxy?… и строки «сервер:порт:секрет» (в т.ч. «ip:port:mtproto:секрет») */
 function parse(t){
  const o=[],seen={};
@@ -377,6 +394,11 @@ async function loadKeys(force){
  put($('#klist'),`<div class="li" style="justify-content:center;padding:36px 20px;cursor:default">${WV('Загрузка ключей')}</div>`);
  let bad=0;try{const t=await getTxt(s,force);if(id!==req)return;lastTxt=t;keys=parse(t)}catch(e){if(id!==req)return;keys=[];bad=1}
  rKeys(bad)}
+function vstat(k){const o=(votesRaw&&k&&votesRaw[k.pid])||{};let up=0,dn=0;for(const u in o){if(o[u]===1)up++;else if(o[u]===-1)dn++}return{up,dn,my:user?(+o[user.uid]||0):0}}
+const vtag=k=>{const v=vstat(k);return(v.up||v.dn)?`<span class="vt"><span class="${v.my===1?'me':''}"><i data-i="tup"></i>${v.up}</span><span class="${v.my===-1?'me':''}"><i data-i="tdn"></i>${v.dn}</span></span>`:''};
+function paintVotes(k){const v=vstat(k),a=$('#vup'),b=$('#vdn');if(!a||!b)return;$('#vupn').textContent=v.up;$('#vdnn').textContent=v.dn;a.classList.toggle('on',v.my===1);b.classList.toggle('on',v.my===-1)}
+async function vote(k,v){if(!user||!k||!k.pid)return;const nv=vstat(k).my===v?0:v;
+ try{const r=db.ref('proxyVotes/'+k.pid+'/'+user.uid);if(nv)await r.set(nv);else await r.remove()}catch(e){snack('Не удалось сохранить оценку')}}
 function rKeys(bad){
  const s=curSrc(),pm=isPrem();
  document.querySelectorAll('.more').forEach(x=>x.remove());
@@ -386,7 +408,7 @@ function rKeys(bad){
  if(s.p&&!pm){put(L,'<div class="li col" style="align-items:center;text-align:center"><span class="lead"><i data-i="lock"></i></span><b>Premium-список закрыт</b><small style="color:var(--on-sv)">Оформите Premium, чтобы открыть этот список</small><button class="fbtn rp" id="tos" style="max-width:260px">Открыть магазин</button></div>');$('#tos').onclick=()=>tab('shop');$('#kcount').textContent='Premium';return}
  $('#kcount').textContent=keys.length?`${s.n} · ${keys.length}`:s.n;
  if(!keys.length){put(L,`<div class="li" style="justify-content:center;color:var(--on-sv)">${bad?'Не удалось загрузить прокси. Проверьте сеть и нажмите «Обновить».':(s.local?'Своих прокси пока нет. Нажмите «Добавить».':'В этом списке пока нет прокси.')}</div>`);return}
- put(L,keys.slice(0,lim).map((k,i)=>`<div class="li rp${selKey&&(selKey.raw===k.raw||(selKey.sig&&selKey.sig===k.sig))?' sel':''}" data-k="${i}"><span class="lead">${k.flag}</span><span class="m"><b>${esc(k.server)}</b><small>порт ${k.port} · ${k.tp}</small></span></div>`).join(''));
+ put(L,keys.slice(0,lim).map((k,i)=>`<div class="li rp${selKey&&(selKey.raw===k.raw||(selKey.sig&&selKey.sig===k.sig))?' sel':''}" data-k="${i}"><span class="lead">${k.flag}</span><span class="m"><b>${esc(k.server)}</b><small>порт ${k.port} · ${k.tp}</small></span>${vtag(k)}</div>`).join(''));
  if(keys.length>lim){const b=document.createElement('button');b.className='tbtn more';b.textContent=`Показать ещё (${keys.length-lim})`;b.onclick=()=>{lim+=120;rKeys()};L.after(b)}}
 $('#cats').onclick=e=>{const b=e.target.closest('[data-c]');if(!b)return;const p=+b.dataset.c;if(p&&!isPrem()){srcId='p1';store.set('fx-src',srcId);loadKeys();snack('Premium-список доступен только с Premium');return}srcId=SRC.find(x=>x.p===p).id;store.set('fx-src',srcId);loadKeys()};
 $('#srcs').onclick=e=>{if(e.target.closest('#rfr')){loadKeys(true);return}const b=e.target.closest('[data-s]');if(!b)return;srcId=b.dataset.s;store.set('fx-src',srcId);loadKeys()};
@@ -394,7 +416,8 @@ $('#klist').onclick=e=>{const r=e.target.closest('[data-k]');if(!r)return;openPx
 function openPx(k){
  selKey=k;store.set('fx-key',k.raw);store.set('fx-ksig',k.sig||'');rKeys();rHome();
  const mine=curSrc().local;
- dlg(`<h3>${esc(k.server)}</h3><div class="grp"><div class="li" style="cursor:default"><span class="m"><b>Порт</b><small>${k.port}</small></span></div><div class="li" style="cursor:default"><span class="m"><b>Тип секрета</b><small>${k.tp}</small></span></div></div><button class="fbtn rp" id="pxg" style="margin-top:16px">Подключить в Telegram</button><div class="row2" style="justify-content:flex-end">${mine?'<button class="tbtn" id="pxd">Удалить</button>':''}<button class="tbtn" id="pxx">Закрыть</button></div>`);
+ dlg(`<h3>${esc(k.server)}</h3><div class="grp"><div class="li" style="cursor:default"><span class="m"><b>Порт</b><small>${k.port}</small></span></div><div class="li" style="cursor:default"><span class="m"><b>Тип секрета</b><small>${k.tp}</small></span></div></div><div class="vrow"><button class="vb rp" id="vup" aria-label="Нравится"><i data-i="tup"></i><span id="vupn">0</span></button><button class="vb rp" id="vdn" aria-label="Не нравится"><i data-i="tdn"></i><span id="vdnn">0</span></button></div><button class="fbtn rp" id="pxg" style="margin-top:12px">Подключить в Telegram</button><div class="row2" style="justify-content:flex-end">${mine?'<button class="tbtn" id="pxd">Удалить</button>':''}<button class="tbtn" id="pxx">Закрыть</button></div>`);
+ curPx=k;paintVotes(k);$('#vup').onclick=()=>vote(k,1);$('#vdn').onclick=()=>vote(k,-1);
  $('#pxg').onclick=()=>{closeDlg();openClient(k.raw)};
  $('#pxx').onclick=closeDlg;
  if(mine)$('#pxd').onclick=()=>{store.set('fx-mine',store.get('fx-mine','').split('\n').filter(l=>l&&(parse(l)[0]||{}).sig!==k.sig).join('\n'));if(selKey&&selKey.sig===k.sig){selKey=null;store.set('fx-key','');store.set('fx-ksig','')}closeDlg();loadKeys();rHome();snack('Удалено')}}
@@ -426,7 +449,12 @@ function rHome(){
  $('#srv').textContent=selKey?`${selKey.flag} ${selKey.n}`:'Прокси не выбран';
  $('#n-keys').textContent=keys.length;$('#n-proto').textContent=selKey?selKey.tp:'—';
  $('#n-prem').textContent=isPrem()?'Да':'Нет';
- const dot=$('#shopdot');if(dot)dot.hidden=isPrem()}
+ const dot=$('#shopdot');if(dot)dot.hidden=isPrem();
+ const pn=$('#pnote');if(pn){let h='';const e=expOf(prem),left=e-Date.now();
+  if(gprem.active!==true&&prem&&prem.expiresAt&&e){
+   if(left>0&&prem.active){const d=Math.ceil(left/864e5);h=`<div class="pnote${d<=3?' warn':''}"><span class="lead"><i data-i="crown"></i></span><span class="m"><b>Premium: осталось ${d} дн.</b><small>Действует до ${dt(e)}</small></span><button class="btn rp" id="pnb">Продлить</button></div>`}
+   else if(left<=0&&!prem.revokedAt){h=`<div class="pnote warn"><span class="lead"><i data-i="crown"></i></span><span class="m"><b>Premium закончился</b><small>Продлите, чтобы вернуть доступ</small></span><button class="btn rp" id="pnb">Продлить</button></div>`}}
+  put(pn,h);const b=$('#pnb');if(b)b.onclick=()=>tab('shop')}}
 
 /* ---------- магазин ---------- */
 function rShop(){
@@ -445,7 +473,7 @@ async function loadHist(){try{const a=(await db.ref('payments/'+user.uid).once('
 
 /* ---------- профиль и рефералы ---------- */
 function dlg(h){put($('#dlg'),h);$('#scrim').hidden=false}
-const closeDlg=()=>{$('#scrim').hidden=true};
+const closeDlg=()=>{$('#scrim').hidden=true;curPx=null};
 $('#scrim').onclick=e=>{if(e.target.id==='scrim')closeDlg()};
 function rMe(){
  if(!user)return;
@@ -498,6 +526,7 @@ async function deleteAccount(){
 /* В Sketchware-приложении используется нативный мост Android.showNotification, в обычном браузере — Notification API.
    Работают, пока приложение открыто (фонового push без сервера нет). */
 let pn;
+Object.assign(IC,{tup:"M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z",tdn:"M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"});
 IC.trash="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z";
 function notify(t,m){
  if(store.get('fx-notif','0')!=='1')return;
@@ -539,7 +568,7 @@ function openAv(){
  <input type="file" id="avf" accept="image/*" hidden>
  <div class="row2" style="justify-content:flex-end;margin-top:8px"><button class="tbtn" id="avx">Закрыть</button></div>`);
  paintAv($('#avp'),ud);
- const save=async d=>{try{await db.ref('users/'+user.uid).update(d);closeDlg();snack('Аватар обновлён')}catch(e){snack('Не удалось сохранить аватар')}};
+ const save=async d=>{try{const up={};for(const k in d)up['users/'+user.uid+'/'+k]=d[k];await db.ref().update(up);closeDlg();snack('Аватар обновлён')}catch(e){snack('Не удалось сохранить аватар')}};
  $('#avx').onclick=closeDlg;
  $('#avi').onclick=()=>save({avatarId:'initials',photoURL:null});
  $('#avu').onclick=()=>$('#avf').click();
@@ -663,7 +692,8 @@ async function boot(){
 function listen(){
  off();const L=(p,f)=>{const r=db.ref(p);r.on('value',s=>{f(s.val());rAll()},()=>{});subs.push(r)};
  L('users/'+user.uid,v=>{ud=v||{};if(ud.adminBlocked===true){snack('Аккаунт заблокирован');auth.signOut()}});L('users/'+user.uid+'/premium',v=>prem=v||{});L('settings/globalPremium',v=>gprem=v||{active:false});
- L('users/'+user.uid+'/refBalance/rub',v=>refBal=+v||0);L('users/'+user.uid+'/refStats',v=>refSt=v||{})}
+ L('users/'+user.uid+'/refBalance/rub',v=>refBal=+v||0);L('users/'+user.uid+'/refStats',v=>refSt=v||{});
+ {const r=db.ref('proxyVotes');r.on('value',s=>{votesRaw=s.val()||{};if(keys.length&&$('#keys').classList.contains('on'))rKeys();if(curPx&&!$('#scrim').hidden)paintVotes(curPx)},()=>{});subs.push(r)}}
 function off(){subs.forEach(r=>r.off());subs=[]}
 function enter(){
  store.set('fx-li','1');$('#gate').hidden=true;$('#app').hidden=false;listen();loadHist();loadKeys();rAll();tab('home');
@@ -688,7 +718,7 @@ function tab(t){
  $('#h1').textContent=TT[t];$('#sub').textContent=t==='home'?['Не активен','Подготовка…','Ключ активен'][state]:'';
  $('#sub').style.display=t==='home'?'':'none';$('.app').scrollTop=0;$('#bar').classList.remove('sc');
  if(t==='shop'&&user){rShop();loadHist();}
- if(t==='keys')rKeys()}
+ if(t==='keys')rKeys();if(t==='home')rHome()}
 $$('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
 $('#ava').onclick=()=>tab('me');
 
