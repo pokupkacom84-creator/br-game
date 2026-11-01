@@ -352,22 +352,36 @@ function mkChatEnt(e) {
   return c;
 }
 
+function limiter(n) {
+  let a = 0; const q = [];
+  const pump = () => { while (a < n && q.length) { const j = q.shift(); a++; j().catch(() => {}).finally(() => { a--; pump(); }); } };
+  return { add: (j) => { q.push(j); pump(); } };
+}
+const avLim = limiter(6), mediaLim = limiter(4);
+let softT = 0;
+const softSoon = () => { if (softT) return; softT = setTimeout(() => { softT = 0; W.softMain(); }, 200); };
+async function avGet(id) { try { const d = await idb(); return await rq(d.transaction("blobs").objectStore("blobs").get("av:" + id)); } catch (e) { return null; } }
+async function avPut(id, blob) { try { const d = await idb(); const t = d.transaction("blobs", "readwrite"); t.objectStore("blobs").put({ k: "av:" + id, blob, ts: Date.now() }); await wq(t); } catch (e) {} }
 async function loadAvatar(c) {
   if (c.photo || photoQ[c.id]) return;
   photoQ[c.id] = 1;
-  try {
+  const cached = await avGet(c.id);
+  if (cached && cached.blob) { c.photo = URL.createObjectURL(cached.blob); softSoon(); if (Date.now() - (cached.ts || 0) < 3 * 864e5) return; }
+  avLim.add(async () => {
     const b = await client.downloadProfilePhoto(ents[c.id], { isBig: false });
-    if (b && b.length) { c.photo = URL.createObjectURL(new Blob([b], { type: "image/jpeg" })); W.softMain(); }
-  } catch (e) {}
+    if (b && b.length) { const blob = new Blob([b], { type: "image/jpeg" }); c.photo = URL.createObjectURL(blob); avPut(c.id, blob); softSoon(); }
+  });
 }
 
 async function loadDialogs() {
-  const ds = await client.getDialogs({ limit: 200 });
-  W.S.chats = ds.filter((d) => !d.archived).map(mkChat);
-  W.softMain();
-  const list = W.S.chats.slice();
-  for (const c of list.slice(0, 30)) loadAvatar(c);
-  (async () => { for (const c of list.slice(30)) { await loadAvatar(c); await new Promise((r) => setTimeout(r, 120)); } })();
+  const apply = (ds) => {
+    const old = {}; (W.S.chats || []).forEach((c) => { old[c.id] = c; });
+    W.S.chats = ds.filter((d) => !d.archived).map((d) => old[sid(d.id)] || mkChat(d));
+    W.softMain();
+    W.S.chats.forEach(loadAvatar);
+  };
+  apply(await client.getDialogs({ limit: 30 }));
+  client.getDialogs({ limit: 200 }).then(apply).catch(() => {});
 }
 
 /* ---------- история: загрузка, слияние с кэшем (удалённые), подгрузка вверх ---------- */
@@ -395,7 +409,18 @@ const byTime = (a, b) => a.t - b.t || Number(a.id) - Number(b.id);
 async function loadHistory(c) {
   if (c.hist) return;
   c.hist = true;
-  const list = await client.getMessages(ents[c.id], { limit: 60 });
+  const base = c.msgs.slice();
+  const netP = client.getMessages(ents[c.id], { limit: 60 });
+  netP.catch(() => {});
+  if (base.length <= 1) { // мгновенно показываем сохранённую историю, пока грузится сеть
+    try {
+      const rows = (await idbChat(c.id)).filter((r) => AYU.keepDeleted || !r.deleted).sort((a, b) => a.id - b.id).slice(-60);
+      if (rows.length > 1 && W.S.open === c.id) { c.msgs = (await Promise.all(rows.map(fromRec))).sort(byTime); W.renderMsgs(); }
+    } catch (e) {}
+  }
+  let list;
+  try { list = await netP; } catch (e) { c.hist = false; return; }
+  c.msgs = base;
   const fetched = list.reverse().map((m) => convMsg(m, c));
   const lo = fetched.length ? Math.min(...fetched.map((x) => Number(x.id))) : 0;
   const extra = await mergeCache(c, fetched, lo);
@@ -434,22 +459,31 @@ async function loadOlder(c) {
   } catch (e) {} finally { c.loadingOld = false; }
 }
 
-async function fetchMedia(c) {
-  for (const m of c.msgs) {
-    if (!m.raw || m.mediaDone) continue;
-    if (m.photoPending || m.voice) {
-      m.mediaDone = true;
-      try {
-        const buf = await client.downloadMedia(m.raw, {});
-        if (buf) {
-          const blob = new Blob([buf], { type: m.voice ? "audio/ogg" : "image/jpeg" });
-          const url = URL.createObjectURL(blob);
-          if (m.voice) m.audio = url; else { m.img = url; m.photoPending = false; }
-          idbPutBlob(c.id + ":" + m.id, blob); cacheMsg(c, m);
-          if (W.S.open === c.id) W.renderMsgs(1);
+const renderSoon = (c) => { if (c._rt) return; c._rt = setTimeout(() => { c._rt = 0; if (W.S.open === c.id) W.renderMsgs(1); }, 150); };
+function fetchMedia(c) {
+  const list = c.msgs.filter((m) => m.raw && !m.mediaDone && (m.photoPending || m.voice)).reverse(); // сначала самые новые
+  for (const m of list) {
+    m.mediaDone = true;
+    mediaLim.add(async () => {
+      const key = c.id + ":" + m.id;
+      let blob = await idbGetBlob(key);
+      if (!blob) {
+        if (m.photoPending) { // мгновенное размытое превью
+          try {
+            const t = await client.downloadMedia(m.raw, { thumb: 0 });
+            if (t && t.length && !m.img) { m.img = URL.createObjectURL(new Blob([t], { type: "image/jpeg" })); m.prev = true; renderSoon(c); }
+          } catch (e) {}
         }
-      } catch (e) {}
-    }
+        const buf = await client.downloadMedia(m.raw, {});
+        if (!buf) return;
+        blob = new Blob([buf], { type: m.voice ? "audio/ogg" : "image/jpeg" });
+        idbPutBlob(key, blob);
+      }
+      const url = URL.createObjectURL(blob);
+      if (m.voice) m.audio = url;
+      else { if (m.prev && m.img) URL.revokeObjectURL(m.img); m.img = url; m.photoPending = false; m.prev = false; }
+      cacheMsg(c, m); renderSoon(c);
+    });
   }
 }
 
@@ -497,7 +531,8 @@ async function startTG() {
   hookEvents();
   setInterval(() => { if (AYU.ghostOnline) setOffline(); }, 15000);
   setInterval(pollChat, 3000);
-  setInterval(pollDialogs, 12000);
+  setInterval(pollDialogs, 15000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { pollDialogs(); pollChat(); } });
   if (AYU.ghostOnline) setOffline();
   W.toast("Подключено к Telegram");
 }
@@ -643,14 +678,14 @@ function mergeLive(c, list) {
 }
 let polling = false, pollingD = false;
 async function pollChat() {
-  if (!client || !TGM || polling) return;
+  if (!client || !TGM || polling || document.hidden) return;
   const c = W.chat(W.S.open);
   if (!c || !c.tg || !c.hist || c.loadingOld) return;
   polling = true;
   try { mergeLive(c, await client.getMessages(ents[c.id], { limit: 25 })); } catch (e) {} finally { polling = false; }
 }
 async function pollDialogs() {
-  if (!client || !TGM || pollingD) return;
+  if (!client || !TGM || pollingD || document.hidden) return;
   pollingD = true;
   try {
     const ds = await client.getDialogs({ limit: 40 });
