@@ -192,8 +192,6 @@ button,.li,.tile,.chp,.lead,.pill,.ava,.avb,.pw,.btn,.fbtn,.tbtn{
  <section id="me" class="scr"><div id="mbox"></div>
   <div class="lbl">Приложение</div>
   <div class="grp">
-   <div class="li col"><div style="display:flex;align-items:center;gap:16px"><span class="lead"><i data-i="shield"></i></span><span class="m"><b>Способ подключения</b><small>Как открывать выбранный прокси</small></span></div>
-    <div class="seg" id="cli"><button data-c="tg"><i data-i="check"></i>Telegram</button><button data-c="web"><i data-i="check"></i>Ссылка t.me</button></div></div>
    <label class="li rp"><span class="lead"><i data-i="sync"></i></span><span class="m"><b>Автоподключение</b><small>Отправлять выбранный прокси в Telegram при запуске</small></span><input class="sw" type="checkbox" data-k="auto"></label>
    <label class="li rp"><span class="lead"><i data-i="bell"></i></span><span class="m"><b>Уведомления</b><small>Новые прокси и окончание Premium</small></span><input class="sw" type="checkbox" data-k="notif"></label>
   </div>
@@ -391,7 +389,7 @@ function rKeys(bad){
  put(L,keys.slice(0,lim).map((k,i)=>`<div class="li rp${selKey&&(selKey.raw===k.raw||(selKey.sig&&selKey.sig===k.sig))?' sel':''}" data-k="${i}"><span class="lead">${k.flag}</span><span class="m"><b>${esc(k.server)}</b><small>порт ${k.port} · ${k.tp}</small></span></div>`).join(''));
  if(keys.length>lim){const b=document.createElement('button');b.className='tbtn more';b.textContent=`Показать ещё (${keys.length-lim})`;b.onclick=()=>{lim+=120;rKeys()};L.after(b)}}
 $('#cats').onclick=e=>{const b=e.target.closest('[data-c]');if(!b)return;const p=+b.dataset.c;if(p&&!isPrem()){srcId='p1';store.set('fx-src',srcId);loadKeys();snack('Premium-список доступен только с Premium');return}srcId=SRC.find(x=>x.p===p).id;store.set('fx-src',srcId);loadKeys()};
-$('#srcs').onclick=e=>{if(e.target.closest('#rfr')){loadKeys(true);return}if(e.target.closest('#addp')){addProxy();return}const b=e.target.closest('[data-s]');if(!b)return;srcId=b.dataset.s;store.set('fx-src',srcId);loadKeys()};
+$('#srcs').onclick=e=>{if(e.target.closest('#rfr')){loadKeys(true);return}const b=e.target.closest('[data-s]');if(!b)return;srcId=b.dataset.s;store.set('fx-src',srcId);loadKeys()};
 $('#klist').onclick=e=>{const r=e.target.closest('[data-k]');if(!r)return;openPx(keys[+r.dataset.k])};
 function openPx(k){
  selKey=k;store.set('fx-key',k.raw);store.set('fx-ksig',k.sig||'');rKeys();rHome();
@@ -400,12 +398,6 @@ function openPx(k){
  $('#pxg').onclick=()=>{closeDlg();openClient(k.raw)};
  $('#pxx').onclick=closeDlg;
  if(mine)$('#pxd').onclick=()=>{store.set('fx-mine',store.get('fx-mine','').split('\n').filter(l=>l&&(parse(l)[0]||{}).sig!==k.sig).join('\n'));if(selKey&&selKey.sig===k.sig){selKey=null;store.set('fx-key','');store.set('fx-ksig','')}closeDlg();loadKeys();rHome();snack('Удалено')}}
-function addProxy(){
- dlg(`<h3>Свой прокси</h3><p style="margin:0 0 12px;color:var(--on-sv)">Вставьте ссылку tg://proxy… или t.me/proxy…, либо сервер:порт:секрет. Можно несколько — каждый с новой строки.</p><textarea id="pxt" rows="5" autocapitalize="none" autocomplete="off" spellcheck="false" style="width:100%;border:1px solid var(--ol);border-radius:16px;background:none;color:var(--on-s);padding:12px 16px;outline:0;font:inherit;resize:none"></textarea><div class="row2" style="justify-content:flex-end;margin-top:12px"><button class="tbtn" id="pax">Отмена</button><button class="tbtn" id="pas">Добавить</button></div>`);
- $('#pax').onclick=closeDlg;
- $('#pas').onclick=()=>{const add=parse($('#pxt').value);if(!add.length){snack('Не удалось распознать прокси');return}
-  const cur=parse(store.get('fx-mine','')),seen=new Set(cur.map(x=>x.sig));add.forEach(x=>{if(!seen.has(x.sig)){seen.add(x.sig);cur.push(x)}});
-  store.set('fx-mine',cur.map(x=>x.raw).join('\n'));srcId='mine';store.set('fx-src',srcId);closeDlg();loadKeys();snack('Добавлено: '+add.length)}}
 
 /* ---------- главная ---------- */
 function setSt(s){state=s;const h=$('#hero');h.classList.toggle('on',s===2);h.classList.toggle('busy',s===1);const t=['Не подключён','Подготовка…','Отправлено в Telegram'][s];$('#st').textContent=t;if(!$('#home').classList.contains('x'))$('#sub').textContent=t}
@@ -416,7 +408,7 @@ function toggle(){
  setTimeout(()=>{setSt(2);openClient(selKey.raw);setTimeout(()=>{if(state===2)setSt(0)},5000)},400)}
 /* выбор VPN-клиента: Happ или Incy (llc.itdev.incy). Оба принимают deep link вида <схема>://add/<ключ> */
 const CLI={tg:{n:'Telegram',m:'tg'},web:{n:'Ссылка t.me',m:'web'}};
-const client=()=>CLI[store.get('fx-client','tg')]?store.get('fx-client','tg'):'tg';
+const client=()=>'tg';
 /* открывает выбранный клиент; ключ добавляется автоматически через deep link */
 function openClient(k){
  const C=CLI[client()];
@@ -716,9 +708,6 @@ function apply(){
  put($('#sws'),sysT+HU.map(h=>{const s=scheme(h,d);return`<button class="tile rp${!sy&&Math.abs(h-hue)<1?' on':''}" data-h="${h}" aria-label="Цвет ${h}" style="background:${s.sc}"><span class="dot" style="background:conic-gradient(${s.p} 0 50%,${s.t} 50% 75%,${s.pc} 75%)"><i data-i="check"></i></span></button>`}).join('')+`<label class="tile" style="background:${c.s3}" aria-label="Свой цвет"><span class="dot" style="color:var(--on-sv)"><i data-i="plus"></i></span><input type="color" id="cc" value="${hex(tl(d?80:40),.15,hue)}"></label>`)}
 dq.addEventListener('change',apply);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&store.get('fx-sys','0')==='1')apply()});
-const paintCli=()=>$$('#cli button').forEach(b=>b.classList.toggle('on',b.dataset.c===client()));
-$('#cli').onclick=e=>{const b=e.target.closest('button');if(!b)return;store.set('fx-client',b.dataset.c);paintCli();snack('Способ: '+CLI[b.dataset.c].n)};
-paintCli();
 $('#seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;mode=b.dataset.m;store.set('fx-mode',mode);apply()};
 $('#sws').onclick=e=>{const y=e.target.closest('.tile[data-sys]');if(y){store.set('fx-sys','1');apply();return}const b=e.target.closest('.tile[data-h]');if(!b)return;hue=+b.dataset.h;store.set('fx-sys','0');store.set('fx-h',hue);apply()};
 $('#sws').addEventListener('change',e=>{if(e.target.id!=='cc')return;hue=hueOf(e.target.value);store.set('fx-sys','0');store.set('fx-h',hue);apply()});
