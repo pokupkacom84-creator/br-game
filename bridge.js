@@ -427,9 +427,22 @@ async function fetchMedia(c) {
 /* =====================================================================
    ЗАПУСК
    ===================================================================== */
+function showEntry(err) {
+  const el = $("#login"); if (!el) return;
+  const img = (document.querySelector("#login img") || {}).src || "";
+  el.style.display = "flex";
+  el.innerHTML = '<div class="auth"><div class="big">' + (img ? '<img src="' + img + '" alt="">' : "") + "</div><h2>Telegram You</h2><p>Вход выполняется через Telegram</p>" +
+    '<button class="tb f aw" id="tge">Войти через Telegram</button>' +
+    '<button class="tb" id="tgp" style="margin-top:6px">' + (getProxy() ? "Прокси: включён" : "Настроить прокси") + "</button>" +
+    '<div class="aerr" id="aerr">' + esc(err || "") + "</div></div>";
+  $("#tge").onclick = startTG;
+  $("#tgp").onclick = () => W.AYU_proxy();
+}
+
 async function startTG() {
   TGM = true;
-  try { await connect(); } catch (e) { TGM = false; W.showLogin("auth"); W.aerr && W.aerr({ message: String(e.message || e) }); return; }
+  { const el = $("#login"); if (el) { el.style.display = "flex"; el.innerHTML = loginHtml("load"); } }
+  try { await connect(); } catch (e) { TGM = false; console.error("connect", e); showEntry("Не удалось подключиться: " + String((e && (e.errorMessage || e.message)) || e)); return; }
   const me = await client.getMe();
   MYID = sid(me.id);
   const name = [me.firstName, me.lastName].filter(Boolean).join(" ") || me.username || "Я";
@@ -890,22 +903,10 @@ function patch() {
     "setTyping", "typingPing", "startCall", "newChatDlg", "toggleBlock", "clearHist", "delChat", "persist", "selDel", "selRead",
     "statusText", "doFwd", "openProfile", "sendBlob", "sendFile", "mention", "moreCards", "renderMsgs", "msgMenu2", "iBlock"].forEach((n) => { O[n] = W[n]; });
 
-  W.showLogin = function (step, mode) {
-    if (TGM) return; // Firebase не должен перекрывать вход через Telegram
-    O.showLogin(step, mode);
-    if (step === "auth" && !TGM) {
-      const el = $("#login .auth"); if (!el) return;
-      const b = document.createElement("button");
-      b.className = "tb f aw"; b.style.marginTop = "12px"; b.textContent = "Войти через Telegram";
-      b.onclick = startTG;
-      el.insertBefore(b, el.querySelector("#aerr"));
-      const pb = document.createElement("button");
-      pb.className = "tb"; pb.style.marginTop = "6px";
-      pb.textContent = getProxy() ? "Прокси: включён" : "Настроить прокси";
-      pb.onclick = () => W.AYU_proxy();
-      el.insertBefore(pb, el.querySelector("#aerr"));
-    }
-  };
+  // вход только через Telegram: экран входа Firebase никогда не показывается
+  W.showLogin = function () { if (!TGM) showEntry(); };
+  W.startApp = function () {}; // сессия Firebase не используется
+  W.showBan = function () {};
 
   // Firebase при отсутствии своего пользователя сбрасывает ME=null и зовёт hideBan() – возвращаем нашего
   W.hideBan = function () { if (TGM && TGME) W.ME = TGME; return O.hideBan.apply(this, arguments); };
@@ -1141,9 +1142,7 @@ function patch() {
 /* ---------- автозапуск ---------- */
 function boot() {
   patch();
-  if (localStorage.getItem(SKEY)) {
-    // есть сохранённая сессия Telegram – входим автоматически
-    const t = setInterval(() => { if (typeof W.S === "object" && W.chat) { clearInterval(t); startTG(); } }, 50);
-  }
+  // всегда сразу входим через Telegram: по сохранённой сессии или с экрана ввода номера
+  const t = setInterval(() => { if (typeof W.S === "object" && W.chat && W.renderMain) { clearInterval(t); startTG(); } }, 50);
 }
 boot();
