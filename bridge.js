@@ -390,6 +390,7 @@ function instantBoot() {
       return Object.assign(c, { msgs: last ? [last] : [], reads: {}, refs: [], u: {}, ready: true, stale: true, typing: false, online: false });
     });
     const l = $("#login"); if (l) l.style.display = "none";
+    injectCss();
     W.renderMain();
     W.S.chats.forEach(loadAvatar);
     return true;
@@ -411,6 +412,25 @@ function prefetch(c) {
   if (!c || !c.tg || c.hist || c.pre || c.preBusy || c.stale || !client || !ents[c.id]) return;
   c.preBusy = true;
   preQ.add(async () => { try { c.pre = await client.getMessages(ents[c.id], { limit: 40 }); } catch (e) {} c.preBusy = false; });
+}
+
+/* ---------- закреп, переход к сообщению, «чат появляется целиком» ---------- */
+const stripMd = (t) => String(t).replace(/\*\*|__|`/g, "");
+function hold(c) { // прячем ленту, пока чат не загрузится – без «дёрганья» при подгрузке
+  const el = $("#msgs"); if (!el || W.S.open !== c.id) return;
+  el.style.visibility = "hidden";
+  clearTimeout(c._ht); c._ht = setTimeout(() => reveal(c), 1500);
+}
+function reveal(c) { clearTimeout(c._ht); const el = $("#msgs"); if (el) el.style.visibility = ""; }
+async function jumpLoad(c, id) { // подгрузить окно вокруг далёкого сообщения (закреп, ответ на старое)
+  const n = Number(id);
+  const list = await client.getMessages(ents[c.id], { limit: 40, offsetId: n + 21 });
+  if (!list.length) throw new Error("none");
+  const have = new Set(c.msgs.map((x) => x.id));
+  const add = list.reverse().map((m) => convMsg(m, c)).filter((x) => !have.has(x.id));
+  add.forEach((m) => cacheMsg(c, m));
+  c.msgs = c.msgs.concat(add).sort(byTime);
+  W.renderMsgs(1); fetchMedia(c);
 }
 
 function limiter(n) {
@@ -487,6 +507,7 @@ const byTime = (a, b) => a.t - b.t || Number(a.id) - Number(b.id);
 async function loadHistory(c) {
   if (c.hist) return;
   c.hist = true;
+  hold(c);
   const base = c.msgs.slice();
   const pre = c.pre, usedPre = !!pre; c.pre = null;
   let netP = null;
@@ -496,12 +517,12 @@ async function loadHistory(c) {
   if (base.length <= 1 && !usedPre) { // мгновенно показываем сохранённую историю, пока грузится сеть
     try {
       const rows = (await idbChat(c.id)).filter((r) => AYU.keepDeleted || !r.deleted).sort((a, b) => a.id - b.id).slice(-60);
-      if (rows.length > 1 && W.S.open === c.id) { c.msgs = (await Promise.all(rows.map(fromRec))).sort(byTime); W.renderMsgs(); }
+      if (rows.length > 1 && W.S.open === c.id) { c.msgs = (await Promise.all(rows.map(fromRec))).sort(byTime); W.renderMsgs(); W.scrollEnd(); reveal(c); }
     } catch (e) {}
   }
-  if (!netP) { await readyP; if (!ents[c.id]) { c.hist = false; return; } netP = client.getMessages(ents[c.id], { limit: 60 }); }
+  if (!netP) { await readyP; if (!ents[c.id]) { c.hist = false; reveal(c); return; } netP = client.getMessages(ents[c.id], { limit: 60 }); }
   let list;
-  try { list = await netP; } catch (e) { c.hist = false; return; }
+  try { list = await netP; } catch (e) { c.hist = false; reveal(c); return; }
   c.msgs = base;
   const fetched = list.reverse().map((m) => convMsg(m, c));
   const lo = fetched.length ? Math.min(...fetched.map((x) => Number(x.id))) : 0;
@@ -509,12 +530,13 @@ async function loadHistory(c) {
   c.msgs = fetched.concat(extra).sort(byTime);
   fetched.forEach((m) => cacheMsg(c, m));
   if (list.length < (usedPre ? 40 : 60)) c.noMore = true;
-  W.renderMsgs && W.S.open === c.id && W.renderMsgs();
+  if (W.S.open === c.id) { W.renderMsgs(); W.scrollEnd(); }
+  reveal(c);
   W.softMain();
   fetchMedia(c);
   if (usedPre) client.getMessages(ents[c.id], { limit: 40 }).then((l) => mergeLive(c, l)).catch(() => {}); // тихо доснять свежее
   client.getMessages(ents[c.id], { filter: new Api.InputMessagesFilterPinned(), limit: 1 }).then((l) => {
-    if (l && l[0]) { c.pin = sid(l[0].id); if (W.S.open === c.id) W.renderMsgs(1); }
+    if (l && l[0]) { c.pin = sid(l[0].id); c.pinMsg = convMsg(l[0], c); if (W.S.open === c.id) W.pinBar(c); }
   }).catch(() => {});
 }
 
@@ -542,7 +564,11 @@ async function loadOlder(c) {
   } catch (e) {} finally { c.loadingOld = false; }
 }
 
-const renderSoon = (c) => { if (c._rt) return; c._rt = setTimeout(() => { c._rt = 0; if (W.S.open === c.id) W.renderMsgs(1); }, 150); };
+const renderSoon = (c) => { // отложенная общая перерисовка: ждём, пока подгрузятся несколько картинок
+  c._rq = c._rq || Date.now();
+  clearTimeout(c._rt);
+  c._rt = setTimeout(() => { c._rt = 0; c._rq = 0; if (W.S.open === c.id) W.renderMsgs(1); }, Math.max(0, Math.min(350, 1200 - (Date.now() - c._rq))));
+};
 function fetchMedia(c) {
   const list = c.msgs.filter((m) => m.raw && !m.mediaDone && (m.photoPending || m.voice)).reverse(); // сначала самые новые
   for (const m of list) {
@@ -551,12 +577,6 @@ function fetchMedia(c) {
       const key = c.id + ":" + m.id;
       let blob = await idbGetBlob(key);
       if (!blob) {
-        if (m.photoPending) { // мгновенное размытое превью
-          try {
-            const t = await client.downloadMedia(m.raw, { thumb: 0 });
-            if (t && t.length && !m.img) { m.img = URL.createObjectURL(new Blob([t], { type: "image/jpeg" })); m.prev = true; renderSoon(c); }
-          } catch (e) {}
-        }
         const buf = await client.downloadMedia(m.raw, {});
         if (!buf) return;
         blob = new Blob([buf], { type: m.voice ? "audio/ogg" : "image/jpeg" });
@@ -720,7 +740,7 @@ function hookEvents() {
         if (c) { c.unread = u.stillUnreadCount || 0; W.softMain(); }
       } else if (n === "UpdatePinnedMessages" || n === "UpdatePinnedChannelMessages") {
         const c = chatById(n === "UpdatePinnedMessages" ? sid(getPeerId(u.peer)) : sid(getPeerId(new Api.PeerChannel({ channelId: u.channelId }))));
-        if (c && c.hist) client.getMessages(ents[c.id], { filter: new Api.InputMessagesFilterPinned(), limit: 1 }).then((l) => { c.pin = l && l[0] ? sid(l[0].id) : null; if (W.S.open === c.id) W.renderMsgs(1); }).catch(() => {});
+        if (c && c.hist) client.getMessages(ents[c.id], { filter: new Api.InputMessagesFilterPinned(), limit: 1 }).then((l) => { c.pin = l && l[0] ? sid(l[0].id) : null; c.pinMsg = l && l[0] ? convMsg(l[0], c) : null; if (W.S.open === c.id) W.pinBar(c); }).catch(() => {});
       }
     } catch (e) {}
   });
@@ -977,7 +997,7 @@ W.AYU_editUser = () => {
 function injectCss() {
   if ($("#ayucss")) return;
   const s = document.createElement("style"); s.id = "ayucss";
-  s.textContent = ".m.deleted{opacity:.8;outline:1.5px dashed #d93025;outline-offset:-1.5px}.m .mt .ayud{color:#d93025;margin-right:4px}.m .mt .ayue{text-decoration:underline dotted}" + SKIN_CSS;
+  s.textContent = ".m{animation:none!important}.m.flash{animation:fl 1.2s!important}.m.deleted{opacity:.8;outline:1.5px dashed #d93025;outline-offset:-1.5px}.m .mt .ayud{color:#d93025;margin-right:4px}.m .mt .ayue{text-decoration:underline dotted}" + SKIN_CSS;
   document.head.appendChild(s);
 }
 const SWROW = (k, ico, t, sub) => '<div class="row" style="padding:4px 0" onclick="AYU_t(\'' + k + '\')"><div class="ico">' + W.ic(ico) + '</div><div class="t">' + t + "<small>" + sub + '</small></div><div class="sw' + (AYU[k] ? " on" : "") + '"></div></div>';
@@ -1305,7 +1325,7 @@ function decorateSkin() { ceHydrate(document.getElementById("msgs")); }
    ===================================================================== */
 function patch() {
   const O = {};
-  ["hideBan", "showLogin", "openChat", "pushMsg", "pushTo", "sbClick", "markRead", "doDel", "logout", "getMedia", "react", "pinMsg",
+  ["plain", "pinBar", "jumpTo", "hideBan", "showLogin", "openChat", "pushMsg", "pushTo", "sbClick", "markRead", "doDel", "logout", "getMedia", "react", "pinMsg",
     "setTyping", "typingPing", "startCall", "newChatDlg", "toggleBlock", "clearHist", "delChat", "persist", "selDel", "selRead",
     "statusText", "doFwd", "openProfile", "sendBlob", "sendFile", "mention", "moreCards", "renderMsgs", "msgMenu2", "iBlock",
     "rxOf", "esc", "fmt", "copyMsg", "editMsg", "addEmo"].forEach((n) => { O[n] = W[n]; });
@@ -1318,6 +1338,26 @@ function patch() {
 
   // Firebase при отсутствии своего пользователя сбрасывает ME=null и зовёт hideBan() – возвращаем нашего
   W.hideBan = function () { if (TGM && TGME) W.ME = TGME; return O.hideBan.apply(this, arguments); };
+
+  W.plain = function (m) { const p = O.plain(m); return TGM && m && m.tg && typeof p === "string" ? stripMd(p) : p; };
+  W.pinBar = function (c) {
+    if (!TGM || !c || !c.tg) return O.pinBar(c);
+    const el = $("#pinbar"); if (!el) return;
+    const m = c.pin && (W.findMsgIn(c, c.pin) || c.pinMsg);
+    if (!m) { el.innerHTML = ""; return; }
+    el.innerHTML = '<div class="pinb" onclick="jumpTo(\'' + m.id + '\')">' + W.ic("pin", 18) + '<div class="q2"><b>Закреплённое сообщение</b><span>' + W.esc(W.plain(m) || "") + '</span></div><button class="ib" style="width:36px;height:36px" onclick="event.stopPropagation();pinMsg(\'' + m.id + '\')">' + W.ic("close", 18) + '</button></div>';
+  };
+  W.jumpTo = function (id) {
+    if (!TGM) return O.jumpTo(id);
+    const go = () => {
+      const el = document.querySelector('.m[data-mid="' + id + '"]'); if (!el) return false;
+      el.scrollIntoView({ block: "center" }); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1300); return true;
+    };
+    if (go()) return;
+    const c = W.chat(W.S.open); if (!c || !c.tg) return W.toast("Сообщение не найдено");
+    W.toast("Загрузка…");
+    jumpLoad(c, id).then(() => requestAnimationFrame(() => { if (!go()) W.toast("Сообщение не найдено"); })).catch(() => W.toast("Сообщение не найдено"));
+  };
 
   W.openChat = function (id) {
     if (TGM && id === "c0") id = MYID; // «Избранное»
