@@ -167,6 +167,7 @@ function ask(step, err) {
 async function connect() {
   const saved = localStorage.getItem(SKEY) || "";
   client = new TelegramClient(new StringSession(saved), API_ID, API_HASH, { connectionRetries: 5, useWSS: true });
+  try { client.setLogLevel("error"); } catch (e) {}
   let lastErr = "";
   await client.start({
     phoneNumber: () => ask("phone", lastErr),
@@ -352,6 +353,66 @@ function mkChatEnt(e) {
   return c;
 }
 
+/* ---------- мгновенный старт: кэш списка чатов, предзагрузка, пакетная отрисовка ---------- */
+const DKEY = "tgyou_dialogs";
+let MEINFO = null, readyRes;
+const readyP = new Promise((r) => { readyRes = r; });
+let dsT = 0;
+function saveDlg() {
+  clearTimeout(dsT);
+  dsT = setTimeout(() => {
+    try {
+      if (!MEINFO || !W.S.chats.length) return;
+      const F = ["id", "tg", "type", "name", "hue", "peer", "pinned", "muted", "unread", "uname", "members", "readOut", "_pp", "_pm"];
+      const chats = W.S.chats.slice(0, 100).map((c) => {
+        const o = {}; F.forEach((k) => { o[k] = c[k]; });
+        const l = c.msgs[c.msgs.length - 1];
+        if (l) {
+          o.last = { id: l.id, tg: true, out: l.out, text: l.text || ((l.img || l.photoPending) ? "🖼 Фото" : ""), t: l.t, from: l.from, voice: l.voice, dur: l.dur, sticker: l.sticker, file: l.file, service: l.service };
+        }
+        return o;
+      });
+      localStorage.setItem(DKEY, JSON.stringify({ me: MEINFO, chats }));
+    } catch (e) {}
+  }, 1500);
+}
+function instantBoot() {
+  try {
+    const j = JSON.parse(localStorage.getItem(DKEY) || "null");
+    if (!j || !j.me || !j.chats || !j.chats.length || !localStorage.getItem(SKEY)) return false;
+    MYID = j.me.id || ""; MEINFO = j.me;
+    W.ME = { uid: "me", name: j.me.name, email: j.me.phone || "" }; TGME = W.ME;
+    W.S.name = j.me.name; W.S.phone = W.ME.email;
+    W.S.me = { name: j.me.name, username: j.me.username || "", bio: "", priv: {}, blocked: {} };
+    W.S.cover = null; W.S.tab = "chats"; W.S.open = null; W.S.admin = false;
+    W.S.chats = j.chats.map((c) => {
+      const last = c.last; delete c.last;
+      return Object.assign(c, { msgs: last ? [last] : [], reads: {}, refs: [], u: {}, ready: true, stale: true, typing: false, online: false });
+    });
+    const l = $("#login"); if (l) l.style.display = "none";
+    W.renderMain();
+    W.S.chats.forEach(loadAvatar);
+    return true;
+  } catch (e) { return false; }
+}
+// несколько обновлений подряд -> одна перерисовка за кадр
+const schedR = (c, scroll) => {
+  c._sr = Math.max(c._sr || 0, scroll ? 2 : 1);
+  if (c._srt) return;
+  c._srt = requestAnimationFrame(() => {
+    const k = c._sr; c._sr = 0; c._srt = 0;
+    if (W.S.open !== c.id) return;
+    W.renderMsgs(1); if (k === 2) W.scrollEnd(); fetchMedia(c);
+  });
+};
+// предзагрузка истории – чат открывается мгновенно
+const preQ = limiter(2);
+function prefetch(c) {
+  if (!c || !c.tg || c.hist || c.pre || c.preBusy || c.stale || !client || !ents[c.id]) return;
+  c.preBusy = true;
+  preQ.add(async () => { try { c.pre = await client.getMessages(ents[c.id], { limit: 40 }); } catch (e) {} c.preBusy = false; });
+}
+
 function limiter(n) {
   let a = 0; const q = [];
   const pump = () => { while (a < n && q.length) { const j = q.shift(); a++; j().catch(() => {}).finally(() => { a--; pump(); }); } };
@@ -362,24 +423,41 @@ let softT = 0;
 const softSoon = () => { if (softT) return; softT = setTimeout(() => { softT = 0; W.softMain(); }, 200); };
 async function avGet(id) { try { const d = await idb(); return await rq(d.transaction("blobs").objectStore("blobs").get("av:" + id)); } catch (e) { return null; } }
 async function avPut(id, blob) { try { const d = await idb(); const t = d.transaction("blobs", "readwrite"); t.objectStore("blobs").put({ k: "av:" + id, blob, ts: Date.now() }); await wq(t); } catch (e) {} }
+function avJob(c) {
+  avLim.add(async () => {
+    if (!client || !ents[c.id]) { c.avOld = true; return; }
+    c.avOld = false;
+    const b = await client.downloadProfilePhoto(ents[c.id], { isBig: false });
+    if (b && b.length) { const blob = new Blob([b], { type: "image/jpeg" }); c.photo = URL.createObjectURL(blob); avPut(c.id, blob); softSoon(); }
+  });
+}
 async function loadAvatar(c) {
+  if (c.avOld && c.photo) return avJob(c);
   if (c.photo || photoQ[c.id]) return;
   photoQ[c.id] = 1;
   const cached = await avGet(c.id);
   if (cached && cached.blob) { c.photo = URL.createObjectURL(cached.blob); softSoon(); if (Date.now() - (cached.ts || 0) < 3 * 864e5) return; }
-  avLim.add(async () => {
-    const b = await client.downloadProfilePhoto(ents[c.id], { isBig: false });
-    if (b && b.length) { const blob = new Blob([b], { type: "image/jpeg" }); c.photo = URL.createObjectURL(blob); avPut(c.id, blob); softSoon(); }
-  });
+  avJob(c);
 }
 
 async function loadDialogs() {
   const apply = (ds) => {
     const old = {}; (W.S.chats || []).forEach((c) => { old[c.id] = c; });
-    W.S.chats = ds.filter((d) => !d.archived).map((d) => old[sid(d.id)] || mkChat(d));
+    W.S.chats = ds.filter((d) => !d.archived).map((d) => {
+      const o = old[sid(d.id)];
+      if (!o) return mkChat(d);
+      if (o.stale) { const nc = mkChat(d); Object.assign(o, nc, { msgs: o.hist ? o.msgs : nc.msgs }); o.stale = false; }
+      return o;
+    });
     W.softMain();
     W.S.chats.forEach(loadAvatar);
+    W.S.chats.slice(0, 12).forEach(prefetch);
+    saveDlg(); readyRes();
   };
+  if ((W.S.chats || []).some((c) => c.stale)) { // список уже показан из кэша – обновляем без блокировки
+    client.getDialogs({ limit: 200 }).then(apply).catch(() => {});
+    return;
+  }
   apply(await client.getDialogs({ limit: 30 }));
   client.getDialogs({ limit: 200 }).then(apply).catch(() => {});
 }
@@ -410,14 +488,18 @@ async function loadHistory(c) {
   if (c.hist) return;
   c.hist = true;
   const base = c.msgs.slice();
-  const netP = client.getMessages(ents[c.id], { limit: 60 });
-  netP.catch(() => {});
-  if (base.length <= 1) { // мгновенно показываем сохранённую историю, пока грузится сеть
+  const pre = c.pre, usedPre = !!pre; c.pre = null;
+  let netP = null;
+  if (usedPre) netP = Promise.resolve(pre);
+  else if (!c.stale && ents[c.id]) netP = client.getMessages(ents[c.id], { limit: 60 });
+  if (netP) netP.catch(() => {});
+  if (base.length <= 1 && !usedPre) { // мгновенно показываем сохранённую историю, пока грузится сеть
     try {
       const rows = (await idbChat(c.id)).filter((r) => AYU.keepDeleted || !r.deleted).sort((a, b) => a.id - b.id).slice(-60);
       if (rows.length > 1 && W.S.open === c.id) { c.msgs = (await Promise.all(rows.map(fromRec))).sort(byTime); W.renderMsgs(); }
     } catch (e) {}
   }
+  if (!netP) { await readyP; if (!ents[c.id]) { c.hist = false; return; } netP = client.getMessages(ents[c.id], { limit: 60 }); }
   let list;
   try { list = await netP; } catch (e) { c.hist = false; return; }
   c.msgs = base;
@@ -426,10 +508,11 @@ async function loadHistory(c) {
   const extra = await mergeCache(c, fetched, lo);
   c.msgs = fetched.concat(extra).sort(byTime);
   fetched.forEach((m) => cacheMsg(c, m));
-  if (list.length < 60) c.noMore = true;
+  if (list.length < (usedPre ? 40 : 60)) c.noMore = true;
   W.renderMsgs && W.S.open === c.id && W.renderMsgs();
   W.softMain();
   fetchMedia(c);
+  if (usedPre) client.getMessages(ents[c.id], { limit: 40 }).then((l) => mergeLive(c, l)).catch(() => {}); // тихо доснять свежее
   client.getMessages(ents[c.id], { filter: new Api.InputMessagesFilterPinned(), limit: 1 }).then((l) => {
     if (l && l[0]) { c.pin = sid(l[0].id); if (W.S.open === c.id) W.renderMsgs(1); }
   }).catch(() => {});
@@ -504,17 +587,19 @@ function showEntry(err) {
 
 async function startTG() {
   TGM = true;
-  { const el = $("#login"); if (el) { el.style.display = "flex"; el.innerHTML = loginHtml("load"); } }
+  const instant = instantBoot(); // показываем сохранённый список чатов, пока подключаемся
+  if (!instant) { const el = $("#login"); if (el) { el.style.display = "flex"; el.innerHTML = loginHtml("load"); } }
   try { await connect(); } catch (e) { TGM = false; console.error("connect", e); showEntry("Не удалось подключиться: " + String((e && (e.errorMessage || e.message)) || e)); return; }
   const me = await client.getMe();
   MYID = sid(me.id); MYPREM = !!me.premium;
   const name = [me.firstName, me.lastName].filter(Boolean).join(" ") || me.username || "Я";
+  MEINFO = { id: MYID, name, phone: me.phone ? "+" + me.phone : "", username: me.username || "" };
   W.ME = { uid: "me", name, email: me.phone ? "+" + me.phone : "" };
   TGME = W.ME;
   W.S.name = name;
   W.S.phone = W.ME.email;
   W.S.me = { name, username: me.username || "", bio: "", priv: {}, blocked: {} };
-  W.S.cover = null; W.S.tab = "chats"; W.S.open = null; W.S.chats = [];
+  W.S.cover = null; W.S.tab = "chats"; W.S.open = null; if (!instant) W.S.chats = [];
   W.S.admin = false;
   $("#login").style.display = "none";
   injectCss();
@@ -530,9 +615,11 @@ async function startTG() {
   await loadDialogs();
   hookEvents();
   setInterval(() => { if (AYU.ghostOnline) setOffline(); }, 15000);
-  setInterval(pollChat, 3000);
-  setInterval(pollDialogs, 15000);
+  setInterval(pollChat, 8000);
+  setInterval(pollDialogs, 30000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { pollDialogs(); pollChat(); } });
+  window.addEventListener("online", () => { pollDialogs(); pollChat(); });
+  document.addEventListener("pointerdown", (e) => { const ci = e.target.closest && e.target.closest(".ci[data-id]"); if (ci) prefetch(W.chat(ci.dataset.id)); }, { passive: true });
   if (AYU.ghostOnline) setOffline();
   W.toast("Подключено к Telegram");
 }
@@ -592,8 +679,8 @@ async function onNew(ev) {
         if (W.S.open !== c.id && W.S.notif && !c.muted) W.toast(c.name + ": " + (m.message || "медиа").split("\n")[0]);
       }
     }
-    if (W.S.open === c.id) { W.renderMsgs(1); fetchMedia(c); if (m.out) W.scrollEnd(); }
-    W.softMain();
+    if (W.S.open === c.id) schedR(c, !!m.out);
+    W.softMain(); saveDlg();
   }
 
 function hookEvents() {
@@ -703,7 +790,7 @@ async function pollDialogs() {
         if (!c.msgs.some((x) => x.id === cm.id)) { if (c.hist) c.msgs.push(cm); else c.msgs = [cm]; cacheMsg(c, cm); }
       }
     }
-    W.softMain();
+    W.softMain(); saveDlg();
     if (W.S.open) W.renderChatHdr();
   } catch (e) {} finally { pollingD = false; }
 }
@@ -714,6 +801,7 @@ async function pollDialogs() {
 function markRead(c) {
   if (AYU.ghostRead) return; // режим призрака: не отправляем «прочитано»
   c.unread = 0;
+  if (!client || !ents[c.id]) return;
   client.markAsRead(ents[c.id]).catch(() => {});
 }
 
@@ -770,6 +858,7 @@ function dropPending(c, p) {
 }
 
 async function send(c, o) {
+  await readyP;
   const ent = ents[c.id];
   const replyTo = o.reply ? Number(o.reply) : undefined;
   let r;
