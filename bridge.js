@@ -72,16 +72,12 @@ let idbP = null;
 function idb() {
   if (idbP) return idbP;
   idbP = new Promise((res, rej) => {
-    const r = indexedDB.open("tgyou_ayu", 2);
+    const r = indexedDB.open("tgyou_ayu", 1);
     r.onupgradeneeded = () => {
       const d = r.result;
-      const m = d.objectStoreNames.contains("msgs")
-        ? r.transaction.objectStore("msgs")
-        : d.createObjectStore("msgs", { keyPath: "k" });
-      if (!m.indexNames.contains("chat")) m.createIndex("chat", "chat");
-      if (!m.indexNames.contains("id")) m.createIndex("id", "id");
-      if (!m.indexNames.contains("chatId")) m.createIndex("chatId", ["chat", "id"]);
-      if (!d.objectStoreNames.contains("blobs")) d.createObjectStore("blobs", { keyPath: "k" });
+      const m = d.createObjectStore("msgs", { keyPath: "k" });
+      m.createIndex("chat", "chat"); m.createIndex("id", "id");
+      d.createObjectStore("blobs", { keyPath: "k" });
     };
     r.onsuccess = () => res(r.result);
     r.onerror = () => rej(r.error);
@@ -103,25 +99,7 @@ async function flush() {
     arr.forEach((r) => s.put(r)); await wq(t);
   } catch (e) {}
 }
-async function idbChat(chatId, limit = 250) {
-  try {
-    await flush();
-    const d = await idb();
-    const index = d.transaction("msgs").objectStore("msgs").index("chatId");
-    const range = IDBKeyRange.bound([chatId, 0], [chatId, Number.MAX_SAFE_INTEGER]);
-    return await new Promise((resolve, reject) => {
-      const rows = [];
-      const req = index.openCursor(range, "prev");
-      req.onsuccess = () => {
-        const cur = req.result;
-        if (!cur || rows.length >= limit) { resolve(rows.reverse()); return; }
-        rows.push(cur.value);
-        cur.continue();
-      };
-      req.onerror = () => reject(req.error);
-    });
-  } catch (e) { return []; }
-}
+async function idbChat(chatId) { try { await flush(); const d = await idb(); return await rq(d.transaction("msgs").objectStore("msgs").index("chat").getAll(chatId)); } catch (e) { return []; } }
 async function idbById(id) { try { await flush(); const d = await idb(); return await rq(d.transaction("msgs").objectStore("msgs").index("id").getAll(id)); } catch (e) { return []; } }
 async function idbAll() { try { await flush(); const d = await idb(); return await rq(d.transaction("msgs").objectStore("msgs").getAll()); } catch (e) { return []; } }
 async function idbDel(k) { try { queue.delete(k); const d = await idb(); const t = d.transaction(["msgs", "blobs"], "readwrite"); t.objectStore("msgs").delete(k); t.objectStore("blobs").delete(k); await wq(t); } catch (e) {} }
@@ -431,31 +409,25 @@ const byTime = (a, b) => a.t - b.t || Number(a.id) - Number(b.id);
 async function loadHistory(c) {
   if (c.hist) return;
   c.hist = true;
-  const netP = client.getMessages(ents[c.id], { limit: 80 });
-  if (!c._cacheShown) {
-    c._cacheShown = true;
-    idbChat(c.id, 80).then(async (rows) => {
-      if (!rows.length || W.S.open !== c.id) return;
-      const cached = await Promise.all(rows.filter((r) => AYU.keepDeleted || !r.deleted).map(fromRec));
-      const map = new Map(c.msgs.map((m) => [m.id, m]));
-      cached.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); });
-      c.msgs = [...map.values()].sort(byTime);
-      if (W.S.open === c.id) W.renderMsgs();
-    }).catch(() => {});
+  const base = c.msgs.slice();
+  const netP = client.getMessages(ents[c.id], { limit: 60 });
+  netP.catch(() => {});
+  if (base.length <= 1) { // мгновенно показываем сохранённую историю, пока грузится сеть
+    try {
+      const rows = (await idbChat(c.id)).filter((r) => AYU.keepDeleted || !r.deleted).sort((a, b) => a.id - b.id).slice(-60);
+      if (rows.length > 1 && W.S.open === c.id) { c.msgs = (await Promise.all(rows.map(fromRec))).sort(byTime); W.renderMsgs(); }
+    } catch (e) {}
   }
   let list;
-  try { list = await netP; }
-  catch (e) { c.hist = false; return; }
-  const fetched = list.slice().reverse().map((m) => convMsg(m, c));
+  try { list = await netP; } catch (e) { c.hist = false; return; }
+  c.msgs = base;
+  const fetched = list.reverse().map((m) => convMsg(m, c));
   const lo = fetched.length ? Math.min(...fetched.map((x) => Number(x.id))) : 0;
   const extra = await mergeCache(c, fetched, lo);
-  const map = new Map(fetched.map((m) => [m.id, m]));
-  c.msgs.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); });
-  extra.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); });
-  c.msgs = [...map.values()].sort(byTime);
+  c.msgs = fetched.concat(extra).sort(byTime);
   fetched.forEach((m) => cacheMsg(c, m));
-  if (list.length < 80) c.noMore = true;
-  if (W.renderMsgs && W.S.open === c.id) W.renderMsgs();
+  if (list.length < 60) c.noMore = true;
+  W.renderMsgs && W.S.open === c.id && W.renderMsgs();
   W.softMain();
   fetchMedia(c);
   client.getMessages(ents[c.id], { filter: new Api.InputMessagesFilterPinned(), limit: 1 }).then((l) => {
@@ -470,24 +442,21 @@ async function loadOlder(c) {
   c.loadingOld = true;
   try {
     const minId = Math.min(...real.map((x) => Number(x.id)));
-    const list = await client.getMessages(ents[c.id], { limit: 60, offsetId: minId });
+    const list = await client.getMessages(ents[c.id], { limit: 50, offsetId: minId });
     if (!list.length) { c.noMore = true; return; }
-    const fetched = list.slice().reverse().map((m) => convMsg(m, c));
+    const fetched = list.reverse().map((m) => convMsg(m, c));
     const lo = Math.min(...fetched.map((x) => Number(x.id)));
     const extra = await mergeCache(c, fetched, lo);
-    const map = new Map(c.msgs.map((m) => [m.id, m]));
-    fetched.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); });
-    extra.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); });
     fetched.forEach((m) => cacheMsg(c, m));
-    c.msgs = [...map.values()].sort(byTime);
-    if (list.length < 60) c.noMore = true;
+    c.msgs = fetched.concat(extra, c.msgs).sort(byTime);
+    if (list.length < 50) c.noMore = true;
     if (W.S.open === c.id) {
-      const el = $("#msgs"), h0 = el ? el.scrollHeight : 0, t0 = el ? el.scrollTop : 0;
+      const el = $("#msgs"), h0 = el.scrollHeight, t0 = el.scrollTop;
       W.renderMsgs(1);
-      if (el) el.scrollTop = t0 + (el.scrollHeight - h0);
+      el.scrollTop = t0 + (el.scrollHeight - h0);
       fetchMedia(c);
     }
-  } catch (e) { console.warn("loadOlder", e); } finally { c.loadingOld = false; }
+  } catch (e) {} finally { c.loadingOld = false; }
 }
 
 const renderSoon = (c) => { if (c._rt) return; c._rt = setTimeout(() => { c._rt = 0; if (W.S.open === c.id) W.renderMsgs(1); }, 150); };
@@ -561,8 +530,8 @@ async function startTG() {
   await loadDialogs();
   hookEvents();
   setInterval(() => { if (AYU.ghostOnline) setOffline(); }, 15000);
-  setInterval(pollChat, 8000);
-  setInterval(pollDialogs, 30000);
+  setInterval(pollChat, 3000);
+  setInterval(pollDialogs, 15000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { pollDialogs(); pollChat(); } });
   if (AYU.ghostOnline) setOffline();
   W.toast("Подключено к Telegram");
@@ -614,14 +583,7 @@ async function onNew(ev) {
     const m = ev.message;
     if (!c) { await loadDialogs(); c = chatOf(ev); if (!c) return; }
     const cm = convMsg(m, c);
-    const existing = c.msgs.findIndex((x) => x.id === cm.id);
-    if (existing >= 0) {
-      const old = c.msgs[existing];
-      if (!old.pending && !old.deleted) return;
-      c.msgs[existing] = cm;
-    } else if (c.hist) c.msgs.push(cm);
-    else c.msgs = [cm];
-    c.msgs.sort(byTime);
+    if (c.hist) { if (!c.msgs.some((x) => x.id === cm.id)) c.msgs.push(cm); } else c.msgs = [cm];
     cacheMsg(c, cm);
     if (!m.out) {
       if (W.S.open === c.id && !AYU.ghostRead) markRead(c);
@@ -683,8 +645,6 @@ function hookEvents() {
    ===================================================================== */
 function mergeLive(c, list) {
   if (!list || !list.length) return;
-  const view = W.S.open === c.id ? $("#msgs") : null;
-  const wasAtBottom = !view || view.scrollHeight - view.scrollTop - view.clientHeight < 120;
   const items = list.slice().reverse(); // старые -> новые
   const ids = items.map((m) => Number(m.id));
   const lo = Math.min(...ids), hi = Math.max(...ids);
@@ -712,7 +672,7 @@ function mergeLive(c, list) {
   if (!AYU.keepDeleted) c.msgs = c.msgs.filter((m) => !m.deleted);
   if (changed) {
     c.msgs.sort(byTime);
-    if (W.S.open === c.id) { W.renderMsgs(1); if (wasAtBottom) W.scrollEnd(); fetchMedia(c); }
+    if (W.S.open === c.id) { const atEnd = true; W.renderMsgs(1); if (atEnd) W.scrollEnd(); fetchMedia(c); }
     W.softMain();
   }
 }
