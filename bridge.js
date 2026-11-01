@@ -529,7 +529,7 @@ function showEntry(err) {
     '<button class="tb f aw" id="tge">Войти через Telegram</button>' +
     '<button class="tb" id="tgp" style="margin-top:6px">' + (getProxy() ? "Прокси: включён" : "Настроить прокси") + "</button>" +
     '<div class="aerr" id="aerr">' + esc(err || "") + "</div></div>";
-  $("#tge").onclick = startTG;
+  $("#tge").onclick = startTGOnce;
   $("#tgp").onclick = () => W.AYU_proxy();
 }
 
@@ -1474,10 +1474,32 @@ function patch() {
   };
 }
 
-/* ---------- автозапуск ---------- */
+/* ---------- запуск и восстановление входа ---------- */
+let tgStarting = false;
+
+async function startTGOnce() {
+  if (tgStarting || TGM) return;
+  tgStarting = true;
+  try {
+    await startTG();
+  } finally {
+    tgStarting = false;
+  }
+}
+
 function boot() {
   patch();
-  // всегда сразу входим через Telegram: по сохранённой сессии или с экрана ввода номера
-  const t = setInterval(() => { if (typeof W.S === "object" && W.chat && W.renderMain) { clearInterval(t); startTG(); } }, 50);
+  const t = setInterval(() => {
+    if (typeof W.S !== "object" || !W.chat || !W.renderMain) return;
+    clearInterval(t);
+    showEntry("");
+    const saved = localStorage.getItem(SKEY) || "";
+    if (saved) {
+      const btn = $("#tge");
+      if (btn) btn.textContent = "Продолжить через Telegram";
+    }
+    const btn = $("#tge");
+    if (btn) btn.onclick = startTGOnce;
+  }, 50);
 }
 boot();
