@@ -529,7 +529,7 @@ function showEntry(err) {
     '<button class="tb f aw" id="tge">Войти через Telegram</button>' +
     '<button class="tb" id="tgp" style="margin-top:6px">' + (getProxy() ? "Прокси: включён" : "Настроить прокси") + "</button>" +
     '<div class="aerr" id="aerr">' + esc(err || "") + "</div></div>";
-  $("#tge").onclick = startTGOnce;
+  $("#tge").onclick = startTG;
   $("#tgp").onclick = () => W.AYU_proxy();
 }
 
@@ -561,11 +561,9 @@ async function startTG() {
   await loadDialogs();
   hookEvents();
   setInterval(() => { if (AYU.ghostOnline) setOffline(); }, 15000);
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && client && TGM) {
-      client.invoke(new Api.updates.GetState()).catch(() => {});
-    }
-  });
+  setInterval(pollChat, 8000);
+  setInterval(pollDialogs, 30000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { pollDialogs(); pollChat(); } });
   if (AYU.ghostOnline) setOffline();
   W.toast("Подключено к Telegram");
 }
@@ -576,33 +574,10 @@ function setOffline() { client && client.invoke(new Api.account.UpdateStatus({ o
    СОБЫТИЯ В РЕАЛЬНОМ ВРЕМЕНИ
    ===================================================================== */
 function chatOf(ev) {
-  const m = ev && ev.message;
-  let id = ev && ev.chatId != null ? sid(ev.chatId) : sid(m && m.chatId);
-  if (!id && m && m.peerId) {
-    try { id = sid(getPeerId(m.peerId)); } catch (e) {}
-  }
+  const id = sid(ev.chatId || (ev.message && ev.message.chatId));
   return W.S.chats.find((c) => c.id === id);
 }
-const chatById = (id) => W.S.chats.find((c) => c.id === sid(id));
-
-async function ensureChatForMessage(ev, m) {
-  let c = chatOf(ev);
-  if (c) return c;
-  if (m && m.peerId) {
-    try {
-      const entity = await client.getEntity(m.peerId);
-      const input = await client.getInputEntity(m.peerId);
-      c = mkChatEnt(entity);
-      ents[c.id] = input;
-      W.S.chats.unshift(c);
-      W.softMain();
-      loadAvatar(c);
-      return c;
-    } catch (e) {}
-  }
-  try { await loadDialogs(); } catch (e) {}
-  return chatOf(ev);
-}
+const chatById = (id) => W.S.chats.find((c) => c.id === id);
 
 async function onDeleted(ev) {
   const ids = (ev.deletedIds || []).map(sid);
@@ -635,19 +610,17 @@ async function onDeleted(ev) {
 }
 
 async function onNew(ev) {
-    const m = ev && ev.message;
-    if (!m) return;
-    const c = await ensureChatForMessage(ev, m);
-    if (!c) return;
-    const view = W.S.open === c.id ? $("#msgs") : null;
-    const wasAtBottom = !view || view.scrollHeight - view.scrollTop - view.clientHeight < 120;
+    let c = chatOf(ev);
+    const m = ev.message;
+    if (!c) { await loadDialogs(); c = chatOf(ev); if (!c) return; }
     const cm = convMsg(m, c);
     const existing = c.msgs.findIndex((x) => x.id === cm.id);
     if (existing >= 0) {
       const old = c.msgs[existing];
       if (!old.pending && !old.deleted) return;
       c.msgs[existing] = cm;
-    } else c.msgs.push(cm);
+    } else if (c.hist) c.msgs.push(cm);
+    else c.msgs = [cm];
     c.msgs.sort(byTime);
     cacheMsg(c, cm);
     if (!m.out) {
@@ -657,7 +630,7 @@ async function onNew(ev) {
         if (W.S.open !== c.id && W.S.notif && !c.muted) W.toast(c.name + ": " + (m.message || "медиа").split("\n")[0]);
       }
     }
-    if (W.S.open === c.id) { W.renderMsgs(1); fetchMedia(c); if (wasAtBottom) W.scrollEnd(); }
+    if (W.S.open === c.id) { W.renderMsgs(1); fetchMedia(c); if (m.out) W.scrollEnd(); }
     W.softMain();
   }
 
@@ -673,14 +646,7 @@ function hookEvents() {
   client.addEventHandler((u) => {
     try {
       const n = u.className;
-      if (n === "UpdateNewMessage" || n === "UpdateNewChannelMessage") {
-        const m = u.message;
-        if (m) {
-          let id = "";
-          try { id = sid(getPeerId(m.peerId)); } catch (e) {}
-          onNew({ chatId: id, message: m }).catch((e) => console.error("RawNewMessage", e));
-        }
-      } else if (n === "UpdateUserTyping" || n === "UpdateChatUserTyping" || n === "UpdateChannelUserTyping") {
+      if (n === "UpdateUserTyping" || n === "UpdateChatUserTyping" || n === "UpdateChannelUserTyping") {
         const id = n === "UpdateUserTyping" ? sid(u.userId)
           : sid(getPeerId(n === "UpdateChatUserTyping" ? new Api.PeerChat({ chatId: u.chatId }) : new Api.PeerChannel({ channelId: u.channelId })));
         const c = chatById(id);
@@ -711,6 +677,76 @@ function hookEvents() {
   });
 }
 
+
+/* =====================================================================
+   ОПРОС — запасной канал, если поток обновлений gramjs молчит
+   ===================================================================== */
+function mergeLive(c, list) {
+  if (!list || !list.length) return;
+  const view = W.S.open === c.id ? $("#msgs") : null;
+  const wasAtBottom = !view || view.scrollHeight - view.scrollTop - view.clientHeight < 120;
+  const items = list.slice().reverse(); // старые -> новые
+  const ids = items.map((m) => Number(m.id));
+  const lo = Math.min(...ids), hi = Math.max(...ids);
+  let changed = false;
+  const seen = new Set();
+  items.forEach((m) => {
+    const cm = convMsg(m, c); seen.add(cm.id);
+    const old = c.msgs.find((x) => x.id === cm.id);
+    if (!old) {
+      c.msgs.push(cm); cacheMsg(c, cm); changed = true;
+      if (!m.out) {
+        if (W.S.open === c.id && !AYU.ghostRead) markRead(c); else if (W.S.open !== c.id) c.unread++;
+      }
+    } else if (!old.deleted) {
+      if (cm.editT && cm.editT !== old.editT) { applyEdit(c, m); }
+      else if (JSON.stringify(cm.rx || []) !== JSON.stringify(old.rx || [])) { old.react = cm.react; old.rx = cm.rx; changed = true; }
+    }
+  });
+  const now = Date.now();
+  c.msgs.forEach((m) => {
+    const n = Number(m.id);
+    if (m.pending || m.deleted || isNaN(n) || n < lo || n > hi || seen.has(m.id)) return;
+    m.deleted = true; m.delT = now; cacheMsg(c, m); changed = true; // исчезло с сервера
+  });
+  if (!AYU.keepDeleted) c.msgs = c.msgs.filter((m) => !m.deleted);
+  if (changed) {
+    c.msgs.sort(byTime);
+    if (W.S.open === c.id) { W.renderMsgs(1); if (wasAtBottom) W.scrollEnd(); fetchMedia(c); }
+    W.softMain();
+  }
+}
+let polling = false, pollingD = false;
+async function pollChat() {
+  if (!client || !TGM || polling || document.hidden) return;
+  const c = W.chat(W.S.open);
+  if (!c || !c.tg || !c.hist || c.loadingOld) return;
+  polling = true;
+  try { mergeLive(c, await client.getMessages(ents[c.id], { limit: 25 })); } catch (e) {} finally { polling = false; }
+}
+async function pollDialogs() {
+  if (!client || !TGM || pollingD || document.hidden) return;
+  pollingD = true;
+  try {
+    const ds = await client.getDialogs({ limit: 40 });
+    let added = false;
+    for (const d of ds) {
+      if (d.archived) continue;
+      const id = sid(d.id), c = chatById(id);
+      if (!c) { const nc = mkChat(d); W.S.chats.push(nc); loadAvatar(nc); added = true; continue; }
+      const dl = d.dialog || {};
+      if (dl.readOutboxMaxId != null) { c.readOut = Number(dl.readOutboxMaxId) || c.readOut; c.msgs.forEach((m) => { if (m.out && Number(m.id) <= c.readOut) m.read = true; }); }
+      if (W.S.open !== c.id) c.unread = d.unreadCount || 0;
+      c.online = false; c.seen = undefined; Object.assign(c, statusOf(d.entity));
+      if (d.message) {
+        const cm = convMsg(d.message, c);
+        if (!c.msgs.some((x) => x.id === cm.id)) { if (c.hist) c.msgs.push(cm); else c.msgs = [cm]; cacheMsg(c, cm); }
+      }
+    }
+    W.softMain();
+    if (W.S.open) W.renderChatHdr();
+  } catch (e) {} finally { pollingD = false; }
+}
 
 /* =====================================================================
    ДЕЙСТВИЯ
@@ -1474,32 +1510,10 @@ function patch() {
   };
 }
 
-/* ---------- запуск и восстановление входа ---------- */
-let tgStarting = false;
-
-async function startTGOnce() {
-  if (tgStarting || TGM) return;
-  tgStarting = true;
-  try {
-    await startTG();
-  } finally {
-    tgStarting = false;
-  }
-}
-
+/* ---------- автозапуск ---------- */
 function boot() {
   patch();
-  const t = setInterval(() => {
-    if (typeof W.S !== "object" || !W.chat || !W.renderMain) return;
-    clearInterval(t);
-    showEntry("");
-    const saved = localStorage.getItem(SKEY) || "";
-    if (saved) {
-      const btn = $("#tge");
-      if (btn) btn.textContent = "Продолжить через Telegram";
-    }
-    const btn = $("#tge");
-    if (btn) btn.onclick = startTGOnce;
-  }, 50);
+  // всегда сразу входим через Telegram: по сохранённой сессии или с экрана ввода номера
+  const t = setInterval(() => { if (typeof W.S === "object" && W.chat && W.renderMain) { clearInterval(t); startTG(); } }, 50);
 }
 boot();
