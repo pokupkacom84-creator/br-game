@@ -4,6 +4,8 @@ import { NewMessage } from "telegram/events";
 import { EditedMessage } from "telegram/events/EditedMessage";
 import { DeletedMessage } from "telegram/events/DeletedMessage";
 import { getPeerId } from "telegram/Utils";
+import * as MDX from "telegram/extensions/markdown";
+import bigInt from "big-integer";
 
 const API_ID = 37903917;
 const API_HASH = "4e2c9b6a239fefd89a6749fde0f39aad";
@@ -43,13 +45,16 @@ let client = null;
 let TGM = false; // режим Telegram включён
 let TGME = null;
 let MYID = "";
+let MYPREM = false;
+const CELIST = []; // премиум-эмодзи, вставленные в поле ввода: [{alt, id}]
 const ents = {}; // chatId -> InputPeer / entity
 const photoQ = {};
 
 const $ = (s) => document.querySelector(s);
 const sid = (x) => (x == null ? "" : String(x));
 const hue = (s) => { let h = 0; s = String(s); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; };
-const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const stripCE = (s) => String(s).replace(/\uE000\d+\uE001/g, "").replace(/\uE002/g, "");
+const esc = (s) => stripCE(String(s == null ? "" : s)).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const toast = (t) => W.toast && W.toast(t);
 const errTxt = (e) => (e && (e.errorMessage || e.message)) || String(e);
 
@@ -201,6 +206,7 @@ function entMd(text, ents_) {
     else if (n === "MessageEntityItalic") { o = c = "__"; }
     else if (n === "MessageEntityCode" || n === "MessageEntityPre") { o = c = "`"; }
     else if (n === "MessageEntityTextUrl" && e.url) { c = " (" + e.url + ")"; }
+    else if (n === "MessageEntityCustomEmoji") { o = "\uE000" + String(e.documentId) + "\uE001"; c = "\uE002"; }
     else return;
     if (o) ins.push({ p: e.offset, s: o, k: 1 });
     ins.push({ p: e.offset + e.length, s: c, k: 0 });
@@ -225,6 +231,29 @@ function convReact(m) {
   return r;
 }
 
+// реакции в виде списка: [{k, e, d, n, mine, who:[peerId|"me"]}] — для чипов как в Telegram
+function sameR(rr, emo, doc) {
+  if (!rr) return false;
+  if (emo) return rr.emoticon === emo;
+  return rr.documentId != null && String(rr.documentId) === doc;
+}
+function convRx(m) {
+  const res = m.reactions && m.reactions.results;
+  if (!res || !res.length) return undefined;
+  const rec = m.reactions.recentReactions || [];
+  const out = [];
+  res.forEach((x) => {
+    const emo = x.reaction && x.reaction.emoticon;
+    const doc = x.reaction && x.reaction.documentId != null ? String(x.reaction.documentId) : null;
+    if (!emo && !doc) return;
+    const mine = x.chosenOrder != null;
+    const who = rec.filter((r) => sameR(r.reaction, emo, doc)).map((r) => { try { return r.my ? "me" : sid(getPeerId(r.peerId)); } catch (e) { return ""; } }).filter(Boolean);
+    if (mine && who.indexOf("me") < 0) who.push("me");
+    out.push({ k: emo || "ce:" + doc, e: emo || null, d: doc, n: Number(x.count), mine, who: who.slice(0, 3) });
+  });
+  return out.length ? out : undefined;
+}
+
 const ACT = {
   MessageActionChatAddUser: "добавлен(ы) участник(и)", MessageActionChatDeleteUser: "участник удалён",
   MessageActionChatJoinedByLink: "присоединился(-ась) по ссылке", MessageActionChatJoinedByRequest: "присоединился(-ась)",
@@ -246,7 +275,7 @@ function convMsgRaw(m, c) {
     from: m.out ? "me" : (m.sender && (m.sender.firstName || m.sender.title)) || c.name,
     edited: !!m.editDate, editT: m.editDate ? m.editDate * 1000 : undefined,
     reply: m.replyTo && m.replyTo.replyToMsgId ? sid(m.replyTo.replyToMsgId) : undefined,
-    fwd, raw: m, react: convReact(m),
+    fwd, raw: m, react: convReact(m), rx: convRx(m),
     read: !!(m.out && c.readOut && Number(m.id) <= c.readOut),
   };
   try {
@@ -444,7 +473,7 @@ async function startTG() {
   { const el = $("#login"); if (el) { el.style.display = "flex"; el.innerHTML = loginHtml("load"); } }
   try { await connect(); } catch (e) { TGM = false; console.error("connect", e); showEntry("Не удалось подключиться: " + String((e && (e.errorMessage || e.message)) || e)); return; }
   const me = await client.getMe();
-  MYID = sid(me.id);
+  MYID = sid(me.id); MYPREM = !!me.premium;
   const name = [me.firstName, me.lastName].filter(Boolean).join(" ") || me.username || "Я";
   W.ME = { uid: "me", name, email: me.phone ? "+" + me.phone : "" };
   TGME = W.ME;
@@ -455,6 +484,7 @@ async function startTG() {
   W.S.admin = false;
   $("#login").style.display = "none";
   injectCss();
+  buildEmoPanel(); loadAvail();
   W.renderMain();
   client.downloadProfilePhoto("me", { isBig: false }).then((b) => {
     if (b && b.length) { W.S.me.avatar = "data:image/jpeg;base64," + btoa(String.fromCharCode(...new Uint8Array(b))); W.refreshMe(); }
@@ -559,7 +589,7 @@ function hookEvents() {
       } else if (n === "UpdateMessageReactions") {
         const c = chatById(sid(getPeerId(u.peer))); if (!c) return;
         const m = c.msgs.find((x) => x.id === sid(u.msgId));
-        if (m) { m.react = convReact({ reactions: u.reactions }); if (W.S.open === c.id) W.renderMsgs(1); }
+        if (m) { m.react = convReact({ reactions: u.reactions }); m.rx = convRx({ reactions: u.reactions }); if (W.S.open === c.id) W.renderMsgs(1); }
       } else if (n === "UpdateReadHistoryOutbox" || n === "UpdateReadChannelOutbox") {
         const c = chatById(n === "UpdateReadHistoryOutbox" ? sid(getPeerId(u.peer)) : sid(getPeerId(new Api.PeerChannel({ channelId: u.channelId }))));
         if (c) { c.readOut = Number(u.maxId); c.msgs.forEach((m) => { if (m.out && Number(m.id) <= c.readOut) m.read = true; }); if (W.S.open === c.id) W.renderMsgs(1); W.softMain(); }
@@ -595,7 +625,7 @@ function mergeLive(c, list) {
       }
     } else if (!old.deleted) {
       if (cm.editT && cm.editT !== old.editT) { applyEdit(c, m); }
-      else if (JSON.stringify(cm.react || {}) !== JSON.stringify(old.react || {})) { old.react = cm.react; changed = true; }
+      else if (JSON.stringify(cm.rx || []) !== JSON.stringify(old.rx || [])) { old.react = cm.react; old.rx = cm.rx; changed = true; }
     }
   });
   const now = Date.now();
@@ -720,8 +750,21 @@ async function send(c, o) {
     } else {
       const message = o.text || o.sticker || "";
       if (!message) return;
-      try { r = await client.sendMessage(ent, { message, replyTo, silent: !!o.silent, parseMode: "md" }); }
-      catch (e1) { r = await client.sendMessage(ent, { message, replyTo, silent: !!o.silent }); } // запасной вариант без разметки
+      const list = CELIST.splice(0);
+      let done = false;
+      if (list.length && MDX && MDX.MarkdownParser) {
+        try {
+          const pr = MDX.MarkdownParser.parse(message), msg = pr[0], base = pr[1] || [], ce = [];
+          let pos = 0;
+          list.forEach((it) => { const i = msg.indexOf(it.alt, pos); if (i < 0) return; ce.push(new Api.MessageEntityCustomEmoji({ offset: i, length: it.alt.length, documentId: bigInt(it.id) })); pos = i + it.alt.length; });
+          r = await client.sendMessage(ent, { message: msg, replyTo, silent: !!o.silent, formattingEntities: base.concat(ce).sort((a, b) => a.offset - b.offset) });
+          done = true;
+        } catch (e0) { console.warn("custom emoji send failed, fallback", e0); }
+      }
+      if (!done) {
+        try { r = await client.sendMessage(ent, { message, replyTo, silent: !!o.silent, parseMode: "md" }); }
+        catch (e1) { r = await client.sendMessage(ent, { message, replyTo, silent: !!o.silent }); } // запасной вариант без разметки
+      }
     }
   } catch (e) { console.error("send", e); if (pend) dropPending(c, pend); return W.toast("Ошибка отправки: " + errTxt(e)); }
   if (pend) c.msgs = c.msgs.filter((x) => x !== pend);
@@ -810,7 +853,7 @@ W.AYU_editUser = () => {
 function injectCss() {
   if ($("#ayucss")) return;
   const s = document.createElement("style"); s.id = "ayucss";
-  s.textContent = ".m.deleted{opacity:.8;outline:1.5px dashed #d93025;outline-offset:-1.5px}.m .mt .ayud{color:#d93025;margin-right:4px}.m .mt .ayue{text-decoration:underline dotted}";
+  s.textContent = ".m.deleted{opacity:.8;outline:1.5px dashed #d93025;outline-offset:-1.5px}.m .mt .ayud{color:#d93025;margin-right:4px}.m .mt .ayue{text-decoration:underline dotted}" + SKIN_CSS;
   document.head.appendChild(s);
 }
 const SWROW = (k, ico, t, sub) => '<div class="row" style="padding:4px 0" onclick="AYU_t(\'' + k + '\')"><div class="ico">' + W.ic(ico) + '</div><div class="t">' + t + "<small>" + sub + '</small></div><div class="sw' + (AYU[k] ? " on" : "") + '"></div></div>';
@@ -894,6 +937,245 @@ function decorate() {
   });
 }
 
+
+/* =====================================================================
+   ПРЕМИУМ-ЭМОДЗИ (custom emoji): показ в тексте/реакциях и выбор в панели
+   Анимированные TGS показываются статичной картинкой (превью), WEBM/WEBP — как есть.
+   ===================================================================== */
+const CE = new Map(); // id -> {doc, url, video, busy}
+const RE_CE = /\uE000(\d+)\uE001([^\uE002]*)\uE002/g;
+const ceEl = (e) => (e.video ? '<video class="cei" src="' + e.url + '" autoplay loop muted playsinline></video>' : '<img class="cei" src="' + e.url + '" alt="">');
+function ceHtml(id, alt) {
+  const e = CE.get(id);
+  if (e && e.url) return '<span class="ce" data-ce="' + id + '" data-h="1">' + ceEl(e) + "</span>";
+  return '<span class="ce" data-ce="' + id + '">' + esc(alt || "⭐") + "</span>";
+}
+function ceFill(id) {
+  const e = CE.get(id); if (!e || !e.url) return;
+  document.querySelectorAll('.ce[data-ce="' + id + '"]').forEach((el) => { if (el.dataset.h) return; el.dataset.h = "1"; el.innerHTML = ceEl(e); });
+}
+async function ceDownload(id) {
+  const e = CE.get(id); if (!e || e.url || e.busy || !e.doc) return;
+  e.busy = true;
+  try {
+    let blob = await idbGetBlob("ce:" + id);
+    if (!blob) {
+      const d = e.doc, mt = d.mimeType || ""; let buf, type = "image/webp";
+      if (mt === "video/webm") { buf = await client.downloadMedia(d, {}); type = "video/webm"; }
+      else if (mt === "image/webp" || mt === "image/png") { buf = await client.downloadMedia(d, {}); type = mt; }
+      else { const sz = (d.thumbs || []).filter((t) => t.className === "PhotoSize" || t.className === "PhotoCachedSize").pop(); if (sz) buf = await client.downloadMedia(d, { thumb: sz }); }
+      if (buf && buf.length) { blob = new Blob([buf], { type }); idbPutBlob("ce:" + id, blob); }
+    }
+    if (blob) { e.url = URL.createObjectURL(blob); e.video = /^video/.test(blob.type); ceFill(id); }
+  } catch (err) {} finally { e.busy = false; }
+}
+async function ceLoad(ids) {
+  if (!client) return;
+  ids = [...new Set(ids)].filter((i) => { const e = CE.get(i); return !(e && (e.url || e.busy)); });
+  if (!ids.length) return;
+  const need = ids.filter((i) => !(CE.get(i) && CE.get(i).doc));
+  if (need.length) {
+    try {
+      const r = await client.invoke(new Api.messages.GetCustomEmojiDocuments({ documentId: need.map((i) => bigInt(i)) }));
+      r.forEach((d) => { const id = String(d.id); CE.set(id, Object.assign(CE.get(id) || {}, { doc: d })); });
+    } catch (e) {}
+  }
+  for (let i = 0; i < ids.length; i += 4) await Promise.all(ids.slice(i, i + 4).map(ceDownload));
+}
+function ceHydrate(root) {
+  const ids = [];
+  (root || document).querySelectorAll(".ce[data-ce]:not([data-h])").forEach((el) => {
+    const id = el.dataset.ce, e = CE.get(id);
+    if (e && e.url) ceFill(id); else ids.push(id);
+  });
+  if (ids.length) ceLoad(ids);
+}
+const altOf = (d) => { const a = (d.attributes || []).find((x) => x.className === "DocumentAttributeCustomEmoji"); return (a && a.alt) || "⭐"; };
+
+W.AYU_ce = (id, alt) => {
+  const ta = $("#ta"); if (!ta) return;
+  ta.value += alt; CELIST.push({ alt, id });
+  if (!MYPREM && !W._cePremHint) { W._cePremHint = 1; toast("Без Telegram Premium такой эмодзи отправится обычным"); }
+  W.onType && W.onType();
+};
+
+/* ---------- реакции в стиле Telegram ---------- */
+let AVAIL = ["❤️", "👍", "👎", "🔥", "🥰", "👏", "😁", "🤔", "🤯", "😱", "🤬", "😢", "🎉", "🤩", "🤮", "💩", "🙏", "👌", "🕊", "🤡", "🥱", "🥴", "😍", "🐳", "💯", "🤣", "⚡", "🍌", "🏆", "💔", "🤨", "😐", "🍓", "🍾", "💋", "😈", "😴", "😭", "🤓", "👻", "👀", "🎃", "🙈", "😇", "😨", "🤝", "🤗", "🫡", "🎅", "🎄", "💅", "🤪", "🗿", "🆒", "💘", "🙉", "🦄", "😘", "💊", "🙊", "😎", "👾", "🤷", "😡"];
+async function loadAvail() {
+  try {
+    const r = await client.invoke(new Api.messages.GetAvailableReactions({ hash: 0 }));
+    if (r && r.reactions) { const l = r.reactions.filter((x) => !x.inactive && (MYPREM || !x.premium)).map((x) => x.reaction); if (l.length) AVAIL = l; }
+  } catch (e) {}
+}
+function rxAv(w) {
+  let url = "", name = "?";
+  if (w === "me") { url = W.S.me && W.S.me.avatar; name = W.S.name || "Я"; }
+  else { const c = chatById(w); if (c) { url = c.photo; name = c.name; } }
+  return '<i style="' + (url ? "background-image:url(" + url + ")" : "background:hsl(" + hue(w) + ",45%,42%)") + '">' + (url ? "" : esc((name || "?").trim().charAt(0).toUpperCase())) + "</i>";
+}
+function rxHtml(m) {
+  const list = m.rx; if (!list || !list.length) return "";
+  return '<div class="rxs">' + list.map((r) => {
+    const sym = r.e ? '<span class="rxe">' + esc(r.e) + "</span>" : ceHtml(r.d, "⭐");
+    const tail = r.who.length && r.who.length === r.n && r.n <= 3 ? '<span class="rxa">' + r.who.map(rxAv).join("") + "</span>" : "<b>" + r.n + "</b>";
+    return '<span class="rx tgrx' + (r.mine ? " me" : "") + '" onclick="event.stopPropagation();react(\'' + m.id + "','" + r.k + '\')">' + sym + tail + "</span>";
+  }).join("") + "</div>";
+}
+W.AYU_rxMore = (mid) => {
+  const box = $("#rxall"); if (!box) return;
+  if (box.dataset.o) { box.style.display = "none"; box.dataset.o = ""; return; }
+  box.dataset.o = "1"; box.style.display = "grid";
+  box.innerHTML = AVAIL.map((e) => '<button onclick="closeAll();react(\'' + mid + "','" + e + '\')">' + e + "</button>").join("");
+  if (MYPREM) {
+    client.invoke(new Api.messages.GetTopReactions({ limit: 40, hash: bigInt(0) })).then((r) => {
+      (r.reactions || []).filter((x) => x.documentId != null).forEach((x) => {
+        const id = String(x.documentId);
+        box.insertAdjacentHTML("beforeend", '<button onclick="closeAll();react(\'' + mid + "','ce:" + id + '\')"><span class="ce" data-ce="' + id + '">⭐</span></button>');
+      });
+      ceHydrate(box);
+    }).catch(() => {});
+  }
+};
+
+/* ---------- панель эмодзи: категории, недавние, премиум ---------- */
+const isEmo = (s) => /^\p{Emoji_Presentation}$/u.test(s);
+const rng = (a, b) => { const o = []; for (let i = a; i <= b; i++) { const c = String.fromCodePoint(i); if (isEmo(c)) o.push(c); } return o; };
+const flag = (cc) => String.fromCodePoint(...[...cc].map((ch) => 0x1F1E6 + ch.charCodeAt(0) - 65));
+const sp = (t) => t.split(" ");
+let ECATS = null;
+function ecats() {
+  if (ECATS) return ECATS;
+  ECATS = [
+    { i: "😀", e: [].concat(rng(0x1F600, 0x1F64F), rng(0x1F910, 0x1F93A), rng(0x1F970, 0x1F97A), sp("🥲 🫠 🫡 🫢 🫣 🫤 🥹")) },
+    { i: "👍", e: sp("👍 👎 👌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐 🖖 👋 🤝 🙏 ✍️ 💪 👏 🙌 👐 🤲 🫶 🫰 🫵 👊 ✊ 🤛 🤜 🤌 🤏 🖕 👀 👅 👄 🧠 🫀") },
+    { i: "❤️", e: sp("❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❤️‍🔥 ❤️‍🩹 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 💋 💯 💢 💥 💫 💦 💨 💬 💭 💤 ✨ ⭐ 🌟 🔥 🎉 🎊") },
+    { i: "🐶", e: [].concat(rng(0x1F400, 0x1F43F), rng(0x1F980, 0x1F9AF)) },
+    { i: "🍔", e: [].concat(rng(0x1F345, 0x1F37F), rng(0x1F950, 0x1F96B), rng(0x1F32D, 0x1F32F)) },
+    { i: "⚽", e: [].concat(sp("⚽ 🏀 🏈 ⚾ 🎾 🏐 🎮 🎲 🎯 🎵 🎶 🎤 🎧 🎸 🎹 🥇 🏆"), rng(0x1F3A0, 0x1F3CA)) },
+    { i: "🚀", e: [].concat(rng(0x1F680, 0x1F6A4), rng(0x1F30D, 0x1F320), rng(0x1F3E0, 0x1F3F0)) },
+    { i: "💡", e: [].concat(sp("📱 💻 ⌚ 📷 🎁 🔑 🔒 📌 ✏️ 📎 💰 💳"), rng(0x1F4A1, 0x1F4FF)) },
+    { i: "✅", e: sp("✅ ❌ ⭕ ❗ ❓ ‼️ ⚠️ 🚫 ♻️ ➕ ➖ ➡️ ⬅️ ⬆️ ⬇️ 🔴 🟠 🟡 🟢 🔵 🟣 ⚫ ⚪ 🔞 🆗 🆒 🆕 🔝") },
+    { i: "🇷🇺", e: sp("RU UA BY KZ UZ GE AM AZ US GB DE FR IT ES TR CN JP KR IN BR PL NL").map(flag) },
+  ];
+  return ECATS;
+}
+const REC_KEY = "tgyou_recent_emo";
+const recents = () => { try { return JSON.parse(localStorage.getItem(REC_KEY) || "[]"); } catch (e) { return []; } };
+let ETAB = "0";
+function buildEmoPanel() {
+  const el = $("#emo"); if (!el) return;
+  const tabs = [{ k: "r", i: "🕒" }].concat(ecats().map((c, i) => ({ k: String(i), i: c.i })), [{ k: "ce", i: "⭐" }]);
+  el.innerHTML = '<div class="etabs">' + tabs.map((t) => '<button data-k="' + t.k + '" onclick="AYU_etab(\'' + t.k + '\')">' + t.i + "</button>").join("") + '</div><div class="egrid" id="egrid"></div>';
+  W.AYU_etab(recents().length ? "r" : "0");
+}
+W.AYU_etab = (k) => {
+  ETAB = k;
+  document.querySelectorAll("#emo .etabs button").forEach((b) => b.classList.toggle("on", b.dataset.k === k));
+  const g = $("#egrid"); if (!g) return;
+  g.className = "egrid"; g.scrollTop = 0;
+  if (k === "ce") return cePanel(g);
+  const list = k === "r" ? recents() : ecats()[Number(k)].e;
+  g.innerHTML = list.length ? list.map((e) => '<button onclick="addEmo(\'' + e + '\')">' + e + "</button>").join("") : '<div class="cehint">Пока пусто</div>';
+};
+async function cePanel(g) {
+  g.className = "egrid cep"; g.innerHTML = '<div class="cehint">Загрузка…</div>';
+  try {
+    let sets = ((await client.invoke(new Api.messages.GetEmojiStickers({ hash: bigInt(0) }))).sets || []).slice(0, 8);
+    if (!sets.length) sets = ((await client.invoke(new Api.messages.GetFeaturedEmojiStickers({ hash: bigInt(0) }))).sets || []).map((x) => x.set || x).slice(0, 8);
+    g.innerHTML = MYPREM ? "" : '<div class="cehint">Для отправки нужен Telegram Premium — без него эмодзи уйдёт обычным</div>';
+    for (const st of sets) {
+      if (ETAB !== "ce") return;
+      const ss = await client.invoke(new Api.messages.GetStickerSet({ stickerset: new Api.InputStickerSetID({ id: st.id, accessHash: st.accessHash }), hash: 0 }));
+      let h = '<div class="cest">' + esc(st.title) + '</div><div class="cegrid">';
+      (ss.documents || []).slice(0, 48).forEach((d) => {
+        const id = String(d.id), alt = altOf(d);
+        const e = CE.get(id) || {}; if (!e.doc) { e.doc = d; CE.set(id, e); }
+        h += '<button class="ceb" onclick="AYU_ce(\'' + id + "','" + esc(alt) + '\')">' + ceHtml(id, alt) + "</button>";
+      });
+      g.insertAdjacentHTML("beforeend", h + "</div>");
+      ceHydrate(g);
+    }
+  } catch (e) { g.innerHTML = '<div class="cehint">Не удалось загрузить: ' + esc(errTxt(e)) + "</div>"; }
+}
+
+/* ---------- внешний вид «как в Telegram» ---------- */
+const DOODLE = "<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240' fill='none' stroke='#8a8f98' stroke-opacity='.17' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='30' cy='34' r='12'/><path d='M88 28l5 11 12 1-9 8 3 12-11-6-11 6 3-12-9-8 12-1z'/><path d='M165 44c-9-15-31-2-20 13l20 17 20-17c11-15-11-28-20-13z'/><rect x='24' y='104' width='32' height='24' rx='7'/><path d='M96 116c0-11 15-11 15 0s15 11 15 0'/><circle cx='186' cy='116' r='6'/><circle cx='204' cy='104' r='4'/><path d='M40 186l11-15 11 15z'/><path d='M104 190h42M125 174v32'/><circle cx='196' cy='192' r='15'/><path d='M189 192h14M196 185v14'/><path d='M140 130c6-9 16-9 22 0'/><path d='M70 70l16 16M86 70L70 86'/></svg>";
+const SKIN_CSS = `
+.chbar{background:transparent!important;padding:8px 10px 6px!important;gap:8px}
+.chbar>.ib{background:var(--s3);width:52px;height:52px;flex-shrink:0;color:var(--os)}
+.chbar .who{background:var(--s3);border-radius:30px;min-height:52px;padding:4px 16px 4px 4px;gap:10px}
+.chbar .who .av{width:44px;height:44px}
+.chbar .nm{font-size:17px;line-height:1.15}.chbar .st{font-size:13px;line-height:1.15}
+#pinbar .pinb{margin:2px 10px 4px;border:0;border-radius:22px;background:var(--s3);padding:8px 8px 8px 16px}
+.msgs{background-color:var(--s1);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240' fill='none' stroke='%238a8f98' stroke-opacity='.17' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='30' cy='34' r='12'/%3E%3Cpath d='M88 28l5 11 12 1-9 8 3 12-11-6-11 6 3-12-9-8 12-1z'/%3E%3Cpath d='M165 44c-9-15-31-2-20 13l20 17 20-17c11-15-11-28-20-13z'/%3E%3Crect x='24' y='104' width='32' height='24' rx='7'/%3E%3Cpath d='M96 116c0-11 15-11 15 0s15 11 15 0'/%3E%3Ccircle cx='186' cy='116' r='6'/%3E%3Ccircle cx='204' cy='104' r='4'/%3E%3Cpath d='M40 186l11-15 11 15z'/%3E%3Cpath d='M104 190h42M125 174v32'/%3E%3Ccircle cx='196' cy='192' r='15'/%3E%3Cpath d='M189 192h14M196 185v14'/%3E%3Cpath d='M140 130c6-9 16-9 22 0'/%3E%3Cpath d='M70 70l16 16M86 70L70 86'/%3E%3C/svg%3E");background-size:240px 240px;padding:6px 10px}
+.m{border-radius:20px;padding:8px 12px 6px}
+.m.in{background:var(--s3);border-bottom-left-radius:6px}
+.m.out{border-bottom-right-radius:6px}
+.day{background:var(--s3);color:var(--os);font-weight:500}
+.comp{background:transparent!important;padding:6px 10px 10px;padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+.inp{background:var(--s3)!important;border-radius:30px!important;min-height:56px!important}
+.inp textarea{height:56px;padding:16px 4px}
+.sb{width:56px!important;height:56px!important;background:var(--pc)!important;color:var(--onpc)!important}
+.nav{margin:0 12px calc(10px + env(safe-area-inset-bottom));padding:8px 6px!important;border-radius:36px;background:var(--s3)!important;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+.nv{border-radius:28px;padding:6px 0}
+.nv .pill{background:none!important;height:28px}
+.nv.on{background:var(--sc);color:var(--onsc)}
+.chips{background:var(--s2);margin:4px 14px 8px;border-radius:30px;padding:6px;gap:6px}
+.chip{flex:1;justify-content:center;height:42px;border:0;border-radius:24px;font-size:16px}
+.chip.on{background:var(--sc);color:var(--os)}
+.ci{margin:0;border-radius:0;padding:10px 16px}
+.fab{border-radius:22px;background:var(--pc);color:var(--onpc);bottom:calc(112px + env(safe-area-inset-bottom))}
+.rxs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.rx{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:16px;background:color-mix(in srgb,currentColor 16%,transparent);font-size:16px;font-weight:500}
+.rx.me{background:var(--p);color:var(--onp)}
+.rx b{font-weight:500;font-size:14px}
+.rxa{display:inline-flex}.rxa i{width:20px;height:20px;border-radius:50%;background-size:cover;background-position:center;margin-left:-6px;font-style:normal;font-size:11px;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 0 0 2px var(--s3)}
+.rxa i:first-child{margin-left:0}
+.m.out .rxa i{box-shadow:0 0 0 2px var(--pc)}
+.ce{display:inline-block}.cei{width:1.3em;height:1.3em;vertical-align:-.3em;object-fit:contain}
+.rx .cei{width:20px;height:20px;vertical-align:middle}
+.rxbar{display:flex;align-items:center;justify-content:space-around;padding:6px 4px;border-radius:30px;background:var(--s3);margin-bottom:8px}
+.rxbar button{font-size:28px;width:44px;height:44px;border-radius:50%}
+.rxbar .rxmore{font-size:22px;color:var(--osv)}
+.rxall{max-height:230px;overflow-y:auto;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px}
+.rxall button{font-size:28px;height:46px;border-radius:12px}.rxall .cei{width:30px;height:30px}
+#emo.show{display:block;max-height:300px;padding-top:6px}
+.etabs{display:flex;gap:4px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
+.etabs button{flex-shrink:0;width:42px;height:38px;border-radius:14px;font-size:20px}
+.etabs button.on{background:var(--sc)}
+.egrid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;max-height:236px;overflow-y:auto}
+.egrid.cep{display:block}
+.egrid button{font-size:26px;height:44px;border-radius:12px}
+.cegrid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px}
+.ceb{display:flex;align-items:center;justify-content:center}.ceb .cei{width:32px;height:32px}
+.cest{font-size:13px;font-weight:500;color:var(--p);padding:8px 6px 4px}
+.cehint{grid-column:1/-1;padding:12px;color:var(--osv);font-size:14px;text-align:center}
+`;
+
+function patchSkin(O) {
+  W.rxOf = function (m) { return TGM && m && m.rx ? rxHtml(m) : O.rxOf(m); };
+  W.esc = function (x) { return O.esc(typeof x === "string" && x.indexOf("\uE000") >= 0 ? stripCE(x) : x); };
+  W.fmt = function (t) {
+    if (!TGM || typeof t !== "string" || t.indexOf("\uE000") < 0) return O.fmt(t);
+    const out = []; let last = 0;
+    t.replace(RE_CE, (m0, id, alt, off) => { out.push(O.fmt(t.slice(last, off)), ceHtml(id, alt)); last = off + m0.length; return m0; });
+    out.push(O.fmt(t.slice(last)));
+    return out.join("");
+  };
+  W.copyMsg = function (id) {
+    const m = W.findMsg(id);
+    if (m && m.text && m.text.indexOf("\uE000") >= 0) { const t = m.text; m.text = stripCE(t); try { O.copyMsg(id); } finally { m.text = t; } }
+    else O.copyMsg(id);
+  };
+  W.editMsg = function (id) { O.editMsg(id); const ta = $("#ta"); if (ta && ta.value.indexOf("\uE000") >= 0) ta.value = stripCE(ta.value); };
+  W.addEmo = function (e) {
+    O.addEmo(e);
+    try { const r = [e].concat(recents().filter((x) => x !== e)).slice(0, 32); localStorage.setItem(REC_KEY, JSON.stringify(r)); } catch (x) {}
+  };
+}
+
+function decorateSkin() { ceHydrate(document.getElementById("msgs")); }
+
 /* =====================================================================
    ПОДМЕНА ФУНКЦИЙ ПРИЛОЖЕНИЯ
    ===================================================================== */
@@ -901,7 +1183,9 @@ function patch() {
   const O = {};
   ["hideBan", "showLogin", "openChat", "pushMsg", "pushTo", "sbClick", "markRead", "doDel", "logout", "getMedia", "react", "pinMsg",
     "setTyping", "typingPing", "startCall", "newChatDlg", "toggleBlock", "clearHist", "delChat", "persist", "selDel", "selRead",
-    "statusText", "doFwd", "openProfile", "sendBlob", "sendFile", "mention", "moreCards", "renderMsgs", "msgMenu2", "iBlock"].forEach((n) => { O[n] = W[n]; });
+    "statusText", "doFwd", "openProfile", "sendBlob", "sendFile", "mention", "moreCards", "renderMsgs", "msgMenu2", "iBlock",
+    "rxOf", "esc", "fmt", "copyMsg", "editMsg", "addEmo"].forEach((n) => { O[n] = W[n]; });
+  patchSkin(O);
 
   // вход только через Telegram: экран входа Firebase никогда не показывается
   W.showLogin = function () { if (!TGM) showEntry(); };
@@ -926,7 +1210,7 @@ function patch() {
     }
   };
 
-  W.renderMsgs = function () { const r = O.renderMsgs.apply(this, arguments); decorate(); return r; };
+  W.renderMsgs = function () { const r = O.renderMsgs.apply(this, arguments); decorate(); if (TGM) decorateSkin(); return r; };
 
   W.markRead = function (c, f) { if (TGM) { if (c && c.tg && (f || W.S.open === c.id)) markRead(c); return; } O.markRead(c, f); };
 
@@ -973,10 +1257,18 @@ function patch() {
   W.react = function (mid, e) {
     if (!TGM) return O.react(mid, e);
     const c = W.chat(W.S.open), m = W.findMsg(mid); if (!m) return;
-    const mine = m.react && m.react.me === e;
-    client.invoke(new Api.messages.SendReaction({ peer: ents[c.id], msgId: Number(mid), reaction: mine ? [] : [new Api.ReactionEmoji({ emoticon: e })] })).catch(() => {});
-    m.react = m.react || {};
-    if (mine) delete m.react.me; else m.react.me = e;
+    const isCe = /^ce:/.test(e), doc = isCe ? e.slice(3) : null;
+    const mine = (m.rx || []).some((r) => r.mine && r.k === e);
+    const reaction = isCe ? new Api.ReactionCustomEmoji({ documentId: bigInt(doc) }) : new Api.ReactionEmoji({ emoticon: e });
+    client.invoke(new Api.messages.SendReaction({ peer: ents[c.id], msgId: Number(mid), reaction: mine ? [] : [reaction] })).catch((err) => W.toast(errTxt(err)));
+    // сразу показываем результат, сервер подтвердит позже
+    m.rx = (m.rx || []).map((r) => (r.mine ? Object.assign({}, r, { n: r.n - 1, mine: false, who: r.who.filter((w) => w !== "me") }) : r)).filter((r) => r.n > 0);
+    if (!mine) {
+      const r = m.rx.find((x) => x.k === e);
+      if (r) { r.n++; r.mine = true; r.who = r.who.concat("me").slice(0, 3); }
+      else m.rx.push({ k: e, e: isCe ? null : e, d: doc, n: 1, mine: true, who: ["me"] });
+    }
+    m.react = mine ? {} : { me: e };
     W.renderMsgs(1);
   };
 
@@ -1135,6 +1427,10 @@ function patch() {
       return W.sheet(h);
     }
     O.msgMenu2(mid);
+    const row = $("#sheet") && $("#sheet").firstElementChild;
+    if (row && row.querySelector("button") && !row.classList.contains("sec")) {
+      row.outerHTML = '<div class="rxbar">' + AVAIL.slice(0, 6).map((e) => '<button onclick="closeAll();react(\'' + mid + "','" + e + '\')">' + e + "</button>").join("") + '<button class="rxmore" onclick="AYU_rxMore(\'' + mid + '\')">⌄</button></div><div class="rxall" id="rxall" style="display:none"></div>';
+    }
     if (m.edits && m.edits.length) $("#sheet").insertAdjacentHTML("beforeend", W.si("edit", "История изменений (" + m.edits.length + ")", "AYU_hist('" + mid + "')"));
   };
 }
