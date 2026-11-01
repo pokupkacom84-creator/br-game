@@ -113,7 +113,8 @@ function recOf(c, m) {
   return {
     k: c.id + ":" + m.id, chat: c.id, ch: c.type, id: Number(m.id), text: m.text || "", t: m.t, out: !!m.out, from: m.from,
     edited: !!m.edited, editT: m.editT, edits: m.edits, fwd: m.fwd, reply: m.reply, voice: !!m.voice, dur: m.dur,
-    photo: !!(m.img || m.photoPending), sticker: m.sticker, file: m.file, deleted: !!m.deleted, delT: m.delT,
+    photo: !!(m.img || m.photoPending), sticker: m.sticker, file: m.file,
+    gid: m.gid, vthumb: m.vthumb, views: m.views, author: m.author, cm: m.cm, deleted: !!m.deleted, delT: m.delT,
   };
 }
 function cacheMsg(c, m) { if (m && m.id != null && !isNaN(Number(m.id))) qSave(recOf(c, m)); }
@@ -122,7 +123,9 @@ async function fromRec(r) {
     id: sid(r.id), tg: true, out: r.out, text: r.text, t: r.t, from: r.from, edited: r.edited, editT: r.editT, edits: r.edits,
     fwd: r.fwd, reply: r.reply, voice: r.voice || undefined, dur: r.dur, sticker: r.sticker, file: r.file,
     deleted: !!r.deleted, delT: r.delT, mediaDone: true,
+    gid: r.gid, vthumb: r.vthumb, views: r.views, author: r.author, cm: r.cm,
   };
+  if (r.vthumb) { const tb = await idbGetBlob(r.k + ":t"); if (tb) m.thumbUrl = URL.createObjectURL(tb); }
   if (r.photo || r.voice) {
     const b = await idbGetBlob(r.k);
     if (b) { const url = URL.createObjectURL(b); if (r.voice) m.audio = url; else m.img = url; }
@@ -277,6 +280,8 @@ function convMsgRaw(m, c) {
     edited: !!m.editDate, editT: m.editDate ? m.editDate * 1000 : undefined,
     reply: m.replyTo && m.replyTo.replyToMsgId ? sid(m.replyTo.replyToMsgId) : undefined,
     fwd, raw: m, react: convReact(m), rx: convRx(m),
+    gid: m.groupedId ? sid(m.groupedId) : undefined, views: m.views || undefined, author: m.postAuthor || undefined,
+    cm: m.replies && m.replies.comments ? (Number(m.replies.replies) || 0) : undefined,
     read: !!(m.out && c.readOut && Number(m.id) <= c.readOut),
   };
   try {
@@ -289,6 +294,7 @@ function convMsgRaw(m, c) {
       const nm = (d && d.attributes.find((a) => a.fileName) || {}).fileName || (m.videoNote ? "кружок.mp4" : "файл");
       o.file = { k: "f", n: nm, s: d ? Number(d.size) : 0 };
       o.mid = "tg" + m.id;
+      if (m.video || m.videoNote || m.gif) o.vthumb = true;
     } else if (m.media && !o.text) {
       const k = m.media.className;
       if (k === "MessageMediaGeo" || k === "MessageMediaGeoLive") o.text = "📍 https://maps.google.com/?q=" + m.media.geo.lat + "," + m.media.geo.long;
@@ -335,6 +341,7 @@ function mkChat(d) {
   c._pp = c.pinned; c._pm = c.muted;
   Object.assign(c, statusOf(d.entity));
   if (d.message) c.msgs.push(convMsg(d.message, c));
+  c.srv = d.unreadCount || 0; c.unread = calcUnread(c, d.message && d.message.id);
   return c;
 }
 
@@ -363,7 +370,7 @@ function saveDlg() {
   dsT = setTimeout(() => {
     try {
       if (!MEINFO || !W.S.chats.length) return;
-      const F = ["id", "tg", "type", "name", "hue", "peer", "pinned", "muted", "unread", "uname", "members", "readOut", "_pp", "_pm"];
+      const F = ["id", "tg", "type", "name", "hue", "peer", "pinned", "muted", "unread", "srv", "uname", "members", "readOut", "_pp", "_pm"];
       const chats = W.S.chats.slice(0, 100).map((c) => {
         const o = {}; F.forEach((k) => { o[k] = c[k]; });
         const l = c.msgs[c.msgs.length - 1];
@@ -431,6 +438,79 @@ async function jumpLoad(c, id) { // подгрузить окно вокруг �
   add.forEach((m) => cacheMsg(c, m));
   c.msgs = c.msgs.concat(add).sort(byTime);
   W.renderMsgs(1); fetchMedia(c);
+}
+
+/* ---------- «прочитано»: только каналы/боты/избранное; личные и группы – локально ---------- */
+const LK = "tgyou_lr";
+let LR = {}; try { LR = JSON.parse(localStorage.getItem(LK) || "{}"); } catch (e) {}
+const saveLR = () => { try { localStorage.setItem(LK, JSON.stringify(LR)); } catch (e) {} };
+const ghostFor = (c) => !!c && (AYU.ghostRead || c.type === "user" || c.type === "group");
+const lastRealId = (c) => { let m = 0; c.msgs.forEach((x) => { const n = Number(x.id); if (!isNaN(n) && n > m) m = n; }); return m; };
+function calcUnread(c, lastId) { // счётчик с учётом того, что я уже смотрел чат (сервер об этом не знает)
+  const r = LR[c.id];
+  if (!ghostFor(c) || !r) return c.srv || 0;
+  if (lastId != null && Number(lastId) <= r.m) return 0;
+  return Math.max(0, (c.srv || 0) - r.s);
+}
+
+/* ---------- альбомы, просмотры, комментарии ---------- */
+const PH = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+function albumApply(c) { // на время отрисовки склеиваем сообщения одной группы в одно «сообщение-альбом»
+  const groups = {}, undo = [];
+  c.msgs.forEach((m) => { if (m.gid && !m.deleted) (groups[m.gid] = groups[m.gid] || []).push(m); });
+  Object.keys(groups).forEach((g) => {
+    const L = groups[g].sort((a, b) => Number(a.id) - Number(b.id));
+    if (L.length < 2) return;
+    const head = L[0];
+    undo.push([head, { imgs: head.imgs, tgalb: head.tgalb, atext: head.atext, rx: head.rx, react: head.react }]);
+    head.imgs = L.map((x) => x.img || x.thumbUrl || PH);
+    head.tgalb = true;
+    const cap = L.find((x) => x.text);
+    head.atext = cap ? cap.text : "";
+    const rr = L.find((x) => x.rx && x.rx.length) || head;
+    head.rx = rr.rx; head.react = rr.react;
+    L.slice(1).forEach((x) => { undo.push([x, { albumSkip: x.albumSkip }]); x.albumSkip = true; });
+  });
+  return () => undo.forEach((u) => Object.assign(u[0], u[1]));
+}
+const fmtN = (n) => (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(".0", "") + "K" : String(n));
+const cmWord = (n) => (n % 10 === 1 && n % 100 !== 11 ? "комментарий" : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? "комментария" : "комментариев");
+function decorateChannel() {
+  const c = W.chat(W.S.open), root = document.getElementById("msgs");
+  if (!c || !c.tg || !root) return;
+  root.querySelectorAll(".m[data-mid]").forEach((el) => {
+    const m = W.findMsgIn(c, el.dataset.mid); if (!m) return;
+    const mt = el.querySelector(".mt");
+    if (mt && m.views && !el.querySelector(".tgv")) {
+      const s = document.createElement("span"); s.className = "tgv";
+      s.textContent = "👁 " + fmtN(m.views) + (m.author ? "  " + m.author : "");
+      mt.insertBefore(s, mt.firstChild);
+    }
+    if (m.cm !== undefined && c.type === "channel" && !el.querySelector(".tgc")) {
+      const b = document.createElement("div"); b.className = "tgc";
+      b.setAttribute("onclick", "event.stopPropagation();tgComments('" + m.id + "')");
+      b.innerHTML = "<span>💬 " + (m.cm ? m.cm + " " + cmWord(m.cm) : "Прокомментировать") + "</span><span>›</span>";
+      el.appendChild(b);
+    }
+  });
+}
+async function openComments(mid) { // открыть обсуждение поста (группа-комментарии) на нужном сообщении
+  const c = W.chat(W.S.open); if (!c) return;
+  try {
+    W.toast("Открываю комментарии…");
+    const r = await client.invoke(new Api.messages.GetDiscussionMessage({ peer: ents[c.id], msgId: Number(mid) }));
+    const dm = r.messages && r.messages[0]; if (!dm) throw new Error("none");
+    const gid = sid(getPeerId(dm.peerId));
+    let g = chatById(gid);
+    if (!g) {
+      const e = (r.chats || []).find((x) => sid(getPeerId(x)) === gid); if (!e) throw new Error("none");
+      g = mkChatEnt(e); W.S.chats.push(g); loadAvatar(g);
+    }
+    W.openChat(gid);
+    await loadHistory(g);
+    await jumpLoad(g, dm.id);
+    requestAnimationFrame(() => W.jumpTo(String(dm.id)));
+  } catch (e) { W.toast("Комментарии недоступны"); }
 }
 
 function limiter(n) {
@@ -504,7 +584,10 @@ async function mergeCache(c, fetched, lo) {
 }
 const byTime = (a, b) => a.t - b.t || Number(a.id) - Number(b.id);
 
-async function loadHistory(c) {
+function loadHistory(c) {
+  return c._hp || (c._hp = loadHistory0(c).finally(() => { if (!c.hist) c._hp = null; }));
+}
+async function loadHistory0(c) {
   if (c.hist) return;
   c.hist = true;
   hold(c);
@@ -570,21 +653,24 @@ const renderSoon = (c) => { // отложенная общая перерисо�
   c._rt = setTimeout(() => { c._rt = 0; c._rq = 0; if (W.S.open === c.id) W.renderMsgs(1); }, Math.max(0, Math.min(350, 1200 - (Date.now() - c._rq))));
 };
 function fetchMedia(c) {
-  const list = c.msgs.filter((m) => m.raw && !m.mediaDone && (m.photoPending || m.voice)).reverse(); // сначала самые новые
+  const list = c.msgs.filter((m) => m.raw && !m.mediaDone && (m.photoPending || m.voice || m.vthumb)).reverse(); // сначала самые новые
   for (const m of list) {
     m.mediaDone = true;
     mediaLim.add(async () => {
-      const key = c.id + ":" + m.id;
+      const key = c.id + ":" + m.id + (m.vthumb ? ":t" : "");
       let blob = await idbGetBlob(key);
       if (!blob) {
-        const buf = await client.downloadMedia(m.raw, {});
-        if (!buf) return;
+        let opt = {};
+        if (m.vthumb) { const th = m.raw.document && m.raw.document.thumbs; opt = { thumb: th && th.length ? th[th.length - 1] : 0 }; }
+        const buf = await client.downloadMedia(m.raw, opt);
+        if (!buf || !buf.length) return;
         blob = new Blob([buf], { type: m.voice ? "audio/ogg" : "image/jpeg" });
         idbPutBlob(key, blob);
       }
       const url = URL.createObjectURL(blob);
       if (m.voice) m.audio = url;
-      else { if (m.prev && m.img) URL.revokeObjectURL(m.img); m.img = url; m.photoPending = false; m.prev = false; }
+      else if (m.vthumb) m.thumbUrl = url;
+      else { m.img = url; m.photoPending = false; }
       cacheMsg(c, m); renderSoon(c);
     });
   }
@@ -693,10 +779,11 @@ async function onNew(ev) {
     if (c.hist) { if (!c.msgs.some((x) => x.id === cm.id)) c.msgs.push(cm); } else c.msgs = [cm];
     cacheMsg(c, cm);
     if (!m.out) {
-      if (W.S.open === c.id && !AYU.ghostRead) markRead(c);
+      c.srv = (c.srv || 0) + 1;
+      if (W.S.open === c.id) markRead(c);
       else {
         c.unread++;
-        if (W.S.open !== c.id && W.S.notif && !c.muted) W.toast(c.name + ": " + (m.message || "медиа").split("\n")[0]);
+        if (W.S.notif && !c.muted) W.toast(c.name + ": " + (m.message || "медиа").split("\n")[0]);
       }
     }
     if (W.S.open === c.id) schedR(c, !!m.out);
@@ -737,7 +824,7 @@ function hookEvents() {
         if (c) { c.readOut = Number(u.maxId); c.msgs.forEach((m) => { if (m.out && Number(m.id) <= c.readOut) m.read = true; }); if (W.S.open === c.id) W.renderMsgs(1); W.softMain(); }
       } else if (n === "UpdateReadHistoryInbox" || n === "UpdateReadChannelInbox") {
         const c = chatById(n === "UpdateReadHistoryInbox" ? sid(getPeerId(u.peer)) : sid(getPeerId(new Api.PeerChannel({ channelId: u.channelId }))));
-        if (c) { c.unread = u.stillUnreadCount || 0; W.softMain(); }
+        if (c) { c.srv = u.stillUnreadCount || 0; if (!c.srv) { delete LR[c.id]; saveLR(); } c.unread = W.S.open === c.id ? 0 : calcUnread(c, lastRealId(c)); W.softMain(); }
       } else if (n === "UpdatePinnedMessages" || n === "UpdatePinnedChannelMessages") {
         const c = chatById(n === "UpdatePinnedMessages" ? sid(getPeerId(u.peer)) : sid(getPeerId(new Api.PeerChannel({ channelId: u.channelId }))));
         if (c && c.hist) client.getMessages(ents[c.id], { filter: new Api.InputMessagesFilterPinned(), limit: 1 }).then((l) => { c.pin = l && l[0] ? sid(l[0].id) : null; c.pinMsg = l && l[0] ? convMsg(l[0], c) : null; if (W.S.open === c.id) W.pinBar(c); }).catch(() => {});
@@ -763,7 +850,8 @@ function mergeLive(c, list) {
     if (!old) {
       c.msgs.push(cm); cacheMsg(c, cm); changed = true;
       if (!m.out) {
-        if (W.S.open === c.id && !AYU.ghostRead) markRead(c); else if (W.S.open !== c.id) c.unread++;
+        c.srv = (c.srv || 0) + 1;
+        if (W.S.open === c.id) markRead(c); else c.unread++;
       }
     } else if (!old.deleted) {
       if (cm.editT && cm.editT !== old.editT) { applyEdit(c, m); }
@@ -803,7 +891,8 @@ async function pollDialogs() {
       if (!c) { const nc = mkChat(d); W.S.chats.push(nc); loadAvatar(nc); added = true; continue; }
       const dl = d.dialog || {};
       if (dl.readOutboxMaxId != null) { c.readOut = Number(dl.readOutboxMaxId) || c.readOut; c.msgs.forEach((m) => { if (m.out && Number(m.id) <= c.readOut) m.read = true; }); }
-      if (W.S.open !== c.id) c.unread = d.unreadCount || 0;
+      c.srv = d.unreadCount || 0;
+      if (W.S.open !== c.id) c.unread = calcUnread(c, d.message && d.message.id);
       c.online = false; c.seen = undefined; Object.assign(c, statusOf(d.entity));
       if (d.message) {
         const cm = convMsg(d.message, c);
@@ -819,15 +908,20 @@ async function pollDialogs() {
    ДЕЙСТВИЯ
    ===================================================================== */
 function markRead(c) {
-  if (AYU.ghostRead) return; // режим призрака: не отправляем «прочитано»
   c.unread = 0;
+  if (ghostFor(c)) { // личные чаты и группы: «прочитано» собеседнику не отправляем, помним локально
+    const m = lastRealId(c);
+    if (m) { LR[c.id] = { m, s: c.srv || 0 }; saveLR(); }
+    return;
+  }
+  c.srv = 0; if (LR[c.id]) { delete LR[c.id]; saveLR(); }
   if (!client || !ents[c.id]) return;
   client.markAsRead(ents[c.id]).catch(() => {});
 }
 
 function afterSend(c) {
   if (AYU.ghostOnline) setTimeout(setOffline, 400);
-  if (AYU.ghostRead && AYU.readOnSend) { c.unread = 0; client.markAsRead(ents[c.id]).catch(() => {}); W.softMain(); }
+  if (ghostFor(c) && AYU.readOnSend) { c.unread = 0; c.srv = 0; delete LR[c.id]; saveLR(); client.markAsRead(ents[c.id]).catch(() => {}); W.softMain(); }
 }
 
 function dataToBuf(d) {
@@ -997,7 +1091,7 @@ W.AYU_editUser = () => {
 function injectCss() {
   if ($("#ayucss")) return;
   const s = document.createElement("style"); s.id = "ayucss";
-  s.textContent = ".m{animation:none!important}.m.flash{animation:fl 1.2s!important}.m.deleted{opacity:.8;outline:1.5px dashed #d93025;outline-offset:-1.5px}.m .mt .ayud{color:#d93025;margin-right:4px}.m .mt .ayue{text-decoration:underline dotted}" + SKIN_CSS;
+  s.textContent = ".alb.tg{display:grid;gap:2px;border-radius:14px;overflow:hidden;margin:0 0 4px}.alb.tg img{width:100%;height:100%;max-height:none;object-fit:cover;border-radius:0;margin:0}.alb.tg.n2{grid-template-columns:1fr 1fr;height:190px}.alb.tg.n3{grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr;height:300px}.alb.tg.n3 img:first-child{grid-row:span 2}.alb.tg.n4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;height:260px}.alb.tg.n5{grid-template-columns:repeat(3,1fr);grid-auto-rows:110px}.alb.tg img[src^=\"data:image/gif\"]{background:var(--s3)}.tgv{opacity:.7;margin-right:8px}.tgc{display:flex;justify-content:space-between;align-items:center;margin:6px -4px -2px;padding:10px 4px 4px;border-top:1px solid rgba(127,127,127,.3);color:var(--p);font-weight:500;cursor:pointer}.m{animation:none!important}.m.flash{animation:fl 1.2s!important}.m.deleted{opacity:.8;outline:1.5px dashed #d93025;outline-offset:-1.5px}.m .mt .ayud{color:#d93025;margin-right:4px}.m .mt .ayue{text-decoration:underline dotted}" + SKIN_CSS;
   document.head.appendChild(s);
 }
 const SWROW = (k, ico, t, sub) => '<div class="row" style="padding:4px 0" onclick="AYU_t(\'' + k + '\')"><div class="ico">' + W.ic(ico) + '</div><div class="t">' + t + "<small>" + sub + '</small></div><div class="sw' + (AYU[k] ? " on" : "") + '"></div></div>';
@@ -1318,14 +1412,14 @@ function patchSkin(O) {
   };
 }
 
-function decorateSkin() { ceHydrate(document.getElementById("msgs")); }
+function decorateSkin() { ceHydrate(document.getElementById("msgs")); decorateChannel(); }
 
 /* =====================================================================
    ПОДМЕНА ФУНКЦИЙ ПРИЛОЖЕНИЯ
    ===================================================================== */
 function patch() {
   const O = {};
-  ["plain", "pinBar", "jumpTo", "hideBan", "showLogin", "openChat", "pushMsg", "pushTo", "sbClick", "markRead", "doDel", "logout", "getMedia", "react", "pinMsg",
+  ["okMsg", "albumHtml", "plain", "pinBar", "jumpTo", "hideBan", "showLogin", "openChat", "pushMsg", "pushTo", "sbClick", "markRead", "doDel", "logout", "getMedia", "react", "pinMsg",
     "setTyping", "typingPing", "startCall", "newChatDlg", "toggleBlock", "clearHist", "delChat", "persist", "selDel", "selRead",
     "statusText", "doFwd", "openProfile", "sendBlob", "sendFile", "mention", "moreCards", "renderMsgs", "msgMenu2", "iBlock",
     "rxOf", "esc", "fmt", "copyMsg", "editMsg", "addEmo"].forEach((n) => { O[n] = W[n]; });
@@ -1365,8 +1459,8 @@ function patch() {
     O.openChat(id);
     const c = W.chat(id);
     if (TGM && c && c.tg) {
-      if (AYU.ghostRead && u0) { c.unread = u0; W.softMain(); } // призрак: счётчик не сбрасываем
-      loadHistory(c).then(() => fetchMedia(c));
+      markRead(c); W.softMain();
+      loadHistory(c).then(() => { fetchMedia(c); if (W.S.open === c.id) markRead(c); });
       const chn = $("#chn");
       if (chn && c.type === "channel") chn.onclick = () => { c.muted = !c.muted; W.persist(c); W.openChat(id); };
       const el = $("#msgs");
@@ -1374,7 +1468,18 @@ function patch() {
     }
   };
 
-  W.renderMsgs = function () { const r = O.renderMsgs.apply(this, arguments); decorate(); if (TGM) decorateSkin(); return r; };
+  W.renderMsgs = function () {
+    const c0 = TGM ? W.chat(W.S.open) : null, undo = c0 && c0.tg ? albumApply(c0) : null;
+    let r; try { r = O.renderMsgs.apply(this, arguments); } finally { if (undo) undo(); }
+    decorate(); if (TGM) decorateSkin(); return r;
+  };
+  W.okMsg = function (m) { if (TGM && m && m.albumSkip) return false; return O.okMsg(m); };
+  W.albumHtml = function (m) {
+    if (!TGM || !m.tgalb) return O.albumHtml(m);
+    return '<div class="alb tg n' + Math.min(m.imgs.length, 5) + '">' + m.imgs.map((i) => '<img class="pic" src="' + i + '">').join("") + "</div>" +
+      (m.atext ? '<div class="tx">' + W.fmt(m.atext) + "</div>" : "");
+  };
+  W.tgComments = openComments;
 
   W.markRead = function (c, f) { if (TGM) { if (c && c.tg && (f || W.S.open === c.id)) markRead(c); return; } O.markRead(c, f); };
 
