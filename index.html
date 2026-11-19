@@ -809,6 +809,22 @@ label.f{display:block;font-size:.78em;color:var(--ac);margin-top:14px;font-weigh
 .wp.wpa::after{animation:wpdrift 70s linear infinite}
 @keyframes wpdrift{to{background-position:180px 180px}}
 .ch+.ch{padding-left:16px}.hd h1{padding-left:12px}
+
+/* ── Noto Animated Emoji (Google, CC BY 4.0) ── */
+.emp{position:relative;z-index:3;flex:none;height:min(300px,42vh);margin:0 10px 6px;border-radius:20px;background:var(--sf);border:1px solid var(--ln);box-shadow:0 2px 12px rgba(30,40,90,.12);display:flex;flex-direction:column;overflow:hidden;animation:fi .15s}
+.emt{display:flex;gap:2px;padding:6px 8px;border-bottom:1px solid var(--ln);overflow-x:auto;flex:none}
+.emt button{width:40px;height:36px;border-radius:12px;font-size:1.25em;flex:none;display:grid;place-items:center;filter:grayscale(1) opacity(.6)}
+.emt button.on{background:var(--acs);filter:none}
+.emg{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));align-content:start;padding:6px;-webkit-overflow-scrolling:touch}
+.emc{height:46px;display:grid;place-items:center;border-radius:12px}
+.emc:active{background:var(--acs)}
+.emnone{grid-column:1/-1;text-align:center;color:var(--sub);padding:30px 0;font-size:.9em}
+.emcr{flex:none;font-size:.68em;color:var(--sub);text-align:center;padding:3px 0 5px}
+.ea{display:inline-grid;place-items:center;width:var(--s,24px);height:var(--s,24px);font-size:calc(var(--s,24px)*.78);line-height:1;vertical-align:middle}
+.ea img{width:100%;height:100%;display:block;pointer-events:none}
+.b.be{background:none!important;box-shadow:none!important;padding:2px 4px!important}
+.b.be .mt{color:var(--sub)!important}
+.bem{display:flex;gap:4px;margin:0}
 </style></head>
 <body><div id="app"></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -1073,8 +1089,9 @@ function drawMsgs(first){const ml=$('#ml');if(!ml)return;
     // Swipe hint arrow
     const hint=`<div class="swipe-hint" id="sh_${m.id}">${ic('reply','')}</div>`;
     // Formatted text with optional search highlight
-    let textHtml='';
-    if(m.t){
+    let textHtml='';const bg=(!m.img&&!m.re)?bigEm(m.t):null;
+    if(bg){const sz=bg.length==1?112:bg.length==2?80:64,pl=emPlay(2);textHtml=`<p class="bem">${bg.map(x=>emHtml(x,sz,pl)).join('')}</p>`}
+    else if(m.t){
       let ft=fmtText(m.t);
       if(isHit){
         const re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
@@ -1085,7 +1102,7 @@ function drawMsgs(first){const ml=$('#ml');if(!ml)return;
     // Link preview (inline, loaded async)
     const url=!m.img?extractUrl(m.t):null;
     const lpHtml=url?`<div class="lp-slot" data-url="${esc(url)}" data-mid="${m.id}">${lpCache[url]||''}</div>`:'';
-    h+=`<div class="b ${me?'out':''} ${isHit?'srch-match':''}" data-id="${m.id}" data-idx="${idx}" style="${cr};position:relative">
+    h+=`<div class="b ${me?'out':''} ${isHit?'srch-match':''} ${bg?'be':''}" data-id="${m.id}" data-idx="${idx}" style="${cr};position:relative">
     ${hint}
     ${m.re?`<div class="q"><b>${m.re.from==uid?'Вы':esc((CU[m.re.from]||{}).name||'')}</b>${esc(m.re.t)}</div>`:''}
     ${m.img?`<img class="mi" src="${m.img}" loading="lazy">`:''}
@@ -1470,11 +1487,44 @@ function chatMenu(){gmenu([
  {i:'img',t:'Изменить обои',f:()=>{S.s.wpid=((S.s.wpid||0)+1)%WP.length;S.s.wpimg=null;S.s.wpc=null;save();const e=$('.wp');if(e){e.style.background=wpBg();e.classList.toggle('wpd',defWp());e.classList.remove('wpi')}toast('Обои изменены')}},
  {i:'broom',t:'Очистить историю',f:()=>{if(!confirm('Очистить историю у себя?'))return;S.clr=S.clr||{};S.clr[cid(peer)]=Date.now();save();MS=MS.filter(m=>(m.ts||0)>S.clr[cid(peer)]);drawMsgs(true);toast('История очищена')}},
  {i:'trash',t:'Удалить чат',f:()=>{if(!confirm('Удалить чат из списка?'))return;db.ref('userChats/'+uid+'/'+peer).remove();go('list');toast('Чат удалён')}}])}
-function toggleEmoji(){const ex=$('#em-bar');if(ex){ex.remove();return}
- const bar=document.createElement('div');bar.id='em-bar';bar.className='fmt-bar';
- bar.innerHTML=['😀','😂','😍','🥰','😎','🤔','😢','😡','👍','👎','🙏','🔥','❤️','🎉','👀','💯','😅','🤝'].map(e=>`<button data-e="${e}" style="font-size:1.3em">${e}</button>`).join('');
- $('.ib').before(bar);
- bar.onclick=e=>{const b=e.target.closest('[data-e]');if(!b)return;const ti=$('#ti'),p=ti.selectionStart;ti.value=ti.value.slice(0,p)+b.dataset.e+ti.value.slice(ti.selectionEnd);ti.selectionStart=ti.selectionEnd=p+b.dataset.e.length;ti.oninput()}}
+// ── Noto Animated Emoji by Google (https://googlefonts.github.io/noto-emoji-animation/) — license CC BY 4.0
+const EM_CATS=[
+['😀','Смайлы','😀 😃 😄 😁 😆 😅 🤣 😂 🙂 🙃 😉 😊 😇 🥰 😍 🤩 😘 😗 ☺️ 😚 😙 🥲 😋 😛 😜 🤪 😝 🤑 🤗 🤭 🫢 🫣 🤫 🤔 🫡 🤐 🤨 😐 😑 😶 🫥 😏 😒 🙄 😬 🤥 😌 😔 😪 🤤 😴 😷 🤒 🤕 🤢 🤮 🤧 🥵 🥶 🥴 😵 🤯 🤠 🥳 🥸 😎 🤓 🧐 😕 🫤 😟 🙁 ☹️ 😮 😯 😲 😳 🥺 🥹 😦 😧 😨 😰 😥 😢 😭 😱 😖 😣 😞 😓 😩 😫 🥱 😤 😡 😠 🤬 😈 👿 💀 ☠️ 💩 🤡 👹 👺 👻 👽 👾 🤖 🙈 🙉 🙊'],
+['👋','Жесты','👋 🤚 🖐️ ✋ 🖖 👌 🤌 🤏 ✌️ 🤞 🫰 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 🫶 👐 🤲 🤝 🙏 ✍️ 💅 🤳 💪 👀 👁️ 👅 👄 🫦 🧠 🫀'],
+['❤️','Сердца и символы','❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❤️‍🔥 ❤️‍🩹 ❣️ 💕 💞 💓 💗 💖 💘 💝 💋 💌 💯 💢 💥 💫 💦 💨 💤 🔥 ✨ ⭐ 🌟 ⚡ 🎉 🎊 🎈 🎁 🏆 ✅ ❌ ❓ ❗'],
+['🐱','Животные и природа','🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐨 🐯 🦁 🐮 🐷 🐸 🐵 🐔 🐧 🐦 🦆 🦉 🦇 🐺 🐴 🦄 🐝 🦋 🐌 🐞 🐢 🐍 🐙 🦀 🐠 🐬 🐳 🦈 🌹 🌸 🌻 🍀 🌈 ☀️ 🌙 ❄️ ☃️ ⛄ 🌊'],
+['🍕','Еда и предметы','🍎 🍕 🍔 🍟 🌭 🍿 🍩 🍪 🎂 🍫 🍺 🍷 ☕ ⚽ 🏀 🎮 🎵 🎶 🎤 🎧 📱 💻 💡 💰 💎 🔔 🚀 ✈️ 🚗 🏠 ⌚ 📷 🔑 🕯️ 💣 🧨 🔮 🎃 🎄']];
+const emCp=e=>Array.from(e).map(c=>c.codePointAt(0).toString(16)).join('_');
+const emUrl=(e,strip)=>'https://fonts.gstatic.com/s/e/notoemoji/latest/'+(strip?emCp(e).replace(/_fe0f/g,''):emCp(e))+'/512.webp';
+const emPlay=k=>pe('em.'+k)&&!pwOn();
+const emHtml=(e,sz,play)=>`<span class="ea" data-e="${e}" style="--s:${sz}px">${play?`<img src="${emUrl(e)}" alt="" draggable="false" onerror="emErr(this)">`:e}</span>`;
+function emErr(im){const sp=im.parentNode,e=sp.dataset.e;if(!sp._r&&/fe0f/i.test(emCp(e))){sp._r=1;im.src=emUrl(e,1)}else{sp._x=1;sp.textContent=e}}
+function emLoad(sp){if(sp.dataset.on||sp._x)return;sp.dataset.on=1;const e=sp.dataset.e,im=new Image();let r=0;im.draggable=false;
+ im.onload=()=>{if(sp.dataset.on){sp.textContent='';sp.appendChild(im)}};
+ im.onerror=()=>{if(!r&&/fe0f/i.test(emCp(e))){r=1;im.src=emUrl(e,1)}else{sp._x=1;delete sp.dataset.on}};
+ im.src=emUrl(e)}
+function emUnload(sp){if(!sp.dataset.on)return;delete sp.dataset.on;sp.textContent=sp.dataset.e}
+const EM_RE=/^(?:\p{Extended_Pictographic}[\uFE0F\u{1F3FB}-\u{1F3FF}]?(?:\u200D\p{Extended_Pictographic}[\uFE0F\u{1F3FB}-\u{1F3FF}]?)*){1,3}$/u;
+const EM_ONE=/\p{Extended_Pictographic}[\uFE0F\u{1F3FB}-\u{1F3FF}]?(?:\u200D\p{Extended_Pictographic}[\uFE0F\u{1F3FB}-\u{1F3FF}]?)*/gu;
+function bigEm(t){t=(t||'').trim();if(!t||t.length>24||!EM_RE.test(t))return null;const a=t.match(EM_ONE);return a&&a.every(x=>x.codePointAt(0)>0x2000)?a:null}
+document.addEventListener('click',e=>{const sp=e.target.closest&&e.target.closest('#ml .ea');if(sp&&!sp.querySelector('img'))emLoad(sp)});
+function toggleEmoji(){const ex=$('#em-panel');if(ex){if(ex._io)ex._io.disconnect();ex.remove();return}
+ const rec=S.s.rec||[],cats=[['🕘','Недавние',rec]].concat(EM_CATS.map(c=>[c[0],c[1],c[2].split(' ')]));
+ const p=document.createElement('div');p.id='em-panel';p.className='emp';
+ p.innerHTML=`<div class="emt">${cats.map((c,i)=>`<button data-c="${i}" title="${c[1]}">${c[0]}</button>`).join('')}</div><div class="emg"></div><div class="emcr">Анимированные эмодзи: Google Noto Emoji, CC BY 4.0</div>`;
+ $('.ib').before(p);
+ const g=p.querySelector('.emg');
+ function fill(i){p.querySelectorAll('.emt button').forEach((b,j)=>b.classList.toggle('on',j==i));
+  if(p._io)p._io.disconnect();
+  const l=cats[i][2];g.scrollTop=0;
+  g.innerHTML=l.length?l.map(e=>`<button class="emc" data-e="${e}">${emHtml(e,38,false)}</button>`).join(''):'<div class="emnone">Здесь появятся недавно использованные эмодзи</div>';
+  p._io=new IntersectionObserver(es=>es.forEach(x=>{x.isIntersecting?(emPlay(0)&&emLoad(x.target)):emUnload(x.target)}),{root:g,rootMargin:'80px'});
+  g.querySelectorAll('.ea').forEach(sp=>p._io.observe(sp))}
+ fill(rec.length?0:1);
+ p.onclick=ev=>{const t=ev.target.closest('[data-c]');if(t){fill(+t.dataset.c);return}
+  const b=ev.target.closest('[data-e]');if(!b)return;const e=b.dataset.e,ti=$('#ti'),pos=ti.selectionStart;
+  ti.value=ti.value.slice(0,pos)+e+ti.value.slice(ti.selectionEnd);ti.selectionStart=ti.selectionEnd=pos+e.length;ti.oninput();
+  S.s.rec=[e].concat((S.s.rec||[]).filter(x=>x!==e)).slice(0,24);save();cats[0][2]=S.s.rec}}
 
 // ---------- bindings / nav ----------
 function go(v){if(view=='chat')closeChat();view=v;sub=null;render()}
