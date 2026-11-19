@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#517da2"><meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg">
 <title>YouGram</title>
@@ -25,7 +25,7 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .l2 span{color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.95em}
 .ub{background:var(--ac);color:#fff;font-style:normal;font-size:.75em;min-width:22px;height:22px;border-radius:11px;display:grid;place-items:center;padding:0 6px;animation:bump .3s}
 .av{border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:500;object-fit:cover;flex:none}
-.avw{position:relative;flex:none}.on:after{content:"";position:absolute;right:0;bottom:1px;width:13px;height:13px;border-radius:50%;background:#4cd964;border:2.5px solid var(--bg)}
+.avw{position:relative;flex:none;display:inline-block;line-height:0}.hero .avw,.dr .top .avw{display:block;margin:0 auto 10px;width:max-content}.dr .top .avw{margin:0}.avw.on:after{content:"";position:absolute;right:0;bottom:1px;width:13px;height:13px;border-radius:50%;background:#4cd964;border:2.5px solid var(--bg)}
 .fab{position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center;box-shadow:0 3px 10px #0004;z-index:4}
 .ml{flex:1;overflow-y:auto;padding:8px 8px 6px;display:flex;flex-direction:column;gap:2px;background-size:cover}
 .dc{align-self:center;background:#0004;color:#fff;font-size:.8em;padding:3px 12px;border-radius:12px;margin:8px 0}
@@ -34,7 +34,7 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .b p{white-space:pre-wrap}.mt{float:right;margin:4px 0 -2px 10px;font-size:.7em;color:var(--sub);display:flex;gap:3px;align-items:center}
 .out .mt{color:#5fa84c}[data-theme=dark] .out .mt{color:#8cb9e5}.mt svg{width:16px;height:16px;stroke-width:2.2}
 .q{border-left:3px solid var(--ac);padding:1px 8px;margin-bottom:4px;font-size:.88em;background:#0001;border-radius:4px}.q b{color:var(--ac);display:block;font-weight:500}
-.mi{max-width:100%;border-radius:10px;display:block;margin-bottom:4px}
+.mi{width:260px;max-width:100%;border-radius:10px;display:block;margin-bottom:4px}
 .rxs{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;clear:both}
 .rx{display:flex;align-items:center;gap:3px;padding:2px 8px 2px 4px;border-radius:12px;background:#0000000d;font-size:.82em;font-weight:500;animation:bump .3s cubic-bezier(.3,1.8,.5,1)}.rx.me{background:var(--ac);color:#fff}.rx svg{width:17px;height:17px}
 @keyframes bump{0%{transform:scale(.6);opacity:.3}100%{transform:none;opacity:1}}
@@ -76,6 +76,7 @@ label.f{display:block;font-size:.8em;color:var(--ac);margin-top:12px}
 .rip{position:absolute;border-radius:50%;background:currentColor;opacity:.15;transform:scale(0);animation:rp .5s ease-out forwards;pointer-events:none}@keyframes rp{to{transform:scale(1);opacity:0}}
 .na *{animation:none!important;transition:none!important}
 @media(min-width:520px){#app{max-height:900px;margin:auto;border-radius:24px;box-shadow:0 0 0 8px #111}}
+.row,.ch{position:relative;overflow:hidden}.gbtn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:13px;border-radius:10px;background:#fff;color:#222;border:1px solid #dadce0;font-weight:500;margin-top:26px}.gbtn svg{width:22px;height:22px}.lnk{display:block;margin:16px auto 0;color:var(--ac);padding:8px}.ok{font-size:.82em;min-height:18px;margin-top:2px}
 </style></head>
 <body><div id="app"></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -103,8 +104,8 @@ const GR=[['#4facfe','#43e97b'],['#667eea','#764ba2'],['#f093fb','#f5576c'],['#f
 const WALL=[['#9cc08c','#d9e8b9'],['#7ea6d4','#dcebf7'],['#b9a2dc','#f4e3ef'],['#1b2430','#0e151d']];
 const KEY='yougram1',$=s=>document.querySelector(s),app=$('#app');
 let S=JSON.parse(localStorage.getItem(KEY)||'null')||{u:null,s:{theme:'light',font:16,corner:14,wall:0,enter:0,sound:1,vib:1,seen:1,anim:1}};
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Нет места: фото слишком большое')}syncUser()};
-let db,uid,view='list',peer=null,sub=null,CU={},UC={},PR={},MS=[],RD=0,reply=null,off=[],st=0;
+const save=()=>{S.uid=uid;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Нет места: фото слишком большое')}syncUser()};
+let db,uid,user,ready=false,pre=null,view='list',peer=null,sub=null,CU={},UC={},PR={},MS=[],RD=0,reply=null,off=[],st=0;
 const SV=()=>firebase.database.ServerValue.TIMESTAMP,cid=p=>[uid,p].sort().join('_');
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hash=s=>[...String(s)].reduce((a,c)=>a*31+c.charCodeAt(0)|0,7);
@@ -116,36 +117,61 @@ function av(p,sz=54,on){p=p||{name:'?'};const g=GR[Math.abs(hash(p.name||'?'))%G
  return `<span class="avw ${on?'on':''}">${w}</span>`}
 const status=p=>PR[p]===true?'в сети':PR[p]?'был(а) в '+tm(PR[p]):'был(а) недавно';
 function applyTheme(){const d=S.s.theme=='dark'||(S.s.theme=='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);const r=document.documentElement;r.dataset.theme=d?'dark':'light';r.style.setProperty('--fs',S.s.font+'px');
- app.className=S.s.anim?'':'na';$('meta[name=theme-color]').content=getComputedStyle(r).getPropertyValue('--hd')}
+ app.className=S.s.anim?'':'na';$('meta[name=theme-color]').content=getComputedStyle(r).getPropertyValue('--hd').trim()}
 function beep(){if(S.s.vib&&navigator.vibrate)navigator.vibrate(40);if(!S.s.sound)return;try{const a=new AudioContext(),o=a.createOscillator(),g=a.createGain();o.frequency.value=880;g.gain.value=.08;o.connect(g);g.connect(a.destination);o.start();g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.25);o.stop(a.currentTime+.25)}catch(e){}}
 
 // ---------- cloud ----------
 function syncUser(){if(!uid||!S.u)return;clearTimeout(st);st=setTimeout(()=>{const u=S.u;db.ref('users/'+uid).set({name:u.name,username:u.username,bio:u.bio||'',avatar:u.avatar||'',grad:u.grad}).catch(e=>toast('Ошибка: '+e.code))},500)}
 function presence(){const r=db.ref('presence/'+uid);if(S.s.seen){r.set(true);r.onDisconnect().set(SV())}else{r.onDisconnect().cancel();r.set(SV())}}
 function ch(){if(!uid||!S.u)return;if(view=='chat'){updHdr();drawMsgs();return}if(['INPUT','TEXTAREA'].includes(document.activeElement?.tagName))return;if(!$('.sheet')&&!$('.dr')&&!$('.cxb')&&view!='settings')render()}
+const GSVG='<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.2C12.4 13.5 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.2 5.5-4.7 7.2l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17.6z"/><path fill="#FBBC05" d="M10.5 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.1.8-4.6l-7.9-6.2A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4-13.5-9.9l-7.9 6.2C6.5 42.6 14.6 48 24 48z"/></svg>';
+function unErr(n){if(n.length<5)return 'Минимум 5 символов';if(n.length>32)return 'Максимум 32 символа';if(!/^[a-z]/i.test(n))return 'Должно начинаться с буквы';if(!/^[a-z0-9_]+$/i.test(n))return 'Только латиница, цифры и _';if(/__|_$/.test(n))return 'Без «__» и «_» в конце';return ''}
+async function unFree(n){const v=(await db.ref('usernames/'+n.toLowerCase()).once('value')).val();return !v||v==uid}
+async function claim(n){const r=await db.ref('usernames/'+n.toLowerCase()).transaction(c=>c===null||c===uid?uid:undefined);return r.committed}
+function watchUn(inp,out,cur,cb){let t;inp.oninput=()=>{clearTimeout(t);const v=inp.value.trim();cb(false);const set=(m,c)=>{out.textContent=m;out.style.color=c};
+ if(cur&&v.toLowerCase()==cur.toLowerCase())return set('Это ваше текущее имя','var(--sub)');
+ const e=unErr(v);if(e)return set(e,'#e5484d');set('Проверка…','var(--sub)');
+ t=setTimeout(async()=>{try{const f=await unFree(v);if(inp.value.trim()!=v)return;set(f?v+' свободно':'Имя пользователя занято',f?'#3cb371':'#e5484d');cb(f)}catch(x){set('Ошибка проверки','#e5484d')}},350)}}
+let lst=0;
 function initCloud(){
- if(!window.firebase){toast('Нет соединения с Firebase');return}
+ if(!window.firebase){ready=true;app.innerHTML='<div class="empty" style="margin:auto">Нет соединения с Firebase.<br>Проверьте интернет и обновите страницу.</div>';return}
  firebase.initializeApp(FIREBASE_CONFIG);db=firebase.database();
- firebase.auth().signInAnonymously().catch(e=>toast('Ошибка входа: '+e.code));
- firebase.auth().onAuthStateChanged(u=>{if(!u)return;uid=u.uid;
-  db.ref('users').on('value',x=>{CU=x.val()||{};ch()});
-  db.ref('userChats/'+uid).on('value',x=>{UC=x.val()||{};ch()});
-  db.ref('presence').on('value',x=>{PR=x.val()||{};if(view=='chat')updHdr();else ch()});
-  syncUser();presence();render()})}
-
-// ---------- gate ----------
+ firebase.auth().getRedirectResult().catch(e=>toast('Ошибка входа: '+e.code));
+ firebase.auth().onAuthStateChanged(async u=>{
+  if(!u){uid=null;user=null;ready=true;render();return}
+  user=u;uid=u.uid;let old=S.uid===uid?S.u:null;
+  try{const v=(await db.ref('users/'+uid).once('value')).val();
+   if(v){old={name:v.name,username:v.username,bio:v.bio||'',avatar:v.avatar||'',grad:v.grad||GR[0]};S.u=old}else S.u=old}catch(e){toast('Ошибка: '+e.code)}
+  if(S.u){try{if(unErr(S.u.username)||!(await claim(S.u.username)))S.u=null}catch(e){S.u=null}}
+  pre={name:(old&&old.name)||u.displayName||'',avatar:(old&&old.avatar)||u.photoURL||''};
+  if(!lst){lst=1;
+   db.ref('users').on('value',x=>{CU=x.val()||{};ch()});
+   db.ref('userChats/'+uid).on('value',x=>{UC=x.val()||{};ch()});
+   db.ref('presence').on('value',x=>{PR=x.val()||{};if(view=='chat')updHdr();else ch()})}
+  if(S.u){save();presence()}
+  ready=true;render()})}
+function loginV(){
+ app.innerHTML=`<div class="gate"><div class="logo">${ic('send')}</div><h1>YouGram</h1><p>Быстрый и безопасный мессенджер</p>
+ <button class="gbtn" id="gg">${GSVG}Войти через Google</button></div>`;
+ $('#gg').onclick=()=>{const p=new firebase.auth.GoogleAuthProvider();firebase.auth().signInWithPopup(p).catch(e=>{
+  if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment'].includes(e.code))firebase.auth().signInWithRedirect(p);
+  else if(!['auth/popup-closed-by-user','auth/cancelled-popup-request'].includes(e.code))toast('Ошибка входа: '+e.code)})};
+}
 function gate(){
- app.innerHTML=`<div class="gate"><div class="logo">${ic('send')}</div><h1>YouGram</h1><p>Введите данные, чтобы начать общение</p>
- <label class="f">Имя</label><input class="inp" id="g1" maxlength="30"><label class="f">Имя пользователя</label><input class="inp" id="g2" placeholder="username" autocapitalize="none" maxlength="20"><label class="f">О себе</label><input class="inp" id="g3" maxlength="100">
- <p id="ge" style="color:#e5484d;margin-top:8px"></p><button class="pri" id="go">Продолжить</button></div>`;
- $('#go').onclick=()=>{const v=i=>$('#g'+i).value.trim(),er=m=>$('#ge').textContent=m;
-  if(v(1).length<2)return er('Введите имя');if(!/^[a-z0-9_]{3,20}$/i.test(v(2)))return er('Имя пользователя: 3–20 символов, латиница, цифры, _');
-  if(Object.entries(CU).some(([k,u])=>k!=uid&&(u.username||'').toLowerCase()==v(2).toLowerCase()))return er('Это имя пользователя уже занято');
-  S.u={name:v(1),username:v(2),bio:v(3),avatar:'',grad:GR[0]};save();render()}}
+ app.innerHTML=`<div class="gate"><div class="logo">${ic('user')}</div><h1>Ваш профиль</h1><p>Выберите имя и имя пользователя</p>
+ <label class="f">Имя</label><input class="inp" id="g1" maxlength="30" value="${esc(pre?.name||'')}">
+ <label class="f">Имя пользователя</label><input class="inp" id="g2" placeholder="username" autocapitalize="none" maxlength="32"><div class="ok" id="gu" style="color:var(--sub)">Минимум 5 символов: a–z, 0–9 и _</div>
+ <label class="f">О себе</label><input class="inp" id="g3" maxlength="100"><button class="pri" id="go" disabled style="opacity:.5">Продолжить</button><button class="lnk" id="so">Сменить аккаунт</button></div>`;
+ let free=false;const upd=()=>{const o=free&&$('#g1').value.trim().length>=2;$('#go').disabled=!o;$('#go').style.opacity=o?1:.5};
+ watchUn($('#g2'),$('#gu'),'',f=>{free=f;upd()});$('#g1').oninput=upd;
+ $('#so').onclick=()=>firebase.auth().signOut().finally(()=>{localStorage.removeItem(KEY);location.reload()});
+ $('#go').onclick=async()=>{const n=$('#g2').value.trim();$('#go').disabled=true;
+  try{if(unErr(n)||!(await claim(n)))throw 0}catch(e){$('#gu').textContent='Имя пользователя занято';$('#gu').style.color='#e5484d';return}
+  S.u={name:$('#g1').value.trim(),username:n,bio:$('#g3').value.trim(),avatar:pre?.avatar||'',grad:GR[0]};save();presence();render()}}
 
 // ---------- views ----------
 function render(){
- applyTheme();if(!S.u)return gate();
+ applyTheme();if(!ready){app.innerHTML='<div class="empty" style="margin:auto">Подключение…</div>';return}if(!uid)return loginV();if(!S.u)return gate();
  if(!uid){app.innerHTML=`<div class="empty" style="margin:auto">Подключение…</div>`;return}
  if(view=='chat')return chatView();
  const keep=$('.body')?.scrollTop||0;
@@ -165,12 +191,12 @@ function meV(){const u=S.u,g=u.grad;
  <div class="row"><div class="t">@${esc(u.username)}<div class="s">Имя пользователя</div></div></div><div class="row"><div class="t">${esc(u.bio||'Не указано')}<div class="s">О себе</div></div></div><input type="file" accept="image/*" id="fi" hidden></div>`}
 const toggle=(k,l,s)=>({type:'tg',k,l,s});
 const PAGES={
-account:{t:'Аккаунт',i:[{type:'tx',k:'u.name',l:'Имя'},{type:'tx',k:'u.username',l:'Имя пользователя'},{type:'tx',k:'u.bio',l:'О себе'}]},
+account:{t:'Аккаунт',i:[{type:'tx',k:'u.name',l:'Имя'},{type:'un'},{type:'tx',k:'u.bio',l:'О себе'}]},
 chats:{t:'Настройки чатов',i:[{type:'seg',k:'theme',l:'Тема',o:[['light','Светлая'],['dark','Тёмная'],['auto','Авто']]},{type:'rg',k:'font',l:'Размер текста',a:13,b:20},{type:'rg',k:'corner',l:'Скругление сообщений',a:4,b:22},{type:'wl'},toggle('enter','Отправка клавишей Enter'),toggle('anim','Анимации')]},
 privacy:{t:'Конфиденциальность',i:[toggle('seen','Время захода','Показывать «в сети» и время захода')]},
 notif:{t:'Уведомления',i:[toggle('sound','Звук сообщений'),toggle('vib','Вибрация')]},
 data:{t:'Данные и память',i:[{type:'bt',l:'Очистить локальные настройки',a:'clr'}]},
-devices:{t:'Устройства',i:[{type:'bt',l:'Выйти из аккаунта',a:'out',red:1}]},
+devices:{t:'Устройства',i:[{type:'inf'},{type:'bt',l:'Выйти из аккаунта',a:'out',red:1}]},
 energy:{t:'Энергосбережение',i:[toggle('anim','Экономия энергии','Отключает анимации')]}};
 const MENU=[['account','Аккаунт','Имя, имя пользователя, «О себе»','user','#3b8fe8'],['chats','Настройки чатов','Обои, ночной режим, анимации','chat','#e8a13b'],['privacy','Конфиденциальность','Время захода','lock','#4cb36a'],['notif','Уведомления','Звуки, вибрация','bell','#e5484d'],['data','Данные и память','Локальные данные','pie','#4a62c9'],['devices','Устройства','Сеанс и выход','device','#3aa6b9'],['energy','Энергосбережение','Экономия энергии','bat','#e0734a']];
 const gv=k=>k.startsWith('u.')?S.u[k.slice(2)]:S.s[k],sv=(k,v)=>{k.startsWith('u.')?S.u[k.slice(2)]=v:S.s[k]=v;save();applyTheme()};
@@ -180,6 +206,8 @@ function setV(){
  return bar('back')+`<div class="body">${PAGES[sub].i.map(item).join('')}</div>`}
 function item(it){
  if(it.type=='tg')return `<button class="row" data-tg="${it.k}"><span class="t">${it.l}${it.s?`<div class="s">${it.s}</div>`:''}</span><span class="tg ${S.s[it.k]?'on':''}"></span></button>`;
+ if(it.type=='inf')return `<div class="row"><div class="t">${esc((user&&user.email)||'Аккаунт')}<div class="s">Вы вошли как</div></div></div>`;
+ if(it.type=='un')return `<div style="padding:2px 18px"><label class="f">Имя пользователя</label><input class="inp" id="un" value="${esc(S.u.username)}" maxlength="32" autocapitalize="none"><div class="ok" id="uns" style="color:var(--sub)">Минимум 5 символов: a–z, 0–9 и _</div><button class="pri" id="unb" style="display:none;margin-top:8px">Сохранить</button></div>`;
  if(it.type=='tx')return `<div style="padding:2px 18px"><label class="f">${it.l}</label><input class="inp" data-tx="${it.k}" value="${esc(gv(it.k)||'')}"></div>`;
  if(it.type=='seg')return `<div class="hs">${it.l}</div><div class="seg">${it.o.map(o=>`<button data-sg="${it.k}:${o[0]}" class="${S.s[it.k]==o[0]?'on':''}">${o[1]}</button>`).join('')}</div>`;
  if(it.type=='rg')return `<div class="hs">${it.l}</div><div style="padding:6px 18px"><input type="range" min="${it.a}" max="${it.b}" value="${S.s[it.k]}" data-rg="${it.k}" style="width:100%"></div>`;
@@ -207,7 +235,7 @@ function openChat(p){view='chat';peer=p;MS=[];RD=0;reply=null;render();const c=c
  r1.on('value',x=>{const n=MS.length;MS=Object.entries(x.val()||{}).map(([id,v])=>({id,...v})).sort((a,b)=>(a.ts||1e15)-(b.ts||1e15));const l=MS[MS.length-1];if(n&&l&&l.from!=uid&&MS.length>n)beep();drawMsgs();markRead()},e=>toast('Ошибка: '+e.code));
  r2.on('value',x=>{RD=x.val()||0;drawMsgs()});off=[r1,r2]}
 function closeChat(){off.forEach(r=>r.off());off=[];peer=null;reply=null}
-function markRead(){if(view!='chat')return;db.ref('reads/'+cid(peer)+'/'+uid).set(SV());if(UC[peer]&&UC[peer].unread)db.ref('userChats/'+uid+'/'+peer+'/unread').set(0)}
+function markRead(){if(view!='chat'||document.hidden)return;db.ref('reads/'+cid(peer)+'/'+uid).set(SV());if(UC[peer]&&UC[peer].unread)db.ref('userChats/'+uid+'/'+peer+'/unread').set(0)}
 function send(t,img){const m={from:uid,ts:SV()};if(t)m.t=t;if(img)m.img=img;if(reply)m.re={t:reply.t||'Фото',from:reply.from};
  const last=img&&!t?'Фото':t;db.ref('messages/'+cid(peer)).push(m).catch(e=>toast('Ошибка: '+e.code));
  db.ref('userChats/'+uid+'/'+peer).update({last,ts:SV(),unread:0});db.ref('userChats/'+peer+'/'+uid).update({last,ts:SV(),unread:firebase.database.ServerValue.increment(1)});
@@ -226,10 +254,10 @@ function bindChat(){
  ml.onclick=e=>{const r=e.target.closest('[data-rk]');if(r)toggleRx(r.closest('.b').dataset.id,r.dataset.rk)}}
 function toggleRx(id,k){const m=MS.find(x=>x.id==id);if(!m)return;if(S.s.vib&&navigator.vibrate)navigator.vibrate(12);const r=db.ref('messages/'+cid(peer)+'/'+id+'/rx/'+uid);(m.rx||{})[uid]==k?r.remove():r.set(k).catch(e=>toast('Ошибка: '+e.code))}
 function ctx(b){const m=MS.find(x=>x.id==b.dataset.id);if(!m)return;if(navigator.vibrate)navigator.vibrate(15);clearTimeout(0);
- const a=app.getBoundingClientRect(),r=b.getBoundingClientRect(),top=Math.min(Math.max(r.bottom-a.top+8,110),a.height-200),x=Math.min(Math.max(r.left-a.left,8),a.width-300);
+ const a=app.getBoundingClientRect(),r=b.getBoundingClientRect(),mt=Math.min(r.bottom-a.top+8,a.height-175),bt=Math.max(64,Math.min(r.top-a.top-54,mt-58)),x=Math.min(Math.max(r.left-a.left,8),a.width-300);
  const el=document.createElement('div');el.className='cxb';
- el.innerHTML=`<div class="rbar" style="left:${x}px;top:${top-58}px">${Object.keys(RC).map(k=>`<button data-r="${k}">${rsvg(k)}</button>`).join('')}</div>
- <div class="menu" style="left:${x}px;top:${top}px"><button data-a="re">${ic('reply')}Ответить</button>${m.t?`<button data-a="cp">${ic('copy')}Копировать</button>`:''}${m.from==uid?`<button data-a="del" style="color:#e5484d">${ic('trash')}Удалить</button>`:''}</div>`;
+ el.innerHTML=`<div class="rbar" style="left:${x}px;top:${bt}px">${Object.keys(RC).map(k=>`<button data-r="${k}">${rsvg(k)}</button>`).join('')}</div>
+ <div class="menu" style="left:${x}px;top:${mt}px"><button data-a="re">${ic('reply')}Ответить</button>${m.t?`<button data-a="cp">${ic('copy')}Копировать</button>`:''}${m.from==uid?`<button data-a="del" style="color:#e5484d">${ic('trash')}Удалить</button>`:''}</div>`;
  app.append(el);el.onclick=e=>{const k=e.target.closest('[data-r]'),a=e.target.closest('[data-a]');
   if(k)toggleRx(m.id,k.dataset.r);
   if(a){const t=a.dataset.a;if(t=='re'){reply=m;$('#rp').innerHTML=`<div class="rp"><div><b>${m.from==uid?'Вы':esc((CU[m.from]||{}).name)}</b><span>${esc(m.t||'Фото')}</span></div><button id="xr">${ic('close')}</button></div>`;$('#xr').onclick=()=>{reply=null;$('#rp').innerHTML=''};$('#ti').focus()}
@@ -266,7 +294,9 @@ function bindMe(){
   const up=()=>{S.u.grad=c;save();$('.hero').style.background=`linear-gradient(160deg,${c[0]},${c[1]})`};
   b.querySelector('.sw').onclick=e=>{const i=e.target.dataset.g;if(i==null)return;c=[...GR[i]];$('#c1').value=c[0];$('#c2').value=c[1];b.querySelectorAll('.sw button').forEach(x=>x.classList.toggle('on',x==e.target));up()};
   $('#c1').oninput=e=>{c[0]=e.target.value;up()};$('#c2').oninput=e=>{c[1]=e.target.value;up()};$('#ok').onclick=b.firstChild.onclick=()=>b.remove()}}
-function bindSet(){
+function bindSet(){const un=$('#un');if(un){const b=$('#unb');watchUn(un,$('#uns'),S.u.username,ok=>b.style.display=ok?'block':'none');
+ b.onclick=async()=>{const n=un.value.trim();b.disabled=true;try{if(!(await claim(n)))throw 0;const old=S.u.username;S.u.username=n;if(old.toLowerCase()!=n.toLowerCase())db.ref('usernames/'+old.toLowerCase()).remove();save();toast('Имя пользователя изменено');b.style.display='none'}catch(e){toast('Не удалось: имя занято')}b.disabled=false}}
+
  document.querySelectorAll('[data-sub]').forEach(b=>b.onclick=()=>{sub=b.dataset.sub;render()});if($('#pf'))$('#pf').onclick=()=>{view='me';render()};
  document.querySelectorAll('[data-tg]').forEach(b=>b.onclick=()=>{const k=b.dataset.tg;sv(k,S.s[k]?0:1);if(k=='seen')presence();b.querySelector('.tg').classList.toggle('on')});
  document.querySelectorAll('[data-tx]').forEach(i=>i.onchange=()=>{const v=i.value.trim(),k=i.dataset.tx;
@@ -277,11 +307,11 @@ function bindSet(){
  document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{sv('wall',+b.dataset.w);render()});
  document.querySelectorAll('[data-rg]').forEach(i=>i.oninput=()=>sv(i.dataset.rg,+i.value));
  document.querySelectorAll('[data-bt]').forEach(b=>b.onclick=()=>{const a=b.dataset.bt;
-  if(a=='clr'){const u=S.u;localStorage.removeItem(KEY);S=JSON.parse(JSON.stringify({u,s:{theme:'light',font:16,corner:14,wall:0,enter:0,sound:1,vib:1,seen:1,anim:1}}));save();render();toast('Настройки сброшены')}
-  if(a=='out'&&confirm('Выйти? Профиль будет удалён с этого устройства.')){const x=()=>{localStorage.removeItem(KEY);location.reload()};db.ref('users/'+uid).remove().finally(()=>firebase.auth().signOut().finally(x))}})}
+  if(a=='clr'){const u=S.u;localStorage.removeItem(KEY);S=JSON.parse(JSON.stringify({u,uid:S.uid,s:{theme:'light',font:16,corner:14,wall:0,enter:0,sound:1,vib:1,seen:1,anim:1}}));save();render();toast('Настройки сброшены')}
+  if(a=='out'&&confirm('Выйти из аккаунта?')){const x=()=>{localStorage.removeItem(KEY);location.reload()},so=()=>firebase.auth().signOut().finally(x);if(user.isAnonymous)Promise.all([db.ref('users/'+uid).remove(),db.ref('usernames/'+S.u.username.toLowerCase()).remove()]).finally(so);else so()}})}
 document.addEventListener('pointerdown',e=>{const t=e.target.closest('button,.row,.ch');if(!t)return;const r=t.getBoundingClientRect(),d=Math.max(r.width,r.height)*2,x=document.createElement('span');
- x.className='rip';x.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;t.style.position=t.style.position||'relative';t.style.overflow='hidden';t.append(x);setTimeout(()=>x.remove(),550)});
-history.pushState({},'');addEventListener('popstate',()=>{history.pushState({},'');back()});
+ x.className='rip';x.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;t.append(x);setTimeout(()=>x.remove(),550)});
+history.pushState({},'');addEventListener('popstate',()=>{const c=$('.sheet-bg,.dr-bg,.cxb')||view!='list'||sub;if(c){history.pushState({},'');back()}else history.back()});document.addEventListener('visibilitychange',markRead);
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
-initCloud();render();
+initCloud();if(db)render();
 </script></body></html>
