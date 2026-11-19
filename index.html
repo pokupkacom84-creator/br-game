@@ -944,11 +944,20 @@ function initCloud(){
     bootFromCache=false
   })}
 function loginV(){
- app.innerHTML=`<div class="gate"><div class="logo">${ic('send')}</div><h1>YouGram</h1><p>Быстрый и безопасный мессенджер</p>
- <button class="gbtn" id="gg">${GSVG}Войти через Google</button></div>`;
- $('#gg').onclick=()=>{const p=new firebase.auth.GoogleAuthProvider();firebase.auth().signInWithPopup(p).catch(e=>{
-  if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment'].includes(e.code))firebase.auth().signInWithRedirect(p);
-  else if(!['auth/popup-closed-by-user','auth/cancelled-popup-request'].includes(e.code))toast('Ошибка входа: '+e.code)})};
+ let mode='login';
+ const draw=()=>{
+ app.innerHTML=`<div class="gate"><div class="logo">${ic('send')}</div><h1>YouGram</h1><p>Вход или регистрация по email</p>
+ <label class="f">Email</label><input class="inp" id="em" type="email" autocomplete="email" placeholder="name@example.com">
+ <label class="f">Пароль</label><input class="inp" id="pw" type="password" autocomplete="${mode==='login'?'current-password':'new-password'}" placeholder="Не менее 6 символов">
+ <button class="pri" id="ep">${mode==='login'?'Войти':'Создать аккаунт'}</button>
+ <button class="lnk" id="sw">${mode==='login'?'Нет аккаунта? Зарегистрироваться':'Уже есть аккаунт? Войти'}</button>
+ ${mode==='login'?`<button class="lnk" id="rs">Забыли пароль?</button>`:''}
+ <button class="gbtn" id="gg">${GSVG}Войти через Google</button><div class="ok" id="authmsg"></div></div>`;
+ $('#sw').onclick=()=>{mode=mode==='login'?'signup':'login';draw()};
+ $('#ep').onclick=async()=>{const email=$('#em').value.trim(),password=$('#pw').value,msg=$('#authmsg');if(!email||!password){msg.textContent='Введите email и пароль';return}if(mode==='signup'&&password.length<6){msg.textContent='Пароль должен содержать минимум 6 символов';return}$('#ep').disabled=true;try{if(mode==='login')await firebase.auth().signInWithEmailAndPassword(email,password);else await firebase.auth().createUserWithEmailAndPassword(email,password)}catch(e){msg.textContent=({'auth/invalid-email':'Некорректный email','auth/user-not-found':'Аккаунт не найден','auth/wrong-password':'Неверный пароль','auth/invalid-credential':'Неверный email или пароль','auth/email-already-in-use':'Email уже зарегистрирован','auth/weak-password':'Слишком слабый пароль','auth/network-request-failed':'Нет соединения'}[e.code]||'Ошибка: '+e.code);$('#ep').disabled=false}};
+ if($('#rs'))$('#rs').onclick=async()=>{const email=$('#em').value.trim();if(!email){$('#authmsg').textContent='Введите email для восстановления';return}try{await firebase.auth().sendPasswordResetEmail(email);$('#authmsg').textContent='Письмо для сброса пароля отправлено'}catch(e){$('#authmsg').textContent='Ошибка: '+e.code}};
+ $('#gg').onclick=()=>{const p=new firebase.auth.GoogleAuthProvider();firebase.auth().signInWithPopup(p).catch(e=>{if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment'].includes(e.code))firebase.auth().signInWithRedirect(p);else if(!['auth/popup-closed-by-user','auth/cancelled-popup-request'].includes(e.code))toast('Ошибка входа: '+e.code)})};
+ };draw();
 }
 function gate(){
  app.innerHTML=`<div class="gate"><div class="logo">${ic('user')}</div><h1>Ваш профиль</h1><p>Выберите имя и имя пользователя</p>
