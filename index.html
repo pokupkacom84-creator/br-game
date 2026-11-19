@@ -75,6 +75,25 @@ label.f{display:block;font-size:.8em;color:var(--ac);margin-top:12px}
 .logo{width:96px;height:96px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center;margin:0 auto}.logo svg{width:50px;height:50px;stroke-width:1.5}
 .rip{position:absolute;border-radius:50%;background:currentColor;opacity:.15;transform:scale(0);animation:rp .5s ease-out forwards;pointer-events:none}@keyframes rp{to{transform:scale(1);opacity:0}}
 .na *{animation:none!important;transition:none!important}
+/* skeleton */
+@keyframes sk{0%,100%{opacity:.4}50%{opacity:.9}}
+.sk{background:var(--ln);border-radius:8px;animation:sk 1.4s ease-in-out infinite}
+.sk-row{display:flex;gap:12px;padding:9px 14px;align-items:center}
+.sk-av{width:54px;height:54px;border-radius:50%;flex:none}.sk-av.sk{background:var(--ln)}
+.sk-t{flex:1;display:flex;flex-direction:column;gap:8px}
+.sk-line{height:14px}.sk-line.sh{width:60%}
+/* offline banner */
+.offl{position:absolute;top:calc(56px + env(safe-area-inset-top));left:0;right:0;background:#e5484d;color:#fff;font-size:.8em;text-align:center;padding:5px;z-index:10;animation:up .2s}
+/* empty state */
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.empty-art{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--sub);gap:12px;padding:40px 30px}
+.empty-art svg{animation:bob 2.6s ease-in-out infinite;opacity:.55}
+.empty-art p{text-align:center;line-height:1.5}
+/* wallpaper patterns (indices 4-7 in WALL array) */
+.wp-dots{background-image:radial-gradient(circle,var(--dot-c) 1.5px,transparent 1.5px);background-size:20px 20px}
+.wp-lines{background-image:repeating-linear-gradient(45deg,var(--dot-c) 0,var(--dot-c) 1px,transparent 0,transparent 50%);background-size:14px 14px}
+.wp-grid{background-image:linear-gradient(var(--dot-c) 1px,transparent 1px),linear-gradient(90deg,var(--dot-c) 1px,transparent 1px);background-size:22px 22px}
+.wp-hex{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49'%3E%3Cpath d='M14 0l14 8v16l-14 8L0 24V8z' fill='none' stroke='rgba(100,120,160,.18)' stroke-width='1'/%3E%3C/svg%3E");background-size:28px 49px}
 @media(min-width:520px){#app{max-height:900px;margin:auto;border-radius:24px;box-shadow:0 0 0 8px #111}}
 .row,.ch{position:relative;overflow:hidden}.gbtn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:13px;border-radius:10px;background:#fff;color:#222;border:1px solid #dadce0;font-weight:500;margin-top:26px}.gbtn svg{width:22px;height:22px}.lnk{display:block;margin:16px auto 0;color:var(--ac);padding:8px}.ok{font-size:.82em;min-height:18px;margin-top:2px}
 .b,.rx,.ub,.body,.ib .snd,.tg,.tg:after,.fab,.avw{animation:none!important;transition:none!important}
@@ -83,6 +102,7 @@ label.f{display:block;font-size:.8em;color:var(--ac);margin-top:12px}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyB0uaLhHrYjWblrCBLTPx7mF_OmUhhld70",
@@ -103,10 +123,38 @@ const RC={heart:'#e5484d',fire:'#f08a24',thumb:'#3b82f6',laugh:'#e8a90c',wow:'#8
 const rsvg=k=>`<svg viewBox="0 0 24 24" fill="${k=='heart'||k=='fire'?RC[k]+'33':'none'}" stroke="${RC[k]}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${P[k]}"/></svg>`;
 const GR=[['#4facfe','#43e97b'],['#667eea','#764ba2'],['#f093fb','#f5576c'],['#fa709a','#fee140'],['#30cfd0','#330867'],['#ff9a44','#fc6076'],['#0ba360','#3cba92'],['#232526','#5f6c8a']];
 const WALL=[['#9cc08c','#d9e8b9'],['#7ea6d4','#dcebf7'],['#b9a2dc','#f4e3ef'],['#1b2430','#0e151d']];
+// pattern wallpapers: {bg, cls} — applied via class + background-color
+const WALLP=[
+  {bg:'#eaf3fb',cls:'wp-dots',dot:'rgba(100,150,200,.22)'},
+  {bg:'#f5f0ff',cls:'wp-lines',dot:'rgba(140,100,200,.18)'},
+  {bg:'#f0fff4',cls:'wp-grid',dot:'rgba(80,180,120,.18)'},
+  {bg:'#fdf6e3',cls:'wp-hex',dot:''},
+];
+// returns inline style string for the .ml element
+function wallBg(){
+  const i=S.s.wall;
+  if(i<WALL.length)return`background:linear-gradient(160deg,${WALL[i][0]},${WALL[i][1]})`;
+  const p=WALLP[i-WALL.length];
+  return`background-color:${p.bg};--dot-c:${p.dot}` // class added separately
+}
+function wallCls(){const i=S.s.wall;if(i<WALL.length)return'';return WALLP[i-WALL.length].cls}
 const KEY='yougram1',$=s=>document.querySelector(s),app=$('#app');
 let S=JSON.parse(localStorage.getItem(KEY)||'null')||{u:null,s:{theme:'light',font:16,corner:14,wall:0,enter:0,sound:1,vib:1,seen:1,anim:1}};
-const save=()=>{S.uid=uid;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Нет места: фото слишком большое')}syncUser()};
-let db,uid,user,ready=false,pre=null,view='list',peer=null,sub=null,CU={},UC={},PR={},MS=[],RD=0,reply=null,off=[],st=0;
+const save=()=>{
+  S.uid=uid;
+  try{
+    // strip avatar blob from cache — store only the URL/empty string, not base64
+    const snap=JSON.parse(JSON.stringify(S));
+    if(snap.u&&snap.u.avatar&&snap.u.avatar.startsWith('data:'))snap.u.avatar='';
+    localStorage.setItem(KEY,JSON.stringify(snap));
+  }catch(e){toast('Нет места: фото слишком большое')}
+  syncUser();
+};
+let db,storage,uid,user,ready=false,pre=null,view='list',peer=null,sub=null,CU={},UC={},PR={},MS=[],RD=0,reply=null,off=[],st=0;
+// offline queue
+let isOnline=true,sendQueue=[];
+function flushQueue(){if(!isOnline||!sendQueue.length)return;const q=[...sendQueue];sendQueue=[];q.forEach(fn=>fn())}
+function qsend(fn){if(isOnline)fn();else{sendQueue.push(fn);toast('Нет сети — отправится автоматически')}}
 const SV=()=>firebase.database.ServerValue.TIMESTAMP,cid=p=>[uid,p].sort().join('_');
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hash=s=>[...String(s)].reduce((a,c)=>a*31+c.charCodeAt(0)|0,7);
@@ -136,7 +184,7 @@ function watchUn(inp,out,cur,cb){let t;inp.oninput=()=>{clearTimeout(t);const v=
 let lst=0;
 function initCloud(){
  if(!window.firebase){ready=true;app.innerHTML='<div class="empty" style="margin:auto">Нет соединения с Firebase.<br>Проверьте интернет и обновите страницу.</div>';return}
- firebase.initializeApp(FIREBASE_CONFIG);db=firebase.database();
+ firebase.initializeApp(FIREBASE_CONFIG);db=firebase.database();storage=firebase.storage();
  firebase.auth().getRedirectResult().catch(e=>toast('Ошибка входа: '+e.code));
  firebase.auth().onAuthStateChanged(async u=>{
   if(!u){uid=null;user=null;ready=true;render();return}
@@ -146,9 +194,18 @@ function initCloud(){
   if(S.u){try{if(unErr(S.u.username)||!(await claim(S.u.username)))S.u=null}catch(e){S.u=null}}
   pre={name:(old&&old.name)||u.displayName||'',avatar:(old&&old.avatar)||u.photoURL||''};
   if(!lst){lst=1;
-   db.ref('users').on('value',x=>{CU=x.val()||{};ch()});
-   db.ref('userChats/'+uid).on('value',x=>{UC=x.val()||{};ch()});
-   db.ref('presence').on('value',x=>{PR=x.val()||{};if(view=='chat')updHdr();else ch()})}
+   // per-user fetch: load only users we have chats with + self
+   function fetchUser(id){if(CU[id])return;db.ref('users/'+id).on('value',x=>{const v=x.val();if(v)CU[id]=v;ch()})}
+   db.ref('userChats/'+uid).on('value',x=>{UC=x.val()||{};Object.keys(UC).forEach(fetchUser);ch()});
+   fetchUser(uid);
+   db.ref('presence').on('value',x=>{PR=x.val()||{};if(view=='chat')updHdr();else ch()});
+   // online/offline detection
+   db.ref('.info/connected').on('value',x=>{
+     isOnline=!!x.val();
+     const banner=$('#offl-banner');
+     if(isOnline){if(banner)banner.remove();flushQueue()}
+     else{if(!$('#offl-banner')){const d=document.createElement('div');d.id='offl-banner';d.className='offl';d.textContent='Нет соединения';app.append(d)}}
+   })}
   if(S.u){save();presence()}
   ready=true;render()})}
 function loginV(){
@@ -182,7 +239,8 @@ const bar=(l,r='')=>`<div class="hd"><button id="mn">${ic(l)}</button><h1>${{lis
 function listV(){
  const rows=Object.entries(UC).sort((a,b)=>b[1].ts-a[1].ts).map(([id,c])=>{const u=CU[id]||{name:'Пользователь'};
  return `<button class="ch" data-p="${id}">${av(u,54,PR[id]===true)}<div class="t"><div class="l1"><b>${esc(u.name)}</b><span class="tm">${lt(c.ts)}</span></div><div class="l2"><span>${esc(c.last)}</span>${c.unread?`<i class="ub">${c.unread}</i>`:''}</div></div></button>`}).join('');
- return bar('menu',`<button id="sr">${ic('search')}</button>`)+`<div class="body">${rows||`<div class="empty">Чатов пока нет.<br>Нажмите на кнопку внизу и выберите собеседника.</div>`}</div><button class="fab" id="nw">${ic('pen')}</button>`}
+ const empty=`<div class="empty-art"><svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5" opacity=".6"/></svg><p>Чатов пока нет.<br>Нажмите <b>✏</b> чтобы начать переписку</p></div>`;
+ return bar('menu',`<button id="sr">${ic('search')}</button>`)+`<div class="body">${rows||empty}</div><button class="fab" id="nw">${ic('pen')}</button>`}
 function contactsV(q=''){
  const rows=Object.entries(CU).filter(([k,u])=>k!=uid&&(u.name+' '+u.username).toLowerCase().includes(q.toLowerCase())).map(([id,u])=>`<button class="ch" data-p="${id}">${av(u,50,PR[id]===true)}<div class="t"><div class="l1"><b>${esc(u.name)}</b></div><div class="l2"><span>${status(id)} · @${esc(u.username)}</span></div></div></button>`).join('');
  return `<div class="hd"><button id="mn">${ic('back')}</button><input class="inp" id="q" placeholder="Поиск по имени или @username" value="${esc(q)}" style="margin:0;border:0;color:#fff;flex:1"></div><div class="body" id="cl">${rows||'<div class="empty">Никого не найдено</div>'}</div>`}
@@ -212,14 +270,16 @@ function item(it){
  if(it.type=='tx')return `<div style="padding:2px 18px"><label class="f">${it.l}</label><input class="inp" data-tx="${it.k}" value="${esc(gv(it.k)||'')}"></div>`;
  if(it.type=='seg')return `<div class="hs">${it.l}</div><div class="seg">${it.o.map(o=>`<button data-sg="${it.k}:${o[0]}" class="${S.s[it.k]==o[0]?'on':''}">${o[1]}</button>`).join('')}</div>`;
  if(it.type=='rg')return `<div class="hs">${it.l}</div><div style="padding:6px 18px"><input type="range" min="${it.a}" max="${it.b}" value="${S.s[it.k]}" data-rg="${it.k}" style="width:100%"></div>`;
- if(it.type=='wl')return `<div class="hs">Обои чата</div><div class="sw" style="padding:0 18px">${WALL.map((w,i)=>`<button data-w="${i}" class="${S.s.wall==i?'on':''}" style="background:linear-gradient(135deg,${w[0]},${w[1]})"></button>`).join('')}</div>`;
+ if(it.type=='wl')return `<div class="hs">Обои чата</div><div class="sw" style="padding:0 18px">${WALL.map((w,i)=>`<button data-w="${i}" class="${S.s.wall==i?'on':''}" style="background:linear-gradient(135deg,${w[0]},${w[1]})"></button>`).join('')}${WALLP.map((p,i)=>`<button data-w="${WALL.length+i}" class="${S.s.wall==WALL.length+i?'on':''} ${p.cls}" style="background-color:${p.bg};--dot-c:${p.dot};width:46px;height:46px;border-radius:50%;border:3px solid transparent"></button>`).join('')}</div>`;
  if(it.type=='bt')return `<button class="row" data-bt="${it.a}"><span class="t" style="color:${it.red?'#e5484d':'var(--ac)'}">${it.l}</span></button>`}
 
 // ---------- chat ----------
+function skRow(w1='70%',w2='45%'){return`<div class="sk-row"><div class="sk-av sk"></div><div class="sk-t"><div class="sk-line sk" style="width:${w1}"></div><div class="sk-line sk" style="width:${w2}"></div></div></div>`}
 function chatView(){app._h=null;
  const u=CU[peer]||{name:'Пользователь'};
+ const wallStyle=wallBg();
  app.innerHTML=`<div class="hd"><button id="bk">${ic('back')}</button><button id="ph" style="display:flex;align-items:center;gap:10px;flex:1;height:48px;width:auto;border-radius:8px;text-align:left;justify-content:flex-start">${av(u,40)}<div><div id="nm" style="font-weight:500"></div><small id="st" style="opacity:.8"></small></div></button></div>
- <div class="ml" id="ml" style="background:linear-gradient(160deg,${WALL[S.s.wall][0]},${WALL[S.s.wall][1]})"></div><div id="rp"></div>
+ <div class="ml ${wallCls()}" id="ml" style="${wallStyle}">${skRow('65%','40%')+skRow('80%','55%')+skRow('50%','35%')}</div><div id="rp"></div>
  <div class="ib"><button id="at">${ic('attach')}</button><textarea id="ti" rows="1" placeholder="Сообщение"></textarea><button class="snd" id="sd">${ic('send')}</button></div><input type="file" accept="image/*" id="fi" hidden>`;
  updHdr();drawMsgs(true);bindChat()}
 function updHdr(){const n=$('#nm');if(!n)return;n.textContent=(CU[peer]||{}).name||'Пользователь';$('#st').textContent=status(peer)}
@@ -231,22 +291,31 @@ function drawMsgs(first){const ml=$('#ml');if(!ml)return;const near=first||ml.sc
   <span class="mt">${tm(m.ts)}${me?ic(RD>=m.ts?'check2':'check'):''}</span>
   ${Object.keys(rx).length?`<div class="rxs">${Object.keys(rx).map(k=>`<button class="rx ${(m.rx||{})[uid]==k?'me':''}" data-rk="${k}">${rsvg(k)}${rx[k]}</button>`).join('')}</div>`:''}</div>`});
  h=h||`<div class="dc">Напишите первое сообщение</div>`;if(h===ml._h&&!first)return;ml._h=h;const sc=ml.scrollTop;ml.innerHTML=h;ml.scrollTop=near?ml.scrollHeight:sc}
-function openChat(p){view='chat';peer=p;MS=[];RD=0;reply=null;render();const c=cid(p);
+function openChat(p){view='chat';peer=p;MS=[];RD=0;reply=null;
+ // ensure peer data loaded (per-user sub)
+ if(!CU[p])db.ref('users/'+p).once('value').then(x=>{const v=x.val();if(v){CU[p]=v;updHdr()}});
+ render();const c=cid(p);
  const r1=db.ref('messages/'+c).limitToLast(150),r2=db.ref('reads/'+c+'/'+p);
  r1.on('value',x=>{const n=MS.length;MS=Object.entries(x.val()||{}).map(([id,v])=>({id,...v})).sort((a,b)=>(a.ts||1e15)-(b.ts||1e15));const l=MS[MS.length-1];if(n&&l&&l.from!=uid&&MS.length>n)beep();drawMsgs();markRead()},e=>toast('Ошибка: '+e.code));
  r2.on('value',x=>{RD=x.val()||0;drawMsgs()});off=[r1,r2]}
 function closeChat(){off.forEach(r=>r.off());off=[];peer=null;reply=null}
 function markRead(){if(view!='chat'||document.hidden)return;db.ref('reads/'+cid(peer)+'/'+uid).set(SV());if(UC[peer]&&UC[peer].unread)db.ref('userChats/'+uid+'/'+peer+'/unread').set(0)}
-function send(t,img){const m={from:uid,ts:SV()};if(t)m.t=t;if(img)m.img=img;if(reply)m.re={t:reply.t||'Фото',from:reply.from};
- const last=img&&!t?'Фото':t;db.ref('messages/'+cid(peer)).push(m).catch(e=>toast('Ошибка: '+e.code));
- db.ref('userChats/'+uid+'/'+peer).update({last,ts:SV(),unread:0});db.ref('userChats/'+peer+'/'+uid).update({last,ts:SV(),unread:firebase.database.ServerValue.increment(1)});
- reply=null;$('#rp').innerHTML=''}
+function send(t,img){
+  const m={from:uid,ts:SV()};if(t)m.t=t;if(img)m.img=img;if(reply)m.re={t:reply.t||'Фото',from:reply.from};
+  const last=img&&!t?'Фото':t;const p=peer;
+  qsend(()=>{
+    db.ref('messages/'+cid(p)).push(m).catch(e=>toast('Ошибка: '+e.code));
+    db.ref('userChats/'+uid+'/'+p).update({last,ts:SV(),unread:0});
+    db.ref('userChats/'+p+'/'+uid).update({last,ts:SV(),unread:firebase.database.ServerValue.increment(1)});
+  });
+  reply=null;const rp=$('#rp');if(rp)rp.innerHTML=''
+}
 function bindChat(){
  const ti=$('#ti'),sd=$('#sd'),go=()=>{const t=ti.value.trim();if(!t)return;send(t);ti.value='';ti.style.height='';sd.classList.remove('on')};
  ti.oninput=()=>{ti.style.height='auto';ti.style.height=ti.scrollHeight+'px';sd.classList.toggle('on',!!ti.value.trim())};
  ti.onkeydown=e=>{if(e.key=='Enter'&&S.s.enter&&!e.shiftKey){e.preventDefault();go()}};sd.onclick=go;
  $('#bk').onclick=back;$('#at').onclick=()=>$('#fi').click();$('#ph').onclick=()=>profSheet(peer);
- $('#fi').onchange=e=>resize(e.target.files[0],800,.72,d=>send('',d));
+ $('#fi').onchange=e=>{const f=e.target.files[0];if(!f)return;toast('Загрузка…');uploadImg(f,800,.72,'chat/'+cid(peer),url=>send('',url))};
  const ml=$('#ml');let tm_,sx,sy;
  ml.onpointerdown=e=>{const b=e.target.closest('.b');if(!b)return;sx=e.clientX;sy=e.clientY;tm_=setTimeout(()=>ctx(b),420)};
  ml.onpointermove=e=>{if(Math.abs(e.clientX-sx)+Math.abs(e.clientY-sy)>10)clearTimeout(tm_)};ml.onpointerup=ml.onpointercancel=()=>clearTimeout(tm_);
@@ -266,6 +335,17 @@ function ctx(b){const m=MS.find(x=>x.id==b.dataset.id);if(!m)return;if(navigator
    if(t=='del')db.ref('messages/'+cid(peer)+'/'+m.id).remove()}
   el.remove()}}
 function resize(f,max,q,cb){if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',q))};im.src=r.result};r.readAsDataURL(f)}
+// Upload resized image to Firebase Storage, return download URL via cb(url)
+function uploadImg(f,maxPx,qual,path,cb){
+  resize(f,maxPx,qual,dataUrl=>{
+    if(!storage){cb(dataUrl);return} // fallback to base64 if storage not ready
+    const blob=dataURLtoBlob(dataUrl);
+    const ref=storage.ref(path+'/'+Date.now()+'.jpg');
+    const task=ref.put(blob,{contentType:'image/jpeg'});
+    task.then(()=>ref.getDownloadURL()).then(url=>cb(url)).catch(e=>{toast('Ошибка загрузки: '+e.code);cb(dataUrl)})
+  })
+}
+function dataURLtoBlob(d){const[h,b]=d.split(','),m=h.match(/:(.*?);/)[1],by=atob(b),ar=new Uint8Array(by.length);for(let i=0;i<by.length;i++)ar[i]=by.charCodeAt(i);return new Blob([ar],{type:m})}
 function profSheet(id){const u=CU[id]||{name:'Пользователь'},g=u.grad||GR[0],b=document.createElement('div');
  b.innerHTML=`<div class="sheet-bg"></div><div class="sheet" style="padding:0"><div class="hero" style="background:linear-gradient(160deg,${g[0]},${g[1]})">${av(u,84)}<h2 style="font-weight:500">${esc(u.name)}</h2><div style="opacity:.9">${status(id)}</div></div>
  <div class="row"><div class="t">@${esc(u.username||'')}<div class="s">Имя пользователя</div></div></div><div class="row"><div class="t">${esc(u.bio||'Не указано')}<div class="s">О себе</div></div></div></div>`;app.append(b);b.firstChild.onclick=()=>b.remove()}
@@ -287,7 +367,7 @@ function bind(){
  if($('#q')){$('#q').focus();$('#q').oninput=e=>{const t=document.createElement('div');t.innerHTML=contactsV(e.target.value);$('#cl').innerHTML=t.querySelector('#cl').innerHTML;document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>openChat(b.dataset.p))}}
  if(view=='me')bindMe();if(view=='settings')bindSet()}
 function bindMe(){
- $('#bp').onclick=()=>$('#fi').click();$('#fi').onchange=e=>resize(e.target.files[0],256,.85,d=>{S.u.avatar=d;save();render();toast('Фото обновлено')});
+ $('#bp').onclick=()=>$('#fi').click();$('#fi').onchange=e=>{const f=e.target.files[0];if(!f)return;toast('Загрузка…');uploadImg(f,256,.85,'avatars/'+uid,url=>{S.u.avatar=url;save();render();toast('Фото обновлено')})};
  $('#be').onclick=()=>{view='settings';sub='account';render()};
  $('#bg').onclick=()=>{const b=document.createElement('div');let c=[...S.u.grad];
   b.innerHTML=`<div class="sheet-bg"></div><div class="sheet"><b>Фон профиля</b><div class="sw">${GR.map((g,i)=>`<button data-g="${i}" class="${g[0]==c[0]&&g[1]==c[1]?'on':''}" style="background:linear-gradient(135deg,${g[0]},${g[1]})"></button>`).join('')}</div>
