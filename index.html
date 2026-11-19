@@ -77,6 +77,7 @@ label.f{display:block;font-size:.8em;color:var(--ac);margin-top:12px}
 .na *{animation:none!important;transition:none!important}
 @media(min-width:520px){#app{max-height:900px;margin:auto;border-radius:24px;box-shadow:0 0 0 8px #111}}
 .row,.ch{position:relative;overflow:hidden}.gbtn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:13px;border-radius:10px;background:#fff;color:#222;border:1px solid #dadce0;font-weight:500;margin-top:26px}.gbtn svg{width:22px;height:22px}.lnk{display:block;margin:16px auto 0;color:var(--ac);padding:8px}.ok{font-size:.82em;min-height:18px;margin-top:2px}
+.b,.rx,.ub,.body,.ib .snd,.tg,.tg:after,.fab,.avw{animation:none!important;transition:none!important}
 </style></head>
 <body><div id="app"></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -175,7 +176,7 @@ function render(){
  if(!uid){app.innerHTML=`<div class="empty" style="margin:auto">Подключение…</div>`;return}
  if(view=='chat')return chatView();
  const keep=$('.body')?.scrollTop||0;
- if(view=='list')app.innerHTML=listV();else if(view=='contacts')app.innerHTML=contactsV();else if(view=='me')app.innerHTML=meV();else app.innerHTML=setV();
+ const h=view=='list'?listV():view=='contacts'?contactsV():view=='me'?meV():setV();if(h===app._h&&$('.body'))return;app._h=h;app.innerHTML=h;
  const b=$('.body');if(b)b.scrollTop=keep;bind()}
 const bar=(l,r='')=>`<div class="hd"><button id="mn">${ic(l)}</button><h1>${{list:'YouGram',contacts:'Контакты',me:'Профиль',settings:sub?PAGES[sub].t:'Настройки'}[view]}</h1>${r}</div>`;
 function listV(){
@@ -215,7 +216,7 @@ function item(it){
  if(it.type=='bt')return `<button class="row" data-bt="${it.a}"><span class="t" style="color:${it.red?'#e5484d':'var(--ac)'}">${it.l}</span></button>`}
 
 // ---------- chat ----------
-function chatView(){
+function chatView(){app._h=null;
  const u=CU[peer]||{name:'Пользователь'};
  app.innerHTML=`<div class="hd"><button id="bk">${ic('back')}</button><button id="ph" style="display:flex;align-items:center;gap:10px;flex:1;height:48px;width:auto;border-radius:8px;text-align:left;justify-content:flex-start">${av(u,40)}<div><div id="nm" style="font-weight:500"></div><small id="st" style="opacity:.8"></small></div></button></div>
  <div class="ml" id="ml" style="background:linear-gradient(160deg,${WALL[S.s.wall][0]},${WALL[S.s.wall][1]})"></div><div id="rp"></div>
@@ -229,7 +230,7 @@ function drawMsgs(first){const ml=$('#ml');if(!ml)return;const near=first||ml.sc
   ${m.re?`<div class="q"><b>${m.re.from==uid?'Вы':esc((CU[m.re.from]||{}).name||'')}</b>${esc(m.re.t)}</div>`:''}${m.img?`<img class="mi" src="${m.img}">`:''}${m.t?`<p>${esc(m.t)}</p>`:''}
   <span class="mt">${tm(m.ts)}${me?ic(RD>=m.ts?'check2':'check'):''}</span>
   ${Object.keys(rx).length?`<div class="rxs">${Object.keys(rx).map(k=>`<button class="rx ${(m.rx||{})[uid]==k?'me':''}" data-rk="${k}">${rsvg(k)}${rx[k]}</button>`).join('')}</div>`:''}</div>`});
- ml.innerHTML=h||`<div class="dc">Напишите первое сообщение</div>`;if(near)ml.scrollTop=ml.scrollHeight}
+ h=h||`<div class="dc">Напишите первое сообщение</div>`;if(h===ml._h&&!first)return;ml._h=h;const sc=ml.scrollTop;ml.innerHTML=h;ml.scrollTop=near?ml.scrollHeight:sc}
 function openChat(p){view='chat';peer=p;MS=[];RD=0;reply=null;render();const c=cid(p);
  const r1=db.ref('messages/'+c).limitToLast(150),r2=db.ref('reads/'+c+'/'+p);
  r1.on('value',x=>{const n=MS.length;MS=Object.entries(x.val()||{}).map(([id,v])=>({id,...v})).sort((a,b)=>(a.ts||1e15)-(b.ts||1e15));const l=MS[MS.length-1];if(n&&l&&l.from!=uid&&MS.length>n)beep();drawMsgs();markRead()},e=>toast('Ошибка: '+e.code));
