@@ -169,20 +169,32 @@ function initCloud(){
       return
     }
     const freshUid=u.uid;user=u;
-    if(S.uid&&S.uid!==freshUid){S.u=null} // different account — drop stale profile
+    const sameUser=S.uid===freshUid;
+    if(!sameUser){S.u=null} // different Google account — drop stale profile
     uid=freshUid;
-    let old=S.uid===freshUid?S.u:null;
+    // Fetch profile from DB; it is the source of truth.
+    // If DB has data → use it. If DB empty but cache has profile → keep cache.
+    // Never call claim() on boot — it's for username-change only.
     try{
       const v=(await db.ref('users/'+uid).once('value')).val();
-      if(v){old={name:v.name,username:v.username,bio:v.bio||'',avatar:v.avatar||'',grad:v.grad||GR[0]};S.u=old}
-      else S.u=old
-    }catch(e){toast('Ошибка: '+e.code)}
-    if(S.u){try{if(unErr(S.u.username)||!(await claim(S.u.username)))S.u=null}catch(e){S.u=null}}
-    pre={name:(old&&old.name)||u.displayName||'',avatar:(old&&old.avatar)||u.photoURL||''};
+      if(v&&v.username){
+        // DB has a full profile — always trust it
+        S.u={name:v.name,username:v.username,bio:v.bio||'',avatar:v.avatar||'',grad:v.grad||GR[0]}
+      } else if(sameUser&&S.u&&S.u.username){
+        // DB empty (first login on new device) but cache valid — keep cache, re-sync to DB
+        syncUser()
+      } else {
+        // genuinely new user, no profile anywhere
+        S.u=null
+      }
+    }catch(e){
+      // network error — keep whatever cache says, don't wipe it
+      if(!sameUser)S.u=null
+    }
+    pre={name:(S.u&&S.u.name)||u.displayName||'',avatar:(S.u&&S.u.avatar)||u.photoURL||''};
     startSubs();
     if(S.u){save();presence()}
     ready=true;
-    // already rendering from cache and auth confirmed same user — skip re-render
     if(!bootFromCache||!S.u)render();
     bootFromCache=false
   })}
