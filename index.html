@@ -42,9 +42,21 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .ib textarea{flex:1;border:0;outline:0;background:none;resize:none;max-height:120px;padding:11px 4px;line-height:1.3}
 .ib button{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--sub);flex:none}
 .ib .snd{color:var(--ac);transform:scale(0);width:0;transition:.2s}.ib .snd.on{transform:none;width:44px}
+.ib .emj{transition:.2s}
 .rp{background:var(--sf);padding:6px 14px;border-top:1px solid var(--ln);display:flex;align-items:center;gap:10px;font-size:.9em}.rp div{flex:1;border-left:3px solid var(--ac);padding-left:8px;min-width:0}.rp b{color:var(--ac);display:block;font-weight:500}.rp span{color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+
+/* ── Context menu overlay — fade out properly ── */
 .cxb{position:absolute;inset:0;background:#0003;z-index:20;animation:fi .15s}
+.cxb.closing{animation:fo .18s forwards}
+@keyframes fo{to{opacity:0}}
+
 .rbar{position:absolute;background:var(--sf);border-radius:26px;padding:5px 7px;display:flex;gap:2px;box-shadow:0 4px 20px #0004;transform-origin:bottom left;animation:pop .22s cubic-bezier(.3,1.5,.5,1)}
+.rbar.closing{animation:popout .18s forwards}
+@keyframes pop{from{transform:scale(.4);opacity:0}}
+@keyframes popout{to{transform:scale(.4);opacity:0}}
+.menu.closing{animation:menuout .18s forwards}
+@keyframes menuout{to{transform:scale(.85) translateY(-6px);opacity:0}}
+
 @keyframes pop{from{transform:scale(.4);opacity:0}}
 .rbar button{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;transition:transform .15s;animation:bump .4s backwards}
 .rbar button:nth-child(2){animation-delay:.03s}.rbar button:nth-child(3){animation-delay:.06s}.rbar button:nth-child(4){animation-delay:.09s}.rbar button:nth-child(5){animation-delay:.12s}.rbar button:nth-child(6){animation-delay:.15s}
@@ -67,8 +79,26 @@ label.f{display:block;font-size:.8em;color:var(--ac);margin-top:12px}
 .pri{background:var(--ac);color:#fff;padding:13px;border-radius:10px;font-weight:500;width:100%;margin-top:14px}
 .seg{display:flex;margin:6px 18px;border:1px solid var(--ac);border-radius:10px;overflow:hidden}.seg button{flex:1;padding:8px;color:var(--ac)}.seg .on{background:var(--ac);color:#fff}
 .sw{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}.sw button{width:46px;height:46px;border-radius:50%;border:3px solid transparent}.sw .on{border-color:var(--ac)}
-.hero{padding:30px 20px 22px;text-align:center;color:#fff;margin-bottom:0}.hero .av{margin:0 auto 10px;border:3px solid #fff7}
+
+/* ── Telegram-style profile hero ── */
+.hero{padding:0;text-align:center;color:#fff;margin-bottom:0;position:relative;overflow:hidden}
+.hero-bg{width:100%;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:16px 20px 0;position:relative}
+.hero-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,rgba(0,0,0,.35))}
+.hero-info{position:relative;z-index:1;padding-bottom:0;text-align:left;width:100%}
+.hero-info h2{font-size:1.3em;font-weight:600;text-shadow:0 1px 4px #0004}
+.hero-info .hsub{font-size:.9em;opacity:.9;text-shadow:0 1px 3px #0003}
+.hero-av{margin:0 0 10px;border:3px solid rgba(255,255,255,.5);box-shadow:0 2px 12px #0004}
 .acts{display:flex;border-bottom:10px solid var(--g)}.acts button{flex:1;padding:12px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.8em;color:var(--ac)}
+
+/* profile sheet like TG */
+.psheet-hero{padding:0;position:relative;overflow:hidden}
+.psheet-bg{min-height:180px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;padding:16px 18px 12px;position:relative}
+.psheet-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent 30%,rgba(0,0,0,.4))}
+.psheet-info{position:relative;z-index:1;color:#fff}
+.psheet-info h2{font-size:1.2em;font-weight:600}
+.psheet-info .st{font-size:.85em;opacity:.88}
+.psheet-av{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:0}
+
 .toast{position:absolute;left:12px;right:12px;bottom:calc(80px + env(safe-area-inset-bottom));background:#323232;color:#fff;padding:13px 16px;border-radius:8px;z-index:60;animation:up .2s}
 .empty{text-align:center;color:var(--sub);padding:60px 30px}
 .gate{flex:1;overflow-y:auto;padding:40px 24px;background:var(--bg)}.gate h1{font-weight:500;margin:14px 0 4px;text-align:center}.gate p{color:var(--sub);text-align:center;margin-bottom:10px}
@@ -78,6 +108,26 @@ label.f{display:block;font-size:.8em;color:var(--ac);margin-top:12px}
 @media(min-width:520px){#app{max-height:900px;margin:auto;border-radius:24px;box-shadow:0 0 0 8px #111}}
 .row,.ch{position:relative;overflow:hidden}.gbtn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:13px;border-radius:10px;background:#fff;color:#222;border:1px solid #dadce0;font-weight:500;margin-top:26px}.gbtn svg{width:22px;height:22px}.lnk{display:block;margin:16px auto 0;color:var(--ac);padding:8px}.ok{font-size:.82em;min-height:18px;margin-top:2px}
 .b,.rx,.ub,.body,.ib .snd,.tg,.tg:after,.fab,.avw{animation:none!important;transition:none!important}
+
+/* ── Search hint ── */
+.search-hint{text-align:center;color:var(--sub);padding:40px 24px;font-size:.95em}
+.search-hint svg{width:48px;height:48px;stroke:var(--ln);display:block;margin:0 auto 12px}
+
+/* ── Emoji picker ── */
+.emoji-btn-wrap{position:relative}
+.ep{position:absolute;bottom:56px;left:-4px;width:320px;max-width:calc(100vw - 20px);background:var(--sf);border-radius:16px;box-shadow:0 8px 32px #0005;z-index:50;animation:up .22s cubic-bezier(.2,.9,.3,1);overflow:hidden}
+.ep-tabs{display:flex;border-bottom:1px solid var(--ln);overflow-x:auto;padding:4px 6px 0}
+.ep-tabs button{padding:6px 8px;font-size:1.3em;border-radius:8px 8px 0 0;flex:none;background:none;border:0}
+.ep-tabs button.on{background:var(--acs)}
+.ep-search{padding:6px 10px;border-bottom:1px solid var(--ln)}
+.ep-search input{width:100%;padding:6px 10px;border-radius:20px;border:0;background:var(--g);outline:0;font-size:.9em;color:var(--tx)}
+.ep-grid{display:grid;grid-template-columns:repeat(8,1fr);padding:6px;gap:1px;max-height:220px;overflow-y:auto}
+.ep-grid button{font-size:1.4em;padding:4px;border-radius:6px;background:none;border:0;cursor:pointer;line-height:1.2;transition:transform .1s}
+.ep-grid button:active{transform:scale(1.3);background:var(--acs)}
+.ep-label{padding:4px 10px 2px;font-size:.72em;color:var(--sub);font-weight:500;text-transform:uppercase;letter-spacing:.5px;grid-column:1/-1}
+.recent-bar{display:flex;padding:6px 8px;gap:2px;border-bottom:1px solid var(--ln);overflow-x:auto}
+.recent-bar button{font-size:1.3em;border-radius:6px;background:none;border:0;padding:3px 4px;flex:none;cursor:pointer}
+.recent-bar button:active{background:var(--acs)}
 </style></head>
 <body><div id="app"></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -108,15 +158,8 @@ let S=JSON.parse(localStorage.getItem(KEY)||'null')||{u:null,s:{theme:'light',fo
 const save=()=>{S.uid=uid;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Нет места: фото слишком большое')}syncUser()};
 let db,uid,user,ready=false,pre=null,view='list',peer=null,sub=null,CU={},UC={},PR={},MS=[],RD=0,reply=null,off=[],st=0;
 
-// ── instant boot ──────────────────────────────────────────────────────────────
-// If we have a cached session, skip the "Подключение…" screen entirely.
-// Render from cache immediately; onAuthStateChanged confirms/refreshes in bg.
 let bootFromCache=false;
-if(S.uid&&S.u){
-  uid=S.uid;
-  ready=true;        // mark ready so render() draws list, not spinner
-  bootFromCache=true;
-}
+if(S.uid&&S.u){uid=S.uid;ready=true;bootFromCache=true;}
 const SV=()=>firebase.database.ServerValue.TIMESTAMP,cid=p=>[uid,p].sort().join('_');
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hash=s=>[...String(s)].reduce((a,c)=>a*31+c.charCodeAt(0)|0,7);
@@ -156,41 +199,24 @@ function initCloud(){
     return
   }
   firebase.initializeApp(FIREBASE_CONFIG);db=firebase.database();
-  // already have cached session — hook up live subs immediately, no spinner
   if(bootFromCache){startSubs();presence()}
   firebase.auth().getRedirectResult().catch(e=>toast('Ошибка входа: '+e.code));
   firebase.auth().onAuthStateChanged(async u=>{
     if(!u){
-      if(bootFromCache){
-        // cache said logged in, Firebase says no — truly expired
-        uid=null;user=null;S.u=null;ready=true;
-        localStorage.removeItem(KEY);bootFromCache=false;render()
-      } else {uid=null;user=null;ready=true;render()}
+      if(bootFromCache){uid=null;user=null;S.u=null;ready=true;localStorage.removeItem(KEY);bootFromCache=false;render()}
+      else{uid=null;user=null;ready=true;render()}
       return
     }
     const freshUid=u.uid;user=u;
     const sameUser=S.uid===freshUid;
-    if(!sameUser){S.u=null} // different Google account — drop stale profile
+    if(!sameUser){S.u=null}
     uid=freshUid;
-    // Fetch profile from DB; it is the source of truth.
-    // If DB has data → use it. If DB empty but cache has profile → keep cache.
-    // Never call claim() on boot — it's for username-change only.
     try{
       const v=(await db.ref('users/'+uid).once('value')).val();
-      if(v&&v.username){
-        // DB has a full profile — always trust it
-        S.u={name:v.name,username:v.username,bio:v.bio||'',avatar:v.avatar||'',grad:v.grad||GR[0]}
-      } else if(sameUser&&S.u&&S.u.username){
-        // DB empty (first login on new device) but cache valid — keep cache, re-sync to DB
-        syncUser()
-      } else {
-        // genuinely new user, no profile anywhere
-        S.u=null
-      }
-    }catch(e){
-      // network error — keep whatever cache says, don't wipe it
-      if(!sameUser)S.u=null
-    }
+      if(v&&v.username){S.u={name:v.name,username:v.username,bio:v.bio||'',avatar:v.avatar||'',grad:v.grad||GR[0]}}
+      else if(sameUser&&S.u&&S.u.username){syncUser()}
+      else{S.u=null}
+    }catch(e){if(!sameUser)S.u=null}
     pre={name:(S.u&&S.u.name)||u.displayName||'',avatar:(S.u&&S.u.avatar)||u.photoURL||''};
     startSubs();
     if(S.u){save();presence()}
@@ -230,11 +256,50 @@ function listV(){
  const rows=Object.entries(UC).sort((a,b)=>b[1].ts-a[1].ts).map(([id,c])=>{const u=CU[id]||{name:'Пользователь'};
  return `<button class="ch" data-p="${id}">${av(u,54,PR[id]===true)}<div class="t"><div class="l1"><b>${esc(u.name)}</b><span class="tm">${lt(c.ts)}</span></div><div class="l2"><span>${esc(c.last)}</span>${c.unread?`<i class="ub">${c.unread}</i>`:''}</div></div></button>`}).join('');
  return bar('menu',`<button id="sr">${ic('search')}</button>`)+`<div class="body">${rows||`<div class="empty">Чатов пока нет.<br>Нажмите на кнопку внизу и выберите собеседника.</div>`}</div><button class="fab" id="nw">${ic('pen')}</button>`}
+
+// ── Contacts: show ONLY real contacts (users I've chatted with) ──
+// Plus search any user by exact @username when query starts with @
 function contactsV(q=''){
- const rows=Object.entries(CU).filter(([k,u])=>k!=uid&&(u.name+' '+u.username).toLowerCase().includes(q.toLowerCase())).map(([id,u])=>`<button class="ch" data-p="${id}">${av(u,50,PR[id]===true)}<div class="t"><div class="l1"><b>${esc(u.name)}</b></div><div class="l2"><span>${status(id)} · @${esc(u.username)}</span></div></div></button>`).join('');
- return `<div class="hd"><button id="mn">${ic('back')}</button><input class="inp" id="q" placeholder="Поиск по имени или @username" value="${esc(q)}" style="margin:0;border:0;color:#fff;flex:1"></div><div class="body" id="cl">${rows||'<div class="empty">Никого не найдено</div>'}</div>`}
+ // People I've had chats with (excluding myself)
+ const myContacts=Object.keys(UC).filter(k=>k!==uid);
+ let rows='';
+ if(!q){
+   // No query → show my contacts only
+   if(myContacts.length===0){
+     rows=`<div class="empty">Нет контактов.<br>Начните новый чат, чтобы добавить контакты.</div>`;
+   } else {
+     rows=myContacts.map(id=>{
+       const u=CU[id]||{name:'Пользователь'};
+       return `<button class="ch" data-p="${id}">${av(u,50,PR[id]===true)}<div class="t"><div class="l1"><b>${esc(u.name)}</b></div><div class="l2"><span>${status(id)} · @${esc(u.username||'')}</span></div></div></button>`
+     }).join('');
+   }
+ } else {
+   // With query → search only by @username in ALL users, but contacts first
+   const ql=q.toLowerCase().replace(/^@/,'');
+   if(ql.length<2){
+     rows=`<div class="search-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="${P.search}"/></svg>Введите имя пользователя для поиска</div>`;
+   } else {
+     // Search all known users by username match
+     const found=Object.entries(CU).filter(([k,u])=>k!==uid&&(u.username||'').toLowerCase().includes(ql));
+     if(found.length===0){
+       rows=`<div class="search-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="${P.search}"/></svg>Пользователь «@${esc(ql)}» не найден</div>`;
+     } else {
+       rows=found.map(([id,u])=>`<button class="ch" data-p="${id}">${av(u,50,PR[id]===true)}<div class="t"><div class="l1"><b>${esc(u.name)}</b></div><div class="l2"><span>${status(id)} · @${esc(u.username||'')}</span></div></div></button>`).join('');
+     }
+   }
+ }
+ return `<div class="hd"><button id="mn">${ic('back')}</button><input class="inp" id="q" placeholder="Поиск по @username" value="${esc(q)}" style="margin:0;border:0;color:#fff;flex:1;caret-color:#fff"></div><div class="body" id="cl">${rows}</div>`}
+
 function meV(){const u=S.u,g=u.grad;
- return bar('back')+`<div class="body"><div class="hero" style="background:linear-gradient(160deg,${g[0]},${g[1]})">${av(u,96)}<h2 style="font-weight:500">${esc(u.name)}</h2><div style="opacity:.9">в сети</div></div>
+ return bar('back')+`<div class="body"><div class="hero">
+   <div class="hero-bg" style="background:linear-gradient(160deg,${g[0]},${g[1]});min-height:220px">
+     ${av(u,86)}
+     <div class="hero-info">
+       <h2>${esc(u.name)}</h2>
+       <div class="hsub">в сети</div>
+     </div>
+   </div>
+ </div>
  <div class="acts"><button id="bp">${ic('cam')}Выбрать фото</button><button id="be">${ic('pen')}Изменить</button><button id="bg">${ic('paint')}Фон</button></div>
  <div class="row"><div class="t">@${esc(u.username)}<div class="s">Имя пользователя</div></div></div><div class="row"><div class="t">${esc(u.bio||'Не указано')}<div class="s">О себе</div></div></div><input type="file" accept="image/*" id="fi" hidden></div>`}
 const toggle=(k,l,s)=>({type:'tg',k,l,s});
@@ -267,7 +332,7 @@ function chatView(){app._h=null;
  const u=CU[peer]||{name:'Пользователь'};
  app.innerHTML=`<div class="hd"><button id="bk">${ic('back')}</button><button id="ph" style="display:flex;align-items:center;gap:10px;flex:1;height:48px;width:auto;border-radius:8px;text-align:left;justify-content:flex-start">${av(u,40)}<div><div id="nm" style="font-weight:500"></div><small id="st" style="opacity:.8"></small></div></button></div>
  <div class="ml" id="ml" style="background:linear-gradient(160deg,${WALL[S.s.wall][0]},${WALL[S.s.wall][1]})"></div><div id="rp"></div>
- <div class="ib"><button id="at">${ic('attach')}</button><textarea id="ti" rows="1" placeholder="Сообщение"></textarea><button class="snd" id="sd">${ic('send')}</button></div><input type="file" accept="image/*" id="fi" hidden>`;
+ <div class="ib"><button id="at">${ic('attach')}</button><textarea id="ti" rows="1" placeholder="Сообщение"></textarea><div class="emoji-btn-wrap"><button class="emj" id="emjbtn" title="Эмодзи">😊</button></div><button class="snd" id="sd">${ic('send')}</button></div><input type="file" accept="image/*" id="fi" hidden>`;
  updHdr();drawMsgs(true);bindChat()}
 function updHdr(){const n=$('#nm');if(!n)return;n.textContent=(CU[peer]||{}).name||'Пользователь';$('#st').textContent=status(peer)}
 function drawMsgs(first){const ml=$('#ml');if(!ml)return;const near=first||ml.scrollHeight-ml.scrollTop-ml.clientHeight<140;let day='',h='';
@@ -288,38 +353,172 @@ function send(t,img){const m={from:uid,ts:SV()};if(t)m.t=t;if(img)m.img=img;if(r
  const last=img&&!t?'Фото':t;db.ref('messages/'+cid(peer)).push(m).catch(e=>toast('Ошибка: '+e.code));
  db.ref('userChats/'+uid+'/'+peer).update({last,ts:SV(),unread:0});db.ref('userChats/'+peer+'/'+uid).update({last,ts:SV(),unread:firebase.database.ServerValue.increment(1)});
  reply=null;$('#rp').innerHTML=''}
+
+// ── Context menu with proper fade-out animation ──
+function closeCxb(el, cb){
+ if(!el||el._closing)return;
+ el._closing=true;
+ el.classList.add('closing');
+ const rb=el.querySelector('.rbar'),mn=el.querySelector('.menu');
+ if(rb)rb.classList.add('closing');
+ if(mn)mn.classList.add('closing');
+ setTimeout(()=>{el.remove();if(cb)cb()},180)}
+
 function bindChat(){
- const ti=$('#ti'),sd=$('#sd'),go=()=>{const t=ti.value.trim();if(!t)return;send(t);ti.value='';ti.style.height='';sd.classList.remove('on')};
+ const ti=$('#ti'),sd=$('#sd'),go=()=>{const t=ti.value.trim();if(!t)return;send(t);ti.value='';ti.style.height='';sd.classList.remove('on');closeEmojiPicker()};
  ti.oninput=()=>{ti.style.height='auto';ti.style.height=ti.scrollHeight+'px';sd.classList.toggle('on',!!ti.value.trim())};
  ti.onkeydown=e=>{if(e.key=='Enter'&&S.s.enter&&!e.shiftKey){e.preventDefault();go()}};sd.onclick=go;
  $('#bk').onclick=back;$('#at').onclick=()=>$('#fi').click();$('#ph').onclick=()=>profSheet(peer);
  $('#fi').onchange=e=>resize(e.target.files[0],800,.72,d=>send('',d));
+
+ // Emoji picker button
+ const emjbtn=$('#emjbtn');
+ if(emjbtn)emjbtn.onclick=e=>{e.stopPropagation();toggleEmojiPicker(emjbtn,ti)};
+
  const ml=$('#ml');let tm_,sx,sy;
  ml.onpointerdown=e=>{const b=e.target.closest('.b');if(!b)return;sx=e.clientX;sy=e.clientY;tm_=setTimeout(()=>ctx(b),420)};
  ml.onpointermove=e=>{if(Math.abs(e.clientX-sx)+Math.abs(e.clientY-sy)>10)clearTimeout(tm_)};ml.onpointerup=ml.onpointercancel=()=>clearTimeout(tm_);
  ml.oncontextmenu=e=>{e.preventDefault();const b=e.target.closest('.b');if(b)ctx(b)};
  ml.ondblclick=e=>{const b=e.target.closest('.b');if(b)toggleRx(b.dataset.id,'heart')};
  ml.onclick=e=>{const r=e.target.closest('[data-rk]');if(r)toggleRx(r.closest('.b').dataset.id,r.dataset.rk)}}
+
 function toggleRx(id,k){const m=MS.find(x=>x.id==id);if(!m)return;if(S.s.vib&&navigator.vibrate)navigator.vibrate(12);const r=db.ref('messages/'+cid(peer)+'/'+id+'/rx/'+uid);(m.rx||{})[uid]==k?r.remove():r.set(k).catch(e=>toast('Ошибка: '+e.code))}
+
 function ctx(b){const m=MS.find(x=>x.id==b.dataset.id);if(!m)return;if(navigator.vibrate)navigator.vibrate(15);clearTimeout(0);
+ // Close any existing context menu first
+ const existing=$('.cxb');if(existing)existing.remove();
+
  const a=app.getBoundingClientRect(),r=b.getBoundingClientRect(),mt=Math.min(r.bottom-a.top+8,a.height-175),bt=Math.max(64,Math.min(r.top-a.top-54,mt-58)),x=Math.min(Math.max(r.left-a.left,8),a.width-300);
  const el=document.createElement('div');el.className='cxb';
  el.innerHTML=`<div class="rbar" style="left:${x}px;top:${bt}px">${Object.keys(RC).map(k=>`<button data-r="${k}">${rsvg(k)}</button>`).join('')}</div>
  <div class="menu" style="left:${x}px;top:${mt}px"><button data-a="re">${ic('reply')}Ответить</button>${m.t?`<button data-a="cp">${ic('copy')}Копировать</button>`:''}${m.from==uid?`<button data-a="del" style="color:#e5484d">${ic('trash')}Удалить</button>`:''}</div>`;
- app.append(el);el.onclick=e=>{const k=e.target.closest('[data-r]'),a=e.target.closest('[data-a]');
+ app.append(el);
+
+ el.onclick=e=>{
+  // Don't close if clicking reaction or action buttons — handle those first
+  const k=e.target.closest('[data-r]'),act=e.target.closest('[data-a]');
   if(k)toggleRx(m.id,k.dataset.r);
-  if(a){const t=a.dataset.a;if(t=='re'){reply=m;$('#rp').innerHTML=`<div class="rp"><div><b>${m.from==uid?'Вы':esc((CU[m.from]||{}).name)}</b><span>${esc(m.t||'Фото')}</span></div><button id="xr">${ic('close')}</button></div>`;$('#xr').onclick=()=>{reply=null;$('#rp').innerHTML=''};$('#ti').focus()}
+  if(act){
+   const t=act.dataset.a;
+   if(t=='re'){
+    closeCxb(el,()=>{
+     reply=m;
+     $('#rp').innerHTML=`<div class="rp"><div><b>${m.from==uid?'Вы':esc((CU[m.from]||{}).name)}</b><span>${esc(m.t||'Фото')}</span></div><button id="xr">${ic('close')}</button></div>`;
+     $('#xr').onclick=()=>{reply=null;$('#rp').innerHTML=''};$('#ti').focus()
+    });return
+   }
    if(t=='cp'){navigator.clipboard?.writeText(m.t);toast('Скопировано')}
-   if(t=='del')db.ref('messages/'+cid(peer)+'/'+m.id).remove()}
-  el.remove()}}
+   if(t=='del')db.ref('messages/'+cid(peer)+'/'+m.id).remove()
+  }
+  // Click on backdrop (not on rbar or menu) → close
+  if(!e.target.closest('.rbar')&&!e.target.closest('.menu')){
+   closeCxb(el);return
+  }
+  // After reaction or non-re action → close
+  if(k||act)closeCxb(el)
+ }
+}
+
 function resize(f,max,q,cb){if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',q))};im.src=r.result};r.readAsDataURL(f)}
-function profSheet(id){const u=CU[id]||{name:'Пользователь'},g=u.grad||GR[0],b=document.createElement('div');
- b.innerHTML=`<div class="sheet-bg"></div><div class="sheet" style="padding:0"><div class="hero" style="background:linear-gradient(160deg,${g[0]},${g[1]})">${av(u,84)}<h2 style="font-weight:500">${esc(u.name)}</h2><div style="opacity:.9">${status(id)}</div></div>
- <div class="row"><div class="t">@${esc(u.username||'')}<div class="s">Имя пользователя</div></div></div><div class="row"><div class="t">${esc(u.bio||'Не указано')}<div class="s">О себе</div></div></div></div>`;app.append(b);b.firstChild.onclick=()=>b.remove()}
+
+// ── Telegram-style profile sheet ──
+function profSheet(id){
+ const u=CU[id]||{name:'Пользователь'},g=u.grad||GR[Math.abs(hash((u.name||'?')))%GR.length];
+ const b=document.createElement('div');
+ b.innerHTML=`<div class="sheet-bg"></div><div class="sheet" style="padding:0;overflow:hidden">
+   <div class="psheet-hero">
+     <div class="psheet-bg" style="background:linear-gradient(160deg,${g[0]},${g[1]});min-height:200px">
+       <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">${av(u,90)}</div>
+       <div class="psheet-info" style="position:relative;z-index:2">
+         <h2>${esc(u.name)}</h2>
+         <div class="st">${status(id)}</div>
+       </div>
+     </div>
+   </div>
+   <div class="row"><div class="t">@${esc(u.username||'')}<div class="s">Имя пользователя</div></div></div>
+   <div class="row"><div class="t">${esc(u.bio||'Не указано')}<div class="s">О себе</div></div></div>
+   <button class="pri" style="margin:0 16px 20px;width:calc(100% - 32px)" onclick="this.closest('.sheet').previousSibling.click()">Написать сообщение</button>
+ </div>`;
+ app.append(b);b.firstChild.onclick=()=>b.remove()}
+
+// ── Emoji Picker ──
+const EMOJI_DATA=[
+ {cat:'😀 Смайлы',emojis:['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🫢','🫣','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😶‍🌫️','😏','😒','🙄','😬','🤥','🫨','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','😵‍💫','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','🫤','😟','🙁','☹️','😮','😯','😲','😳','🥺','🫹','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖']},
+ {cat:'👋 Жесты',emojis:['👋','🤚','🖐️','✋','🖖','🫱','🫲','🫳','🫴','🫷','🫸','👌','🤌','🤏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','🫵','👍','👎','✊','👊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦵','🦶','👂','🦻','👃','🫀','🫁','🧠','🦷','🦴','👀','👁️','👅','👄','🫦','💋']},
+ {cat:'❤️ Сердца',emojis:['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','❤️‍🔥','❤️‍🩹','💔','💕','💞','💓','💗','💖','💘','💝','💟','♥️','🫀','💌','💑','💏']},
+ {cat:'🐶 Животные',emojis:['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🐤','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🦟','🦗','🕷️','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🦣','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🦬','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐕‍🦺','🐈','🐈‍⬛','🪶','🐓','🦃','🦤','🦚','🦜','🦢','🦩','🕊️','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿️','🦔']},
+ {cat:'🍔 Еда',emojis:['🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶️','🫑','🥕','🧄','🧅','🥔','🍠','🫚','🫛','🥐','🥯','🍞','🥖','🥨','🧀','🥚','🍳','🧈','🥞','🧇','🥓','🥩','🍗','🍖','🌭','🍔','🍟','🍕','🫓','🥪','🥙','🧆','🌮','🌯','🫔','🥗','🥘','🫕','🥫','🍝','🍜','🍲','🍛','🍣','🍱','🥟','🦪','🍤','🍙','🍚','🍘','🍥','🥮','🍢','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪','🌰','🥜','🍯','🍺','🍻','🥂','🍷','🫗','🥃','🍸','🍹','🧉','🍾','🧃','🥤','🧋','☕','🍵','🫖','🍶','🍼','🥛','🫗','🧊','🥢','🍽️','🍴','🥄','🔪','🫙']},
+ {cat:'⚽ Спорт',emojis:['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','⛷️','🏂','🪂','🏋️','🤸','🤺','🤼','🤾','🤽','🏊','🏄','🧗','🚵','🚴','🏇','🤾','⛹️','🏌️','🧘','🏄','🤽','🚣','🧜','🏊','🚴','🏋️','🤼']},
+ {cat:'✈️ Путешествия',emojis:['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🏍️','🛵','🛺','🚲','🛴','🛹','🛼','🚏','🛣️','🛤️','⛽','🚨','🚥','🚦','🛑','🚧','⚓','🛟','⛵','🚤','🛥️','🛳️','⛴️','🚢','✈️','🛩️','🛫','🛬','🪂','💺','🚁','🚟','🚠','🚡','🛰️','🚀','🛸','🎡','🎢','🎠','🏗️','🌁','🏘️','🏚️','🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏬','🏭','🏯','🏰','💒','🗼','🗽','⛪','🕌','🛕','🕍','⛩️','🕋','⛲','⛺','🌃','🌄','🌅','🌆','🌇','🌉','🌌','🎇','🎆','🗺️','🧭','🏔️','⛰️','🌋','🗻','🏕️','🏖️','🏜️','🏝️','🏞️']},
+ {cat:'💡 Объекты',emojis:['⌚','📱','📲','💻','⌨️','🖥️','🖨️','🖱️','🖲️','💽','💾','💿','📀','🧮','📷','📸','📹','🎥','📽️','🎞️','📞','☎️','📟','📠','📺','📻','🧭','⏱️','⏲️','⏰','🕰️','⌛','⏳','📡','🔋','🔌','💡','🔦','🕯️','🪔','🧯','🛢️','💰','💴','💵','💶','💷','💸','💳','🪙','💹','📈','📉','📊','📋','📌','📍','📎','🖇️','📏','📐','✂️','🗃️','🗄️','🗑️','🔒','🔓','🔏','🔐','🔑','🗝️','🔨','🪓','⛏️','⚒️','🛠️','🗡️','⚔️','🔫','🪃','🏹','🛡️','🪚','🔧','🪛','🔩','⚙️','🗜️','⚖️','🦯','🔗','⛓️','🪝','🧲','🪜','⚗️','🔭','🔬','🩺','💊','🩹','🩻','🩼','🧬','🦠','🧪','🧫','🧲']},
+ {cat:'🎉 Праздник',emojis:['🎃','🎄','🎆','🎇','🧨','✨','🎉','🎊','🎋','🎍','🎎','🎏','🎐','🎑','🧧','🎁','🎗️','🎟️','🎫','🎖️','🏆','🥇','🥈','🥉','🏅','🎀','🎈','🎏','🎃','🪅','🪩','🎭','🎨','🖼️','🎪','🎬','🎤','🎧','🎼','🎵','🎶','🎹','🥁','🪘','🎷','🎺','🎸','🪕','🎻','🪗','🎲','♟️','🎯','🎳','🎮','🎰','🧩','🪄']}
+];
+
+let recentEmojis=[];
+try{recentEmojis=JSON.parse(localStorage.getItem('yg_emoji')||'[]')}catch(e){}
+let epState={tab:0,search:''};
+
+function closeEmojiPicker(){const ep=$('.ep');if(ep)ep.remove()}
+
+function toggleEmojiPicker(btn,ti){
+ if($('.ep')){closeEmojiPicker();return}
+ const ep=document.createElement('div');ep.className='ep';
+ renderEmojiPicker(ep,ti);
+ // position near button
+ const wrap=btn.closest('.emoji-btn-wrap')||btn.parentElement;
+ wrap.style.position='relative';
+ wrap.append(ep);
+ // close on outside click
+ setTimeout(()=>document.addEventListener('pointerdown',function _(e){if(!ep.contains(e.target)&&e.target!==btn){closeEmojiPicker();document.removeEventListener('pointerdown',_)}},true),50)
+}
+
+function renderEmojiPicker(ep,ti){
+ const cats=EMOJI_DATA;
+ const recent=recentEmojis.length?`<div class="recent-bar">${recentEmojis.slice(0,20).map(e=>`<button class="erecent" data-e="${e}">${e}</button>`).join('')}</div>`:'';
+ const tabs=cats.map((c,i)=>`<button class="ep-tab${epState.tab===i?' on':''}" data-ti="${i}">${c.cat.split(' ')[0]}</button>`).join('');
+ let grid='';
+ if(epState.search){
+  const q=epState.search.toLowerCase();
+  const found=cats.flatMap(c=>c.emojis).filter(e=>e.toLowerCase().includes(q));
+  grid=found.map(e=>`<button class="eitem" data-e="${e}">${e}</button>`).join('');
+ } else {
+  const c=cats[epState.tab];
+  grid=c.emojis.map(e=>`<button class="eitem" data-e="${e}">${e}</button>`).join('');
+ }
+ ep.innerHTML=`
+  ${recent}
+  <div class="ep-tabs">${tabs}</div>
+  <div class="ep-search"><input id="esrch" placeholder="🔍 Поиск эмодзи" value="${esc(epState.search)}"></div>
+  <div class="ep-grid">${grid||'<div style="padding:16px;color:var(--sub);grid-column:1/-1;text-align:center">Не найдено</div>'}</div>
+ `;
+ // bind
+ ep.querySelector('#esrch').oninput=e=>{epState.search=e.target.value;renderEmojiPicker(ep,ti)};
+ ep.querySelectorAll('.ep-tab').forEach(b=>b.onclick=e=>{epState.tab=+b.dataset.ti;epState.search='';renderEmojiPicker(ep,ti)});
+ ep.querySelectorAll('.eitem,.erecent').forEach(b=>b.onclick=()=>{
+  const em=b.dataset.e;
+  insertEmoji(ti,em);
+  // track recent
+  recentEmojis=recentEmojis.filter(x=>x!==em);
+  recentEmojis.unshift(em);
+  if(recentEmojis.length>24)recentEmojis=recentEmojis.slice(0,24);
+  try{localStorage.setItem('yg_emoji',JSON.stringify(recentEmojis))}catch(e){}
+  renderEmojiPicker(ep,ti)
+ })
+}
+
+function insertEmoji(ti,em){
+ const start=ti.selectionStart,end=ti.selectionEnd,v=ti.value;
+ ti.value=v.slice(0,start)+em+v.slice(end);
+ ti.selectionStart=ti.selectionEnd=start+em.length;
+ ti.dispatchEvent(new Event('input'));ti.focus()
+}
+
+// ---------- profile sheet ──
+function profSheet2(id){profSheet(id)}
 
 // ---------- bindings / nav ----------
 function go(v){if(view=='chat')closeChat();view=v;sub=null;render()}
-function back(){if($('.sheet-bg')){$('.sheet-bg').click();return}if($('.dr-bg')){$('.dr-bg').click();return}if($('.cxb')){$('.cxb').remove();return}
+function back(){if($('.sheet-bg')){$('.sheet-bg').click();return}if($('.dr-bg')){$('.dr-bg').click();return}if($('.cxb')){closeCxb($('.cxb'));return}
  if(view=='settings'&&sub){sub=null;render();return}if(view!='list')go('list')}
 function drawer(){const u=S.u,g=u.grad,b=document.createElement('div');
  b.innerHTML=`<div class="dr-bg"></div><div class="dr" style="--c1:${g[0]};--c2:${g[1]}"><div class="top">${av(u,64)}<b>${esc(u.name)}</b><small>@${esc(u.username)}</small></div>
@@ -331,7 +530,17 @@ function bind(){
  const mn=$('#mn');if(mn)mn.onclick=()=>view=='list'?drawer():back();
  document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>openChat(b.dataset.p));
  if($('#sr'))$('#sr').onclick=()=>go('contacts');if($('#nw'))$('#nw').onclick=()=>go('contacts');
- if($('#q')){$('#q').focus();$('#q').oninput=e=>{const t=document.createElement('div');t.innerHTML=contactsV(e.target.value);$('#cl').innerHTML=t.querySelector('#cl').innerHTML;document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>openChat(b.dataset.p))}}
+ if($('#q')){
+   const qi=$('#q');
+   qi.focus();
+   qi.oninput=e=>{
+     const t=document.createElement('div');
+     t.innerHTML=contactsV(e.target.value);
+     const cl=t.querySelector('#cl');
+     if(cl)$('#cl').innerHTML=cl.innerHTML;
+     document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>openChat(b.dataset.p))
+   }
+ }
  if(view=='me')bindMe();if(view=='settings')bindSet()}
 function bindMe(){
  $('#bp').onclick=()=>$('#fi').click();$('#fi').onchange=e=>resize(e.target.files[0],256,.85,d=>{S.u.avatar=d;save();render();toast('Фото обновлено')});
@@ -339,12 +548,11 @@ function bindMe(){
  $('#bg').onclick=()=>{const b=document.createElement('div');let c=[...S.u.grad];
   b.innerHTML=`<div class="sheet-bg"></div><div class="sheet"><b>Фон профиля</b><div class="sw">${GR.map((g,i)=>`<button data-g="${i}" class="${g[0]==c[0]&&g[1]==c[1]?'on':''}" style="background:linear-gradient(135deg,${g[0]},${g[1]})"></button>`).join('')}</div>
   <label class="f">Свой градиент</label><div style="display:flex;gap:10px"><input type="color" id="c1" value="${c[0]}" style="flex:1;height:44px;border:0;background:none"><input type="color" id="c2" value="${c[1]}" style="flex:1;height:44px;border:0;background:none"></div><button class="pri" id="ok">Готово</button></div>`;app.append(b);
-  const up=()=>{S.u.grad=c;save();$('.hero').style.background=`linear-gradient(160deg,${c[0]},${c[1]})`};
+  const up=()=>{S.u.grad=c;save();$('.hero-bg')&&($('.hero-bg').style.background=`linear-gradient(160deg,${c[0]},${c[1]})`)};
   b.querySelector('.sw').onclick=e=>{const i=e.target.dataset.g;if(i==null)return;c=[...GR[i]];$('#c1').value=c[0];$('#c2').value=c[1];b.querySelectorAll('.sw button').forEach(x=>x.classList.toggle('on',x==e.target));up()};
   $('#c1').oninput=e=>{c[0]=e.target.value;up()};$('#c2').oninput=e=>{c[1]=e.target.value;up()};$('#ok').onclick=b.firstChild.onclick=()=>b.remove()}}
 function bindSet(){const un=$('#un');if(un){const b=$('#unb');watchUn(un,$('#uns'),S.u.username,ok=>b.style.display=ok?'block':'none');
  b.onclick=async()=>{const n=un.value.trim();b.disabled=true;try{if(!(await claim(n)))throw 0;const old=S.u.username;S.u.username=n;if(old.toLowerCase()!=n.toLowerCase())db.ref('usernames/'+old.toLowerCase()).remove();save();toast('Имя пользователя изменено');b.style.display='none'}catch(e){toast('Не удалось: имя занято')}b.disabled=false}}
-
  document.querySelectorAll('[data-sub]').forEach(b=>b.onclick=()=>{sub=b.dataset.sub;render()});if($('#pf'))$('#pf').onclick=()=>{view='me';render()};
  document.querySelectorAll('[data-tg]').forEach(b=>b.onclick=()=>{const k=b.dataset.tg;sv(k,S.s[k]?0:1);if(k=='seen')presence();b.querySelector('.tg').classList.toggle('on')});
  document.querySelectorAll('[data-tx]').forEach(i=>i.onchange=()=>{const v=i.value.trim(),k=i.dataset.tx;
@@ -362,6 +570,5 @@ document.addEventListener('pointerdown',e=>{const t=e.target.closest('button,.ro
 history.pushState({},'');addEventListener('popstate',()=>{const c=$('.sheet-bg,.dr-bg,.cxb')||view!='list'||sub;if(c){history.pushState({},'');back()}else history.back()});document.addEventListener('visibilitychange',markRead);
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 initCloud();
-// render immediately from cache if available — Firebase auth confirms in bg
 if(bootFromCache)render();
 </script></body></html>
