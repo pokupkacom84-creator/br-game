@@ -170,6 +170,28 @@ svg{width:24px;height:24px;fill:currentColor;flex:none}
 [hidden]{display:none!important}
 .msgs.na .b{animation:none}#mb{cursor:pointer;border:0}
 .col{display:flex;flex-direction:column;gap:8px}
+
+/* ===== настройки / динамические цвета ===== */
+.navav{width:28px;height:28px;border-radius:50%;background:var(--tc) center/cover;color:var(--ontc);display:grid;place-items:center;font-size:13px;font-weight:800;transition:box-shadow .3s}
+.nav button.on .navav{box-shadow:0 0 0 2px var(--p)}
+.b{font-size:calc(16px*var(--fs,1))}
+.field textarea{font-size:calc(16px*var(--fs,1))}
+html.noanim *{animation:none!important;transition:none!important}
+html.cmp .row{padding:6px 12px}html.cmp .row .av{width:44px;height:44px;font-size:18px}
+#pset{z-index:2}
+.shd{display:flex;align-items:center;gap:8px;margin:0 0 8px -8px}.shd .ph{padding:0}
+.sh2{font-size:14px;font-weight:700;color:var(--p);padding:20px 8px 8px}
+.seg{display:flex;gap:4px;background:var(--surf3);border-radius:22px;padding:4px;margin-bottom:4px}
+.seg button{flex:1;height:40px;border-radius:18px;font-size:14px;font-weight:500;color:var(--onv);transition:all .25s}
+.seg button.on{background:var(--p);color:var(--onp);font-weight:700}
+.swg{display:flex;flex-wrap:wrap;gap:12px;padding:14px 8px 6px}
+.swc{width:48px;height:48px;border-radius:50%;border:0;display:grid;place-items:center;color:#fff;font-size:20px;font-weight:700;position:relative;background-size:cover;background-position:center;transition:transform .25s cubic-bezier(.3,1.6,.5,1),box-shadow .2s}
+.swc.on{box-shadow:0 0 0 3px var(--bg),0 0 0 6px var(--p);transform:scale(.92)}
+.swc input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.pvw{display:flex;flex-direction:column;gap:4px;padding:14px;border-radius:24px;background:var(--bg);border:1px solid var(--out);margin:8px 0}
+.pvw .b{animation:none}
+.set small.wr{white-space:normal;max-width:none}
+.dis{opacity:.45;pointer-events:none}
 </style>
 </head>
 <body>
@@ -189,12 +211,36 @@ svg{width:24px;height:24px;fill:currentColor;flex:none}
 <button class="set press" id="rAbout"><span>О себе<small id="pab"></small></span><span>✎</span></button>
 <button class="set press" id="rUn"><span>Ник и @username</span><span>✎</span></button>
 <button class="set press" id="rAcc"><span>Почта и аккаунт<small id="pem"></small></span><span>›</span></button>
-<button class="set press" id="swT"><span>Тёмная тема</span><span class="sw" id="sw"><i></i></span></button>
-<button class="set press" id="sNot"><span>Уведомления</span><span class="sw" id="sNotSw"><i></i></span></button>
-<button class="set press" id="sSnd"><span>Звуки сообщений</span><span class="sw" id="sSndSw"><i></i></span></button>
+<button class="set press" id="sOpen"><span>Настройки<small>Тема, цвета, уведомления, внешний вид</small></span><span>›</span></button>
 <button class="set press" id="logout"><span>Выйти из аккаунта</span><span>↪</span></button></div>
 <div class="prof" id="pcalls"><div class="ph">Звонки</div><div id="clist"></div></div>
 <div class="prof" id="pcont"><div class="ph">Контакты</div><button class="set press" id="newG"><span>👥 Новая группа</span><span>＋</span></button><div id="ctl"></div></div>
+<div class="prof" id="pset">
+<div class="shd"><button class="icon-btn press" id="psetBack" aria-label="Назад"><svg viewBox="0 -960 960 960"><path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"/></svg></button><div class="ph">Настройки</div></div>
+
+<div class="sh2">Тема</div>
+<div class="seg" id="segMode"><button data-m="system">Системная</button><button data-m="light">Светлая</button><button data-m="dark">Тёмная</button></div>
+
+<div class="sh2">Цвета</div>
+<button class="set press" id="sDyn"><span>Динамические цвета<small class="wr">Палитра приложения подстраивается под выбранный цвет</small></span><span class="sw" id="sDynSw"><i></i></span></button>
+<div id="dynBox">
+<div class="swg" id="swg"></div>
+</div>
+<div class="pvw" id="pvw"><div class="b in">Привет! Так выглядят сообщения 👋<span class="t">12:30</span></div><div class="b out">Выглядит отлично!<span class="t">12:31</span></div></div>
+
+<div class="sh2">Внешний вид</div>
+<div style="padding:0 4px 4px;font-size:14px;color:var(--onv)">Размер текста в чатах</div>
+<div class="seg" id="segFs"><button data-f="0.9">Мелкий</button><button data-f="1">Обычный</button><button data-f="1.12">Крупный</button><button data-f="1.25">Огромный</button></div>
+<button class="set press" id="sCmp"><span>Компактный список чатов<small class="wr">Уменьшает отступы и аватарки в списке</small></span><span class="sw" id="sCmpSw"><i></i></span></button>
+<button class="set press" id="sAnim"><span>Анимации<small class="wr">Плавные переходы и эффекты</small></span><span class="sw" id="sAnimSw"><i></i></span></button>
+
+<div class="sh2">Уведомления и звук</div>
+<button class="set press" id="sNot"><span>Уведомления</span><span class="sw" id="sNotSw"><i></i></span></button>
+<button class="set press" id="sSnd"><span>Звуки сообщений</span><span class="sw" id="sSndSw"><i></i></span></button>
+
+<div class="sh2">Прочее</div>
+<button class="set press" id="sReset"><span>Сбросить настройки внешнего вида</span><span>↺</span></button>
+</div>
 <nav class="nav" id="nav"></nav>
   </section>
 
@@ -295,13 +341,15 @@ function renderList(){
    :`<div class="empty">${chats.length?'Ничего не найдено':'Чатов пока нет.<br>Нажмите «Написать» и найдите друга по @username'}</div>`;
   renderNav();
 }
+const esc0=t=>String(t||'?').trim().charAt(0).toUpperCase().replace(/[<>&"']/g,'');
 function renderNav(){renderContacts();$('#s1').textContent=chats.length;$('#s2').textContent=chats.filter(c=>c.g).length;$('#s3').textContent=chats.filter(c=>c.pin).length;
   const tot=chats.reduce((s,c)=>s+(c.mute||c.arch?0:c.un),0);
   const it=[['Чаты','M240-400h480v-80H240v80Zm0-120h480v-80H240v80Zm0-120h480v-80H240v80ZM880-80 720-240H160q-33 0-56.500-23.500T80-320v-480q0-33 23.500-56.500T160-880h640q33 0 56.500 23.500T880-800v720Z'],
    ['Звонки','M798-120q-125 0-247-54.500T329-329Q229-429 174.500-551T120-798q0-18 12-30t30-12h162q14 0 25 9.500t13 22.500l26 140q2 16-1 27t-11 19l-97 98q20 37 47.500 71.500T387-386q31 31 65 57.500t72 48.500l94-94q9-9 23.500-13.500T670-390l138 28q14 4 23 14.500t9 23.500v162q0 18-12 30t-30 12Z'],
    ['Контакты','M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.500-62.500T224-378q62-31 126-46.500T480-440q66 0 130 15.500T736-378q29 15 46.500 43.500T800-272v112H160Z'],
    ['Профиль','M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.500-62.500T224-378q62-31 126-46.500T480-440q66 0 130 15.500T736-378q29 15 46.500 43.500T800-272v112H160Z']];
-  $('#nav').innerHTML=it.map(([l,d],i)=>`<button class="press ${tab===i?'on':''}" data-t="${i}"><span class="pill"><svg viewBox="0 -960 960 960"><path d="${d}"/></svg></span>${l}${i===0&&tot?`<span class="dot">${tot}</span>`:''}</button>`).join('');
+  const mp=window.myProf;
+  $('#nav').innerHTML=it.map(([l,d],i)=>`<button class="press ${tab===i?'on':''}" data-t="${i}"><span class="pill">${i===3&&mp?`<i class="navav" style="${mp.av?`background-image:url(${mp.av})`:''}">${mp.av?'':esc0(mp.n)}</i>`:`<svg viewBox="0 -960 960 960"><path d="${d}"/></svg>`}</span>${l}${i===0&&tot?`<span class="dot">${tot}</span>`:''}</button>`).join('');
 }
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),1800)}
 
@@ -340,8 +388,9 @@ function voice(m){let h='';for(let k=0;k<26;k++)h+=`<i style="height:${m.w?(4+(+
 return `<div class="vm"><button class="play"><svg viewBox="0 -960 960 960"><path d="M320-200v-560l440 280-440 280Z"/></svg></button><div class="wave">${h}</div><span style="font-size:12px">${fmt(m.v)}</span></div>`}
 const S=(()=>{try{return JSON.parse(localStorage.getItem('settings'))||{}}catch(e){return{}}})();
 if(S.n===undefined)S.n=true;if(S.s===undefined)S.s=false;
+if(!S.mode)S.mode='system';if(S.dyn===undefined)S.dyn=false;if(!S.seed)S.seed='#6750a4';if(!S.src)S.src='preset';if(S.fs===undefined)S.fs=1;if(S.anim===undefined)S.anim=true;if(S.cmp===undefined)S.cmp=false;
 function saveS(){try{localStorage.setItem('settings',JSON.stringify(S))}catch(e){}}
-function syncS(){$('#sNotSw').classList.toggle('on',!!S.n);$('#sSndSw').classList.toggle('on',!!S.s)}
+function syncS(){if(typeof syncSet==='function')syncSet()}
 function askNotif(){const off=m=>{S.n=false;saveS();syncS();toast(m)};
   if(window.Android&&Android.showNotification)return;
   if(!('Notification' in window))return off('Уведомления не поддерживаются');
@@ -430,8 +479,47 @@ if(a==='d'){window.fb&&m.k&&fb.del(m);return}
 if(window.fb&&m.k){fb.react(m,b.textContent);return}
 m.r=m.r===b.textContent?undefined:b.textContent;bEl.outerHTML=bubble(m,cur)};
 $('#app').appendChild(p)}
-const isDark=()=>getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()==='#141218';
-function syncSw(){$('#sw').classList.toggle('on',isDark())}
+const mqD=matchMedia('(prefers-color-scheme: dark)');
+const effDark=()=>S.mode==='dark'||(S.mode!=='light'&&mqD.matches);
+const isDark=effDark;
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+function hex2hsl(h){h=h.replace('#','');const r=parseInt(h.substr(0,2),16)/255,g=parseInt(h.substr(2,2),16)/255,b=parseInt(h.substr(4,2),16)/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,d=mx-mn;let H=0,Sx=0;
+  if(d){Sx=d/(1-Math.abs(2*l-1));H=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4;H=(H*60+360)%360}return[H,Sx*100,l*100]}
+function hsl2hex(h,s,l){h=((h%360)+360)%360;s=clamp(s,0,100)/100;l=clamp(l,0,100)/100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+  return'#'+[f(0),f(8),f(4)].map(x=>Math.round(x*255).toString(16).padStart(2,'0')).join('')}
+const PKEYS=['--bg','--surf','--surf2','--surf3','--surf4','--on','--onv','--out','--p','--onp','--pc','--onpc','--sc','--onsc','--tc','--ontc'];
+function palette(seed,dark){const[h,s0]=hex2hsl(seed),s=clamp(s0,35,90),n=Math.min(s*.2,16),nv=Math.min(s*.3,22),h3=(h+50)%360,T=hsl2hex;
+  return dark?{'--bg':T(h,n,7),'--surf':T(h,n,10),'--surf2':T(h,n,12),'--surf3':T(h,n,16),'--surf4':T(h,n,21),
+    '--on':T(h,n,90),'--onv':T(h,nv,80),'--out':T(h,nv,30),'--p':T(h,s,80),'--onp':T(h,s,20),'--pc':T(h,s,30),'--onpc':T(h,s,90),
+    '--sc':T(h,s*.35,30),'--onsc':T(h,s*.35,90),'--tc':T(h3,s*.5,30),'--ontc':T(h3,s*.5,90)}
+  :{'--bg':T(h,n*1.6,98),'--surf':T(h,n*1.5,96),'--surf2':T(h,n*1.5,95),'--surf3':T(h,n*1.4,93),'--surf4':T(h,n*1.3,90),
+    '--on':T(h,n,10),'--onv':T(h,nv,30),'--out':T(h,nv,78),'--p':T(h,s,40),'--onp':'#ffffff','--pc':T(h,Math.min(s*1.1,100),90),'--onpc':T(h,s,10),
+    '--sc':T(h,s*.4,90),'--onsc':T(h,s*.4,10),'--tc':T(h3,s*.8,90),'--ontc':T(h3,s*.8,12)}}
+function applyTheme(){const d=document.documentElement;
+  if(S.mode==='system')delete d.dataset.theme;else d.dataset.theme=S.mode;
+  if(S.dyn&&S.seed){const p=palette(S.seed,effDark());for(const k in p)d.style.setProperty(k,p[k])}else PKEYS.forEach(k=>d.style.removeProperty(k));
+  d.style.setProperty('--fs',S.fs);d.classList.toggle('noanim',!S.anim);d.classList.toggle('cmp',!!S.cmp);
+  const m=document.querySelector('meta[name=theme-color]');if(m)m.content=getComputedStyle(d).getPropertyValue('--bg').trim()||'#fef7ff';
+  syncSet()}
+mqD.addEventListener&&mqD.addEventListener('change',()=>{if(S.mode==='system')applyTheme()});
+const PRESETS=['#6750a4','#005ac1','#006a6a','#386a20','#8b5000','#984061','#ba1a1a','#5c5f00'];
+function renderSw(){const g=$('#swg');if(!g)return;const av=window.myProf&&window.myProf.av,cur=(S.seed||'').toLowerCase();
+  g.innerHTML=PRESETS.map(c=>`<button class="swc ${S.src==='preset'&&cur===c?'on':''}" data-c="${c}" style="background:${c}">${S.src==='preset'&&cur===c?'✓':''}</button>`).join('')
+  +`<button class="swc ${S.src==='avatar'?'on':''}" data-av="1" title="Из аватарки" style="${av?`background-image:url(${av})`:'background:var(--surf4);color:var(--on)'}">${av?'':'👤'}</button>`
+  +`<label class="swc ${S.src==='custom'?'on':''}" title="Свой цвет" style="background:conic-gradient(#f44,#fc4,#4f4,#4ff,#44f,#f4f,#f44)"><input type="color" id="swCustom" value="${S.seed||'#6750a4'}"></label>`}
+function syncSet(){const on=(id,v)=>{const e=$(id);e&&e.classList.toggle('on',!!v)};
+  on('#sNotSw',S.n);on('#sSndSw',S.s);on('#sDynSw',S.dyn);on('#sCmpSw',S.cmp);on('#sAnimSw',S.anim);
+  document.querySelectorAll('#segMode button').forEach(b=>b.classList.toggle('on',b.dataset.m===S.mode));
+  document.querySelectorAll('#segFs button').forEach(b=>b.classList.toggle('on',+b.dataset.f===+S.fs));
+  const bx=$('#dynBox'),pv=$('#pvw');if(bx)bx.classList.toggle('dis',!S.dyn);if(!document.activeElement||document.activeElement.id!=='swCustom')renderSw()}
+function syncSw(){syncSet()}
+function avSeed(url){return new Promise(res=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=32;const x=c.getContext('2d');x.drawImage(im,0,0,32,32);
+  const px=x.getImageData(0,0,32,32).data;let R=0,G=0,B=0,W=0,r2=0,g2=0,b2=0;
+  for(let i=0;i<px.length;i+=4){const r=px[i],g=px[i+1],b=px[i+2],mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/510,sat=mx===mn?0:(mx-mn)/(255-Math.abs(mx+mn-255));
+    r2+=r;g2+=g;b2+=b;if(l>.15&&l<.85){const w=sat*sat+.001;R+=r*w;G+=g*w;B+=b*w;W+=w}}
+  const n=px.length/4;let r=W>.05?R/W:r2/n,g=W>.05?G/W:g2/n,b=W>.05?B/W:b2/n;
+  res('#'+[r,g,b].map(v=>Math.round(v).toString(16).padStart(2,'0')).join(''))};im.onerror=()=>res(null);im.src=url})}
+window.onMeAv=()=>{renderSw();if(S.src==='avatar'&&window.myProf&&window.myProf.av)avSeed(window.myProf.av).then(c=>{if(c&&c!==S.seed){S.seed=c;saveS();applyTheme()}})};
 function sync(){const i=$('#inp');i.style.height='24px';i.style.height=Math.min(i.scrollHeight,96)+'px';$('#send').classList.toggle('has',!!i.value.trim()||!!rec)}
 
 $('#rows').onclick=e=>{const r=e.target.closest('.row');if(r&&!lpF)openChat(r.dataset.id)};
@@ -443,9 +531,8 @@ $('#back').onclick=closeChat;
 $('#send').onclick=send;
 $('#inp').oninput=()=>{sync();if(window.fb&&$('#inp').value.trim())fb.typing()};
 $('#fab').onclick=()=>window.fb?fb.dlg():toast('Войдите в аккаунт');
-$('#themeBtn').onclick=()=>{const d=document.documentElement,dark=getComputedStyle(d).getPropertyValue('--bg').trim()==='#141218';
-  d.dataset.theme=dark?'light':'dark';syncSw()};
-renderChips();renderList();syncSw();syncS();
+$('#themeBtn').onclick=()=>{S.mode=effDark()?'light':'dark';saveS();applyTheme()};
+applyTheme();renderChips();renderList();
 $('#msgs').onscroll=()=>{if(window.fb&&$('#msgs').scrollTop<80)fb.older()};
 $('#sh').onclick=e=>{const b=e.target.closest('button[data-k]'),id=$('#sh').dataset.id;$('#sh').hidden=true;if(!b)return;const c=chats.find(x=>x.id==id);if(!c||!window.fb)return;const k=b.dataset.k;
   if(k==='d'){if(confirm('Удалить чат? История очистится только у вас.')){fb.pref(id,'d',1);toast('Чат удалён')}return}
@@ -461,9 +548,25 @@ $('#msgs').onclick=e=>{if(lpF)return;if(e.target.closest('#mb')){window.fb&&fb.o
 $('#msgs').ondblclick=e=>{const b=e.target.closest('.b');if(!b)return;const m=cur.m[+b.dataset.i];if(window.fb&&m.k){fb.react(m,'❤️');return}m.r=m.r==='❤️'?undefined:'❤️';b.outerHTML=bubble(m,cur)};
 $('#rc').onclick=()=>rec&&stopRec(0);
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('#pk'))hidePicker()});
-$('#prof').onclick=e=>{const b=e.target.closest('.set');if(!b)return;
-  if(b.id==='swT')$('#themeBtn').click();
-  else if(b.id==='sNot'||b.id==='sSnd'){const k=b.id==='sNot'?'n':'s';S[k]=!S[k];saveS();syncS();if(k==='n'){if(S.n)askNotif();else window.pushOff&&pushOff()}if(k==='s'&&S.s)beep()}};
+$('#prof').addEventListener('click',e=>{if(e.target.closest('#sOpen'))$('#pset').classList.add('show')});
+$('#psetBack').onclick=()=>$('#pset').classList.remove('show');
+$('#nav').addEventListener('click',()=>$('#pset').classList.remove('show'));
+$('#pset').onclick=e=>{
+  const m=e.target.closest('#segMode button');if(m){S.mode=m.dataset.m;saveS();applyTheme();return}
+  const f=e.target.closest('#segFs button');if(f){S.fs=+f.dataset.f;saveS();applyTheme();return}
+  const sw=e.target.closest('.swc');
+  if(sw){if(sw.tagName==='LABEL')return;
+    if(sw.dataset.av){const a=window.myProf&&window.myProf.av;if(!a)return toast('Сначала загрузите аватарку в профиле');
+      avSeed(a).then(c=>{if(!c)return toast('Не удалось определить цвет');S.seed=c;S.src='avatar';S.dyn=true;saveS();applyTheme()});return}
+    S.seed=sw.dataset.c;S.src='preset';S.dyn=true;saveS();applyTheme();return}
+  const b=e.target.closest('.set');if(!b)return;
+  if(b.id==='sDyn'){S.dyn=!S.dyn;saveS();applyTheme()}
+  else if(b.id==='sCmp'){S.cmp=!S.cmp;saveS();applyTheme()}
+  else if(b.id==='sAnim'){S.anim=!S.anim;saveS();applyTheme()}
+  else if(b.id==='sNot'||b.id==='sSnd'){const k=b.id==='sNot'?'n':'s';S[k]=!S[k];saveS();syncS();if(k==='n'){if(S.n)askNotif();else window.pushOff&&pushOff()}if(k==='s'&&S.s)beep()}
+  else if(b.id==='sReset'){if(!confirm('Сбросить тему, цвета и внешний вид?'))return;Object.assign(S,{mode:'system',dyn:false,seed:'#6750a4',src:'preset',fs:1,anim:true,cmp:false});saveS();applyTheme();toast('Настройки сброшены')}};
+$('#pset').addEventListener('input',e=>{if(e.target.id==='swCustom'){S.seed=e.target.value;S.src='custom';S.dyn=true;applyTheme()}});
+$('#pset').addEventListener('change',e=>{if(e.target.id==='swCustom'){S.seed=e.target.value;S.src='custom';S.dyn=true;saveS();applyTheme()}});
 
 /* ===== интеграция с Android WebView ===== */
 document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href]');
@@ -472,6 +575,7 @@ window.onBack=()=>{
   for(const id of ['lb','sh','gi','pi','acc','edit','gdlg','dlg']){const e=document.getElementById(id);if(e&&!e.hidden){e.hidden=true;return true}}
   if(document.getElementById('pk')){hidePicker();return true}
   if(cur){closeChat();return true}
+  {const ps=document.getElementById('pset');if(ps&&ps.classList.contains('show')){ps.classList.remove('show');return true}}
   if(tab!==0){document.querySelector('#nav button').click();return true}
   return false};
 </script>
@@ -521,7 +625,7 @@ g('ago').onclick=async()=>{g('aerr').textContent='';
     if(!tx.committed){await deleteUser(u);throw 'Этот @username уже занят'}
     await set(ref(db,'users/'+u.uid),{name,un});if(avData)await set(ref(db,'avatars/'+u.uid),avData);
   }catch(e){g('aerr').textContent=errT(e)}};
-function paint(){g('pn').textContent=me.name;g('pu').textContent='@'+me.un;g('pab').textContent=me.about||'Расскажите о себе';g('pem').textContent=auth.currentUser?auth.currentUser.email:'';const p=g('pav');p.style.backgroundImage=me.av?`url(${me.av})`:'';p.textContent=me.av?'':me.name[0].toUpperCase()}
+function paint(){g('pn').textContent=me.name;g('pu').textContent='@'+me.un;g('pab').textContent=me.about||'Расскажите о себе';g('pem').textContent=auth.currentUser?auth.currentUser.email:'';const p=g('pav');p.style.backgroundImage=me.av?`url(${me.av})`:'';p.textContent=me.av?'':me.name[0].toUpperCase();window.myProf={n:me.name,av:me.av||''};renderNav();window.onMeAv&&onMeAv()}
 function addDM(id,pid){return dmp[id]||(dmp[id]=(async()=>{const p=await getP(pid);
   if(!chats.some(c=>c.id==id))chats.unshift({id,peer:pid,n:p.name||'Пользователь',pun:p.un,av:okAv(p.av),deleted:!!p.del,c:[...pid].reduce((a,ch)=>a+ch.charCodeAt(0),0)%7,last:p.un?'@'+p.un:'',tm:'',un:0,g:0,on:0,seen:0,m:[]}),watch(chats[0]),presWatch(chats[0]),profWatch(chats[0]),applyPref(chats[0]);
   renderList()})())}
@@ -791,7 +895,7 @@ document.querySelector('.chead .mid').onclick=async()=>{if(cur&&cur.g)return ope
 g('pic').onclick=()=>g('pi').hidden=true;g('rbx').onclick=clearReply;
 onAuthStateChanged(auth,u=>{
   if(stopP){stopP();stopP=null}
-  if(!u){uid=null;me=null;window.fb=undefined;g('auth').hidden=false;return}
+  if(!u){uid=null;me=null;window.myProf=null;renderNav();window.fb=undefined;g('auth').hidden=false;return}
   uid=u.uid;
   let uv=null,av='';const upd=()=>{if(!uv)return;me={name:uv.name,un:uv.un,about:uv.about||'',av:okAv(av||uv.av)};paint();enter()};
   const a=onValue(ref(db,'users/'+uid),s=>{uv=s.exists()?s.val():null;upd()}),b=onValue(ref(db,'avatars/'+uid),s=>{av=s.val()||'';upd()});
