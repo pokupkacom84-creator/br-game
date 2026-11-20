@@ -152,6 +152,9 @@ svg{width:24px;height:24px;fill:currentColor;flex:none}
 .rbar[hidden]{display:none}.rbar>div{flex:1;min-width:0}.rbar b{display:block;color:var(--p)}
 .rbar span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--onv)}.rbar button{width:32px;height:32px;border-radius:16px}
 .b a{color:inherit;text-decoration:underline}
+.auth.call{z-index:60}.cbtns{display:flex;gap:28px;margin-top:48px}
+.cb{width:72px;height:72px;border-radius:50%;font-size:30px;display:grid;place-items:center;background:var(--surf4);color:var(--on)}
+.cb[hidden]{display:none}.cb.ok{background:#2e7d32;color:#fff}.cb.end{background:#ba1a1a;color:#fff}.cb.muted{background:var(--p)}
 </style>
 </head>
 <body>
@@ -183,7 +186,7 @@ svg{width:24px;height:24px;fill:currentColor;flex:none}
       <button class="icon-btn press" id="back" aria-label="Назад"><svg viewBox="0 -960 960 960"><path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"/></svg></button>
       <div class="av" id="cav"></div>
       <div class="mid"><div class="nm" id="cnm"></div><div class="ls" id="cst"></div></div>
-      <button class="icon-btn press" aria-label="Звонок"><svg viewBox="0 -960 960 960"><path d="M798-120q-125 0-247-54.500T329-329Q229-429 174.500-551T120-798q0-18 12-30t30-12h162q14 0 25 9.500t13 22.500l26 140q2 16-1 27t-11 19l-97 98q20 37 47.500 71.500T387-386q31 31 65 57.500t72 48.500l94-94q9-9 23.500-13.500T670-390l138 28q14 4 23 14.500t9 23.500v162q0 18-12 30t-30 12Z"/></svg></button>
+      <button class="icon-btn press" id="callBtn" aria-label="Звонок"><svg viewBox="0 -960 960 960"><path d="M798-120q-125 0-247-54.500T329-329Q229-429 174.500-551T120-798q0-18 12-30t30-12h162q14 0 25 9.500t13 22.500l26 140q2 16-1 27t-11 19l-97 98q20 37 47.500 71.500T387-386q31 31 65 57.500t72 48.500l94-94q9-9 23.500-13.500T670-390l138 28q14 4 23 14.500t9 23.500v162q0 18-12 30t-30 12Z"/></svg></button>
     </div>
     <div class="msgs" id="msgs"></div>
     <div class="rbar" id="rbar" hidden><div><b id="rbn"></b><span id="rbt"></span></div><button id="rbx" aria-label="Отмена">✕</button></div>
@@ -225,6 +228,11 @@ svg{width:24px;height:24px;fill:currentColor;flex:none}
 <div class="pick" id="piav" style="display:grid;place-items:center;font-size:40px;font-weight:900"></div>
 <h1 id="pin"></h1><div id="piu" style="color:var(--p);font-weight:600"></div><div id="pia" style="color:var(--onv)"></div>
 <button class="txt" id="pic">Закрыть</button></div></div>
+<audio id="ra" autoplay playsinline></audio>
+<div class="auth call" id="call" hidden><div class="card" style="align-items:center;text-align:center;gap:8px">
+<div class="pick" id="cav2" style="display:grid;place-items:center;font-size:52px;font-weight:900;width:132px;height:132px;border-radius:44px"></div>
+<h1 id="cn"></h1><div id="cs" style="color:var(--onv)"></div>
+<div class="cbtns"><button class="cb press" id="cmute">🎤</button><button class="cb ok press" id="cok">📞</button><button class="cb end press" id="cend">✕</button></div></div></div>
 <div class="toast" id="toast"></div>
 </div>
 
@@ -268,7 +276,7 @@ function bubble(m,c){
   return `<div class="b ${m[0]}" data-i="${c.m.indexOf(m)}">${!out&&c.g&&m[3]?`<div class="who">${m.av?`<i class="mav" style="background-image:url(${m.av})"></i>`:''}${m[3]}</div>`:''}${m.rp?`<div class="rq"><b>${m.rp.n}</b>${m.rp.t}</div>`:''}${m.del?'<i style="opacity:.6">Сообщение удалено</i>':m.v?voice(m):m[1]}<span class="t">${m[2]}${out?tick+tick.replace('<svg','<svg style="margin-left:-9px"'):''}</span>${m.r?`<span class="rx">${m.r}</span>`:''}</div>`;
 }
 function openChat(id){window.fb&&setTimeout(()=>fb.sub(id),0);
-  cur=chats.find(c=>c.id==id);cur.un=0;
+  cur=chats.find(c=>c.id==id);cur.un=0;if(window.fb)cur.m=[];
   $('#cav').outerHTML=av(cur).replace('<div class="av','<div id="cav" class="av');
   $('#cnm').textContent=cur.n;
   $('#cst').textContent=cur.pun?'@'+cur.pun:cur.g?'участники: '+(cur.id*7+5):(cur.on?'в сети':'был(а) недавно');
@@ -389,7 +397,7 @@ function addDM(id,pid){return dmp[id]||(dmp[id]=(async()=>{const p=await getP(pi
   if(!chats.some(c=>c.id==id))chats.unshift({id,peer:pid,n:p.name||'Пользователь',pun:p.un,av:okAv(p.av),c:[...pid].reduce((a,ch)=>a+ch.charCodeAt(0),0)%7,last:'@'+(p.un||''),tm:'',un:0,g:0,on:1,m:[]}),watch(chats[0]);
   renderList()})())}
 function enter(){if(entered)return;entered=true;g('auth').hidden=true;window.fb=fb;
-  onChildAdded(ref(db,'userChats/'+uid),s=>addDM(s.key,s.val()))}
+  onChildAdded(ref(db,'userChats/'+uid),s=>addDM(s.key,s.val()));onValue(ref(db,'incoming/'+uid),inc)}
 const rx=rs=>{const c={};Object.values(rs||{}).forEach(e=>{e=esc(e);c[e]=(c[e]||0)+1});return Object.entries(c).map(([e,n])=>n>1?e+n:e).join(' ')};
 const lk=t=>t.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
 async function mk(d,k){const out=d.u===uid,p=out?{}:await getP(d.u),nn=p.name||d.n||'Гость',uu=p.un||d.un;
@@ -403,6 +411,62 @@ function watch(c){onChildAdded(query(ref(db,'chats/'+c.id+'/msgs'),limitToLast(1
   if(open||mine){localStorage.setItem('rd_'+c.id,s.key);c.un=0}
   else if(localStorage.getItem('rd_'+c.id)!==s.key){c.un=(c._w?c.un:0)+1}
   c._w=1;renderList()})}
+let pc=null,stream=null,callId=null,peerId=null,offs2=[],timer=null,ringT=null,pend=[],ring=null,inCall=false,muted=false,icq=[],icOk=true;
+const ICE={iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}]};
+function callUI(o){g('call').hidden=!o;if(!o)return;g('cn').textContent=o.name||'';g('cs').textContent=o.status;
+  const a=okAv(o.av),e=g('cav2');e.style.backgroundImage=a?`url(${a})`:'';e.textContent=a?'':(o.name||'?')[0].toUpperCase();
+  g('cok').hidden=!o.ring;g('cmute').hidden=!!o.ring;g('cmute').textContent='🎤';g('cmute').classList.remove('muted');muted=false}
+async function pcInit(chat,ready){inCall=true;icOk=ready;icq=[];
+  stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  pc=new RTCPeerConnection(ICE);stream.getTracks().forEach(t=>pc.addTrack(t,stream));
+  pc.ontrack=e=>{g('ra').srcObject=e.streams[0];g('ra').play().catch(()=>{})};
+  pc.onicecandidate=e=>{if(!e.candidate)return;const j=JSON.stringify(e.candidate);
+    if(icOk)push(ref(db,'calls/'+chat+'/ice/'+uid),j);else icq.push(j)};
+  pc.onconnectionstatechange=()=>{if(!pc)return;if(pc.connectionState==='connected')started();
+    if(pc.connectionState==='failed'){toast('Не удалось соединиться');hang(false)}}}
+function started(){if(timer)return;clearTimeout(ringT);const t0=Date.now();g('cs').textContent='0:00';
+  timer=setInterval(()=>g('cs').textContent=fmt(Math.floor((Date.now()-t0)/1000)),1000)}
+const flush=()=>{pend.forEach(c=>pc&&pc.addIceCandidate(c).catch(()=>{}));pend=[]};
+function listenCall(chat,peer){offs2=[
+  onChildAdded(ref(db,'calls/'+chat+'/ice/'+peer),s=>{const c=JSON.parse(s.val());if(pc&&pc.remoteDescription)pc.addIceCandidate(c).catch(()=>{});else pend.push(c)}),
+  onValue(ref(db,'calls/'+chat),async s=>{const d=s.val();if(!d||!pc)return;
+    if(d.answer&&uid===d.from&&!pc.currentRemoteDescription){await pc.setRemoteDescription(d.answer);flush()}
+    if(d.state==='ended'||d.state==='declined'){toast(d.state==='declined'?'Вызов отклонён':'Звонок завершён');hang(true)}})]}
+function cleanup(){offs2.forEach(f=>f());offs2=[];clearTimeout(ringT);clearInterval(timer);timer=null;
+  if(pc){pc.close();pc=null}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  g('ra').srcObject=null;inCall=false;callId=peerId=null;pend=[];icq=[];callUI(false)}
+function hang(remote){const chat=callId,peer=peerId;
+  if(!remote&&chat){update(ref(db,'calls/'+chat),{state:'ended'}).catch(()=>{});if(peer)set(ref(db,'incoming/'+peer),null).catch(()=>{})}
+  cleanup()}
+async function callOut(){if(inCall)return;if(!cur||!cur.peer)return toast('Звонки доступны в личных чатах');
+  const chat=String(cur.id),peer=cur.peer;callId=chat;peerId=peer;
+  try{await pcInit(chat,false);pend=[];const o=await pc.createOffer();await pc.setLocalDescription(o);
+    await set(ref(db,'calls/'+chat),{from:uid,to:peer,state:'ringing',offer:{type:o.type,sdp:o.sdp},ts:Date.now()});
+    icOk=true;icq.forEach(j=>push(ref(db,'calls/'+chat+'/ice/'+uid),j));icq=[];
+    await set(ref(db,'incoming/'+peer),{chat,from:uid,name:me.name,ts:Date.now()});
+    callUI({name:cur.n,av:cur.av,status:'Вызов…'});listenCall(chat,peer);
+    ringT=setTimeout(()=>{if(!timer){toast('Нет ответа');hang(false)}},45000);
+  }catch(e){toast(e.name==='NotAllowedError'?'Разрешите доступ к микрофону':'Ошибка звонка: '+(e.code||e.name||e));cleanup()}}
+async function inc(s){const d=s.val();
+  if(!d){if(ring&&!inCall){ring=null;callUI(false)}return}
+  if(Date.now()-d.ts>60000){set(ref(db,'incoming/'+uid),null);return}
+  if(inCall||ring){update(ref(db,'calls/'+d.chat),{state:'declined'}).catch(()=>{});set(ref(db,'incoming/'+uid),null);return}
+  const p=await getP(d.from);ring={...d,name:p.name||d.name,av:okAv(p.av)};
+  callUI({name:ring.name,av:ring.av,status:'Входящий звонок…',ring:true});navigator.vibrate&&navigator.vibrate([300,200,300,200,300])}
+async function accept(){const d=ring;if(!d)return;ring=null;callId=d.chat;peerId=d.from;
+  try{const c=(await get(ref(db,'calls/'+d.chat))).val();if(!c||c.state!=='ringing')throw 'Звонок уже завершён';
+    await pcInit(d.chat,true);pend=[];listenCall(d.chat,d.from);
+    await pc.setRemoteDescription(c.offer);flush();
+    const a=await pc.createAnswer();await pc.setLocalDescription(a);
+    await update(ref(db,'calls/'+d.chat),{answer:{type:a.type,sdp:a.sdp},state:'active'});
+    set(ref(db,'incoming/'+uid),null);callUI({name:d.name,av:d.av,status:'Соединение…'});
+  }catch(e){toast(typeof e==='string'?e:e.name==='NotAllowedError'?'Разрешите доступ к микрофону':'Ошибка звонка');
+    update(ref(db,'calls/'+d.chat),{state:'ended'}).catch(()=>{});set(ref(db,'incoming/'+uid),null).catch(()=>{});cleanup()}}
+function decline(){const d=ring;ring=null;if(d){update(ref(db,'calls/'+d.chat),{state:'declined'}).catch(()=>{});set(ref(db,'incoming/'+uid),null).catch(()=>{})}callUI(false)}
+g('callBtn').onclick=()=>window.fb?callOut():toast('Войдите в аккаунт');
+g('cok').onclick=accept;
+g('cend').onclick=()=>ring?decline():hang(false);
+g('cmute').onclick=()=>{muted=!muted;if(stream)stream.getAudioTracks().forEach(t=>t.enabled=!muted);g('cmute').classList.toggle('muted',muted);g('cmute').textContent=muted?'🔇':'🎤'};
 const fb={
   send(id,text,v){const r=push(ref(db,'chats/'+id+'/msgs')),d={u:uid,n:me.name,un:me.un,t:text,tm:now(),v:v||null,ts:serverTimestamp()};
     if(replyTo){d.rp={n:replyTo.n.slice(0,24),t:replyTo.t.slice(0,80)};clearReply()}
@@ -412,7 +476,7 @@ const fb={
       idx=k=>here()?cur.m.findIndex(x=>x.k===k):-1,
       redraw=i=>{const el=document.querySelector('.b[data-i="'+i+'"]');if(el)el.outerHTML=bubble(cur.m[i],cur)};
     offs=[onChildAdded(mq(),s=>{if(seen.has(s.key))return;seen.add(s.key);localStorage.setItem('rd_'+id,s.key);const d=s.val();
-        chain=chain.then(async()=>{if(!here())return;const m=await mk(d,s.key);if(here())add(m)}).catch(()=>{})},e=>toast('Firebase: '+e.code)),
+        chain=chain.then(async()=>{if(!here())return;const m=await mk(d,s.key);if(here()&&!cur.m.some(x=>x.k===m.k))add(m)}).catch(()=>{})},e=>toast('Firebase: '+e.code)),
       onChildChanged(mq(),s=>{const i=idx(s.key);if(i<0)return;const m=cur.m[i];m.rs=s.val().r||{};m.r=rx(m.rs);redraw(i)}),
       onChildRemoved(mq(),s=>{const i=idx(s.key);if(i<0)return;cur.m[i].del=1;redraw(i)})]},
   react(m,e){set(ref(db,'chats/'+cur.id+'/msgs/'+m.k+'/r/'+uid),m.rs[uid]===e?null:e).catch(x=>toast('Firebase: '+x.code))},
