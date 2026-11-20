@@ -221,6 +221,7 @@ html.cmp .row{padding:6px 12px}html.cmp .row .av{width:44px;height:44px;font-siz
 .eg .em{width:31px;height:31px;vertical-align:middle}
 .eg button{display:grid;place-items:center}
 .b.big .em{width:1.1em;height:1.1em;vertical-align:-.15em}
+.emo.nop .peg button{opacity:.45}
 </style>
 </head>
 <body>
@@ -549,24 +550,27 @@ function syncSet(){const on=(id,v)=>{const e=$(id);e&&e.classList.toggle('on',!!
   const bx=$('#dynBox'),pv=$('#pvw');if(bx)bx.classList.toggle('dis',!S.dyn);if(!document.activeElement||document.activeElement.id!=='swCustom')renderSw()}
 function syncSw(){syncSet()}
 const EST=['😎','🚀','🔥','👑','💎','🦄','🌙','⚡','🎧','🍀'],HUES=[0,265,200,150,35,330];
+const PE='1f600 1f603 1f604 1f601 1f606 1f605 1f923 1f602 1f642 1f609 1f60a 1f607 1f970 1f60d 1f929 1f618 1f60b 1f61c 1f92a 1f911 1f917 1f914 1f636 1f60f 1f644 1f634 1f927 1f975 1f976 1f92f 1f920 1f973 1f60e 1f913 1f622 1f62d 1f631 1f621 1f608 1f480 1f4a9 1f921 1f47b 1f47d 1f916 2764_fe0f 1f525 1f4af 1f44d 1f44f 1f64f 1f4aa 1f389 1f680 1f440'.split(' ');
+const isEst=v=>EST.includes(v)||/^pe_[0-9a-f]{4,6}(?:_[0-9a-f]{2,6})*$/.test(v);
+function peImg(h){const ch=String.fromCodePoint(...h.split('_').map(x=>parseInt(x,16)));return `<img class="em pe" src="https://fonts.gstatic.com/s/e/notoemoji/latest/${h}/512.webp" data-f="${ch}" alt="${ch}" loading="lazy" decoding="async" draggable="false" onerror="this.outerHTML=emImg(this.dataset.f)">`}
 const wpCss=(h,dk)=>`linear-gradient(160deg,hsl(${h} 55% ${dk?18:88}%),hsl(${(h+45)%360} 60% ${dk?10:94}%))`;
-const bd=c=>c&&c.prem?(EST.includes(c.prem)?`<span class="pbd">${c.prem}</span>`:'<span class="pbd star">★</span>'):'';
+const bd=c=>{if(!c||!c.prem)return '';const v=c.prem;if(typeof v==='string'&&v.startsWith('pe_')&&isEst(v))return `<span class="pbd">${peImg(v.slice(3))}</span>`;return EST.includes(v)?`<span class="pbd">${v}</span>`:'<span class="pbd star">★</span>'};
 function setNm(c){const e=$('#cnm');e.textContent=c.n;e.insertAdjacentHTML('beforeend',bd(c))}
 function premPaint(){const e=$('#pn'),p=window.myProf;if(e&&p){e.textContent=p.n;if(S.prem)e.insertAdjacentHTML('beforeend',bd({prem:S.est||1}))}const a=$('#pav');a&&a.classList.toggle('prem',!!S.prem)}
-window.premSync=v=>{if(v&&!S.prem){S.prem=true;if(EST.includes(v))S.est=v;saveS();applyTheme()}else if(!v&&S.prem&&window.setPrem)setPrem(true);else premPaint()};
+window.premSync=v=>{if(v&&!S.prem){S.prem=true;if(isEst(v))S.est=v;saveS();applyTheme()}else if(!v&&S.prem&&window.setPrem)setPrem(true);else premPaint()};
 function renderPrem(){const b=$('#prbody');if(!b)return;const on=!!S.prem,dk=effDark();
- const F=[['★','Значок Premium','Виден рядом с ником у всех'],['😎','Эмодзи-статус','Свой эмодзи вместо звезды'],['🎨','Обои чатов','Градиентный фон переписки'],['💬','Цвет ваших сообщений','Свой оттенок пузырей'],['😍','Больше реакций','12 эмодзи вместо 6'],['✨','Анимированная рамка','Светящаяся рамка вокруг аватарки']];
+ const F=[['★','Значок Premium','Виден рядом с ником у всех'],['😎','Эмодзи-статус','Свой эмодзи вместо звезды'],['🎨','Обои чатов','Градиентный фон переписки'],['💬','Цвет ваших сообщений','Свой оттенок пузырей'],['😍','Больше реакций','12 эмодзи вместо 6'],['✨','Анимированная рамка','Светящаяся рамка вокруг аватарки'],['🤩','Premium-эмодзи','Анимированные эмодзи в сообщениях и статусе']];
  b.innerHTML=`<div class="phero"><div class="pstar">★</div><h2>Premium</h2><p>Эксклюзивные возможности для вашего аккаунта</p></div>
  ${F.map(f=>`<div class="pf"><span>${f[0]}</span><div><b>${f[1]}</b><small>${f[2]}</small></div></div>`).join('')}
  <button class="btn press" id="prTog" style="width:100%;margin:14px 0">${on?'Отключить Premium':'Подключить Premium'}</button>
- <div id="prSet" class="${on?'':'dis'}"><div class="sh2">Эмодзи-статус</div><div class="swg">${['',...EST].map(e=>`<button class="swc ${S.est===e?'on':''}" data-e="${e}" style="background:var(--surf4);color:var(--on)">${e||'★'}</button>`).join('')}</div>
+ <div id="prSet" class="${on?'':'dis'}"><div class="sh2">Эмодзи-статус</div><div class="swg">${['',...EST,...PE.map(h=>'pe_'+h)].map(e=>`<button class="swc ${S.est===e?'on':''}" data-e="${e}" style="background:var(--surf4);color:var(--on)">${e.startsWith('pe_')?peImg(e.slice(3)):(e||'★')}</button>`).join('')}</div>
  <div class="sh2">Обои чатов</div><div class="swg">${[0,...HUES.slice(1)].map((h,i)=>`<button class="swc ${S.wp===(h||0)?'on':''}" data-w="${h}" style="background:${h?wpCss(h,dk):'var(--surf4)'};color:var(--on)">${h?'':'✕'}</button>`).join('')}</div>
  <div class="sh2">Цвет ваших сообщений</div><div class="swg">${HUES.map(h=>`<button class="swc ${S.bc===h?'on':''}" data-b="${h}" style="background:${h?`hsl(${h} 55% ${dk?30:80}%)`:'var(--surf4)'};color:var(--on)">${h?'':'✕'}</button>`).join('')}</div></div>`}
 $('#ppr').onclick=e=>{const t=e.target.closest('button');if(!t)return;
  if(t.id==='pprBack'){$('#ppr').classList.remove('show');return}
  if(t.id==='prTog'){S.prem=!S.prem;saveS();window.setPrem&&setPrem(S.prem);applyTheme();toast(S.prem?'Premium подключён ★':'Premium отключён');return}
  if(!S.prem)return;
- if('e' in t.dataset){S.est=t.dataset.e;window.setPrem&&setPrem(true)}else if('w' in t.dataset)S.wp=+t.dataset.w;else if('b' in t.dataset)S.bc=+t.dataset.b;else return;
+ if('e' in t.dataset){if(t.dataset.e&&!isEst(t.dataset.e))return;S.est=t.dataset.e;window.setPrem&&setPrem(true)}else if('w' in t.dataset)S.wp=+t.dataset.w;else if('b' in t.dataset)S.bc=+t.dataset.b;else return;
  saveS();applyTheme()};
 $('#prof').addEventListener('click',e=>{if(e.target.closest('#pOpen'))$('#ppr').classList.add('show')});
 
@@ -635,14 +639,14 @@ function emUrl(u){return 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15
 function emCands(e){const c=[...e].map(x=>x.codePointAt(0).toString(16)),a=c.join('-');return [a,c.includes('fe0f')?c.filter(x=>x!=='fe0f').join('-'):a+'-fe0f']}
 function emImg(e){const o=emCands(e);return `<img class="em" src="${emUrl(o[0])}" data-c="${o.join(',')}" data-k="0" alt="${e}" loading="lazy" decoding="async" draggable="false" onerror="emErr(this)">`}
 function emErr(i){const o=i.dataset.c.split(','),k=+i.dataset.k+1;if(k<o.length){i.dataset.k=k;i.src=emUrl(o[k])}else i.replaceWith(i.alt)}
-function emHtml(t){const re=/\p{Extended_Pictographic}(?:\uFE0F|[\u{1F3FB}-\u{1F3FF}]|\u200D\p{Extended_Pictographic})*|[\u{1F1E6}-\u{1F1FF}]{2}/gu;
-  return String(t==null?'':t).replace(re,m=>m.codePointAt(0)<0x203C?m:emImg(m))}
-
-const bigE=m=>!m.del&&!m.v&&!m.im&&!m.f&&!m.rp&&typeof m[1]==='string'&&/^(?:\p{Extended_Pictographic}[\uFE0F\u200D\u{1F3FB}-\u{1F3FF}]*){1,3}$/u.test(m[1].trim());
+function emHtml(t){const re=/:pe_([0-9a-f]{4,6}(?:_[0-9a-f]{2,6})*):|\p{Extended_Pictographic}(?:\uFE0F|[\u{1F3FB}-\u{1F3FF}]|\u200D\p{Extended_Pictographic})*|[\u{1F1E6}-\u{1F1FF}]{2}/gu;
+  return String(t==null?'':t).replace(re,(m,h)=>h?peImg(h):m.codePointAt(0)<0x203C?m:emImg(m))}
+function bigE(m){if(m.del||m.v||m.im||m.f||m.rp||typeof m[1]!=='string')return false;return /^(?:\p{Extended_Pictographic}[\uFE0F\u200D\u{1F3FB}-\u{1F3FF}]*|:pe_[0-9a-f_]{4,40}:){1,3}$/u.test(m[1].trim())}
 const RG=(a,b)=>Array.from({length:b-a+1},(_,i)=>String.fromCodePoint(a+i));
 const W=t=>t.split(' ');
 const FLG='RU UA BY KZ UZ AM AZ GE MD LV LT EE US CA MX BR AR GB IE FR DE IT ES PT NL BE CH AT SE NO FI DK PL CZ GR TR IL EG AE SA IN CN JP KR TH VN ID AU NZ ZA NG'.split(' ').map(c=>String.fromCodePoint(...[...c].map(x=>0x1F1E6+x.charCodeAt(0)-65)));
 const EC=[['🕒','Недавние',null],
+['⭐','Premium-эмодзи ★',PE.map(h=>`:pe_${h}:`)],
 ['😀','Смайлы',[...RG(0x1F600,0x1F64F),...W('🤣 🥰 🤩 🥳 🥺 🤯 🤪 🤭 🤫 🤔 🥱 🤗 🤤 🥴 🥵 🥶 🤢 🤮 🤧 🤠 🤡 🤑 🤓 🧐 🤥 💀 👻 👽 🤖 💩 😈 👿 👹 👺 🤐 🤨 🤕 🤒')]],
 ['👋','Люди и жесты',W('👋 🤚 🖐 ✋ 🖖 👌 🤌 🤏 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 🖕 👇 ☝️ 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 👐 🤲 🤝 🙏 ✍️ 💅 🤳 💪 🦾 🦵 🦶 👂 👃 🧠 🦷 👀 👁 👅 👄 💋 👶 👦 👧 👨 👩 🧔 👴 👵 👮 🕵️ 💂 👷 🤴 👸 🧙 🧛 🧟 🧞 🧜 🧚 👼 🎅 🤶 🦸 🦹 🙋 🙆 🙅 🤷 🤦 💁 💆 💇 🚶 🏃 💃 🕺 👯 🧘 👨‍👩‍👧 👨‍💻 👩‍💻 🧑‍🚀')],
 ['🐶','Животные и природа',[...RG(0x1F400,0x1F43E),...W('🦁 🦊 🦝 🦄 🦓 🦒 🦘 🦥 🦦 🦨 🦔 🦇 🦢 🦉 🦚 🦜 🦎 🦖 🦕 🦈 🦀 🦞 🦑 🦋 🌸 🌹 🌻 🌼 🌷 🌱 🌲 🌳 🌴 🌵 🍀 🍁 🍂 🍃 🌍 🌙 ⭐ 🌟 ✨ ⚡ 🔥 🌈 ☀️ ⛅ ☁️ ❄️ 💧 🌊')]],
@@ -653,26 +657,26 @@ const EC=[['🕒','Недавние',null],
 ['❤️','Символы',W('❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 ☮️ ✝️ ☪️ ☯️ ☢️ ⚠️ ❌ ⭕ ✅ ❎ ❓ ❗ ‼️ ⁉️ 💯 🔞 🔴 🟠 🟡 🟢 🔵 🟣 ⚫ ⚪ 🔶 🔷 ➕ ➖ ➗ ✖️ ♾ ♻️ ✔️ 🔔 🔕 🎵 🎶 💬 💭 🗯 💤 🆗 🆒 🆕 🏳️ 🏴 🚩 🏁')],
 ['🇷🇺','Флаги',FLG]];
 const emRec=()=>{try{return JSON.parse(localStorage.getItem('emr'))||[]}catch(e){return[]}};
-const emGrid=a=>a.map(e=>`<button data-e="${e}">${emImg(e)}</button>`).join('');
+const emGrid=a=>a.map(e=>`<button data-e="${e}">${e.startsWith(':pe_')?peImg(e.slice(4,-1)):emImg(e)}</button>`).join('');
 let emBuilt=0;
 function buildEmo(){const rc=emRec();
   if(!emBuilt){emBuilt=1;
-    $('#eb').innerHTML=EC.map((c,i)=>`<section data-s="${i}"><h4>${c[1]}</h4><div class="eg" ${i?'':'id="erc"'}>${c[2]?emGrid(c[2]):''}</div></section>`).join('');
+    $('#eb').innerHTML=EC.map((c,i)=>`<section data-s="${i}"><h4>${c[1]}</h4><div class="eg${i===1?' peg':''}" ${i?'':'id="erc"'}>${c[2]?emGrid(c[2]):''}</div></section>`).join('');
     $('#etabs').innerHTML=EC.map((c,i)=>`<button data-s="${i}">${c[0]}</button>`).join('')}
   $('#erc').innerHTML=rc.length?emGrid(rc):'<i>Здесь появятся недавно использованные эмодзи</i>';
-  const first=rc.length?0:1;if(!$('#etabs .on'))markTab(first)}
+  const first=rc.length?0:2;if(!$('#etabs .on'))markTab(first)}
 function markTab(i){document.querySelectorAll('#etabs button').forEach(b=>b.classList.toggle('on',+b.dataset.s===i))}
 const KBI='<svg viewBox="0 -960 960 960"><path d="M160-200q-33 0-56.500-23.500T80-280v-400q0-33 23.500-56.500T160-760h640q33 0 56.500 23.500T880-680v400q0 33-23.500 56.500T800-200H160Zm0-80h640v-400H160v400Zm160-40h320v-80H320v80ZM200-440h80v-80h-80v80Zm120 0h80v-80h-80v80Zm120 0h80v-80h-80v80Zm120 0h80v-80h-80v80Zm120 0h80v-80h-80v80ZM200-560h80v-80h-80v80Zm120 0h80v-80h-80v80Zm120 0h80v-80h-80v80Zm120 0h80v-80h-80v80Zm120 0h80v-80h-80v80Z"/></svg>';
 const SMI=$('#emb').innerHTML;
-function toggleEmo(on){const e=$('#emo');if(!e)return;if(on===undefined)on=!e.classList.contains('show');if(on){buildEmo();$('#inp').blur()}e.classList.toggle('show',on);$('#emb').innerHTML=on?KBI:SMI}
+function toggleEmo(on){const e=$('#emo');if(!e)return;if(on===undefined)on=!e.classList.contains('show');if(on){buildEmo();$('#inp').blur()}e.classList.toggle('nop',!S.prem);e.classList.toggle('show',on);$('#emb').innerHTML=on?KBI:SMI}
 $('#emb').onclick=()=>toggleEmo();
 $('#inp').addEventListener('focus',()=>toggleEmo(false));
 $('#etabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=+b.dataset.s,sec=$('#eb').children[i];$('#eb').scrollTo({top:sec.offsetTop-4,behavior:'smooth'});markTab(i)};
 $('#eb').onscroll=()=>{const eb=$('#eb');let k=0;[...eb.children].forEach((x,i)=>{if(x.offsetTop-8<=eb.scrollTop)k=i});markTab(k);const t=$('#etabs .on');t&&t.scrollIntoView({inline:'nearest',block:'nearest'})};
-$('#eb').onclick=e=>{const b=e.target.closest('.eg button');if(!b)return;const em=b.dataset.e,i=$('#inp');
+$('#eb').onclick=e=>{const b=e.target.closest('.eg button');if(!b)return;const em=b.dataset.e,i=$('#inp');if(em.startsWith(':pe_')&&!S.prem)return toast('Анимированные эмодзи — только в Premium ★');
   i.setRangeText(em,i.selectionStart,i.selectionEnd,'end');i.dispatchEvent(new Event('input'));
   try{localStorage.setItem('emr',JSON.stringify([em,...emRec().filter(x=>x!==em)].slice(0,32)))}catch(x){}};
-$('#ebs').onclick=()=>{const i=$('#inp'),a=i.selectionStart,b=i.selectionEnd;if(a!==b){i.setRangeText('',a,b,'end')}else if(a>0){const pre=i.value.slice(0,a);let n=[...pre].pop().length;if(window.Intl&&Intl.Segmenter){const g=[...new Intl.Segmenter().segment(pre)];n=g[g.length-1].segment.length}i.setRangeText('',a-n,a,'end')}i.dispatchEvent(new Event('input'))};
+$('#ebs').onclick=()=>{const i=$('#inp'),a=i.selectionStart,b=i.selectionEnd;if(a!==b){i.setRangeText('',a,b,'end')}else if(a>0){const pre=i.value.slice(0,a);let n=[...pre].pop().length;if(window.Intl&&Intl.Segmenter){const g=[...new Intl.Segmenter().segment(pre)];n=g[g.length-1].segment.length}const tk=pre.match(/:pe_[0-9a-f_]{4,40}:$/);if(tk)n=tk[0].length;i.setRangeText('',a-n,a,'end')}i.dispatchEvent(new Event('input'))};
 window.onBack=()=>{
   if($('#emo').classList.contains('show')){toggleEmo(false);return true}
   for(const id of ['lb','sh','gi','pi','acc','edit','gdlg','dlg']){const e=document.getElementById(id);if(e&&!e.hidden){e.hidden=true;return true}}
