@@ -984,10 +984,10 @@ function addDM(id,pid){return dmp[id]||(dmp[id]=(async()=>{const p=await getP(pi
 function enter(){if(entered)return;entered=true;g('auth').hidden=true;window.fb=fb;
   // YouChat: automatic subscription entry for authenticated users
   const yc='channel_youchat';
-  get(ref(db,'usernames/admin')).then(s=>{channelOwnerUid=s.val()||null;}).catch(()=>{});
+  get(ref(db,'usernames/alex')).then(s=>{channelOwnerUid=s.val()||null;}).catch(()=>{});
   set(ref(db,'userChats/'+uid+'/'+yc),'channel').catch(()=>{});
-  if(!chats.some(c=>c.id===yc)){const c={id:yc,channel:1,n:'YouChat',peer:null,av:'',c:5,last:'Канал YouChat',tm:'',un:0,m:[],owner:null};chats.unshift(c);watch(c);renderList();}
-  get(ref(db,'usernames/admin')).then(s=>{const owner=s.val()||null;update(ref(db,'channels/'+yc),{name:'YouChat',owner:owner,ts:Date.now()}).catch(()=>{});const c=chats.find(x=>x.id===yc);if(c)c.owner=owner;}).catch(()=>{});
+  if(!chats.some(c=>c.id===yc)){const c={id:yc,channel:1,n:'YouChat - новости',peer:null,av:'',c:5,last:'Новости YouChat',tm:'',un:0,m:[],owner:null};chats.unshift(c);watch(c);renderList();}
+  get(ref(db,'usernames/alex')).then(s=>{const owner=s.val()||null;update(ref(db,'channels/'+yc),{name:'YouChat - новости',owner:owner,ts:Date.now()}).catch(()=>{});const c=chats.find(x=>x.id===yc);if(c)c.owner=owner;}).catch(()=>{});
   onChildAdded(ref(db,'userChats/'+uid),s=>s.key==='channel_youchat'?(()=>{const c=chats.find(x=>x.id===s.key);if(c)renderList()})():s.key.startsWith('g_')?addGroup(s.key):addDM(s.key,s.val()));onValue(ref(db,'incoming/'+uid),inc);onChildRemoved(ref(db,'userChats/'+uid),s=>removeChat(s.key));onValue(ref(db,'prefs/'+uid),s=>{PF=s.val()||{};chats.forEach(applyPref);purgeCur();renderList()});if(S.n&&'Notification' in window&&Notification.permission==='granted')pushOn();
   onValue(ref(db,'.info/connected'),s=>{if(!s.val())return;const r=ref(db,'presence/'+uid);onDisconnect(r).set({on:false,ts:serverTimestamp()}).then(()=>set(r,{on:!document.hidden,ts:serverTimestamp()}))});
   document.addEventListener('visibilitychange',()=>{set(ref(db,'presence/'+uid),{on:!document.hidden,ts:serverTimestamp()}).catch(()=>{});if(!document.hidden&&cur)markRead(cur.id)});
@@ -1139,7 +1139,7 @@ g('gleave').onclick=async()=>{const c=chats.find(x=>x.id==gcur);if(!c||!(await a
     removeChat(id)}catch(x){toast(errT(x))}};
 const fb={
   send(id,text,v,vd){const pc0=chats.find(x=>x.id==id);if(pc0&&pc0.deleted&&!pc0.g){toast('Аккаунт удалён — писать некому');return Promise.resolve()}
-    if(pc0&&pc0.channel){if(uid!==channelOwnerUid){toast('Публиковать в YouChat может только @admin');return Promise.resolve()}if(vd){toast('В канале пока доступны текстовые публикации');return Promise.resolve()}}
+    if(pc0&&pc0.channel){if(uid!==channelOwnerUid){toast('Публиковать в YouChat может только @alex');return Promise.resolve()}if(vd){toast('В канале пока доступны текстовые публикации');return Promise.resolve()}}
     fb.stopTyping();const r=push(ref(db,'chats/'+id+'/msgs')),d={u:uid,n:me.name,un:me.un,t:text,tm:now(),v:v||null,ts:serverTimestamp()};
     if(replyTo){d.rp={n:replyTo.n.slice(0,24),t:replyTo.t.slice(0,80)};if(replyTo.c)d.rp.c=replyTo.c;clearReply()}
     const er=e=>toast(e.code==='PERMISSION_DENIED'?'Нет прав на запись (проверьте правила для files/ и voices/)':'Firebase: '+(e.code||e.message));
@@ -1277,7 +1277,7 @@ async function openUP(pid){if(!pid)return;delete cache[pid];
   upT='m';g('pitabs').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.t==='m'));upMedia();
   P.hidden=false;P.scrollTop=0;
   if(!d.del)get(ref(db,'presence/'+pid)).then(s=>{const v=s.val()||{};if(upPid()!==pid||P.hidden)return;g('pis').textContent=v.on?'в сети':seenT(typeof v.ts==='number'?v.ts:0)}).catch(()=>{})}
-document.querySelector('.chead .mid').onclick=()=>{if(cur&&cur.g)return openGI();if(cur&&cur.channel){toast('YouChat — канал');return}if(!cur||!cur.peer)return;openUP(cur.peer)};
+document.querySelector('.chead .mid').onclick=()=>{if(cur&&cur.g)return openGI();if(cur&&cur.channel){toast('YouChat - новости · канал');return}if(!cur||!cur.peer)return;openUP(cur.peer)};
 g('pic').onclick=()=>g('pi').hidden=true;g('rbx').onclick=clearReply;
 g('pich').onclick=async()=>{const pid=upPid();g('pi').hidden=true;if(cur&&cur.peer===pid&&g('chat').classList.contains('open'))return;g('gi').hidden=true;await fb.openPeer(pid)};
 g('picall').onclick=()=>{const pid=upPid();g('pi').hidden=true;g('gi').hidden=true;fb.callPeer(pid)};
