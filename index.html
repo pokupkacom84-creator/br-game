@@ -415,7 +415,7 @@ svg.ln{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;strok
 <div class="logo">💬</div><h1 id="ah">Вход</h1>
 <button class="pick" id="apick" hidden>+ фото</button><input type="file" id="afile" accept="image/*" hidden>
 <label class="tf" id="fn" hidden><input id="aname" placeholder="Ник (имя)" maxlength="24"></label>
-<label class="tf" id="fu" hidden><span>@</span><input id="aun" placeholder="username" maxlength="20" autocapitalize="none" autocomplete="off"></label>
+<label class="tf" id="fu" hidden><span>@</span><input id="aun" placeholder="username" maxlength="32" autocapitalize="none" autocomplete="off"></label>
 <label class="tf"><input id="aem" type="email" placeholder="Почта" autocomplete="email"></label>
 <label class="tf"><input id="apw" type="password" placeholder="Пароль (от 6 символов)" autocomplete="current-password"></label>
 <div class="err" id="aerr"></div>
@@ -431,7 +431,7 @@ svg.ln{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;strok
 <div class="err" id="gerr"></div><button class="btn press" id="ggo">Создать</button><button class="txt" id="gcx">Отмена</button></div></div>
 <div class="auth" id="edit" hidden><div class="card"><h1>Профиль</h1>
 <label class="tf"><input id="ename" placeholder="Ник" maxlength="24"></label>
-<label class="tf"><span>@</span><input id="eun" placeholder="username" maxlength="20" autocapitalize="none" autocomplete="off"></label>
+<label class="tf"><span>@</span><input id="eun" placeholder="username" maxlength="32" autocapitalize="none" autocomplete="off"></label>
 <label class="tf"><input id="eab" placeholder="О себе" maxlength="140"></label>
 <div class="err" id="eerr"></div><button class="btn press" id="esv">Сохранить</button><button class="txt" id="ecx">Отмена</button></div></div>
 <div class="auth" id="acc" hidden><div class="card"><h1>Аккаунт</h1><div id="aem2" style="color:var(--onv);word-break:break-all"></div>
@@ -488,7 +488,7 @@ const COL=['#6750a4','#006a6a','#984061','#7d5260','#386a20','#005ac1','#8b5000'
 const tick='<svg viewBox="0 -960 960 960"><path d="m382-354 339-339 56 56-395 395-198-198 56-56 142 142Z"/></svg>';
 const chats=[];
 const replies=['Ого, круто! 😄','Понял, сейчас гляну','Хах, согласен','Давай позже обсудим?','👍','Окей, договорились','Расскажи подробнее'];
-let filter='all',cur=null,tab=0;
+let filter='all',cur=null,tab=0,channelOwnerUid=null;
 
 function av(c){return `<div class="av ${c.g?'sq':''}" style="background:${c.av?`url(${c.av}) center/cover`:COL[c.c]}">${c.av?'':c.n[0]}</div>`}
 function renderChips(){
@@ -971,7 +971,7 @@ g('ago').onclick=async()=>{g('aerr').textContent='';
     if(!reg){await signInWithEmailAndPassword(auth,em,pw);return}
     const name=g('aname').value.replace(/[<>&"']/g,'').trim(),un=g('aun').value.trim().toLowerCase().replace(/^@/,'');
     if(!name)throw 'Введите ник';
-    if(!/^[a-z0-9_]{3,20}$/.test(un))throw '@username: 3–20 символов, латиница, цифры и _';
+    if(!/^[a-z][a-z0-9_]{4,31}$/.test(un))throw '@username: 5–32 символа: латиница, цифры и _; начинается с буквы';
     const u=(await createUserWithEmailAndPassword(auth,em,pw)).user;
     const tx=await runTransaction(ref(db,'usernames/'+un),v=>v===null?u.uid:undefined);
     if(!tx.committed){await deleteUser(u);throw 'Этот @username уже занят'}
@@ -982,7 +982,13 @@ function addDM(id,pid){return dmp[id]||(dmp[id]=(async()=>{const p=await getP(pi
   if(!chats.some(c=>c.id==id))chats.unshift({id,peer:pid,n:p.name||'Пользователь',pun:p.un,av:okAv(p.av),deleted:!!p.del,c:[...pid].reduce((a,ch)=>a+ch.charCodeAt(0),0)%7,last:p.un?'@'+p.un:'',tm:'',un:0,g:0,on:0,seen:0,m:[]}),watch(chats[0]),presWatch(chats[0]),profWatch(chats[0]),applyPref(chats[0]);
   renderList()})())}
 function enter(){if(entered)return;entered=true;g('auth').hidden=true;window.fb=fb;
-  onChildAdded(ref(db,'userChats/'+uid),s=>s.key.startsWith('g_')?addGroup(s.key):addDM(s.key,s.val()));onValue(ref(db,'incoming/'+uid),inc);onChildRemoved(ref(db,'userChats/'+uid),s=>removeChat(s.key));onValue(ref(db,'prefs/'+uid),s=>{PF=s.val()||{};chats.forEach(applyPref);purgeCur();renderList()});if(S.n&&'Notification' in window&&Notification.permission==='granted')pushOn();
+  // YouChat: automatic subscription entry for authenticated users
+  const yc='channel_youchat';
+  get(ref(db,'usernames/admin')).then(s=>{channelOwnerUid=s.val()||null;}).catch(()=>{});
+  set(ref(db,'userChats/'+uid+'/'+yc),'channel').catch(()=>{});
+  if(!chats.some(c=>c.id===yc)){const c={id:yc,channel:1,n:'YouChat',peer:null,av:'',c:5,last:'Канал YouChat',tm:'',un:0,m:[],owner:null};chats.unshift(c);watch(c);renderList();}
+  get(ref(db,'usernames/admin')).then(s=>{const owner=s.val()||null;update(ref(db,'channels/'+yc),{name:'YouChat',owner:owner,ts:Date.now()}).catch(()=>{});const c=chats.find(x=>x.id===yc);if(c)c.owner=owner;}).catch(()=>{});
+  onChildAdded(ref(db,'userChats/'+uid),s=>s.key==='channel_youchat'?(()=>{const c=chats.find(x=>x.id===s.key);if(c)renderList()})():s.key.startsWith('g_')?addGroup(s.key):addDM(s.key,s.val()));onValue(ref(db,'incoming/'+uid),inc);onChildRemoved(ref(db,'userChats/'+uid),s=>removeChat(s.key));onValue(ref(db,'prefs/'+uid),s=>{PF=s.val()||{};chats.forEach(applyPref);purgeCur();renderList()});if(S.n&&'Notification' in window&&Notification.permission==='granted')pushOn();
   onValue(ref(db,'.info/connected'),s=>{if(!s.val())return;const r=ref(db,'presence/'+uid);onDisconnect(r).set({on:false,ts:serverTimestamp()}).then(()=>set(r,{on:!document.hidden,ts:serverTimestamp()}))});
   document.addEventListener('visibilitychange',()=>{set(ref(db,'presence/'+uid),{on:!document.hidden,ts:serverTimestamp()}).catch(()=>{});if(!document.hidden&&cur)markRead(cur.id)});
   onValue(query(ref(db,'callLog/'+uid),limitToLast(50)),s=>{clog=[];s.forEach(x=>{clog.push(x.val())});renderCalls()})}
@@ -1133,6 +1139,7 @@ g('gleave').onclick=async()=>{const c=chats.find(x=>x.id==gcur);if(!c||!(await a
     removeChat(id)}catch(x){toast(errT(x))}};
 const fb={
   send(id,text,v,vd){const pc0=chats.find(x=>x.id==id);if(pc0&&pc0.deleted&&!pc0.g){toast('Аккаунт удалён — писать некому');return Promise.resolve()}
+    if(pc0&&pc0.channel){if(uid!==channelOwnerUid){toast('Публиковать в YouChat может только @admin');return Promise.resolve()}if(vd){toast('В канале пока доступны текстовые публикации');return Promise.resolve()}}
     fb.stopTyping();const r=push(ref(db,'chats/'+id+'/msgs')),d={u:uid,n:me.name,un:me.un,t:text,tm:now(),v:v||null,ts:serverTimestamp()};
     if(replyTo){d.rp={n:replyTo.n.slice(0,24),t:replyTo.t.slice(0,80)};if(replyTo.c)d.rp.c=replyTo.c;clearReply()}
     const er=e=>toast(e.code==='PERMISSION_DENIED'?'Нет прав на запись (проверьте правила для files/ и voices/)':'Firebase: '+(e.code||e.message));
@@ -1221,7 +1228,7 @@ g('ecx').onclick=()=>g('edit').hidden=true;
 g('esv').onclick=async()=>{try{
   const name=g('ename').value.replace(/[<>&"']/g,'').trim(),un=g('eun').value.trim().toLowerCase().replace(/^@/,''),about=g('eab').value.replace(/[<>]/g,'').trim().slice(0,140);
   if(!name)throw 'Введите ник';
-  if(!/^[a-z0-9_]{3,20}$/.test(un))throw '@username: 3–20 символов, латиница, цифры и _';
+  if(!/^[a-z][a-z0-9_]{4,31}$/.test(un))throw '@username: 5–32 символа: латиница, цифры и _; начинается с буквы';
   const up={['users/'+uid+'/name']:name,['users/'+uid+'/un']:un,['users/'+uid+'/about']:about||null};
   if(un!==me.un){up['usernames/'+un]=uid;up['usernames/'+me.un]=null}
   await update(ref(db),up);g('edit').hidden=true;toast('Профиль обновлён');
@@ -1270,7 +1277,7 @@ async function openUP(pid){if(!pid)return;delete cache[pid];
   upT='m';g('pitabs').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.t==='m'));upMedia();
   P.hidden=false;P.scrollTop=0;
   if(!d.del)get(ref(db,'presence/'+pid)).then(s=>{const v=s.val()||{};if(upPid()!==pid||P.hidden)return;g('pis').textContent=v.on?'в сети':seenT(typeof v.ts==='number'?v.ts:0)}).catch(()=>{})}
-document.querySelector('.chead .mid').onclick=()=>{if(cur&&cur.g)return openGI();if(!cur||!cur.peer)return;openUP(cur.peer)};
+document.querySelector('.chead .mid').onclick=()=>{if(cur&&cur.g)return openGI();if(cur&&cur.channel){toast('YouChat — канал');return}if(!cur||!cur.peer)return;openUP(cur.peer)};
 g('pic').onclick=()=>g('pi').hidden=true;g('rbx').onclick=clearReply;
 g('pich').onclick=async()=>{const pid=upPid();g('pi').hidden=true;if(cur&&cur.peer===pid&&g('chat').classList.contains('open'))return;g('gi').hidden=true;await fb.openPeer(pid)};
 g('picall').onclick=()=>{const pid=upPid();g('pi').hidden=true;g('gi').hidden=true;fb.callPeer(pid)};
