@@ -143,6 +143,8 @@ svg{width:24px;height:24px;fill:currentColor;flex:none}
 .mav{display:inline-block;width:20px;height:20px;border-radius:10px;background-size:cover;background-position:center;margin-right:6px;vertical-align:middle}
 .who small{opacity:.7;font-weight:500}
 .pav{background-size:cover;background-position:center;cursor:pointer}
+.set small{display:block;font-size:13px;color:var(--onv);font-weight:400;margin-top:2px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chead .mid{cursor:pointer}
 </style>
 </head>
 <body>
@@ -159,6 +161,9 @@ svg{width:24px;height:24px;fill:currentColor;flex:none}
     <button class="fab press" id="fab"><svg viewBox="0 -960 960 960"><path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.500-17t30.500-6q16 0 31 6t26 18l55 56q12 11 17.500 26t5.500 30q0 16-5.500 30.500T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/></svg>Написать</button>
     <div class="prof" id="prof"><div class="pav" id="pav">Я</div><div class="pn" id="pn">Вы</div><div class="pu" id="pu">@you</div>
 <div class="pst"><div><b id="s1"></b>чатов</div><div><b id="s2"></b>групп</div><div><b id="s3"></b>закреплено</div></div>
+<button class="set press" id="rAbout"><span>О себе<small id="pab"></small></span><span>✎</span></button>
+<button class="set press" id="rUn"><span>Ник и @username</span><span>✎</span></button>
+<button class="set press" id="rAcc"><span>Почта и аккаунт<small id="pem"></small></span><span>›</span></button>
 <button class="set press" id="swT"><span>Тёмная тема</span><span class="sw" id="sw"><i></i></span></button>
 <button class="set press"><span>Уведомления</span><span class="sw on"><i></i></span></button>
 <button class="set press"><span>Звуки сообщений</span><span class="sw"><i></i></span></button>
@@ -196,6 +201,22 @@ svg{width:24px;height:24px;fill:currentColor;flex:none}
 <label class="tf"><span>@</span><input id="dun" placeholder="username собеседника" autocapitalize="none" autocomplete="off"></label>
 <div class="err" id="derr"></div>
 <button class="btn press" id="dgo">Найти и написать</button><button class="txt" id="dcx">Отмена</button></div></div>
+<div class="auth" id="edit" hidden><div class="card"><h1>Профиль</h1>
+<label class="tf"><input id="ename" placeholder="Ник" maxlength="24"></label>
+<label class="tf"><span>@</span><input id="eun" placeholder="username" maxlength="20" autocapitalize="none" autocomplete="off"></label>
+<label class="tf"><input id="eab" placeholder="О себе" maxlength="140"></label>
+<div class="err" id="eerr"></div><button class="btn press" id="esv">Сохранить</button><button class="txt" id="ecx">Отмена</button></div></div>
+<div class="auth" id="acc" hidden><div class="card"><h1>Аккаунт</h1><div id="aem2" style="color:var(--onv);word-break:break-all"></div>
+<label class="tf"><input id="cpw" type="password" placeholder="Текущий пароль" autocomplete="current-password"></label>
+<label class="tf"><input id="nem" type="email" placeholder="Новая почта"></label>
+<div class="err" id="cerr"></div>
+<button class="btn press" id="cem">Сменить почту</button>
+<button class="btn press" id="cdel" style="background:#ba1a1a;color:#fff">Удалить аккаунт</button>
+<button class="txt" id="ccx">Закрыть</button></div></div>
+<div class="auth" id="pi" hidden><div class="card" style="align-items:center;text-align:center">
+<div class="pick" id="piav" style="display:grid;place-items:center;font-size:40px;font-weight:900"></div>
+<h1 id="pin"></h1><div id="piu" style="color:var(--p);font-weight:600"></div><div id="pia" style="color:var(--onv)"></div>
+<button class="txt" id="pic">Закрыть</button></div></div>
 <div class="toast" id="toast"></div>
 </div>
 
@@ -305,7 +326,7 @@ $('#prof').onclick=e=>{const b=e.target.closest('.set');if(!b)return;if(b.id==='
 const V="https://www.gstatic.com/firebasejs/10.14.1/";
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAnalytics,isSupported} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics.js";
-import {getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,onAuthStateChanged,signOut,deleteUser} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,onAuthStateChanged,signOut,deleteUser,EmailAuthProvider,reauthenticateWithCredential,verifyBeforeUpdateEmail} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {getDatabase,ref,push,set,get,update,query,limitToLast,onChildAdded,onValue,runTransaction,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 const firebaseConfig={
   apiKey:"AIzaSyB0uaLhHrYjWblrCBLTPx7mF_OmUhhld70",
@@ -322,8 +343,8 @@ isSupported().then(ok=>ok&&getAnalytics(app)).catch(()=>{});
 const auth=getAuth(app),db=getDatabase(app),g=id=>document.getElementById(id);
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const okAv=a=>/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(a||'')?a:'';
-const errT=e=>typeof e==='string'?e:({'auth/invalid-credential':'Неверная почта или пароль','auth/email-already-in-use':'Эта почта уже зарегистрирована','auth/weak-password':'Пароль слишком короткий','auth/invalid-email':'Некорректная почта','auth/network-request-failed':'Нет сети'}[e.code]||e.code||e.message);
-const cache={},getP=id=>cache[id]||(cache[id]=get(ref(db,'users/'+id)).then(s=>s.val()||{}));
+const errT=e=>typeof e==='string'?e:({'auth/invalid-credential':'Неверная почта или пароль','auth/email-already-in-use':'Эта почта уже зарегистрирована','auth/weak-password':'Пароль слишком короткий','auth/invalid-email':'Некорректная почта','auth/network-request-failed':'Нет сети','auth/too-many-requests':'Слишком много попыток, подождите','auth/operation-not-allowed':'Смена почты отключена в настройках Firebase','auth/requires-recent-login':'Войдите заново и повторите','PERMISSION_DENIED':'Нет доступа (проверьте правила базы)'}[e.code]||e.code||e.message);
+const cache={},getP=id=>cache[id]||(cache[id]=Promise.all([get(ref(db,'users/'+id)),get(ref(db,'avatars/'+id))]).then(([u,a])=>{const v=u.val()||{};v.av=a.val()||v.av||'';return v}));
 let me=null,uid=null,reg=false,avData=null,picking='reg',off=null,seen=new Set(),chain=Promise.resolve(),stopP=null,entered=false;
 const dmp={};
 function readAv(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=128;const m=Math.min(im.width,im.height);c.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,128,128);res(c.toDataURL('image/jpeg',.7))};im.src=r.result};r.readAsDataURL(file)})}
@@ -333,7 +354,7 @@ g('apick').onclick=()=>{picking='reg';g('afile').click()};
 g('pav').onclick=()=>{picking='prof';g('afile').click()};
 g('afile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const a=await readAv(f);
   if(picking==='reg'){avData=a;g('apick').style.backgroundImage=`url(${a})`;g('apick').textContent=''}
-  else update(ref(db,'users/'+uid),{av:a}).catch(x=>toast('Firebase: '+x.code))};
+  else set(ref(db,'avatars/'+uid),a).then(()=>toast('Фото обновлено')).catch(x=>toast('Firebase: '+x.code))};
 g('ago').onclick=async()=>{g('aerr').textContent='';
   try{const em=g('aem').value.trim(),pw=g('apw').value;
     if(!reg){await signInWithEmailAndPassword(auth,em,pw);return}
@@ -343,11 +364,11 @@ g('ago').onclick=async()=>{g('aerr').textContent='';
     const u=(await createUserWithEmailAndPassword(auth,em,pw)).user;
     const tx=await runTransaction(ref(db,'usernames/'+un),v=>v===null?u.uid:undefined);
     if(!tx.committed){await deleteUser(u);throw 'Этот @username уже занят'}
-    await set(ref(db,'users/'+u.uid),{name,un,av:avData||null});
+    await set(ref(db,'users/'+u.uid),{name,un});if(avData)await set(ref(db,'avatars/'+u.uid),avData);
   }catch(e){g('aerr').textContent=errT(e)}};
-function paint(){g('pn').textContent=me.name;g('pu').textContent='@'+me.un;const p=g('pav');p.style.backgroundImage=me.av?`url(${me.av})`:'';p.textContent=me.av?'':me.name[0].toUpperCase()}
+function paint(){g('pn').textContent=me.name;g('pu').textContent='@'+me.un;g('pab').textContent=me.about||'Расскажите о себе';g('pem').textContent=auth.currentUser?auth.currentUser.email:'';const p=g('pav');p.style.backgroundImage=me.av?`url(${me.av})`:'';p.textContent=me.av?'':me.name[0].toUpperCase()}
 function addDM(id,pid){return dmp[id]||(dmp[id]=(async()=>{const p=await getP(pid);
-  if(!chats.some(c=>c.id==id))chats.unshift({id,n:p.name||'Пользователь',pun:p.un,av:okAv(p.av),c:[...pid].reduce((a,ch)=>a+ch.charCodeAt(0),0)%7,last:'@'+(p.un||''),tm:'',un:0,g:0,on:1,m:[]});
+  if(!chats.some(c=>c.id==id))chats.unshift({id,peer:pid,n:p.name||'Пользователь',pun:p.un,av:okAv(p.av),c:[...pid].reduce((a,ch)=>a+ch.charCodeAt(0),0)%7,last:'@'+(p.un||''),tm:'',un:0,g:0,on:1,m:[]});
   renderList()})())}
 function enter(){if(entered)return;entered=true;g('auth').hidden=true;window.fb=fb;
   onChildAdded(ref(db,'userChats/'+uid),s=>addDM(s.key,s.val()))}
@@ -359,7 +380,7 @@ const fb={
       if(seen.has(s.key))return;seen.add(s.key);const d=s.val();
       chain=chain.then(async()=>{const out=d.u===uid,p=out?{}:await getP(d.u);
         if(!cur||String(cur.id)!==String(id))return;
-        const m=[out?'out':'in',esc(d.t),d.tm||'',esc(d.n||'Гость')+(d.un?` <small>@${esc(d.un)}</small>`:'')];
+        const nn=p.name||d.n||'Гость',uu=p.un||d.un,m=[out?'out':'in',esc(d.t),d.tm||'',esc(nn)+(uu?` <small>@${esc(uu)}</small>`:'')];
         if(d.v)m.v=+d.v||1;if(!out&&okAv(p.av))m.av=okAv(p.av);add(m)}).catch(()=>{})},e=>toast('Firebase: '+e.code))},
   unsub(){if(off){off();off=null}},
   dlg(){g('dun').value='';g('derr').textContent='';g('dlg').hidden=false}
@@ -373,12 +394,42 @@ g('dgo').onclick=async()=>{try{
   await Promise.all([set(ref(db,'userChats/'+uid+'/'+id),pid),set(ref(db,'userChats/'+pid+'/'+id),uid)]);
   await addDM(id,pid);g('dlg').hidden=true;openChat(id)}catch(e){g('derr').textContent=errT(e)}};
 g('logout').onclick=async()=>{await signOut(auth);location.reload()};
+g('rAbout').onclick=g('rUn').onclick=()=>{g('ename').value=me.name;g('eun').value=me.un;g('eab').value=me.about;g('eerr').textContent='';g('edit').hidden=false};
+g('ecx').onclick=()=>g('edit').hidden=true;
+g('esv').onclick=async()=>{try{
+  const name=g('ename').value.replace(/[<>&"']/g,'').trim(),un=g('eun').value.trim().toLowerCase().replace(/^@/,''),about=g('eab').value.replace(/[<>]/g,'').trim().slice(0,140);
+  if(!name)throw 'Введите ник';
+  if(!/^[a-z0-9_]{3,20}$/.test(un))throw '@username: 3–20 символов, латиница, цифры и _';
+  const up={['users/'+uid+'/name']:name,['users/'+uid+'/un']:un,['users/'+uid+'/about']:about||null};
+  if(un!==me.un){up['usernames/'+un]=uid;up['usernames/'+me.un]=null}
+  await update(ref(db),up);g('edit').hidden=true;toast('Профиль обновлён');
+}catch(e){g('eerr').textContent=e.code==='PERMISSION_DENIED'?'Этот @username занят или нет прав':errT(e)}};
+g('rAcc').onclick=()=>{g('aem2').textContent=auth.currentUser.email;g('cpw').value='';g('nem').value='';g('cerr').textContent='';g('acc').hidden=false};
+g('ccx').onclick=()=>g('acc').hidden=true;
+const reauth=async()=>{const u=auth.currentUser;if(!g('cpw').value)throw 'Введите текущий пароль';
+  await reauthenticateWithCredential(u,EmailAuthProvider.credential(u.email,g('cpw').value));return u};
+g('cem').onclick=async()=>{g('cerr').style.color='';try{
+  const ne=g('nem').value.trim();if(!ne)throw 'Введите новую почту';
+  await verifyBeforeUpdateEmail(await reauth(),ne);
+  g('cerr').style.color='var(--p)';g('cerr').textContent='Письмо отправлено на '+ne+'. Перейдите по ссылке в нём, и почта сменится.';
+}catch(e){g('cerr').textContent=errT(e)}};
+g('cdel').onclick=async()=>{g('cerr').style.color='';try{
+  if(!confirm('Удалить аккаунт безвозвратно?'))return;
+  const u=await reauth();
+  await update(ref(db),{['users/'+uid]:null,['avatars/'+uid]:null,['usernames/'+me.un]:null,['userChats/'+uid]:null});
+  await deleteUser(u);location.reload();
+}catch(e){g('cerr').textContent=errT(e)}};
+document.querySelector('.chead .mid').onclick=async()=>{if(!cur||!cur.peer)return;delete cache[cur.peer];const d=await getP(cur.peer),a=okAv(d.av);
+  g('piav').style.backgroundImage=a?`url(${a})`:'';g('piav').textContent=a?'':(d.name||'?')[0].toUpperCase();
+  g('pin').textContent=d.name||'';g('piu').textContent=d.un?'@'+d.un:'';g('pia').textContent=d.about||'О себе ничего не написано';g('pi').hidden=false};
+g('pic').onclick=()=>g('pi').hidden=true;
 onAuthStateChanged(auth,u=>{
   if(stopP){stopP();stopP=null}
   if(!u){uid=null;me=null;window.fb=undefined;g('auth').hidden=false;return}
   uid=u.uid;
-  stopP=onValue(ref(db,'users/'+uid),s=>{if(!s.exists())return;const v=s.val();
-    me={name:v.name,un:v.un,av:okAv(v.av)};cache[uid]=Promise.resolve(v);paint();enter()});
+  let uv=null,av='';const upd=()=>{if(!uv)return;me={name:uv.name,un:uv.un,about:uv.about||'',av:okAv(av||uv.av)};paint();enter()};
+  const a=onValue(ref(db,'users/'+uid),s=>{uv=s.exists()?s.val():null;upd()}),b=onValue(ref(db,'avatars/'+uid),s=>{av=s.val()||'';upd()});
+  stopP=()=>{a();b()};
 });
 </script>
 </body>
