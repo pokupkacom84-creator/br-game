@@ -333,6 +333,9 @@ svg.ln{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;strok
 .mdc h3{font-size:22px;font-weight:600;margin-bottom:12px}.mdc p{font-size:15px;line-height:1.4;color:var(--onv)}
 .mda{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px;margin-top:20px}
 .mdb{height:44px;padding:0 14px;border-radius:22px;font-weight:600;font-size:15px;color:var(--p)}.mdb:active{background:var(--surf4)}.mdb.dn{color:#d93b3b}
+
+/* YouChat channel profile/read-only footer */
+.yc-footer{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 16px;background:var(--surf);color:var(--onv);border-top:1px solid var(--out);font-size:14px;min-height:58px}.yc-footer button{border:0;border-radius:28px;background:var(--sc);color:var(--onsc);padding:12px 20px;font-weight:700}.yc-profile{position:fixed;inset:0;z-index:70;overflow:auto;background:var(--bg);display:none}.yc-profile.show{display:block}.yc-cover{padding:24px 18px 20px;background:linear-gradient(145deg,var(--p),var(--sc));color:var(--onsc);text-align:center}.yc-top{display:flex;justify-content:space-between}.yc-top button{border:0;background:transparent;color:inherit;font-size:22px}.yc-avatar{width:112px;height:112px;border-radius:50%;margin:22px auto 10px;background:var(--out);background-position:center;background-size:cover;display:grid;place-items:center;font-size:40px;font-weight:800}.yc-panel{margin:14px 16px;background:var(--surf);border-radius:22px;padding:8px}.yc-action{display:flex;align-items:center;gap:14px;padding:16px 12px;border:0;background:transparent;color:var(--on);width:100%;text-align:left;font-size:16px}.yc-action+ .yc-action{border-top:1px solid var(--out)}.yc-action small{display:block;color:var(--onv);margin-top:3px}.yc-editor{position:fixed;inset:0;z-index:75;background:var(--bg);display:none;overflow:auto;padding:18px}.yc-editor.show{display:block}.yc-editor .card{max-width:520px;margin:24px auto}.yc-editor input,.yc-editor textarea{width:100%;padding:14px;border:1px solid var(--out);border-radius:14px;background:var(--surf);color:var(--on);font:inherit;margin:8px 0}.yc-editor textarea{min-height:100px}
 </style>
 </head>
 <body>
@@ -408,7 +411,7 @@ svg.ln{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;strok
         <svg class="ic-mic" viewBox="0 -960 960 960"><path d="M480-400q-50 0-85-35t-35-85v-240q0-50 35-85t85-35q50 0 85 35t35 85v240q0 50-35 85t-85 35Zm-40 280v-123q-104-14-172-93t-68-184h80q0 83 58.500 141.500T480-320q83 0 141.500-58.500T680-520h80q0 105-68 184t-172 93v123h-80Z"/></svg>
         <svg class="ic-send" viewBox="0 -960 960 960"><path d="M120-160v-640l760 320-760 320Zm80-120 474-200-474-200v140l240 60-240 60v140Z"/></svg>
       </button>
-    </div>
+    </div><div class="yc-footer" id="ycFooter" hidden><button id="ycNotify">Включить уведомления</button></div>
   <div class="emo" id="emo"><div class="eb" id="eb"></div><div class="et"><div class="etabs" id="etabs"></div><button id="ebs" class="press" aria-label="Стереть">⌫</button></div></div>
   </section>
   <div class="auth" id="auth" hidden><div class="card">
@@ -473,6 +476,7 @@ svg.ln{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;strok
 <div id="gml"></div>
 <button class="btn press" id="gleave" style="background:#ba1a1a;color:#fff">Покинуть группу</button>
 <button class="txt" id="gclose">Закрыть</button></div></div>
+<div class="yc-profile" id="ycProfile"><div class="yc-cover"><div class="yc-top"><button id="ycBack">‹</button><button id="ycEditOpen" hidden>✎</button></div><div class="yc-avatar" id="ycAv">Y</div><h2 id="ycName" style="margin:8px 0"></h2><div id="ycSub" style="opacity:.85">публичный канал</div></div><div class="yc-panel"><div class="yc-action"><div style="font-size:24px">♙</div><div><b id="ycCount">—</b><small>Подписчики</small></div></div><button class="yc-action" id="ycSettings" hidden><span style="font-size:24px">⚙</span><span>Настройки канала</span></button></div><div class="yc-panel"><button class="yc-action" id="ycCloseProfile">Закрыть</button></div></div><div class="yc-editor" id="ycEditor"><div class="card"><h2>Настройки канала</h2><input id="ycNameEdit" maxlength="48" placeholder="Название канала"><textarea id="ycDescEdit" maxlength="300" placeholder="Описание канала"></textarea><button class="btn press" id="ycPhoto">Изменить фото</button><input type="file" id="ycPhotoFile" accept="image/*" hidden><button class="btn press" id="ycSave">Сохранить</button><button class="txt" id="ycEditorClose">Отмена</button></div></div>
 <audio id="ra" autoplay playsinline></audio>
 <div class="auth call" id="call" hidden><div class="card" style="align-items:center;text-align:center;gap:8px">
 <div class="pick" id="cav2" style="display:grid;place-items:center;font-size:52px;font-weight:900;width:132px;height:132px;border-radius:44px"></div>
@@ -530,7 +534,7 @@ function openChat(id){window.fb&&setTimeout(()=>fb.sub(id),0);
   cur.typ=[];cur.reads={};cur.oldK=null;cur.more=true;updateHead();
   renderMsgs();
   $('#chat').classList.add('open');$('#list').classList.add('back');
-  setTimeout(()=>{$('#msgs').scrollTop=1e6},50);renderList();
+  setTimeout(()=>{$('#msgs').scrollTop=1e6},50);const isY=!!cur.channel;document.querySelector('.bar').hidden=isY&&uid!==channelOwnerUid;$('#ycFooter').hidden=!isY||uid===channelOwnerUid;$('#callBtn').hidden=isY;$('#ycFooter').style.display=isY&&uid!==channelOwnerUid?'flex':'none';renderList();
 }
 function closeChat(){selEnd();clearReply();toggleEmo(false);window.fb&&fb.unsub();if(rec)stopRec(0);hidePicker();$('#chat').classList.remove('open');$('#list').classList.remove('back');cur=null;renderList()}
 const now=()=>new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
@@ -984,8 +988,8 @@ function addDM(id,pid){return dmp[id]||(dmp[id]=(async()=>{const p=await getP(pi
 function enter(){if(entered)return;entered=true;g('auth').hidden=true;window.fb=fb;
   // YouChat: automatic subscription entry for authenticated users
   const yc='channel_youchat';
-  get(ref(db,'usernames/alex')).then(s=>{channelOwnerUid=s.val()||null;}).catch(()=>{});
-  set(ref(db,'userChats/'+uid+'/'+yc),'channel').catch(()=>{});
+  get(ref(db,'usernames/alex')).then(s=>{channelOwnerUid=s.val()||null;syncYCControls();}).catch(()=>{});
+  set(ref(db,'userChats/'+uid+'/'+yc),'channel').catch(()=>{});set(ref(db,'channels/'+yc+'/subscribers/'+uid),true).catch(()=>{});
   if(!chats.some(c=>c.id===yc)){const c={id:yc,channel:1,n:'YouChat - новости',peer:null,av:'',c:5,last:'Новости YouChat',tm:'',un:0,m:[],owner:null};chats.unshift(c);watch(c);renderList();}
   get(ref(db,'usernames/alex')).then(s=>{const owner=s.val()||null;update(ref(db,'channels/'+yc),{name:'YouChat - новости',owner:owner,ts:Date.now()}).catch(()=>{});const c=chats.find(x=>x.id===yc);if(c)c.owner=owner;}).catch(()=>{});
   onChildAdded(ref(db,'userChats/'+uid),s=>s.key==='channel_youchat'?(()=>{const c=chats.find(x=>x.id===s.key);if(c)renderList()})():s.key.startsWith('g_')?addGroup(s.key):addDM(s.key,s.val()));onValue(ref(db,'incoming/'+uid),inc);onChildRemoved(ref(db,'userChats/'+uid),s=>removeChat(s.key));onValue(ref(db,'prefs/'+uid),s=>{PF=s.val()||{};chats.forEach(applyPref);purgeCur();renderList()});if(S.n&&'Notification' in window&&Notification.permission==='granted')pushOn();
@@ -1139,7 +1143,7 @@ g('gleave').onclick=async()=>{const c=chats.find(x=>x.id==gcur);if(!c||!(await a
     removeChat(id)}catch(x){toast(errT(x))}};
 const fb={
   send(id,text,v,vd){const pc0=chats.find(x=>x.id==id);if(pc0&&pc0.deleted&&!pc0.g){toast('Аккаунт удалён — писать некому');return Promise.resolve()}
-    if(pc0&&pc0.channel){if(uid!==channelOwnerUid){toast('Публиковать в YouChat может только @alex');return Promise.resolve()}if(vd){toast('В канале пока доступны текстовые публикации');return Promise.resolve()}}
+    if(pc0&&pc0.channel){if(uid!==channelOwnerUid)return Promise.resolve();if(vd){toast('Медиа-публикации в канале пока не поддерживаются');return Promise.resolve()}}
     fb.stopTyping();const r=push(ref(db,'chats/'+id+'/msgs')),d={u:uid,n:me.name,un:me.un,t:text,tm:now(),v:v||null,ts:serverTimestamp()};
     if(replyTo){d.rp={n:replyTo.n.slice(0,24),t:replyTo.t.slice(0,80)};if(replyTo.c)d.rp.c=replyTo.c;clearReply()}
     const er=e=>toast(e.code==='PERMISSION_DENIED'?'Нет прав на запись (проверьте правила для files/ и voices/)':'Firebase: '+(e.code||e.message));
@@ -1277,7 +1281,7 @@ async function openUP(pid){if(!pid)return;delete cache[pid];
   upT='m';g('pitabs').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.t==='m'));upMedia();
   P.hidden=false;P.scrollTop=0;
   if(!d.del)get(ref(db,'presence/'+pid)).then(s=>{const v=s.val()||{};if(upPid()!==pid||P.hidden)return;g('pis').textContent=v.on?'в сети':seenT(typeof v.ts==='number'?v.ts:0)}).catch(()=>{})}
-document.querySelector('.chead .mid').onclick=()=>{if(cur&&cur.g)return openGI();if(cur&&cur.channel){toast('YouChat - новости · канал');return}if(!cur||!cur.peer)return;openUP(cur.peer)};
+document.querySelector('.chead .mid').onclick=()=>{if(cur&&cur.g)return openGI();if(cur&&cur.channel){openYCProfile();return}if(!cur||!cur.peer)return;openUP(cur.peer)};
 g('pic').onclick=()=>g('pi').hidden=true;g('rbx').onclick=clearReply;
 g('pich').onclick=async()=>{const pid=upPid();g('pi').hidden=true;if(cur&&cur.peer===pid&&g('chat').classList.contains('open'))return;g('gi').hidden=true;await fb.openPeer(pid)};
 g('picall').onclick=()=>{const pid=upPid();g('pi').hidden=true;g('gi').hidden=true;fb.callPeer(pid)};
@@ -1289,6 +1293,12 @@ g('piun').onclick=()=>{const t=g('piu').textContent;try{navigator.clipboard.writ
 g('piadd').onclick=()=>{const pid=upPid();if(!pid||g('pi').dataset.del==='1')return;S.ct=S.ct||[];const i=S.ct.indexOf(pid);if(i<0)S.ct.push(pid);else S.ct.splice(i,1);saveS();upBtns();typeof renderContacts==='function'&&renderContacts();toast(i<0?'Добавлено в контакты':'Удалено из контактов')};
 g('pitabs').onclick=e=>{const b=e.target.closest('button[data-t]');if(!b)return;upT=b.dataset.t;g('pitabs').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));upMedia()};
 g('pig').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.u){window.open(b.dataset.u,'_blank','noopener');return}const m=cur&&cur.m[+b.dataset.i];if(!m)return;if(upT==='m')fb.showImg(m);else fb.getFile(m)};
+
+// YouChat channel profile and owner settings
+function syncYCControls(){const c=chats.find(x=>x.id==='channel_youchat');if(c){c.owner=channelOwnerUid;c.channel=1;}const owner=!!uid&&uid===channelOwnerUid;const f=document.getElementById('ycFooter'),bar=document.querySelector('.bar');if(cur&&cur.channel){if(bar)bar.hidden=!owner;if(f){f.hidden=owner;f.style.display=owner?'none':'flex'}}const eb=document.getElementById('ycEditOpen'),st=document.getElementById('ycSettings');if(eb)eb.hidden=!owner;if(st)st.hidden=!owner}
+function openYCProfile(){const c=chats.find(x=>x.id==='channel_youchat');if(!c)return;get(ref(db,'channels/channel_youchat')).then(sn=>{const d=sn.val()||{};document.getElementById('ycName').textContent=d.name||c.n;document.getElementById('ycSub').textContent=d.description||'публичный канал';const a=document.getElementById('ycAv');a.style.backgroundImage=d.av?`url(${d.av})`:'';a.textContent=d.av?'':(d.name||c.n||'Y')[0].toUpperCase();document.getElementById('ycNameEdit').value=d.name||c.n;document.getElementById('ycDescEdit').value=d.description||'';document.getElementById('ycCount').textContent=d.subscribers?Object.keys(d.subscribers).length:'Подписчики';}).catch(()=>{});syncYCControls();document.getElementById('ycProfile').classList.add('show')}
+document.getElementById('ycBack').onclick=document.getElementById('ycCloseProfile').onclick=()=>document.getElementById('ycProfile').classList.remove('show');document.getElementById('ycEditOpen').onclick=document.getElementById('ycSettings').onclick=()=>{if(uid!==channelOwnerUid)return;document.getElementById('ycProfile').classList.remove('show');document.getElementById('ycEditor').classList.add('show')};document.getElementById('ycEditorClose').onclick=()=>document.getElementById('ycEditor').classList.remove('show');let ycPhotoData='';document.getElementById('ycPhoto').onclick=()=>document.getElementById('ycPhotoFile').click();document.getElementById('ycPhotoFile').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;if(f.size>900000){toast('Фото слишком большое');return}const r=new FileReader();r.onload=()=>{ycPhotoData=String(r.result||'');document.getElementById('ycAv').style.backgroundImage=`url(${ycPhotoData})`;document.getElementById('ycAv').textContent=''};r.readAsDataURL(f)};document.getElementById('ycSave').onclick=async()=>{if(uid!==channelOwnerUid){toast('Недоступно');return}const name=document.getElementById('ycNameEdit').value.trim(),description=document.getElementById('ycDescEdit').value.trim();if(!name){toast('Введите название');return}try{const patch={name,description};if(ycPhotoData)patch.av=ycPhotoData;await update(ref(db,'channels/channel_youchat'),patch);const c=chats.find(x=>x.id==='channel_youchat');if(c)c.n=name;document.getElementById('ycEditor').classList.remove('show');toast('Канал обновлён');renderList()}catch(e){toast('Не удалось сохранить: '+(e.code||e.message))}};document.getElementById('ycNotify').onclick=()=>toast('Уведомления канала включены');
+
 onAuthStateChanged(auth,u=>{
   if(stopP){stopP();stopP=null}
   if(!u){uid=null;me=null;window.myProf=null;renderNav();window.fb=undefined;g('auth').hidden=false;return}
