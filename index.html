@@ -203,15 +203,7 @@ svg{width:24px;height:24px;fill:currentColor;flex:none}
 const $=s=>document.querySelector(s);
 const COL=['#6750a4','#006a6a','#984061','#7d5260','#386a20','#005ac1','#8b5000'];
 const tick='<svg viewBox="0 -960 960 960"><path d="m382-354 339-339 56 56-395 395-198-198 56-56 142 142Z"/></svg>';
-const chats=[
- {id:1,n:'Алина',c:0,last:'Скинешь фотки с поездки? 📸',tm:'12:41',un:2,g:0,on:1,m:[['in','Привет! Как выходные?','12:30'],['out','Отлично, ездили на озеро','12:35'],['in','Скинешь фотки с поездки? 📸','12:41']]},
- {id:2,pin:1,n:'Дизайн-команда',c:1,last:'Макс: обновил компоненты в Figma',tm:'11:08',un:5,g:1,m:[['in','Всем привет, ревью в 15:00','10:50','Лена'],['in','обновил компоненты в Figma','11:08','Макс']]},
- {id:3,n:'Мама',c:2,last:'Не забудь позвонить бабушке ❤️',tm:'10:15',un:0,g:0,on:0,m:[['in','Не забудь позвонить бабушке ❤️','10:15']]},
- {id:4,n:'Дима Волков',c:3,last:'Ты: ок, увидимся в 7',tm:'Вчера',un:0,g:0,on:1,m:[['in','Идём вечером в кино?','18:20'],['out','ок, увидимся в 7','18:42']]},
- {id:5,n:'Android Dev RU',c:5,last:'Вышел Android 17 beta 3',tm:'Вчера',un:12,g:1,m:[['in','Вышел Android 17 beta 3','09:00','Bot']]},
- {id:6,n:'Соня',c:4,last:'Спасибо огромное! 🥹',tm:'Пн',un:0,g:0,on:0,m:[['out','Держи рецепт, получится вкусно','20:10'],['in','Спасибо огромное! 🥹','20:15']]},
- {id:7,n:'Работа · Чат',c:6,last:'Анна: презентацию отправила',tm:'Пн',un:0,g:1,m:[['in','презентацию отправила','16:00','Анна']]}
-];
+const chats=[];
 const replies=['Ого, круто! 😄','Понял, сейчас гляну','Хах, согласен','Давай позже обсудим?','👍','Окей, договорились','Расскажи подробнее'];
 let filter='all',cur=null,tab=0;
 
@@ -229,7 +221,7 @@ function renderList(){
   $('#rows').innerHTML=a.length?a.map(c=>`<button class="row" data-id="${c.id}">${av(c)}
    <div class="mid"><div class="nm">${c.n}</div><div class="ls">${c.last}</div></div>
    <div class="meta"><span>${c.tm}</span>${c.un?`<span class="badge">${c.un}</span>`:`<span style="height:24px;display:grid;align-items:center">${c.pin?PIN:''}</span>`}</div></button>`).join('')
-   :'<div class="empty">Ничего не найдено</div>';
+   :`<div class="empty">${chats.length?'Ничего не найдено':'Чатов пока нет.<br>Нажмите «Написать» и найдите друга по @username'}</div>`;
   renderNav();
 }
 function renderNav(){$('#s1').textContent=chats.length;$('#s2').textContent=chats.filter(c=>c.g).length;$('#s3').textContent=chats.filter(c=>c.pin).length;
@@ -297,7 +289,7 @@ $('#q').oninput=renderList;
 $('#back').onclick=closeChat;
 $('#send').onclick=send;
 $('#inp').oninput=sync;
-$('#fab').onclick=()=>window.fb?fb.dlg():openChat(chats[0].id);
+$('#fab').onclick=()=>window.fb?fb.dlg():toast('Войдите в аккаунт');
 $('#themeBtn').onclick=()=>{const d=document.documentElement,dark=getComputedStyle(d).getPropertyValue('--bg').trim()==='#141218';
   d.dataset.theme=dark?'light':'dark';syncSw()};
 renderChips();renderList();syncSw();
