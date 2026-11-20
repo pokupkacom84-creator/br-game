@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#fef7ff">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -343,12 +343,13 @@ if(S.n===undefined)S.n=true;if(S.s===undefined)S.s=false;
 function saveS(){try{localStorage.setItem('settings',JSON.stringify(S))}catch(e){}}
 function syncS(){$('#sNotSw').classList.toggle('on',!!S.n);$('#sSndSw').classList.toggle('on',!!S.s)}
 function askNotif(){const off=m=>{S.n=false;saveS();syncS();toast(m)};
+  if(window.Android&&Android.showNotification)return;
   if(!('Notification' in window))return off('Уведомления не поддерживаются');
   if(Notification.permission==='denied')return off('Разрешите уведомления в настройках браузера');
   if(Notification.permission==='default')Notification.requestPermission().then(p=>{if(p!=='granted')off('Уведомления запрещены');else window.pushOn&&pushOn()});else window.pushOn&&pushOn()}
 let actx;function beep(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain(),t=actx.currentTime;
   o.frequency.value=880;g.gain.setValueAtTime(.15,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);o.connect(g);g.connect(actx.destination);o.start();o.stop(t+.25)}catch(e){}}
-function notify(t,b){if(window.fcmOn)return;if(S.n&&'Notification' in window&&Notification.permission==='granted')try{new Notification(t,{body:b,tag:t})}catch(e){}}
+function notify(t,b){if(window.Android&&Android.showNotification){if(S.n)try{Android.showNotification(String(t),String(b))}catch(e){}return}if(window.fcmOn)return;if(S.n&&'Notification' in window&&Notification.permission==='granted')try{new Notification(t,{body:b,tag:t})}catch(e){}}
 document.addEventListener('pointerdown',()=>{if(S.n&&'Notification' in window&&Notification.permission==='default')Notification.requestPermission().then(p=>{if(p==='granted'&&window.pushOn)pushOn()})},{once:true});
 function seenT(ts){if(!ts)return 'был(а) давно';const d=new Date(ts),n=new Date(),t=d.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}),
   dd=Math.round((new Date(n.getFullYear(),n.getMonth(),n.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5);
@@ -424,7 +425,7 @@ p.innerHTML=['❤️','👍','😂','🔥','😮','😢'].map(e=>`<button>${e}</
 p.style.top=Math.max(80,r.top-a.top-112)+'px';p.style[bEl.classList.contains('out')?'right':'left']='12px';
 p.onclick=ev=>{const b=ev.target.closest('button');if(!b)return;const m=cur.m[+bEl.dataset.i],a=b.dataset.a;hidePicker();
 if(a==='r'){setReply(m);return}if(a==='e'){setEdit(m);return}
-if(a==='c'){navigator.clipboard&&navigator.clipboard.writeText(m.raw||m[1].replace(/&lt;/g,'<'));toast('Скопировано');return}
+if(a==='c'){const tx=m.raw||m[1].replace(/&lt;/g,'<');if(window.Android&&Android.copyText)Android.copyText(tx);else navigator.clipboard&&navigator.clipboard.writeText(tx);toast('Скопировано');return}
 if(a==='d'){window.fb&&m.k&&fb.del(m);return}
 if(window.fb&&m.k){fb.react(m,b.textContent);return}
 m.r=m.r===b.textContent?undefined:b.textContent;bEl.outerHTML=bubble(m,cur)};
@@ -463,6 +464,16 @@ document.addEventListener('pointerdown',e=>{if(!e.target.closest('#pk'))hidePick
 $('#prof').onclick=e=>{const b=e.target.closest('.set');if(!b)return;
   if(b.id==='swT')$('#themeBtn').click();
   else if(b.id==='sNot'||b.id==='sSnd'){const k=b.id==='sNot'?'n':'s';S[k]=!S[k];saveS();syncS();if(k==='n'){if(S.n)askNotif();else window.pushOff&&pushOff()}if(k==='s'&&S.s)beep()}};
+
+/* ===== интеграция с Android WebView ===== */
+document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href]');
+  if(a&&window.Android&&Android.openExternalBrowser&&/^https?:/i.test(a.href)){e.preventDefault();Android.openExternalBrowser(a.href)}});
+window.onBack=()=>{
+  for(const id of ['lb','sh','gi','pi','acc','edit','gdlg','dlg']){const e=document.getElementById(id);if(e&&!e.hidden){e.hidden=true;return true}}
+  if(document.getElementById('pk')){hidePicker();return true}
+  if(cur){closeChat();return true}
+  if(tab!==0){document.querySelector('#nav button').click();return true}
+  return false};
 </script>
 <script type="module">
 const V="https://www.gstatic.com/firebasejs/10.14.1/";
@@ -700,6 +711,7 @@ const fb={
   edit(m,t){if(!m.k)return;const b='chats/'+cur.id+'/msgs/'+m.k;update(ref(db),{[b+'/t']:t,[b+'/ed']:true}).catch(x=>toast('Firebase: '+x.code))},
   showImg(m){g('lbi').src=m.im;g('lb').hidden=false;get(ref(db,'files/'+cur.id+'/'+m.k)).then(s=>{const v=s.val();if(!g('lb').hidden&&/^data:image\/jpeg;base64,/.test(v||''))g('lbi').src=v}).catch(()=>{})},
   getFile(m){toast('Загрузка…');get(ref(db,'files/'+cur.id+'/'+m.k)).then(async s=>{const v=s.val();if(!v)return toast('Файл недоступен');
+    if(window.Android&&Android.saveFile){Android.saveFile(m.fn||'file',v);return}
     const u=URL.createObjectURL(await (await fetch(v)).blob()),a=document.createElement('a');a.href=u;a.download=m.fn||'file';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),3e4)}).catch(x=>toast('Firebase: '+(x.code||x.message)))},
   voice(id,k){return get(ref(db,'voices/'+id+'/'+k)).then(s=>s.val())},
   async openPeer(pid){const id='dm_'+[uid,pid].sort().join('_');await addDM(id,pid);openChat(id)},
