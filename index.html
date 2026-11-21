@@ -661,6 +661,39 @@ input,textarea{font-size:16px}
 html.cmp .row{padding:6px 12px;gap:12px;border-radius:20px}
 html.cmp .row .av{width:44px;height:44px;font-size:18px}
 html.cmp .nm{font-size:16px}html.cmp .ls{font-size:13px;margin-top:0}
+
+/* ===== шапка профиля как в Telegram: радиальный градиент, кольца-узор, плоский низ ===== */
+#phd{--pcy:calc(var(--safe-t,0px) + 80px)}
+#pcPrev{--pcy:calc(var(--safe-t,0px) + 66px)}
+.uph{--pcy:calc(var(--safe-t,0px) + 132px)}
+.phd,.uph{border-radius:0}
+.phd{margin-bottom:12px}
+#pcPrev.phd{border-radius:28px!important}
+@keyframes hdrin{from{transform:scaleY(.92);transform-origin:50% 0;opacity:.4}}
+/* узор: иконки — тёмные силуэты, кольцами вокруг аватара */
+.pat{background-size:44px 44px}
+.pat span{position:absolute;left:50%;top:var(--pcy,40%);width:var(--sz,24px);height:var(--sz,24px);
+  opacity:var(--op,.22);transform:translate(-50%,-50%) translate(var(--dx,0px),var(--dy,0px));
+  animation:pfloat 5.5s ease-in-out infinite alternate;animation-delay:calc(var(--d,0s)*-1)}
+.pat .em,.pat .tge{filter:brightness(0)}
+@keyframes pfloat{
+  from{transform:translate(-50%,-50%) translate(var(--dx,0px),var(--dy,0px)) rotate(-7deg) scale(1)}
+  to{transform:translate(-50%,-50%) translate(var(--dx,0px),calc(var(--dy,0px) - 6px)) rotate(7deg) scale(1.06)}}
+@keyframes patin{from{transform:translate(-50%,-50%) translate(0,0) scale(.1);opacity:0}}
+.prof.show .pat span,.auth:not([hidden]) .pat span{
+  animation:pfloat 5.5s ease-in-out infinite alternate,patin .8s var(--spring) var(--e,0s) backwards;
+  animation-delay:calc(var(--d,0s)*-1),var(--e,0s)}
+/* мягкие волны от аватара */
+.pat::before,.pat::after{content:"";position:absolute;left:50%;top:var(--pcy,40%);width:190px;height:190px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.18);transform:translate(-50%,-50%) scale(.6);opacity:0;
+  animation:ringwave 5s var(--emph) infinite}
+.pat::after{animation-delay:2.5s}
+@keyframes ringwave{0%{transform:translate(-50%,-50%) scale(.6);opacity:.55}100%{transform:translate(-50%,-50%) scale(3.2);opacity:0}}
+/* полупрозрачные кнопки действий */
+.phd.col .pa{background:rgba(0,0,0,.14);color:inherit;border-radius:24px;
+  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.phd.col .pa:active{border-radius:32px}
+.phd.col .pstat{opacity:.85}
 </style>
 </head>
 <body>
@@ -1112,8 +1145,9 @@ function hexRgb(h){h=h.replace('#','');return[0,2,4].map(k=>parseInt(h.substr(k,
 function hexA(h,a){const[r,g,b]=hexRgb(h);return `rgba(${r},${g},${b},${a})`}
 function relLum(h){const[r,g,b]=hexRgb(h).map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*r+.7152*g+.0722*b}
 function textOn(cols){const L=cols.reduce((s,c)=>s+relLum(c),0)/cols.length;return 1.05/(L+.05)>=2.5?'#ffffff':'#1d1b20'}
-function psBg(st){if(!st)return'';const a=st.c[0],b=st.c[1];return st.t==='solid'?`radial-gradient(circle at 50% 25%,rgba(255,255,255,.2),transparent 65%),${a}`:`linear-gradient(160deg,${a},${b})`}
-function diaUri(c,o){const sv=`<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44"><g fill="${c}" fill-opacity="${o}"><path d="M22 8l14 14-14 14L8 22z"/><path d="M0-6l6 6-6 6-6-6zM44-6l6 6-6 6-6-6zM0 38l6 6-6 6-6-6zM44 38l6 6-6 6-6-6z"/></g></svg>`;
+function psBg(st){if(!st)return'';const a=st.c[0],b=st.c[1];
+  const ctr=b?`color-mix(in srgb,${b} 52%,${a})`:`color-mix(in srgb,#ffffff 26%,${a})`;
+  return `repeating-radial-gradient(circle at 50% var(--pcy,38%),rgba(255,255,255,0) 0,rgba(255,255,255,.07) 48px,rgba(255,255,255,0) 96px),radial-gradient(circle at 50% var(--pcy,38%),${ctr} 0%,${a} 100%)`} function diaUri(c,o){const sv=`<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44"><g fill="${c}" fill-opacity="${o}"><path d="M22 8l14 14-14 14L8 22z"/><path d="M0-6l6 6-6 6-6-6zM44-6l6 6-6 6-6-6zM0 38l6 6-6 6-6-6zM44 38l6 6-6 6-6-6z"/></g></svg>`;
   return 'data:image/svg+xml,'+encodeURIComponent(sv).replace(/'/g,'%27').replace(/\(/g,'%28').replace(/\)/g,'%29')}
 function psVars(i){const st=psGet(i);if(!st)return null;const a=st.c[0],b=st.c[1];
   return{'--profile-bg':psBg(st),'--profile-text':textOn(st.c),'--reply-border':a,'--reply-bar':b?`linear-gradient(180deg,${a},${b})`:a,'--reply-bg':hexA(a,.14),'--reply-pat':st.shape?`url(${diaUri(a,.14)})`:'none'}}
@@ -1126,13 +1160,14 @@ const rqHtml=r=>`<div class="rq" style="${psCss(r.c)}"><b>${r.n}</b>${r.t}</div>
 function lpvHtml(m){if(m.del||!m.raw)return'';const u=String(m.raw).match(/https?:\/\/[^\s<>"']+/);if(!u)return'';let h=u[0];try{h=new URL(u[0]).hostname.replace(/^www\./,'')}catch(e){}
   return `<div class="rq lpv" style="${psCss(m.ci)}"><b>${escH(h)}</b>${escH(u[0].slice(0,60))}</div>`}
 function nmSty(c){const x=c&&c.prem?ncCol(c.nc):'';return x?` style="color:${x}"`:''}
-function phdPaint(el,pc,pp){if(!el)return;const st=psGet(pc),bg=st?psBg(st):'var(--defbg)';
+function phdPaint(el,pc,pp){if(!el)return;const st=psGet(pc),bg=st?psBg(st):'repeating-radial-gradient(circle at 50% var(--pcy,38%),rgba(255,255,255,0) 0,rgba(255,255,255,.07) 48px,rgba(255,255,255,0) 96px),radial-gradient(circle at 50% var(--pcy,38%),color-mix(in srgb,var(--p) 80%,#000) 0%,color-mix(in srgb,var(--p) 58%,#000) 100%)';
   el.style.background=bg;
   if(st){el.style.setProperty('--profile-bg',bg);el.style.setProperty('--profile-text',textOn(st.c))}else{el.style.removeProperty('--profile-bg');el.style.removeProperty('--profile-text')}
   el.classList.toggle('col',!!bg);let q=el.querySelector(':scope>.pat');if(!q){q=document.createElement('div');q.className='pat';el.prepend(q)}
   const e=PPAT[clI(pp,8)];
-  q.style.backgroundImage=!e?(st?(st.shape?`url(${diaUri(textOn(st.c),.16)})`:''):`url(${diaUri('#ffffff',.11)})`):'';
-  q.innerHTML=bg&&e?PATPOS.map(x=>`<span style="left:${x[0]}%;top:${x[1]}%">${emImg(e)}</span>`).join(''):''}
+  q.style.backgroundImage=!e&&st&&st.shape?`url(${diaUri(textOn(st.c),.16)})`:'';
+  q.innerHTML=bg&&e?[[104,8,28,.30,0],[170,13,23,.23,.5],[238,18,19,.16,0]].map(([r,n,sz,op,ph],ri)=>Array.from({length:n},(_,i)=>{const t=(i+ph)/n*Math.PI*2-Math.PI/2;
+    return `<span style="--dx:${(Math.cos(t)*r).toFixed(1)}px;--dy:${(Math.sin(t)*r*.94).toFixed(1)}px;--sz:${sz}px;--op:${op};--d:${(((i*37+ri*11)%50)/10).toFixed(1)}s;--e:${(ri*.09+i*.012).toFixed(3)}s">${emImg(e)}</span>`}).join('')).join(''):''}
 function estHtml(v){if(!v||!isEst(v))return'';const h=v.startsWith('pe_')?peImg(v.slice(3)):v.startsWith('tg_')?tgEl(v.slice(3)):emImg(v);return `<span class="est">${h}</span>`}
 function pdlg(d){const pr=!!d.prem,pc=pr?clI(d.pc,PN):0;phdPaint($('#pih'),pc,pr?d.pp:0);
   const w=$('#piavw');w&&w.classList.toggle('prem',pr);
