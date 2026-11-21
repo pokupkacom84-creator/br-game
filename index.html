@@ -756,6 +756,32 @@ button.stp b{width:22px;height:22px;border-radius:11px;background:color-mix(in s
   transform:translate(-50%,-50%);animation:burst 1.2s var(--emph-dec) forwards}
 @keyframes burst{to{transform:translate(-50%,-50%) rotate(var(--a)) translateY(calc(var(--r)*-1.6)) scale(1.6);opacity:0}}
 .uptabs{overflow-x:auto;scrollbar-width:none}.uptabs button{padding:10px 18px;white-space:nowrap}
+
+/* детали подарка + выбор анонимности */
+.gdd{position:relative}
+.gdd .gcimg{width:150px;height:150px;margin-top:6px}
+.gdm{position:absolute;top:6px;right:6px;z-index:2}
+.gtb{border:1px solid var(--out);border-radius:20px;overflow:hidden;text-align:left;margin:6px 0 2px}
+.gtb .gr{display:flex;align-items:center;border-bottom:1px solid var(--out);min-height:54px}
+.gtb .gr:last-child{border-bottom:0}
+.gtb .gr>b{flex:none;width:34%;align-self:stretch;display:flex;align-items:center;padding:0 16px;background:var(--surf3);font-weight:600;font-size:16px}
+.gtb .gr>div{flex:1;min-width:0;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:17px}
+.gtb .gr.gn{padding:14px 16px;font-size:17px;word-break:break-word}
+.gtb .gr .stsv{width:26px;height:26px}
+.gfa{width:36px;height:36px;border-radius:50%;background:var(--pc) center/cover;color:var(--onpc);display:grid;place-items:center;font-weight:600;flex:none}
+.gfn{color:var(--p);font-weight:500}
+.gfc{padding:6px 12px;border-radius:14px;background:var(--sc);color:var(--p);font-size:14px;font-weight:500}
+.gvis{text-align:center;color:var(--onv);font-size:15px;padding:4px 0}
+.gvis button{color:var(--p);font-weight:600}
+.gpop{position:absolute;top:8px;right:10px;z-index:5;min-width:250px;padding:6px;border-radius:24px;background:var(--surf3);box-shadow:0 6px 24px rgba(0,0,0,.28);animation:pop .22s cubic-bezier(.3,1.5,.5,1) both;transform-origin:top right}
+.gpop button{display:flex;align-items:center;gap:16px;width:100%;padding:14px 16px;border-radius:18px;font-size:18px;text-align:left}
+.gpop button svg{width:24px;height:24px;fill:currentColor;flex:none}
+.gpop button.dn{color:#c5362c}
+.gan{display:flex;gap:6px;padding:4px;border-radius:24px;background:var(--surf3)}
+.gan button{flex:1;padding:12px 8px;border-radius:20px;font-weight:600;font-size:15px;color:var(--onv);transition:background .25s,color .25s}
+.gan button.on{background:var(--sc);color:var(--p)}
+.gant{font-size:13px;color:var(--onv);text-align:center;margin-top:-4px}
+.gtile.hd{opacity:.55}
 </style>
 </head>
 <body>
@@ -955,7 +981,19 @@ button.stp b{width:22px;height:22px;border-radius:11px;background:color-mix(in s
 <div class="gsh" id="gconf" hidden><div class="gsc"><div class="gdr"></div>
   <img class="gcimg" id="gcImg" alt=""><div class="gcn" id="gcN"></div><div class="gcs" id="gcS"></div>
   <label class="tf" id="gcNoteW"><input id="gcNote" placeholder="Сообщение (необязательно)" maxlength="120"></label>
+  <div class="gan" id="gcAn"><button class="press on" data-an="0">Показать мой ник</button><button class="press" data-an="1">Анонимно</button></div>
+  <div class="gant" id="gcAnT"></div>
   <button class="btn press gbtn" id="gcGo"></button><button class="txt" id="gcX">Отмена</button></div></div>
+<div class="gsh" id="gdet" hidden><div class="gsc gdd"><div class="gdr"></div>
+  <button class="icon-btn gdm" id="gdMore" aria-label="Ещё"><svg viewBox="0 0 24 24"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/></svg></button>
+  <div class="gpop" id="gdPop" hidden>
+    <button class="press" id="gdHide"><svg viewBox="0 0 24 24" id="gdHideI"></svg><span id="gdHideT">Скрыть из профиля</span></button>
+    <button class="press dn" id="gdDel"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12ZM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4Z"/></svg><span>Удалить подарок</span></button>
+  </div>
+  <img class="gcimg" id="gdImg" alt=""><div class="gcn" id="gdT"></div><div class="gcs" id="gdS"></div>
+  <div class="gtb" id="gdTb"></div>
+  <div class="gvis" id="gdVis"></div>
+  <button class="btn press" id="gdOk">ОК</button></div></div>
 <div class="gsh" id="gstars" hidden><div class="gsc"><div class="gdr"></div>
   <div class="gstbig"><svg class="stsv" viewBox="0 0 24 24"><path d="M12 2.6l2.8 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2l-5.8 3.3 1.3-6.5L2.6 9.4l6.6-.8z"/></svg><b data-stars>0</b></div>
   <div class="gcs">Звёзды — валюта для покупки подарков</div>
@@ -2202,17 +2240,55 @@ let STARS=0,MYG={},starsOff=null,giftsOff=null,shopTo=null,shopG=null,gBusy=fals
 const GER='Нет прав на запись: добавьте правила для stars/ и gifts/ (см. инструкцию)';
 function paintStars(){document.querySelectorAll('[data-stars]').forEach(e=>e.textContent=STARS)}
 function gTile(k,v,own){const G=gById(v.g);if(!G)return'';
-  return `<button class="gtile press" data-gk="${esc(k)}" data-gf="${esc(v.f||'')}"><img src="${GIFT_IMG[G.id]}" alt=""><b>${esc(G.n)}</b><small>${v.f===uid?'от вас':'от '+esc(v.fn||'пользователя')}</small></button>`}
-function giftsHtml(obj,own){const a=Object.entries(obj||{}).filter(([k,v])=>v&&gById(v.g)).sort((x,y)=>(+y[1].ts||0)-(+x[1].ts||0));
+  return `<button class="gtile press${v.h?' hd':''}" data-gk="${esc(k)}" data-gf="${esc(v.f||'')}"><img src="${GIFT_IMG[G.id]}" alt=""><b>${esc(G.n)}</b><small>${v.h?'скрыт · ':''}${v.an?(v.sf?'от вас · анонимно':'аноним'):v.f===uid?'от вас':'от '+esc(v.fn||'пользователя')}</small></button>`}
+function giftsHtml(obj,own){const a=Object.entries(obj||{}).filter(([k,v])=>v&&gById(v.g)&&(own||!v.h)).sort((x,y)=>(+y[1].ts||0)-(+x[1].ts||0));
   return a.length?a.map(([k,v])=>gTile(k,v,own)).join(''):''}
 function renderMyGifts(){const e=g('mygifts');if(!e)return;const h=giftsHtml(MYG,true);e.innerHTML=h||'<div class="uemp" style="grid-column:1/-1">Пока нет подарков</div>';e._d=MYG}
 async function loadUG(pid){const box=g('pig');if(!pid)return;box.innerHTML='<div class="uemp">Загрузка…</div>';
-  try{const s=await get(ref(db,'gifts/'+pid));if(upPid()!==pid||upT!=='g')return;const o=s.val()||{},h=giftsHtml(o);box._d=o;
+  try{const s=await get(ref(db,'gifts/'+pid));if(upPid()!==pid||upT!=='g')return;const o=s.val()||{},h=giftsHtml(o,pid===uid);box._d=o;box._own=pid===uid;
     box.innerHTML=h?`<div class="ggrid sm">${h}</div>`:'<div class="uemp">Подарков пока нет</div>'}catch(e){box.innerHTML='<div class="uemp">Не удалось загрузить подарки</div>'}}
-function gTap(e,src){const b=e.target.closest('.gtile');if(!b)return;const v=(src||{})[b.dataset.gk];if(!v)return;const G=gById(v.g);
-  toast((v.f===uid?'Вы подарили':'Подарок от '+(v.fn||'пользователя'))+' · '+(G?G.n:'')+(v.x?': '+v.x:''))}
-g('mygifts').addEventListener('click',e=>gTap(e,g('mygifts')._d));
-g('pig').addEventListener('click',e=>gTap(e,g('pig')._d));
+const GM=['янв.','февр.','мар.','апр.','мая','июн.','июл.','авг.','сент.','окт.','нояб.','дек.'];
+const gDate=ts=>{const d=new Date(typeof ts==='number'?ts:Date.now()),z=n=>String(n).padStart(2,'0');return d.getDate()+' '+GM[d.getMonth()]+' '+d.getFullYear()+' в '+z(d.getHours())+':'+z(d.getMinutes())};
+const ICO_EYE_OFF='<path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7ZM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27ZM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2Zm4.31-.78 3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01Z"/>';
+const ICO_EYE='<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5ZM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5Zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3Z"/>';
+let gCur=null;
+function gdPaintVis(){if(!gCur)return;const h=!!gCur.v.h,own=gCur.own;
+  g('gdMore').hidden=!own;g('gdPop').hidden=true;
+  g('gdVis').innerHTML=own?(h?'Подарок скрыт из профиля. <button id="gdVisB">Показать ›</button>':'Подарок виден в Вашем профиле. <button id="gdVisB">Скрыть ›</button>'):'';
+  g('gdHideT').textContent=h?'Показать в профиле':'Скрыть из профиля';g('gdHideI').innerHTML=h?ICO_EYE:ICO_EYE_OFF;
+  g('gdS').textContent=own?(h?'Этот подарок скрыт из вашего профиля.':'Вы можете скрыть этот подарок из профиля.'):''}
+function gdFrom(v){
+  if(v.an)return `<span class="gfa" style="background-image:url(${GHOST})"></span><span>${v.sf?'Вы (анонимно)':'Аноним'}</span>`;
+  const nm=v.f===uid?'Вы':(v.fn||'Пользователь');
+  return `<span class="gfa" id="gdFa">${esc(nm[0]||'?').toUpperCase()}</span><span class="gfn" id="gdFn">${esc(nm)}</span>${v.f?'<span class="gfc" id="gdFc">отправить подарок</span>':''}`}
+function openGiftDet(k,v,own){const G=gById(v.g);if(!G)return;gCur={k,v,own};
+  g('gdImg').src=GIFT_IMG[G.id];
+  g('gdT').textContent=own?'Подарок Вам':'Подарок · '+G.n;
+  let h=`<div class="gr"><b>От</b><div>${gdFrom(v)}</div></div><div class="gr"><b>Дата</b><div>${esc(gDate(v.ts))}</div></div><div class="gr"><b>Стоимость</b><div>${STAR_SVG}<span>${+v.p||G.p}</span></div></div>`;
+  if(v.x)h+=`<div class="gr gn">${esc(v.x)}</div>`;
+  g('gdTb').innerHTML=h;gdPaintVis();g('gdet').hidden=false;
+  if(!v.an&&v.f&&v.f!==uid)getP(v.f).then(d=>{if(!gCur||gCur.k!==k||g('gdet').hidden)return;const a=okAv(d.av),fa=g('gdFa'),fn=g('gdFn');
+    if(fn&&!d.del)fn.textContent=d.name;if(fa){if(a){fa.style.backgroundImage=`url(${a})`;fa.textContent=''}else if(d.name)fa.textContent=d.name[0].toUpperCase()}}).catch(()=>{})}
+function gTap(e,src){const b=e.target.closest('.gtile');if(!b)return;const v=(src||{})[b.dataset.gk];if(!v)return;
+  openGiftDet(b.dataset.gk,v,!!(src&&src._own))}
+const gdClose=()=>{g('gdet').hidden=true;g('gdPop').hidden=true;gCur=null};
+g('gdOk').onclick=gdClose;
+g('gdet').addEventListener('click',e=>{
+  if(e.target===g('gdet'))return gdClose();
+  if(!g('gdPop').hidden&&!e.target.closest('#gdPop')&&!e.target.closest('#gdMore'))g('gdPop').hidden=true;
+  if(e.target.closest('#gdFc,#gdFn')&&gCur&&gCur.v.f){const f=gCur.v.f,fn=gCur.v.fn;gdClose();
+    getP(f).then(d=>openShop(f,d.name||fn,okAv(d.av))).catch(()=>{})}});
+g('gdMore').onclick=e=>{e.stopPropagation();g('gdPop').hidden=!g('gdPop').hidden};
+async function gdToggleHide(){if(!gCur||!gCur.own)return;const {k}=gCur,nv=gCur.v.h?null:1;
+  try{await set(ref(db,'gifts/'+uid+'/'+k+'/h'),nv);gCur.v.h=nv;if(MYG[k])MYG[k].h=nv;renderMyGifts();gdPaintVis();toast(nv?'Подарок скрыт из профиля':'Подарок снова виден в профиле')}
+  catch(e){toast(GER)}}
+g('gdHide').onclick=gdToggleHide;
+g('gdet').addEventListener('click',e=>{if(e.target.closest('#gdVisB'))gdToggleHide()});
+g('gdDel').onclick=async()=>{g('gdPop').hidden=true;if(!gCur||!gCur.own)return;const {k}=gCur;
+  if(!await ask({title:'Удалить подарок?',text:'Подарок исчезнет из вашего профиля навсегда.',ok:'Удалить',danger:true}))return;
+  try{await set(ref(db,'gifts/'+uid+'/'+k),null);delete MYG[k];renderMyGifts();gdClose();toast('Подарок удалён')}catch(e){toast(GER)}};
+g('mygifts').addEventListener('click',e=>gTap(e,Object.assign({},g('mygifts')._d,{_own:true})));
+g('pig').addEventListener('click',e=>gTap(e,Object.assign({},g('pig')._d,{_own:!!g('pig')._own})));
 
 /* --- магазин --- */
 function sparkles(){const w=g('gSp');if(w.dataset.on)return;w.dataset.on=1;let h='';
@@ -2228,23 +2304,32 @@ g('gsBack').onclick=()=>g('gshop').hidden=true;
 g('gsBal').onclick=()=>openStars();
 g('gGrid').onclick=e=>{const b=e.target.closest('.gcard');if(!b)return;const G=gById(b.dataset.g);if(!G)return;shopG=G;
   g('gcImg').src=GIFT_IMG[G.id];g('gcN').textContent=G.n;
-  g('gcS').textContent=shopTo.uid===uid?'Для вас':'Для '+shopTo.name;g('gcNote').value='';g('gcNoteW').hidden=shopTo.uid===uid;
+  g('gcS').textContent=shopTo.uid===uid?'Для вас':'Для '+shopTo.name;g('gcNote').value='';g('gcNoteW').hidden=shopTo.uid===uid;setAn(0);
   paintConf();g('gconf').hidden=false};
+let shopAn=0;
+function setAn(v){shopAn=v?1:0;g('gcAn').querySelectorAll('button').forEach(b=>b.classList.toggle('on',(+b.dataset.an)===shopAn));
+  g('gcAnT').textContent=shopAn?(shopTo&&shopTo.uid===uid?'В вашем профиле отправитель будет скрыт':'Получатель не увидит, кто подарил'):('Будет показан ваш ник: '+(me&&me.name?me.name:''))}
+g('gcAn').onclick=e=>{const b=e.target.closest('button[data-an]');if(b)setAn(+b.dataset.an)};
 function paintConf(){if(!shopG)return;const ok=STARS>=shopG.p,self=shopTo&&shopTo.uid===uid,b=g('gcGo');
   b.innerHTML=ok?`${self?'Купить':'Подарить'} за ${STAR_SVG}${shopG.p}`:`Не хватает ${STAR_SVG}${shopG.p-STARS} · пополнить`;b.dataset.ok=ok?'1':''}
 g('gcX').onclick=()=>g('gconf').hidden=true;
 g('gconf').addEventListener('click',e=>{if(e.target===g('gconf'))g('gconf').hidden=true});
 g('gcGo').onclick=async()=>{if(!shopG||!shopTo||gBusy)return;if(!g('gcGo').dataset.ok){openStars();return}
   gBusy=true;g('gcGo').classList.add('dis');
-  try{await sendGift(shopG,shopTo.uid,g('gcNote').value.trim());g('gconf').hidden=true;g('gshop').hidden=true;gDone(shopG)}
+  try{await sendGift(shopG,shopTo.uid,g('gcNote').value.trim(),shopAn);g('gconf').hidden=true;g('gshop').hidden=true;gDone(shopG)}
   catch(e){toast(typeof e==='string'?e:GER)}finally{gBusy=false;g('gcGo').classList.remove('dis')}};
-async function sendGift(G,to,note){
+async function sendGift(G,to,note,an){
   const tx=await runTransaction(ref(db,'stars/'+uid),v=>(+v||0)>=G.p?(+v||0)-G.p:undefined);
   if(!tx.committed)throw 'Недостаточно звёзд';
-  const k=push(ref(db,'gifts/'+to)).key,rec={g:G.id,f:uid,fn:me.name,ts:serverTimestamp(),p:G.p};if(note)rec.x=note.slice(0,120);
-  try{await set(ref(db,'gifts/'+to+'/'+k),rec)}
-  catch(e){await runTransaction(ref(db,'stars/'+uid),v=>(+v||0)+G.p).catch(()=>{});throw GER}
-  if(to!==uid){const c=chats.find(x=>x.peer===to&&!x.g&&!x.channel);if(c)fb.post(c.id,{gift:G.id,gk:k},note)}
+  const k=push(ref(db,'gifts/'+to)).key,rec={g:G.id,ts:serverTimestamp(),p:G.p},self=to===uid;
+  if(note)rec.x=note.slice(0,120);
+  if(an){rec.an=1;if(self)rec.sf=1}else{rec.f=uid;rec.fn=me.name}
+  const refund=()=>runTransaction(ref(db,'stars/'+uid),v=>(+v||0)+G.p).catch(()=>{});
+  try{
+    if(an&&!self)await set(ref(db,'giftSrc/'+k),uid);
+    await set(ref(db,'gifts/'+to+'/'+k),rec)}
+  catch(e){if(an&&!self)set(ref(db,'giftSrc/'+k),null).catch(()=>{});await refund();throw GER}
+  if(!self&&!an){const c=chats.find(x=>x.peer===to&&!x.g&&!x.channel);if(c)fb.post(c.id,{gift:G.id,gk:k},note)}
   navigator.vibrate&&navigator.vibrate([12,40,12])}
 function gDone(G){const d=document.createElement('div');d.className='gdone';
   d.innerHTML=`<div class="gdc"><img src="${GIFT_IMG[G.id]}" alt=""><b>${shopTo&&shopTo.uid===uid?'Подарок в вашем профиле':'Подарок отправлен!'}</b></div>`+Array.from({length:14},(_,i)=>`<i style="--a:${i*25.7}deg;--r:${90+(i%3)*28}px;--c:${i%2?'#ffb300':'#ff7a3d'}"></i>`).join('');
@@ -2292,8 +2377,11 @@ window.giftHtml=m=>{const G=gById(m.gift);if(!G)return emHtml(m[1]);
 onAuthStateChanged(auth,u=>{if(starsOff){starsOff();starsOff=null}if(giftsOff){giftsOff();giftsOff=null}
   STARS=0;MYG={};paintStars();renderMyGifts();if(!u)return;const t0=Date.now();
   starsOff=onValue(ref(db,'stars/'+u.uid),s=>{STARS=+s.val()||0;paintStars();paintConf()},()=>{});
-  giftsOff=onChildAdded(ref(db,'gifts/'+u.uid),s=>{const v=s.val()||{};MYG[s.key]=v;renderMyGifts();
-    if(typeof v.ts==='number'&&v.ts>t0-3000&&v.f&&v.f!==u.uid)toast('🎁 '+(v.fn||'Кто-то')+' подарил(а) вам подарок')},()=>{})});
+  let first=true;
+  giftsOff=onValue(ref(db,'gifts/'+u.uid),s=>{const o=s.val()||{},old=MYG;MYG=o;renderMyGifts();
+    if(!first)Object.entries(o).forEach(([k,v])=>{if(old[k]||!v||typeof v.ts!=='number'||v.ts<=t0-3000||v.f===u.uid||v.sf)return;
+      toast(v.an?'🎁 Вам анонимно подарили подарок':'🎁 '+(v.fn||'Кто-то')+' подарил(а) вам подарок')});
+    first=false},()=>{})});
 </script>
 <script>
 /* M3 Expressive: ripple, сворачивание FAB, лёгкая вибро-отдача (Android) */
