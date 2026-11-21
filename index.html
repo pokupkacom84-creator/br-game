@@ -446,7 +446,7 @@ svg.ln{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;strok
 /* ===== редизайн ===== */
 *{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--onv) 30%,transparent) transparent}
 #tobot{position:absolute;right:16px;bottom:calc(86px + var(--safe-b));width:44px;height:44px;border-radius:22px;background:var(--surf2);color:var(--p);font-size:20px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:6;animation:pop .3s cubic-bezier(.3,1.5,.5,1) both}#tobot[hidden]{display:none}
-.cmp{margin:0 16px 8px;padding:10px 12px;border-left:3px solid var(--p);background:var(--surf3);border-radius:12px;font-size:14px;max-height:120px;overflow:auto;user-select:text}.cmp b{display:block;color:var(--p);font-size:12px;margin-bottom:2px}
+.cmpv{margin:0 16px 8px;padding:10px 12px;border-left:3px solid var(--p);background:var(--surf3);border-radius:12px;font-size:14px;max-height:120px;overflow:auto;user-select:text}.cmpv b{display:block;color:var(--p);font-size:12px;margin-bottom:2px}
 .cma{width:32px;height:32px;border-radius:16px;display:grid;place-items:center;color:#fff;font-weight:700;font-style:normal;float:left;margin-right:10px}
 .cmi{overflow:hidden}.cmi>div{margin-left:42px}
 
@@ -622,6 +622,45 @@ input,textarea{font-size:16px}
   *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
 
+
+/* ===== фон профиля в стиле Telegram + анимации M3 Expressive ===== */
+:root{
+  --defbg:
+    radial-gradient(90% 70% at 100% 0%,rgba(255,255,255,.22),transparent 60%),
+    radial-gradient(80% 60% at 0% 100%,color-mix(in srgb,var(--p) 40%,#000),transparent 70%),
+    linear-gradient(160deg,color-mix(in srgb,var(--p) 70%,#000) 0%,color-mix(in srgb,var(--p) 62%,#2a0a5e) 55%,color-mix(in srgb,var(--p) 66%,#0a4fb0) 100%);
+}
+.phd,.uph{border-radius:0 0 36px 36px}
+.pat{background-repeat:repeat;animation:patdrift 40s linear infinite}
+@keyframes patdrift{to{background-position:44px 44px}}
+.pat span{animation:pfloat 5s ease-in-out infinite alternate}
+.pat span:nth-child(3n){animation-delay:-1.7s;animation-duration:6.5s}
+.pat span:nth-child(3n+1){animation-delay:-3.4s;animation-duration:4.6s}
+@keyframes pfloat{from{transform:translate(-50%,-50%) translateY(0) rotate(-6deg)}to{transform:translate(-50%,-50%) translateY(-7px) rotate(6deg)}}
+
+@keyframes hdrin{from{border-radius:0;transform:scaleY(.9);transform-origin:50% 0;opacity:.5}}
+@keyframes avpop{0%{transform:scale(.4) rotate(-12deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes rise{from{transform:translateY(20px);opacity:0}}
+@keyframes btnpop{from{transform:scale(.6) translateY(12px);opacity:0}}
+.prof.show .phd,.auth:not([hidden]) .uph{animation:hdrin .6s var(--emph-dec) backwards}
+.prof.show #phd .pav:not(.prem),.auth:not([hidden]) .upavw:not(.prem){animation:avpop .75s var(--spring) .08s backwards}
+.prof.show .pn,.prof.show .pstat,.auth:not([hidden]) .upn,.auth:not([hidden]) .ups{animation:rise .55s var(--emph-dec) .15s backwards}
+.prof.show .pa:nth-child(1),.auth:not([hidden]) .upb:nth-child(1){animation:btnpop .55s var(--spring) .20s backwards}
+.prof.show .pa:nth-child(2),.auth:not([hidden]) .upb:nth-child(2){animation:btnpop .55s var(--spring) .26s backwards}
+.prof.show .pa:nth-child(3),.auth:not([hidden]) .upb:nth-child(3){animation:btnpop .55s var(--spring) .32s backwards}
+.prof.show .pa:nth-child(4),.auth:not([hidden]) .upb:nth-child(4){animation:btnpop .55s var(--spring) .38s backwards}
+.prof.show>*:not(.phd):not(.shd):nth-child(n+2){animation:rise .5s var(--emph-dec) backwards}
+.prof.show>*:nth-child(2){animation-delay:.18s}.prof.show>*:nth-child(3){animation-delay:.24s}
+.prof.show>*:nth-child(4){animation-delay:.30s}.prof.show>*:nth-child(5){animation-delay:.36s}
+.prof.show>*:nth-child(n+6){animation-delay:.42s}
+.auth:not([hidden]) .upcard,.auth:not([hidden]) .uptabs{animation:rise .5s var(--emph-dec) .3s backwards}
+.upav,.pav{transition:border-radius .5s var(--spring),transform .4s var(--spring)}
+.upav:active{transform:scale(.94)}
+
+/* компактный режим: корректные размеры */
+html.cmp .row{padding:6px 12px;gap:12px;border-radius:20px}
+html.cmp .row .av{width:44px;height:44px;font-size:18px}
+html.cmp .nm{font-size:16px}html.cmp .ls{font-size:13px;margin-top:0}
 </style>
 </head>
 <body>
@@ -763,7 +802,7 @@ input,textarea{font-size:16px}
 </div></div>
 <div class="auth" id="lb" hidden style="background:rgba(0,0,0,.92);z-index:55"><img id="lbi" alt="" style="max-width:100%;max-height:85%;border-radius:12px"></div>
 <div class="ov" id="crw" hidden><div style="text-align:center;color:#fff"><div class="crv"><video id="crp" muted playsinline autoplay></video></div><div id="crt" style="margin-top:12px;font-size:18px">0:00</div><div class="crb"><button id="crx" aria-label="Отмена">✕</button><button id="crg" aria-label="Запись">●</button></div></div></div>
-<div class="ov" id="cmw" hidden style="background:rgba(0,0,0,.45);align-items:end;place-items:end center"><div class="cmc"><div class="cmh"><b id="cmt">Комментарии</b><button id="cmx" aria-label="Закрыть" style="font-size:20px;padding:4px 10px">✕</button></div><div class="cmp" id="cmp"></div><div id="cml"></div><div class="cmf"><input id="cmi" placeholder="Комментарий" maxlength="500"><button id="cms" aria-label="Отправить">➤</button></div></div></div>
+<div class="ov" id="cmw" hidden style="background:rgba(0,0,0,.45);align-items:end;place-items:end center"><div class="cmc"><div class="cmh"><b id="cmt">Комментарии</b><button id="cmx" aria-label="Закрыть" style="font-size:20px;padding:4px 10px">✕</button></div><div class="cmpv" id="cmp"></div><div id="cml"></div><div class="cmf"><input id="cmi" placeholder="Комментарий" maxlength="500"><button id="cms" aria-label="Отправить">➤</button></div></div></div>
 <div class="auth" id="xsh" hidden style="align-items:flex-end;background:rgba(0,0,0,.45);z-index:60"><div class="card" id="xshc" style="background:var(--surf2);border-radius:28px;padding:16px;gap:4px;max-height:80%;overflow:auto"></div></div>
 <div class="auth" id="sh" hidden style="align-items:flex-end;background:rgba(0,0,0,.45);z-index:45"><div class="card" id="shc" style="background:var(--surf2);border-radius:28px;padding:16px;gap:4px"></div></div>
 <div class="auth" id="gi" hidden style="align-items:flex-start"><div class="card" style="margin:auto 0">
@@ -1087,12 +1126,12 @@ const rqHtml=r=>`<div class="rq" style="${psCss(r.c)}"><b>${r.n}</b>${r.t}</div>
 function lpvHtml(m){if(m.del||!m.raw)return'';const u=String(m.raw).match(/https?:\/\/[^\s<>"']+/);if(!u)return'';let h=u[0];try{h=new URL(u[0]).hostname.replace(/^www\./,'')}catch(e){}
   return `<div class="rq lpv" style="${psCss(m.ci)}"><b>${escH(h)}</b>${escH(u[0].slice(0,60))}</div>`}
 function nmSty(c){const x=c&&c.prem?ncCol(c.nc):'';return x?` style="color:${x}"`:''}
-function phdPaint(el,pc,pp){if(!el)return;const st=psGet(pc),bg=st?psBg(st):'';
+function phdPaint(el,pc,pp){if(!el)return;const st=psGet(pc),bg=st?psBg(st):'var(--defbg)';
   el.style.background=bg;
   if(st){el.style.setProperty('--profile-bg',bg);el.style.setProperty('--profile-text',textOn(st.c))}else{el.style.removeProperty('--profile-bg');el.style.removeProperty('--profile-text')}
   el.classList.toggle('col',!!bg);let q=el.querySelector(':scope>.pat');if(!q){q=document.createElement('div');q.className='pat';el.prepend(q)}
   const e=PPAT[clI(pp,8)];
-  q.style.backgroundImage=bg&&!e&&st.shape?`url(${diaUri(textOn(st.c),.16)})`:'';
+  q.style.backgroundImage=!e?(st?(st.shape?`url(${diaUri(textOn(st.c),.16)})`:''):`url(${diaUri('#ffffff',.11)})`):'';
   q.innerHTML=bg&&e?PATPOS.map(x=>`<span style="left:${x[0]}%;top:${x[1]}%">${emImg(e)}</span>`).join(''):''}
 function estHtml(v){if(!v||!isEst(v))return'';const h=v.startsWith('pe_')?peImg(v.slice(3)):v.startsWith('tg_')?tgEl(v.slice(3)):emImg(v);return `<span class="est">${h}</span>`}
 function pdlg(d){const pr=!!d.prem,pc=pr?clI(d.pc,PN):0;phdPaint($('#pih'),pc,pr?d.pp:0);
