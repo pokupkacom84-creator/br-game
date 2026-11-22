@@ -2231,7 +2231,7 @@ const fb={
       idx=k=>here()?cur.m.findIndex(x=>x.k===k):-1,
       redraw=i=>redrawMsg(cur.m[i]);
     offs=[onChildAdded(mq(),s=>{if(seen.has(s.key))return;seen.add(s.key);localStorage.setItem('rd_'+id,s.key);const d=s.val();if(here()&&(!cur.oldK||s.key<cur.oldK))cur.oldK=s.key;if(here()&&((cur.cut&&typeof d.ts==='number'&&d.ts<=cur.cut)||(cur.hm&&cur.hm[s.key])))return;
-        chain=chain.then(async()=>{if(!here())return;const m=await mk(d,s.key,isC());if(here()&&!cur.m.some(x=>x.k===m.k)){if(cur.m.length&&m.k<cur.m[0].k){cur.m.unshift(m);rerender()}else{add(m);if(m[0]==='in')markRead(id);if(isC()&&m.au!==uid)markView(id,s.key)}}}).catch(()=>{})},e=>toast('Firebase: '+e.code)),
+        chain=chain.then(async()=>{if(!here())return;const m=await mk(d,s.key,isC());if(here()&&!cur.m.some(x=>x.k===m.k)){if(cur.m.length&&m.k<cur.m[0].k){cur.m.unshift(m);rerender()}else{add(m);if(m[0]==='in')markRead(id);}}}).catch(()=>{})},e=>toast('Firebase: '+e.code)),
       onChildChanged(mq(),s=>{const i=idx(s.key);if(i<0)return;const m=cur.m[i];const d=s.val();m.rs=d.r||{};m.r=rx(m.rs);m.raw=d.t;m[1]=lk(fmtT(esc(d.t)));m.ed=!!d.ed;m.pv=d.pv||{};m.cc=+d.cc||0;redraw(i)}),
       onChildRemoved(mq(),s=>{if(here())dropKeys([s.key])}),...extras(id,here),...xtra(id,here),...viewsWatch(id,here,isC)]},
   react(m,e){if(!m.k||!m.rs)return;const id=cur.id,pv=m.rs[uid],nv=pv===e?null:e,put=v=>{if(v)m.rs[uid]=v;else delete m.rs[uid];m.r=rx(m.rs);redrawMsg(m)};put(nv);
@@ -2539,7 +2539,14 @@ function markView(id,k){const key=id+'/'+k;if(viewed.has(key)||document.hidden)r
 function viewsWatch(id,here,isC){if(!isC())return[];
   return [onValue(ref(db,'views/'+id),s=>{if(!here())return;const v=s.val()||{},o=cur.vc||{},n={};Object.keys(v).forEach(k=>{n[k]=Object.keys(v[k]||{}).length});cur.vc=n;
     cur.m.forEach(m=>{if(m.k&&(n[m.k]||0)!==(o[m.k]||0))redrawMsg(m)})},()=>{})]}
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cur&&cur.channel)cur.m.forEach(m=>{if(m.k&&m.au&&m.au!==uid)markView(cur.id,m.k)})});
+/* просмотр засчитывается, когда запись реально видна на экране (как в Telegram), включая старые и свои */
+{const box=document.getElementById('msgs'),tm=new WeakMap(),SEL='.b[data-i]';
+ const io=new IntersectionObserver(es=>es.forEach(e=>{const b=e.target,vis=e.isIntersecting&&(e.intersectionRatio>=.5||e.intersectionRect.height>=box.clientHeight*.5);
+  if(vis){if(tm.has(b))return;tm.set(b,setTimeout(()=>{tm.delete(b);if(!b.isConnected||document.hidden||!cur||!cur.channel)return;const m=cur.m[+b.dataset.i];if(m&&m.k&&!m.del)markView(cur.id,m.k)},500))}
+  else if(tm.has(b)){clearTimeout(tm.get(b));tm.delete(b)}}),{root:box,threshold:[0,.25,.5,.75,1]});
+ let raf=0;const scan=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{if(cur&&cur.channel)box.querySelectorAll(SEL).forEach(b=>io.observe(b))})};
+ new MutationObserver(scan).observe(box,{childList:true,subtree:true});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cur&&cur.channel)box.querySelectorAll(SEL).forEach(b=>{io.unobserve(b);io.observe(b)})})}
 
 /* создание и редактирование */
 let chMode='new',chAv=null;
