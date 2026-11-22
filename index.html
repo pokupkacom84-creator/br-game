@@ -896,18 +896,35 @@ html.ps-emo_rx .rx{animation:none!important}
 .b.dlx{animation:dlx .3s ease forwards!important;overflow:hidden}
 @keyframes dlx{to{opacity:0;transform:scale(.6) translateX(26px);filter:blur(6px)}}
 .msgs{background-size:var(--wps,auto);background-position:var(--wpp,0 0);transition:background-position 1.1s cubic-bezier(.2,.8,.2,1)}
-/* «жидкое стекло» */
-html.glass .nav,html.glass .chead,html.glass .pinbar,html.glass .sbar,html.glass .picker,html.glass .day,html.glass .tb,html.glass .fab{
- background:linear-gradient(135deg,rgba(255,255,255,.62),rgba(255,255,255,.2))!important;color:var(--on);
- -webkit-backdrop-filter:blur(22px) saturate(1.9) brightness(1.04)!important;backdrop-filter:blur(22px) saturate(1.9) brightness(1.04)!important;
- border:1px solid rgba(255,255,255,.6)!important;
- box-shadow:inset 0 1px 1px rgba(255,255,255,.9),inset 0 -1px 2px rgba(255,255,255,.3),0 10px 30px rgba(0,0,0,.14)!important}
-html.glass.gdk .nav,html.glass.gdk .chead,html.glass.gdk .pinbar,html.glass.gdk .sbar,html.glass.gdk .picker,html.glass.gdk .day,html.glass.gdk .tb,html.glass.gdk .fab{
- background:linear-gradient(135deg,rgba(255,255,255,.2),rgba(255,255,255,.05))!important;border-color:rgba(255,255,255,.22)!important;
- box-shadow:inset 0 1px 1px rgba(255,255,255,.35),inset 0 -1px 2px rgba(255,255,255,.08),0 10px 30px rgba(0,0,0,.4)!important}
-html.glass .nav{left:12px;right:12px;bottom:calc(10px + var(--safe-b));padding:8px 6px;border-radius:34px}
-html.glass .nav button.on .pill{background:rgba(255,255,255,.5)!important;box-shadow:inset 0 1px 1px rgba(255,255,255,.95),0 2px 8px rgba(0,0,0,.1)}
-html.glass.gdk .nav button.on .pill{background:rgba(255,255,255,.2)!important}
+/* «жидкое стекло»: раскладка не меняется (нижняя панель на месте, без «плавающего» вида), меняется только материал */
+html.glass{--gl-a:rgba(255,255,255,.55);--gl-b:rgba(255,255,255,.14);--gl-edge:rgba(255,255,255,.85);--gl-low:rgba(255,255,255,.35);--gl-sh:rgba(40,28,70,.16);--gl-mix:46%;--gl-pmix:68%;--gl-blur:blur(22px) saturate(1.9) brightness(1.04)}
+html.glass.gdk{--gl-a:rgba(255,255,255,.15);--gl-b:rgba(255,255,255,.03);--gl-edge:rgba(255,255,255,.34);--gl-low:rgba(255,255,255,.08);--gl-sh:rgba(0,0,0,.5);--gl-mix:52%;--gl-pmix:72%;--gl-blur:blur(24px) saturate(1.7) brightness(1.08)}
+/* панели и поля */
+html.glass :is(.nav,.chead,.pinbar,.sbar,.rbar,.fmtb,.day,.fab,.field,.search){
+ background:linear-gradient(135deg,var(--gl-a),var(--gl-b)),color-mix(in srgb,var(--gt,var(--surf2)) var(--gl-mix),transparent)!important;
+ box-shadow:inset 0 1px 1px var(--gl-edge),inset 1px 0 1px var(--gl-low),inset 0 -1px 2px var(--gl-low),0 8px 24px var(--gl-sh)!important}
+html.glass .nav{box-shadow:inset 0 1px 1px var(--gl-edge),inset 0 -1px 2px var(--gl-low),0 -6px 24px var(--gl-sh)!important}
+html.glass :is(.field,.search){--gt:var(--surf3);box-shadow:inset 0 1px 1px var(--gl-edge),inset 0 -1px 2px var(--gl-low)!important}
+html.glass .fab{--gt:var(--pc);--gl-mix:72%}
+/* всплывающие окна, шторки, эмодзи, меню реакций */
+html.glass :is(.picker,.emo,.cmc,#shc,#xshc,.mdc){
+ background:linear-gradient(135deg,var(--gl-a),var(--gl-b)),color-mix(in srgb,var(--gt,var(--surf2)) var(--gl-pmix),transparent)!important;
+ box-shadow:inset 0 1px 1px var(--gl-edge),inset 1px 0 1px var(--gl-low),inset 0 -1px 2px var(--gl-low),0 12px 36px var(--gl-sh)!important}
+html.glass :is(.mdc,.picker){--gt:var(--surf3)}
+html.glass .toast{background:color-mix(in srgb,var(--on) 80%,transparent)!important;box-shadow:inset 0 1px 1px var(--gl-edge),0 12px 36px var(--gl-sh)!important}
+/* карточки профиля: только тон и блик, без размытия (дёшево для списков) */
+html.glass :is(.pcard,#prof .pst){
+ background:linear-gradient(135deg,var(--gl-a),var(--gl-b)),color-mix(in srgb,var(--surf2) 60%,transparent)!important;
+ box-shadow:inset 0 1px 1px var(--gl-edge),inset 0 -1px 2px var(--gl-low)!important}
+/* размытие (отключается пунктом «Размытие» в энергосбережении) */
+html.glass:not(.ps-blur) :is(.nav,.chead,.pinbar,.sbar,.rbar,.fmtb,.day,.fab,.field,.search,.picker,.emo,.cmc,#shc,#xshc,.mdc,.toast){
+ -webkit-backdrop-filter:var(--gl-blur)!important;backdrop-filter:var(--gl-blur)!important}
+html.glass:not(.ps-blur) :is(.mdl,#sh,#xsh,#cmw){-webkit-backdrop-filter:blur(8px) saturate(1.3)!important;backdrop-filter:blur(8px) saturate(1.3)!important}
+/* выбранная вкладка внизу: стеклянная «таблетка» тем же размером */
+html.glass .nav button.on .pill::before{
+ background:linear-gradient(135deg,var(--gl-a),var(--gl-b)),color-mix(in srgb,var(--sc) 80%,transparent)!important;
+ box-shadow:inset 0 1px 1px var(--gl-edge),inset 0 -1px 2px var(--gl-low),0 2px 8px var(--gl-sh)}
+html.glass .nav .dot{box-shadow:none}
 </style>
 </head>
 <body>
