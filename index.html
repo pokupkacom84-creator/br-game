@@ -762,6 +762,12 @@ button.stp b{width:22px;height:22px;border-radius:11px;background:color-mix(in s
 .gdd .gcimg{width:150px;height:150px;margin-top:6px}
 .gdm{position:absolute;top:6px;right:6px;z-index:2}
 .gdd>*+*{margin-top:10px}
+.gdx{display:flex;flex-direction:column;align-items:center;gap:8px}
+.gdx[hidden]{display:none}
+.gxb{width:100%;padding:14px;border-radius:24px;background:var(--sc);color:var(--p);font-weight:600;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px}
+.gxb .ico{width:20px;height:20px}
+.gxb:disabled{opacity:.5}
+.gxn{font-size:13px;color:var(--onv);text-align:center;line-height:1.4}
 .gtb{border:1px solid var(--out);border-radius:20px;overflow:hidden;text-align:left;margin:6px 0 2px}
 .gtb .gr{display:flex;align-items:center;border-bottom:1px solid var(--out);min-height:54px}
 .gtb .gr:last-child{border-bottom:0}
@@ -1040,6 +1046,7 @@ button.stp b{width:22px;height:22px;border-radius:11px;background:color-mix(in s
   </div>
   <img class="gcimg" id="gdImg" alt=""><div class="gcn" id="gdT"></div><div class="gcs" id="gdS"></div>
   <div class="gtb" id="gdTb"></div>
+  <div class="gdx" id="gdX"></div>
   <div class="gvis" id="gdVis"></div>
   <button class="btn press" id="gdOk">ОК</button></div></div>
 <div class="gsh fx" id="rtsh" hidden><div class="gsc fx rtc"><div class="gdr"></div>
@@ -2348,7 +2355,7 @@ function gdPaintVis(){if(!gCur)return;const h=!!gCur.v.h,own=gCur.own;
   g('gdMore').hidden=!own;g('gdPop').hidden=true;
   g('gdVis').innerHTML=own?(h?'Подарок скрыт из профиля. <button id="gdVisB">Показать ›</button>':'Подарок виден в Вашем профиле. <button id="gdVisB">Скрыть ›</button>'):'';
   g('gdHideT').textContent=h?'Показать в профиле':'Скрыть из профиля';g('gdHideI').innerHTML=h?ICO_EYE:ICO_EYE_OFF;
-  g('gdS').textContent=own?(h?'Этот подарок скрыт из вашего профиля.':'Вы можете скрыть этот подарок из профиля.'):''}
+  g('gdS').textContent=own?(h?'Этот подарок скрыт из вашего профиля.':'Вы можете скрыть этот подарок из профиля.'):'';gxPaint()}
 function gdFrom(v){
   if(v.an)return `<span class="gfa" style="background-image:url(${GHOST})"></span><span>${v.sf?'Вы (анонимно)':'Аноним'}</span>`;
   const nm=v.f===uid?'Вы':(v.fn||'Пользователь');
@@ -2376,6 +2383,35 @@ async function gdToggleHide(){if(!gCur||!gCur.own)return;const {k}=gCur,nv=gCur.
   catch(e){toast(GER)}}
 g('gdHide').onclick=gdToggleHide;
 g('gdet').addEventListener('click',e=>{if(e.target.closest('#gdVisB'))gdToggleHide()});
+/* ===== обмен подарка на звёзды (только 7 дней с момента получения) ===== */
+const GX_WEEK=6048e5;
+/* сколько звёзд вернётся за подарок: чем дороже подарок, тем меньше комиссия. 25 -> 15 */
+function gxPay(p){const r=p<=25?.6:p<=50?.66:p<=100?.72:p<=250?.78:.84;return Math.max(1,Math.floor(p*r))}
+const gxLeft=v=>(typeof v.ts==='number'?v.ts:Date.now())+GX_WEEK-Date.now();
+function gxPaint(){const b=g('gdX');if(!gCur||!gCur.own){b.hidden=true;return}
+  const v=gCur.v,G=gById(v.g);if(!G){b.hidden=true;return}
+  const price=+v.p||G.p,get=gxPay(price),left=gxLeft(v);b.hidden=false;
+  if(left>0){const d=Math.max(1,Math.ceil(left/864e5));
+    b.innerHTML=`<button class="gxb press" id="gdXb" type="button">${ic('refresh')}Обменять на ${ic('star')}${get}</button><div class="gxn">Комиссия ${price-get} из ${price}. Обмен доступен ещё ${pl(d,['день','дня','дней'])} (до ${esc(gDate(v.ts+GX_WEEK))}). После обмена подарок исчезнет из профиля.</div>`}
+  else b.innerHTML='<div class="gxn">Срок обмена на звёзды (7 дней) истёк. Подарок остаётся украшением профиля.</div>'}
+async function rtPenalty(a){if(!(a>0))return;await runTransaction(ref(db,'rating/'+uid),v=>{v=v||{};let q=+v.q||0,p=+v.p||0;const t=Math.min(q,a);q-=t;p=Math.max(0,p-(a-t));v.q=q;v.p=p;return v})}
+async function gxExchange(){if(!gCur||!gCur.own)return;const {k,v}=gCur,G=gById(v.g);if(!G)return;
+  const price=+v.p||G.p,get=gxPay(price);
+  if(gxLeft(v)<=0){toast('Срок обмена истёк');return gxPaint()}
+  if(!await ask({title:'Обменять подарок?',text:`Вы получите ${pl(get,['звезду','звезды','звёзд'])}. Комиссия — ${price-get}. Подарок исчезнет из вашего профиля.`,ok:'Обменять'}))return;
+  const btn=g('gdXb');if(btn)btn.disabled=true;
+  try{
+    let valid=false;
+    const tx=await runTransaction(ref(db,'gifts/'+uid+'/'+k),cur=>{valid=false;
+      if(cur&&typeof cur.ts==='number'&&Date.now()-cur.ts<=GX_WEEK){valid=true;return null}
+      if(cur===null)return null;return});
+    if(!tx.committed||!valid)throw 'Обмен недоступен';
+    let ok=false;for(let i=0;i<3&&!ok;i++){try{await runTransaction(ref(db,'stars/'+uid),x=>(+x||0)+get);ok=true}catch(e){}}
+    if(!ok){await set(ref(db,'gifts/'+uid+'/'+k),v).catch(()=>{});throw GER}
+    rtPenalty(Math.round(price*.85)).then(rtPaintMine).catch(()=>{});
+    delete MYG[k];renderMyGifts();gdClose();toast('Обменяно: +'+pl(get,['звезда','звезды','звёзд']))
+  }catch(e){if(btn)btn.disabled=false;toast(typeof e==='string'?e:GER)}}
+g('gdX').addEventListener('click',e=>{if(e.target.closest('#gdXb'))gxExchange()});
 g('gdDel').onclick=async()=>{g('gdPop').hidden=true;if(!gCur||!gCur.own)return;const {k}=gCur;
   if(!await ask({title:'Удалить подарок?',text:'Подарок исчезнет из вашего профиля навсегда.',ok:'Удалить',danger:true}))return;
   try{await set(ref(db,'gifts/'+uid+'/'+k),null);delete MYG[k];renderMyGifts();gdClose();toast('Подарок удалён')}catch(e){toast(GER)}};
@@ -2510,7 +2546,7 @@ window.giftBubble=(m,c,q)=>{const G=gById(m.gift),out=m[0]==='out',p=m.gp||G.p,
 g('msgs').addEventListener('click',async e=>{const v=e.target.closest('.gview');if(!v)return;if(typeof SEL!=='undefined'&&SEL)return;
   const b=v.closest('.b'),m=b&&cur&&cur.m[+b.dataset.i];if(!m||!m.gk)return;
   const to=m[0]==='in'?uid:cur.peer;if(!to)return;
-  try{const val=(await get(ref(db,'gifts/'+to+'/'+m.gk))).val();if(!val)return toast('Подарок удалён');openGiftDet(m.gk,val,to===uid)}
+  try{const val=(await get(ref(db,'gifts/'+to+'/'+m.gk))).val();if(!val)return toast('Подарок удалён или обменян');openGiftDet(m.gk,val,to===uid)}
   catch(x){toast('Не удалось открыть подарок')}});
 async function giftChat(to){const id='dm_'+[uid,to].sort().join('_');
   await Promise.all([set(ref(db,'userChats/'+uid+'/'+id),to),set(ref(db,'userChats/'+to+'/'+id),uid)]);await addDM(id,to);return id}
