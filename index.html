@@ -2465,7 +2465,7 @@ async function rtMut(add,rec){const now=nowS();
     if(add){if(!v.t)v.t=now+RT_WEEK;v.q+=add;v.lg=v.lg||{};v.lg['k'+now+Math.floor(Math.random()*1e4)]=rec}
     return v})}
 const rtAdd=(a,n)=>rtMut(a,{a,n:String(n).slice(0,24),ts:Date.now()});
-async function rtPaintMine(){try{const r=await rtGet(uid),b=g('mrt');b.innerHTML=rtBadge(rtLevel(r.p));b.hidden=false}catch(e){}}
+async function rtPaintMine(){if(!uid)return;try{const r=await rtGet(uid),b=g('mrt');b.innerHTML=rtBadge(rtLevel(r.p));b.hidden=false}catch(e){console.warn('rtPaintMine',e)}}
 async function openRt(pid){if(!pid)return;const own=pid===uid;
   try{if(own)await rtMut(0)}catch(e){}
   let r;try{r=await rtGet(pid)}catch(e){return toast('Не удалось загрузить рейтинг')}
@@ -2486,6 +2486,7 @@ async function openRt(pid){if(!pid)return;const own=pid===uid;
 g('rtok').onclick=()=>{g('rtsh').hidden=true};
 g('rtsh').addEventListener('click',e=>{if(e.target===g('rtsh'))g('rtsh').hidden=true;if(e.target.closest('#rtView'))g('rtlog').hidden=!g('rtlog').hidden});
 g('mrt').onclick=()=>openRt(uid);
+new MutationObserver(()=>{if(g('prof').classList.contains('show'))rtPaintMine()}).observe(g('prof'),{attributes:true,attributeFilter:['class']});
 g('pirt').onclick=()=>openRt(g('pi').dataset.peer);
 
 async function sendGift(G,to,note,an){
@@ -2563,6 +2564,7 @@ onAuthStateChanged(auth,u=>{if(starsOff){starsOff();starsOff=null}if(giftsOff){g
   STARS=0;MYG={};paintStars();renderMyGifts();if(!u)return;const t0=Date.now();
   starsOff=onValue(ref(db,'stars/'+u.uid),s=>{STARS=+s.val()||0;paintStars();paintConf()},()=>{});
   let first=true;
+  srvSync().then(()=>rtPaintMine()).catch(()=>{});
   giftsOff=onValue(ref(db,'gifts/'+u.uid),s=>{const o=s.val()||{},old=MYG;MYG=o;renderMyGifts();
     if(!first)Object.entries(o).forEach(([k,v])=>{if(old[k]||!v||typeof v.ts!=='number'||v.ts<=t0-3000||v.f===u.uid||v.sf)return;
       toast(v.an?'Вам анонимно подарили подарок':(v.fn||'Кто-то')+' подарил(а) вам подарок')});
