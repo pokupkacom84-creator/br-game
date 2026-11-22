@@ -2334,7 +2334,7 @@ onAuthStateChanged(auth,u=>{
   if(stopP){stopP();stopP=null}
   if(!u){uid=null;me=null;window.myProf=null;renderNav();window.fb=undefined;g('auth').hidden=false;return}
   uid=u.uid;window.myUid=uid;window.setPrem=v=>{update(ref(db),{['users/'+uid+'/prem']:v?1:null,['users/'+uid+'/pc']:v&&S.pc?S.pc:null,['users/'+uid+'/pp']:v&&S.pp?S.pp:null,['users/'+uid+'/nc']:v&&S.nc?S.nc:null,['users/'+uid+'/est']:v&&S.est&&isEst(S.est)?S.est:null,['users/'+uid+'/vt']:v&&S.vt>Date.now()?S.vt:null,['users/'+uid+'/pm']:v&&S.pm>0?S.pm:null}).catch(x=>toast('Premium не сохранился: '+(x&&x.code||x)))};
-  let uv=null,av='';const upd=()=>{if(!uv)return;if(uv.vt)S.vt=+uv.vt;if(uv.pm!==undefined)S.pm=+uv.pm||0;me={name:uv.name,un:uv.un,about:uv.about||'',av:okAv(av||uv.av),prem:uv.prem||0,pc:clI(uv.pc,PN),pp:clI(uv.pp,8),nc:clI(uv.nc,PN)};paint();enter()};
+  let uv=null,av='';let nt=null;const upd=()=>{if(!uv){if(!nt)nt=setTimeout(async()=>{if(uv)return;try{await signOut(auth)}catch(e){}g('auth').hidden=false;const e=g('aerr');if(e)e.textContent='Профиль не найден в базе. Зарегистрируйтесь заново.'},4000);return}if(nt){clearTimeout(nt);nt=null}if(uv.vt)S.vt=+uv.vt;if(uv.pm!==undefined)S.pm=+uv.pm||0;me={name:uv.name,un:uv.un,about:uv.about||'',av:okAv(av||uv.av),prem:uv.prem||0,pc:clI(uv.pc,PN),pp:clI(uv.pp,8),nc:clI(uv.nc,PN)};paint();enter()};
   const a=onValue(ref(db,'users/'+uid),s=>{uv=s.exists()?s.val():null;upd()}),b=onValue(ref(db,'avatars/'+uid),s=>{av=s.val()||'';upd()});
   stopP=()=>{a();b()};
 });
