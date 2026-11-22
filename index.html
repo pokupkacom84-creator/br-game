@@ -1079,6 +1079,11 @@ img[src^="data:image/svg+xml"]{border-radius:14px}
 svg.ln.fl{stroke:currentColor}.stBt.on svg{fill:currentColor}
 .wtc em svg{width:30px;height:30px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 .stIc svg{width:22px;height:22px;color:#fff}.fmtb button svg{width:18px;height:18px;vertical-align:-4px}
+.pi2 b svg{width:1.1em;height:1.1em;vertical-align:-.2em;margin-right:.45em;color:#3b82f6}
+#pu svg,.colg svg{width:.9em;height:.9em;vertical-align:-.08em;margin-left:5px;color:#3b82f6}
+.colg svg{margin:0 6px 0 0}.colc{text-align:center;padding:22px 16px;margin-top:12px}
+.colc .gh2{margin:0 0 6px}.colc .btn{width:100%;margin-top:14px}.colc .stp{margin-top:6px}
+#colBody .row .cl svg{color:#3b82f6}
 </style>
 </head>
 <body>
@@ -1100,7 +1105,7 @@ svg.ln.fl{stroke:currentColor}.stBt.on svg{fill:currentColor}
 <div class="pcard"><button class="pi2" id="rAcc"><b id="pem"></b><small id="pemLbl">Почта и аккаунт</small></button>
 <button class="pi2" id="rUn"><b id="pu">@you</b><small>Имя пользователя</small></button>
 <button class="pi2" id="rAbout"><b id="pab"></b><small>О себе</small></button></div>
-<div class="pcard"><button class="pi2" id="rStars"><b><span class="stp"><svg class="stsv" viewBox="0 0 24 24"><path d="M12 2.6l2.8 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2l-5.8 3.3 1.3-6.5L2.6 9.4l6.6-.8z"/></svg><span data-stars>0</span></span></b><small>Мои звёзды · пополнить</small></button><button class="pi2" id="rGift"><b><i data-ic="gift" data-m="1"></i>Подарить подарок</b><small>Себе или другому пользователю</small></button></div>
+<div class="pcard"><button class="pi2" id="rStars"><b><span class="stp"><svg class="stsv" viewBox="0 0 24 24"><path d="M12 2.6l2.8 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2l-5.8 3.3 1.3-6.5L2.6 9.4l6.6-.8z"/></svg><span data-stars>0</span></span></b><small>Мои звёзды · пополнить</small></button><button class="pi2" id="rGift"><b><i data-ic="gift" data-m="1"></i>Подарить подарок</b><small>Себе или другому пользователю</small></button><button class="pi2" id="rCol"><b><i data-sic="gem"></i>Юзернеймы</b><small>Коллекционные имена из 3–4 символов</small></button></div>
 <div class="sh2" id="mystH" style="padding-top:4px" hidden>Истории профиля</div><div class="ggrid sm" id="myst" hidden></div>
 <div class="sh2" style="padding-top:4px">Мои подарки</div><div class="ggrid sm" id="mygifts"></div>
 <div class="pst"><div><b id="s1"></b>чатов</div><div><b id="s2"></b>групп</div><div><b id="s3"></b>закреплено</div></div>
@@ -1159,6 +1164,8 @@ svg.ln.fl{stroke:currentColor}.stBt.on svg{fill:currentColor}
 <div class="seg" id="pcTabs"><button data-t="p">Профиль</button><button data-t="n">Имя</button></div>
 <div id="pcPrev" style="margin:12px 0"></div><div id="pcBody"></div>
 <button class="btn press" id="pcApply" style="width:100%;margin-top:18px">Применить стиль</button></div>
+<div class="prof" id="pcol"><div class="shd"><button class="icon-btn press" id="pcolBack" aria-label="Назад"><svg viewBox="0 -960 960 960"><path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"/></svg></button><div class="ph">Юзернеймы</div></div>
+<div class="seg" id="colTabs"><button data-t="s">Поиск</button><button data-t="m">Маркет</button><button data-t="o">Мои</button></div><div id="colBody"></div></div>
 <nav class="nav" id="nav"></nav>
   </section>
 
@@ -1917,7 +1924,7 @@ document.addEventListener('pointerdown',e=>{if(!e.target.closest('#pk'))hidePick
 $('#pbPhoto').onclick=()=>$('#pav').click();$('#pbEdit').onclick=()=>$('#rAbout').click();
 $('#prof').addEventListener('click',e=>{if(e.target.closest('#sOpen'))$('#pset').classList.add('show')});
 $('#psetBack').onclick=()=>$('#pset').classList.remove('show');
-$('#nav').addEventListener('click',()=>document.querySelectorAll('#pset,#ppr,#pcs,#pdm,#ppriv,#pwp,#pps,#pavs').forEach(x=>x.classList.remove('show')));
+$('#nav').addEventListener('click',()=>document.querySelectorAll('#pset,#ppr,#pcs,#pdm,#ppriv,#pwp,#pps,#pavs,#pcol').forEach(x=>x.classList.remove('show')));
 $('#pset').onclick=e=>{
   const m=e.target.closest('#segMode button');if(m){S.mode=m.dataset.m;saveS();applyTheme();return}
   const f=e.target.closest('#segFs button');if(f){S.fs=+f.dataset.f;saveS();applyTheme();return}
@@ -2074,7 +2081,7 @@ window.onBack=()=>{if(askC){askC();return true}if(SEL){selEnd();return true}
   for(const id of ['lb','sh','chdlg','pi','csub','ci','gi','acc','edit','gdlg','dlg']){const e=document.getElementById(id);if(e&&!e.hidden){e.hidden=true;return true}}
   if(document.getElementById('pk')){hidePicker();return true}
   if(cur){closeChat();return true}
-  for(const id of ['pcs','ppr','pset']){const ps=document.getElementById(id);if(ps&&ps.classList.contains('show')){ps.classList.remove('show');return true}}
+  for(const id of ['pcol','pcs','ppr','pset']){const ps=document.getElementById(id);if(ps&&ps.classList.contains('show')){ps.classList.remove('show');return true}}
   if(tab!==0){document.querySelector('#nav button').click();return true}
   return false};
 </script>
@@ -2138,7 +2145,7 @@ g('ago').onclick=async()=>{g('aerr').textContent='';
     if(!tx.committed){await deleteUser(u);throw 'Этот @username уже занят'}
     await set(ref(db,'users/'+u.uid),{name,un});if(avData)await set(ref(db,'avatars/'+u.uid),avData);
   }catch(e){g('aerr').textContent=errT(e)}};
-function paint(){g('pn').textContent=me.name;g('pu').textContent='@'+me.un;g('pab').textContent=me.about||'Расскажите о себе';g('pem').textContent=S.hem?'Аккаунт':(auth.currentUser?auth.currentUser.email:'');g('pemLbl').textContent=S.hem?'Пароль, смена почты, удаление':'Почта и аккаунт';const p=g('pav');p.style.backgroundImage=me.av?`url(${me.av})`:'';p.textContent=me.av?'':me.name[0].toUpperCase();window.myProf={n:me.name,av:me.av||''};renderNav();window.onMeAv&&onMeAv();window.premSync&&premSync(me)}
+function paint(){g('pn').textContent=me.name;g('pu').innerHTML='@'+esc(me.un)+(typeof MYC!=='undefined'&&MYC[me.un]?sic('gem'):'');g('pab').textContent=me.about||'Расскажите о себе';g('pem').textContent=S.hem?'Аккаунт':(auth.currentUser?auth.currentUser.email:'');g('pemLbl').textContent=S.hem?'Пароль, смена почты, удаление':'Почта и аккаунт';const p=g('pav');p.style.backgroundImage=me.av?`url(${me.av})`:'';p.textContent=me.av?'':me.name[0].toUpperCase();window.myProf={n:me.name,av:me.av||''};renderNav();window.onMeAv&&onMeAv();window.premSync&&premSync(me)}
 function addDM(id,pid){return dmp[id]||(dmp[id]=(async()=>{const p=await getP(pid);
   if(!chats.some(c=>c.id==id))chats.unshift({id,peer:pid,n:p.name||'Пользователь',pun:p.un,av:okAv(p.av),deleted:!!p.del,c:[...pid].reduce((a,ch)=>a+ch.charCodeAt(0),0)%7,last:p.un?'@'+p.un:'',tm:'',un:0,g:0,on:0,seen:0,m:[]}),watch(chats[0]),pid!==uid&&stWatch(pid),pid===uid?(chats[0].n='Избранное',chats[0].fav=1,chats[0].deleted=false):(presWatch(chats[0]),profWatch(chats[0])),applyPref(chats[0]);
   renderList()})())}
@@ -2556,9 +2563,9 @@ g('ecx').onclick=()=>g('edit').hidden=true;
 g('esv').onclick=async()=>{try{
   const name=g('ename').value.replace(/[<>&"']/g,'').trim(),un=g('eun').value.trim().toLowerCase().replace(/^@/,''),about=g('eab').value.replace(/[<>]/g,'').trim().slice(0,140);
   if(!name)throw 'Введите ник';
-  if(!/^[a-z][a-z0-9_]{4,31}$/.test(un))throw '@username: 5–32 символа: латиница, цифры и _; начинается с буквы';
+  if(!/^[a-z][a-z0-9_]{4,31}$/.test(un)&&!MYC[un])throw '@username: 5–32 символа: латиница, цифры и _; начинается с буквы';
   const up={['users/'+uid+'/name']:name,['users/'+uid+'/un']:un,['users/'+uid+'/about']:about||null};
-  if(un!==me.un){up['usernames/'+un]=uid;up['usernames/'+me.un]=null}
+  if(un!==me.un){up['usernames/'+un]=uid;if(!MYC[me.un])up['usernames/'+me.un]=null}
   await update(ref(db),up);g('edit').hidden=true;toast('Профиль обновлён');
 }catch(e){g('eerr').textContent=e.code==='PERMISSION_DENIED'?'Этот @username занят или нет прав':errT(e)}};
 g('sHideEm').onclick=()=>{S.hem=!S.hem;saveS();syncSet();if(me)paint()};
@@ -3276,6 +3283,77 @@ onAuthStateChanged(auth,u=>{if(starsOff){starsOff();starsOff=null}if(giftsOff){g
     if(!first)Object.entries(o).forEach(([k,v])=>{if(old[k]||!v||typeof v.ts!=='number'||v.ts<=t0-3000||v.f===u.uid||v.sf)return;
       toast(v.an?'Вам анонимно подарили подарок':(v.fn||'Кто-то')+' подарил(а) вам подарок')});
     if(first){srvSync().then(()=>{renderMyGifts();rtPaintMine()})}first=false},()=>{})});
+
+/* ===== коллекционные юзернеймы (3–4 символа) ===== */
+const CUN=u=>/^[a-z][a-z0-9_]{2,3}$/.test(u),cPrice=u=>u.length<=3?1500:400,CFEE=.1;
+let MYC={},colT='s',colQ='',colOff=null;
+const gemI=()=>sic('gem');
+onAuthStateChanged(auth,u=>{if(colOff){colOff();colOff=null}MYC={};if(!u)return;
+  colOff=onValue(ref(db,'userCollectibles/'+u.uid),s=>{MYC=s.val()||{};if(me){g('pu').innerHTML='@'+esc(me.un)+(MYC[me.un]?sic('gem'):'')}if(colT==='o')colPaint()},()=>{})});
+function colTabs(){document.querySelectorAll('#colTabs button').forEach(x=>x.classList.toggle('on',x.dataset.t===colT))}
+function colPaint(){colTabs();const b=g('colBody');if(!b)return;
+  if(colT==='s'){if(!b.querySelector('#colIn')){b.innerHTML='<label class="tf" style="margin-top:8px"><span>@</span><input id="colIn" placeholder="имя из 3–4 символов" maxlength="5" autocapitalize="none" autocomplete="off"></label><div class="hint" style="padding:8px 4px">Цена свободных имён: 3 символа — '+cPrice('abc')+' звёзд, 4 символа — '+cPrice('abcd')+' звёзд. Купленное имя можно сделать основным или перепродать другому пользователю (комиссия 10%).</div><button class="btn press" id="colGo" style="width:100%">Найти</button><div id="colRes"></div>';
+      g('colIn').onkeydown=e=>{if(e.key==='Enter')colLook(g('colIn').value)}}
+    if(colQ){g('colIn').value=colQ;colLook(colQ)}}
+  else if(colT==='m')colMarket();else colMine()}
+function colCard(u,note,price,btn){return `<div class="wcard colc"><div class="gh2 colg">${gemI()}@${u}</div><div class="gsub" style="margin-bottom:6px">${note}</div>${price?stPill(price):''}${btn||''}</div>`}
+async function colLook(u){const r=g('colRes');if(!r)return;u=String(u||'').trim().toLowerCase().replace(/^@/,'');colQ=u;
+  if(!u){r.innerHTML='';return}
+  if(!CUN(u)){r.innerHTML='<div class="uemp">Допустимо 3–4 символа: латиница, цифры и _, первая — буква</div>';return}
+  r.innerHTML='<div class="uemp">Поиск…</div>';
+  try{const [cs,us]=await Promise.all([get(ref(db,'collectibles/'+u)),get(ref(db,'usernames/'+u))]);if(colQ!==u||!g('colRes'))return;const rec=cs.val();let h;
+    if(rec&&rec.o){if(rec.o===uid)h=colCard(u,'Это ваш юзернейм','',MYC[u]?'':'');
+      else if(rec.l&&rec.p>0)h=colCard(u,'Продаёт другой пользователь',rec.p,`<button class="btn press" data-a="buy" data-u="${u}">Купить</button>`);
+      else h=colCard(u,'Занят, не продаётся','')}
+    else if(us.exists())h=colCard(u,'Занят','');
+    else h=colCard(u,'Свободен',cPrice(u),`<button class="btn press" data-a="buy" data-u="${u}">Купить</button>`);
+    r.innerHTML=h}catch(e){r.innerHTML='<div class="uemp">Не удалось найти</div>'}}
+async function colMarket(){const b=g('colBody');b.innerHTML='<div class="uemp">Загрузка…</div>';const a=[];
+  try{let sn;try{sn=await get(query(ref(db,'collectibles'),orderByChild('l'),equalTo(1),limitToFirst(60)))}catch(e){sn=await get(ref(db,'collectibles'))}
+    sn.forEach(x=>{const v=x.val();if(v&&v.l&&v.p>0&&v.o&&CUN(x.key))a.push([x.key,v])})}catch(e){if(colT==='m')b.innerHTML='<div class="uemp">Не удалось загрузить</div>';return}
+  if(colT!=='m')return;a.sort((x,y)=>x[1].p-y[1].p);
+  b.innerHTML=a.length?a.map(([u,v])=>`<button class="row press" data-a="look" data-u="${u}"><div class="cl">${gemI()}</div><div class="mid"><div class="nm">@${u}</div><div class="ls">${v.o===uid?'ваш · ':''}на продаже</div></div>${stPill(v.p)}</button>`).join(''):'<div class="uemp">Сейчас ничего не продаётся</div>'}
+async function colMine(){const b=g('colBody'),ks=Object.keys(MYC).filter(CUN);
+  if(!ks.length){b.innerHTML='<div class="uemp">У вас пока нет коллекционных юзернеймов.<br>Найдите свободное имя во вкладке «Поиск».</div>';return}
+  const rs=await Promise.all(ks.map(async u=>[u,(await get(ref(db,'collectibles/'+u)).catch(()=>null))?.val()||{}]));if(colT!=='o')return;
+  b.innerHTML=rs.map(([u,v])=>{const main=me&&me.un===u;
+    return `<div class="pcard" style="padding:14px 16px;margin-top:10px"><div class="nm colg" style="white-space:normal">${gemI()}@${u}${main?' · основной':''}</div><div class="ls" style="white-space:normal">${v.l?'На продаже за '+v.p+' звёзд':'Не продаётся'}</div><div class="seg" style="margin-top:10px">${main?'':`<button data-a="main" data-u="${u}">Сделать основным</button>`}${v.l?`<button data-a="unsell" data-u="${u}">Снять с продажи</button>`:(main?'':`<button data-a="sell" data-u="${u}">Продать</button>`)}</div></div>`}).join('')}
+async function colBuy(u){if(!uid||gBusy)return;
+  const [cs,us]=await Promise.all([get(ref(db,'collectibles/'+u)),get(ref(db,'usernames/'+u))]),rec=cs.val();let price,seller=null;
+  if(rec&&rec.o){if(rec.o===uid)throw 'Это уже ваш юзернейм';if(!rec.l||!(rec.p>0))throw 'Юзернейм не продаётся';price=+rec.p;seller=rec.o}
+  else{if(us.exists())throw 'Юзернейм занят';price=cPrice(u)}
+  if(!await ask({title:'Купить @'+u+'?',text:'Цена: '+pl(price,['звезда','звезды','звёзд'])+'.',ok:'Купить'}))return;
+  gBusy=true;let done=0;
+  try{const tx=await runTransaction(ref(db,'stars/'+uid),v=>(+v||0)>=price?(+v||0)-price:undefined);
+    if(!tx.committed)throw 'Недостаточно звёзд';
+    const refund=()=>runTransaction(ref(db,'stars/'+uid),v=>(+v||0)+price).catch(()=>{});
+    try{
+      const ct=await runTransaction(ref(db,'collectibles/'+u),v=>{if(v===null)return {o:uid,ts:serverTimestamp()};
+        if(seller&&v.o===seller&&v.l&&+v.p===price)return {o:uid,ts:serverTimestamp()};return});
+      if(!ct.committed)throw 'Юзернейм уже купил другой пользователь';done=1;
+      const ut=await runTransaction(ref(db,'usernames/'+u),v=>(v===null||v===seller)?uid:undefined);
+      if(!ut.committed)throw 'Юзернейм занят';
+      await set(ref(db,'userCollectibles/'+uid+'/'+u),true);
+      if(seller){set(ref(db,'userCollectibles/'+seller+'/'+u),null).catch(()=>{});
+        runTransaction(ref(db,'stars/'+seller),v=>(+v||0)+price-Math.floor(price*CFEE)).catch(()=>{})}
+      toast('Теперь @'+u+' ваш');colLook(u)
+    }catch(e){if(done)await (seller?set(ref(db,'collectibles/'+u),rec):set(ref(db,'collectibles/'+u),null)).catch(()=>{});await refund();throw e}
+  }finally{gBusy=false}}
+async function colMain(u){await update(ref(db),{['users/'+uid+'/un']:u});toast('@'+u+' теперь основной');colPaint()}
+async function colSell(u,p){if(!(p>=1&&p<=1e6))throw 'Укажите цену от 1 до 1 000 000';if(me&&me.un===u)throw 'Сначала сделайте основным другой юзернейм';
+  await update(ref(db,'collectibles/'+u),{l:1,p})}
+async function colUnsell(u){await update(ref(db,'collectibles/'+u),{l:null,p:null});toast('Снято с продажи');colPaint()}
+g('rCol').onclick=()=>{if(!uid)return;colT='s';g('colBody').innerHTML='';g('pcol').classList.add('show');colPaint()};
+g('pcol').addEventListener('click',async e=>{const t=e.target.closest('button');if(!t)return;
+  if(t.id==='pcolBack'){g('pcol').classList.remove('show');return}
+  if(t.dataset.t){colT=t.dataset.t;g('colBody').innerHTML='';colPaint();return}
+  if(t.id==='colGo'){colLook(g('colIn').value);return}
+  const a=t.dataset.a,u=t.dataset.u;if(!a||!CUN(u))return;
+  try{if(a==='buy')await colBuy(u);else if(a==='main')await colMain(u);else if(a==='unsell')await colUnsell(u);
+    else if(a==='sell')xs('<div class="nm" style="padding:8px 12px">Цена для @'+u+'</div><input class="xin" id="colPr" type="number" min="1" max="1000000" placeholder="Цена в звёздах"><div class="hint" style="padding:0 4px 8px">Комиссия 10%, покупатель сразу получает имя.</div><button class="set press" data-cx="1" data-u="'+u+'" style="justify-content:center;background:var(--pc);color:var(--onpc)">Выставить на продажу</button>');
+    else if(a==='look'){colT='s';colQ=u;g('colBody').innerHTML='';colPaint()}}catch(x){toast(errT(x))}});
+g('xshc').addEventListener('click',async e=>{const b=e.target.closest('[data-cx]');if(!b)return;
+  try{await colSell(b.dataset.u,Math.floor(+g('colPr').value));g('xsh').hidden=true;toast('Выставлено на продажу');colPaint()}catch(x){toast(errT(x))}});
 </script>
 <script>
 /* M3 Expressive: ripple, сворачивание FAB, лёгкая вибро-отдача (Android) */
