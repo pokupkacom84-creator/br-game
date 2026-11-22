@@ -925,9 +925,44 @@ html.glass .nav button.on .pill::before{
  background:linear-gradient(135deg,var(--gl-a),var(--gl-b)),color-mix(in srgb,var(--sc) 80%,transparent)!important;
  box-shadow:inset 0 1px 1px var(--gl-edge),inset 0 -1px 2px var(--gl-low),0 2px 8px var(--gl-sh)}
 html.glass .nav .dot{box-shadow:none}
+
+/* ===== форма аватарок ===== */
+html.avs :is(.av:not(.sq),#phd .pav,.navav,.mav){clip-path:url(#avclip)!important;border-radius:0!important}
+.avprev{width:168px;height:168px;margin:10px auto 6px;background:var(--p);color:var(--onp);display:grid;place-items:center;font-size:68px;font-weight:800;clip-path:url(#avclip)}
+.avs-r{padding:14px 4px 2px}.avl{font-size:16px;color:var(--on)}.avl b{font-weight:600}
+.avo{display:flex;align-items:center;width:100%;height:52px;text-align:left;padding:0 8px;font-size:17px;color:var(--on);border-radius:14px}
+.avo.on{color:var(--p);font-weight:700}
+.avtn{color:var(--p);font-weight:600}
+/* ===== загрузка: морфинг-индикатор (Material 3 Expressive) и скелетоны ===== */
+.mload{width:56px;height:56px;margin:22px auto 10px;color:var(--p)}
+.mload svg{width:100%;height:100%;fill:currentColor;display:block}
+.row.sk{pointer-events:none;animation:rowin .45s cubic-bezier(.2,0,0,1) backwards;animation-delay:calc(var(--i,0)*45ms)}
+.sk-av,.sk-l{background:linear-gradient(100deg,var(--surf3) 30%,var(--surf4) 50%,var(--surf3) 70%) 0 0/300% 100%;animation:skm 1.5s linear infinite}
+.sk-l{display:block;height:14px;border-radius:7px;margin:5px 0}
+@keyframes skm{to{background-position:-300% 0}}
+@keyframes rowin{from{opacity:0;transform:translateY(16px) scale(.98)}}
+.rin .row{animation:rowin .5s cubic-bezier(.2,0,0,1) backwards;animation-delay:calc(var(--i,0)*40ms)}
+html.noanim .sk-av,html.noanim .sk-l,html.noanim .row.sk,html.noanim .rin .row{animation:none}
+@media (prefers-reduced-motion:reduce){.sk-av,.sk-l,.row.sk,.rin .row{animation:none}}
+/* ===== широкий экран: список слева, чат справа ===== */
+#chatph{display:none;position:absolute;top:0;bottom:0;left:var(--lw,380px);right:0;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--onv);background:var(--bg);font-size:16px}
+#chatph span{background:var(--surf3);padding:6px 16px;border-radius:16px;font-size:14px;font-weight:500}
+@media (min-width:840px){
+ #app{max-width:none;--lw:clamp(340px,34vw,420px)}
+ #list{right:auto;width:var(--lw);border-right:1px solid var(--out)}
+ #list.back{transform:none;opacity:1}
+ #chat{left:var(--lw);transform:none;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .25s}
+ #chat.open{opacity:1;visibility:visible;pointer-events:auto}
+ #chatph{display:flex}
+ #back{display:none}
+ .row.on{background:var(--sc)}
+ .toast{left:calc(var(--lw) + 16px)}
+ #chat .b{max-width:min(82%,560px)}
+}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><clipPath id="avclip" clipPathUnits="objectBoundingBox"><path id="avclipP" d=""/></clipPath></defs></svg>
 <div id="app">
   <section class="screen" id="list">
     <div class="top">
@@ -971,6 +1006,8 @@ html.glass .nav .dot{box-shadow:none}
 <button class="set press" id="sCmp"><span>Компактный список чатов<small class="wr">Уменьшает отступы и аватарки в списке</small></span><span class="sw" id="sCmpSw"><i></i></span></button>
 <button class="set press" id="sAnim" style="display:none"><span>Анимации<small class="wr">Плавные переходы и эффекты</small></span><span class="sw" id="sAnimSw"><i></i></span></button>
 
+<button class="set press" id="sAvs"><span>Форма аватарок<small class="wr" id="sAvsS">Круг</small></span><span>›</span></button>
+
 <div class="sh2">Чат</div>
 <button class="set press" id="sWp"><span>Обои чата<small class="wr">Фон переписки и цвет карточек подарков</small></span><span>›</span></button>
 <button class="set press" id="sPs"><span>Энергосбережение<small class="wr" id="sPsS">Анимации, размытие, «жидкое стекло»</small></span><span>›</span></button>
@@ -987,6 +1024,7 @@ html.glass .nav .dot{box-shadow:none}
 <div class="prof" id="ppriv"><div class="shd"><button class="icon-btn press" id="ppvBack" aria-label="Назад"><svg viewBox="0 -960 960 960"><path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"/></svg></button><div class="ph">Конфиденциальность</div></div>
 <div class="pcard pvc"><div class="pvt">Время в сети</div><div class="pvd">Кто видит «был(а) в сети» и зелёную точку</div><div class="seg"><button data-k="ls" data-v="all">Все</button><button data-k="ls" data-v="none">Никто</button></div><div class="pvt">Новые сообщения</div><div class="pvd">Кто может написать первым</div><div class="seg"><button data-k="nm" data-v="all">Все</button><button data-k="nm" data-v="ct">Контакты</button></div><div class="pvt">Приглашения в группы</div><div class="pvd">Кто может добавить вас в группу</div><div class="seg"><button data-k="gi" data-v="all">Все</button><button data-k="gi" data-v="ct">Контакты</button></div><div class="pvt">Подарки в профиле</div><div class="pvd">Кто видит ваши подарки</div><div class="seg"><button data-k="gf" data-v="all">Все</button><button data-k="gf" data-v="me">Только я</button></div></div></div>
 <div class="prof" id="pwp"><div class="shd"><button class="icon-btn press" id="pwpBack" aria-label="Назад"><svg viewBox="0 -960 960 960"><path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"/></svg></button><div class="ph">Обои чата</div></div><div id="wpbody"></div></div>
+<div class="prof" id="pavs"><div class="shd"><button class="icon-btn press" id="pavsBack" aria-label="Назад"><svg viewBox="0 -960 960 960"><path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"/></svg></button><div class="ph">Форма аватарок</div></div><div id="avsbody"></div></div>
 <div class="prof" id="pps"><div class="shd"><button class="icon-btn press" id="ppsBack" aria-label="Назад"><svg viewBox="0 -960 960 960"><path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"/></svg></button><div class="ph">Энергосбережение</div></div><div id="psbody"></div></div>
 <div class="prof" id="pdm"><div class="shd"><button class="icon-btn press" id="pdmBack" aria-label="Назад"><svg viewBox="0 -960 960 960"><path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"/></svg></button><div class="ph">Данные и память</div></div>
 <div class="mdn"><svg viewBox="0 0 220 220" id="mdSvg"></svg><div class="mdctr"><b id="mdTot">…</b><span id="mdQ"></span></div></div>
@@ -1025,6 +1063,7 @@ html.glass .nav .dot{box-shadow:none}
     </div><div class="chfoot" id="chFooter" hidden><button class="press" id="chMute"></button></div>
   <div class="emo" id="emo"><div class="eb" id="eb"></div><div class="et"><div class="etabs" id="etabs"></div><button id="ebs" class="press" aria-label="Стереть"><i data-ic="backspace"></i></button></div></div>
   </section>
+  <div id="chatph"><svg viewBox="0 -960 960 960" style="width:72px;height:72px;opacity:.35"><path d="M240-400h480v-80H240v80Zm0-120h480v-80H240v80Zm0-120h480v-80H240v80ZM880-80 720-240H160q-33 0-56.5-23.5T80-320v-480q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v640Z"/></svg><span>Выберите чат, чтобы начать общение</span></div>
   <div class="auth" id="auth" hidden><div class="card">
 <div class="logo"><i data-ic="chat"></i></div><h1 id="ah">Вход</h1>
 <button class="pick" id="apick" hidden>+ фото</button><input type="file" id="afile" accept="image/*" hidden>
@@ -1231,7 +1270,8 @@ function renderList(){
   if(filter==='pers')a=a.filter(c=>!c.g&&!c.channel);
   if(filter==='grp')a=a.filter(c=>c.g);
   if(filter==='chn')a=a.filter(c=>c.channel);
-  $('#rows').innerHTML=a.length?a.map(c=>`<button class="row" data-id="${c.id}">${av(c)}
+  if(window.lsShow&&lsShow(a)){renderNav();return}
+  $('#rows').innerHTML=a.length?a.map((c,i)=>`<button class="row" style="--i:${Math.min(i,12)}" data-id="${c.id}">${av(c)}
    <div class="mid"><div class="nm"${nmSty(c)}>${c.channel?CHI:''}${c.n}${bd(c)}</div><div class="ls">${drHtml(c)||emHtml(escH(c.last))}</div></div>
    <div class="meta"><span>${c.tm}</span>${c.men&&c.un?'<span class="badge">@</span>':''}${c.un?`<span class="badge" ${c.mute?'style="background:var(--out);color:var(--on)"':''}>${c.un}</span>`:`<span style="height:24px;display:grid;align-items:center">${c.mute?ic('bellOff'):''}${c.pin?PIN:''}</span>`}</div></button>`).join('')
    :(window.gsHas&&gsHas(q)?'':`<div class="empty">${chats.length?'Ничего не найдено':'Чатов пока нет.<br>Нажмите «Написать» и найдите друга или канал по @username'}</div>`);
@@ -1622,6 +1662,74 @@ $('#send').onclick=send;
 $('#inp').oninput=()=>{sync();drSave();if(window.fb&&$('#inp').value.trim())fb.typing()};
 $('#fab').onclick=()=>window.fb?fb.dlg():toast('Войдите в аккаунт');
 $('#themeBtn').onclick=()=>{S.mode=effDark()?'light':'dark';saveS();applyTheme()};
+
+/* ===== форма аватарок + морфинг-загрузка + двухпанельный режим ===== */
+if(!S.avs||typeof S.avs!=='object')S.avs={t:'circle',n:6,e:33,r:9};
+{const a=S.avs;if(!['circle','squircle','polygon','cookie','flower','star'].includes(a.t))a.t='circle';a.n=Math.min(12,Math.max(3,+a.n||6));a.e=Math.min(100,Math.max(0,a.e===undefined?33:+a.e));a.r=Math.min(360,Math.max(0,+a.r||0))}
+const AVT=[['circle','Круг'],['squircle','Суперэллипс'],['polygon','Многоугольник'],['cookie','Печенье'],['flower','Цветок'],['star','Звезда']];
+function avsR(t,n,e,N){const r=[],TP=Math.PI*2;
+ for(let i=0;i<N;i++){const th=i/N*TP;let v=1;
+  if(t==='squircle'){const p=2+e*6,c=Math.abs(Math.cos(th)),s=Math.abs(Math.sin(th));v=Math.pow(Math.pow(c,p)+Math.pow(s,p),-1/p)}
+  else if(t==='polygon'){const sc=TP/n,ph=((th%sc)+sc)%sc-sc/2;v=1+(Math.cos(Math.PI/n)/Math.cos(ph)-1)*e}
+  else if(t==='flower')v=1+e*.7*Math.cos(n*th);
+  else if(t==='cookie')v=1-e*.45*(1-Math.abs(Math.sin(n*th/2)));
+  else if(t==='star'){const u=((n*th/TP)%1+1)%1;v=1-e*.65*(1-Math.abs(u-.5)*2)}
+  r.push(v)}
+ if(t==='polygon'||t==='star'){const k=Math.max(1,Math.round(N/90)),q=r.slice();for(let i=0;i<N;i++){let s=0;for(let j=-k;j<=k;j++)s+=q[(i+j+N)%N];r[i]=s/(2*k+1)}}
+ return r}
+function avsPts(r,rot,circ){const N=r.length,P=[];let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9,mx=0;
+ for(let i=0;i<N;i++){const th=i/N*Math.PI*2+rot,x=r[i]*Math.cos(th),y=r[i]*Math.sin(th);P.push([x,y]);if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;if(r[i]>mx)mx=r[i]}
+ if(circ){const k=.5/mx;return P.map(p=>[.5+p[0]*k,.5+p[1]*k])}
+ const k=1/Math.max(x1-x0,y1-y0),cx=(x0+x1)/2,cy=(y0+y1)/2;return P.map(p=>[.5+(p[0]-cx)*k,.5+(p[1]-cy)*k])}
+const avsD=P=>'M'+P.map(p=>p[0].toFixed(4)+' '+p[1].toFixed(4)).join('L')+'Z';
+function avsPath(a){const c=a.t==='circle';return avsD(avsPts(avsR(c?'squircle':a.t,a.n,c?0:a.e/100,240),a.r*Math.PI/180-Math.PI/2))}
+function applyAvs(){const a=S.avs,p=document.getElementById('avclipP');if(p)p.setAttribute('d',avsPath(a));
+ document.documentElement.classList.toggle('avs',a.t!=='circle');
+ const e=document.getElementById('sAvsS');if(e)e.textContent=(AVT.find(x=>x[0]===a.t)||AVT[0])[1]}
+function renderAvs(){const a=S.avs,b=$('#avsbody');if(!b)return;
+ const nm=(AVT.find(x=>x[0]===a.t)||AVT[0])[1],hasN=['polygon','cookie','flower','star'].includes(a.t),hasE=a.t!=='circle';
+ const cl=a.t==='polygon'?'Количество сторон':a.t==='star'?'Количество лучей':'Количество лепестков';
+ const sl=(k,lab,val,mn,mx,u)=>`<div class="avs-r"><div class="avl" data-l="${k}">${lab}: <b>${val}${u}</b></div><input class="psr" type="range" data-p="${k}" data-u="${u}" min="${mn}" max="${mx}" step="1" value="${val}" style="--v:${(val-mn)/(mx-mn)*100}%"></div>`;
+ const mp=window.myProf;
+ b.innerHTML=`<div class="wcard"><div class="wct">Форма аватарок</div><div class="avprev" id="avPrev">${esc0(mp&&mp.n)}</div></div>
+ <button class="set press" id="avT"><span>Форма</span><span class="avtn" id="avTn">${nm}</span></button>
+ <div class="psc" style="margin-top:6px">${hasN?sl('n',cl,a.n,3,12,''):''}${hasE?sl('e','Выраженность формы',Math.round(a.e),0,100,' %'):''}${hasE?sl('r','Поворот',Math.round(a.r),0,360,'°'):''}${hasE?'':'<div class="avl" style="color:var(--onv)">Обычный круглый вид без изменений</div>'}</div>
+ <div class="psn">Форма применяется ко всем круглым аватаркам: список чатов, шапка чата, профиль. «Круг» возвращает обычный вид.</div>`}
+function avsPick(){const m=$('#mdl'),c=$('#mdc');
+ c.innerHTML='<h3>Форма</h3>'+AVT.map(x=>`<button class="mdb avo${S.avs.t===x[0]?' on':''}" data-t="${x[0]}">${x[1]}</button>`).join('');
+ m.onclick=e=>{const b=e.target.closest('.avo');if(!b&&e.target!==m)return;m.hidden=true;m.onclick=null;if(b){S.avs.t=b.dataset.t;saveS();syncS();applyAvs();renderAvs()}};m.hidden=false}
+$('#pset').addEventListener('click',e=>{if(e.target.closest('#sAvs')){$('#pavs').classList.add('show');renderAvs()}});
+$('#pavs').addEventListener('click',e=>{if(e.target.closest('#pavsBack')){$('#pavs').classList.remove('show');return}if(e.target.closest('#avT'))avsPick()});
+$('#pavs').addEventListener('input',e=>{const t=e.target;if(t.type!=='range')return;const k=t.dataset.p,v=+t.value;S.avs[k]=v;
+ t.style.setProperty('--v',(v-t.min)/(t.max-t.min)*100+'%');const l=document.querySelector('#pavs [data-l="'+k+'"] b');if(l)l.textContent=v+(t.dataset.u||'');applyAvs()});
+$('#pavs').addEventListener('change',e=>{if(e.target.type==='range'){saveS();syncS()}});
+
+/* загрузка списка: морфинг фигур + скелетоны */
+const MLS=[['cookie',9,.5],['polygon',5,.8],['flower',6,.5],['cookie',4,.6],['star',8,.5],['flower',4,.55]];
+let mlRun=0;
+function mlStart(){const el=document.querySelector('.mload path');if(!el||mlRun)return;
+ const N=96,A=MLS.map(x=>avsR(x[0],x[1],x[2],N));
+ if(document.documentElement.classList.contains('noanim')||matchMedia('(prefers-reduced-motion:reduce)').matches){el.setAttribute('d',avsD(avsPts(A[0],0,1)));return}
+ mlRun=1;const t0=performance.now(),hold=.5,mv=.6,cyc=hold+mv;
+ const step=now=>{const p=document.querySelector('.mload path');if(!p){mlRun=0;return}
+  const T=(now-t0)/1000,k=Math.floor(T/cyc),f=T-k*cyc;let u=f<hold?0:(f-hold)/mv;u=1+2.2*Math.pow(u-1,3)+1.2*Math.pow(u-1,2);
+  const a=A[k%A.length],b=A[(k+1)%A.length],r=a.map((v,i)=>v+(b[i]-v)*u);
+  p.setAttribute('d',avsD(avsPts(r,T*1.9+k*.6,1)));requestAnimationFrame(step)};
+ requestAnimationFrame(step)}
+const LS={on:0,ready:0,seen:0,t:0};
+window.lsStart=()=>{LS.on=1;LS.ready=chats.length>0;clearTimeout(LS.t);LS.t=setTimeout(()=>{if(!LS.ready){LS.ready=1;renderList()}},3500)};
+window.lsShow=a=>{
+ if(a.length){LS.ready=1;if(LS.seen){LS.seen=0;const r=$('#rows');r.classList.add('rin');setTimeout(()=>r.classList.remove('rin'),1100)}return false}
+ if(LS.ready||!LS.on)return false;LS.seen=1;
+ const W=[62,48,70,40,58,66,44];
+ $('#rows').innerHTML='<div class="mload"><svg viewBox="0 0 100 100"><path d=""/></svg></div>'+W.map((w,i)=>`<div class="row sk" style="--i:${i}"><div class="av sk-av"></div><div class="mid"><i class="sk-l" style="width:${w}%"></i><i class="sk-l" style="width:${Math.max(30,w-22)}%;height:12px"></i></div></div>`).join('');
+ mlStart();return true};
+
+/* двухпанельный режим: подсветка открытого чата */
+function hiRow(){const o=$('#chat').classList.contains('open')&&cur;document.querySelectorAll('#rows .row[data-id]').forEach(r=>r.classList.toggle('on',!!o&&r.dataset.id==cur.id))}
+new MutationObserver(hiRow).observe($('#chat'),{attributes:true,attributeFilter:['class']});
+new MutationObserver(hiRow).observe($('#rows'),{childList:true});
+applyAvs();
 applyTheme();renderChips();renderList();
 $('#msgs').onscroll=()=>{if(window.fb&&$('#msgs').scrollTop<80)fb.older()};
 $('#sh').onclick=e=>{const b=e.target.closest('button[data-k]'),id=$('#sh').dataset.id;$('#sh').hidden=true;if(!b)return;const c=chats.find(x=>x.id==id);if(!c||!window.fb)return;const k=b.dataset.k;
@@ -1648,7 +1756,7 @@ document.addEventListener('pointerdown',e=>{if(!e.target.closest('#pk'))hidePick
 $('#pbPhoto').onclick=()=>$('#pav').click();$('#pbEdit').onclick=()=>$('#rAbout').click();
 $('#prof').addEventListener('click',e=>{if(e.target.closest('#sOpen'))$('#pset').classList.add('show')});
 $('#psetBack').onclick=()=>$('#pset').classList.remove('show');
-$('#nav').addEventListener('click',()=>document.querySelectorAll('#pset,#ppr,#pcs,#pdm,#ppriv,#pwp,#pps').forEach(x=>x.classList.remove('show')));
+$('#nav').addEventListener('click',()=>document.querySelectorAll('#pset,#ppr,#pcs,#pdm,#ppriv,#pwp,#pps,#pavs').forEach(x=>x.classList.remove('show')));
 $('#pset').onclick=e=>{
   const m=e.target.closest('#segMode button');if(m){S.mode=m.dataset.m;saveS();applyTheme();return}
   const f=e.target.closest('#segFs button');if(f){S.fs=+f.dataset.f;saveS();applyTheme();return}
@@ -1880,7 +1988,7 @@ function enter(){if(entered)return;entered=true;g('auth').hidden=true;window.fb=
     set(ref(db,'channels/'+yc+'/subscribers/'+uid),true).catch(()=>{});set(ref(db,'userChats/'+uid+'/'+yc),'c').catch(()=>{});
     get(ref(db,'usernames/alex')).then(s=>{const owner=s.val()||null;if(owner)update(ref(db,'channels/'+yc),{name:'YouChat - новости',owner}).catch(()=>{})}).catch(()=>{})}
   if(pendingCh){const p=pendingCh;pendingCh=null;openByUn(p)}
-  onChildAdded(ref(db,'userChats/'+uid),s=>isCh(s.key)?addChannel(s.key):s.key.startsWith('g_')?addGroup(s.key):addDM(s.key,s.val()));onValue(ref(db,'incoming/'+uid),inc);onChildRemoved(ref(db,'userChats/'+uid),s=>removeChat(s.key));onValue(ref(db,'prefs/'+uid),s=>{PF=s.val()||{};chats.forEach(applyPref);purgeCur();window.chanUI&&chanUI();window.renderCI&&renderCI();renderList()});if(S.n&&'Notification' in window&&Notification.permission==='granted')pushOn();
+  window.lsStart&&lsStart();onChildAdded(ref(db,'userChats/'+uid),s=>isCh(s.key)?addChannel(s.key):s.key.startsWith('g_')?addGroup(s.key):addDM(s.key,s.val()));onValue(ref(db,'incoming/'+uid),inc);onChildRemoved(ref(db,'userChats/'+uid),s=>removeChat(s.key));onValue(ref(db,'prefs/'+uid),s=>{PF=s.val()||{};chats.forEach(applyPref);purgeCur();window.chanUI&&chanUI();window.renderCI&&renderCI();renderList()});if(S.n&&'Notification' in window&&Notification.permission==='granted')pushOn();
   onValue(ref(db,'.info/connected'),s=>{if(s.val())presArm()});
   onValue(ref(db,'privacy/'+uid),s=>{const v=s.val();if(v){S.pv=v;saveS()}pvPaint();presArm()});
   if(S.ct&&S.ct.length)update(ref(db),Object.fromEntries(S.ct.map(p=>['contacts/'+uid+'/'+p,true]))).catch(()=>{});
