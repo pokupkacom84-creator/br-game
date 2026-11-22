@@ -2387,7 +2387,7 @@ g('gdet').addEventListener('click',e=>{if(e.target.closest('#gdVisB'))gdToggleHi
 const GX_WEEK=6048e5;
 /* сколько звёзд вернётся за подарок: чем дороже подарок, тем меньше комиссия. 25 -> 15 */
 function gxPay(p){const r=p<=25?.6:p<=50?.66:p<=100?.72:p<=250?.78:.84;return Math.max(1,Math.floor(p*r))}
-const gxLeft=v=>(typeof v.ts==='number'?v.ts:Date.now())+GX_WEEK-Date.now();
+const gxLeft=v=>typeof v.ts==='number'?v.ts+GX_WEEK-nowS():-1;
 function gxPaint(){const b=g('gdX');if(!gCur||!gCur.own){b.hidden=true;return}
   const v=gCur.v,G=gById(v.g);if(!G){b.hidden=true;return}
   const price=+v.p||G.p,get=gxPay(price),left=gxLeft(v);b.hidden=false;
@@ -2397,17 +2397,18 @@ function gxPaint(){const b=g('gdX');if(!gCur||!gCur.own){b.hidden=true;return}
 async function rtPenalty(a){if(!(a>0))return;await runTransaction(ref(db,'rating/'+uid),v=>{v=v||{};let q=+v.q||0,p=+v.p||0;const t=Math.min(q,a);q-=t;p=Math.max(0,p-(a-t));v.q=q;v.p=p;return v})}
 async function gxExchange(){if(!gCur||!gCur.own)return;const {k,v}=gCur,G=gById(v.g);if(!G)return;
   const price=+v.p||G.p,get=gxPay(price);
-  if(gxLeft(v)<=0){toast('Срок обмена истёк');return gxPaint()}
   if(!await ask({title:'Обменять подарок?',text:`Вы получите ${pl(get,['звезду','звезды','звёзд'])}. Комиссия — ${price-get}. Подарок исчезнет из вашего профиля.`,ok:'Обменять'}))return;
   const btn=g('gdXb');if(btn)btn.disabled=true;
   try{
+    const now=await srvSync();if(!now)throw 'Нет связи с сервером. Попробуйте ещё раз';
+    if(typeof v.ts!=='number'||now-v.ts>GX_WEEK){gxPaint();throw 'Срок обмена истёк'}
     let valid=false;
     const tx=await runTransaction(ref(db,'gifts/'+uid+'/'+k),cur=>{valid=false;
-      if(cur&&typeof cur.ts==='number'&&Date.now()-cur.ts<=GX_WEEK){valid=true;return null}
+      if(cur&&typeof cur.ts==='number'&&now-cur.ts<=GX_WEEK){valid=true;return null}
       if(cur===null)return null;return});
     if(!tx.committed||!valid)throw 'Обмен недоступен';
     let ok=false;for(let i=0;i<3&&!ok;i++){try{await runTransaction(ref(db,'stars/'+uid),x=>(+x||0)+get);ok=true}catch(e){}}
-    if(!ok){await set(ref(db,'gifts/'+uid+'/'+k),v).catch(()=>{});throw GER}
+    if(!ok){await set(ref(db,'gifts/'+uid+'/'+k),Object.assign({},v,{ts:serverTimestamp()})).catch(()=>{});throw GER}
     rtPenalty(Math.round(price*.85)).then(rtPaintMine).catch(()=>{});
     delete MYG[k];renderMyGifts();gdClose();toast('Обменяно: +'+pl(get,['звезда','звезды','звёзд']))
   }catch(e){if(btn)btn.disabled=false;toast(typeof e==='string'?e:GER)}}
@@ -2446,13 +2447,19 @@ g('gcGo').onclick=async()=>{if(!shopG||!shopTo||gBusy)return;if(!g('gcGo').datas
   gBusy=true;g('gcGo').classList.add('dis');
   try{await sendGift(shopG,shopTo.uid,g('gcNote').value.trim(),shopAn);g('gconf').hidden=true;g('gshop').hidden=true;gDone(shopG)}
   catch(e){toast(typeof e==='string'?e:GER)}finally{gBusy=false;g('gcGo').classList.remove('dis')}};
+/* ===== серверное время: часы телефона не учитываются ===== */
+let SRV={s:0,p:0};
+const nowS=()=>SRV.s?SRV.s+(performance.now()-SRV.p):Date.now();
+async function srvSync(){try{const r=ref(db,'clock/'+uid);await set(r,serverTimestamp());const v=(await get(r)).val();
+  if(typeof v==='number'){SRV={s:v,p:performance.now()};return v}}catch(e){}return null}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&typeof uid!=='undefined'&&uid)srvSync()});
 /* ===== рейтинг (как в Telegram) ===== */
 const RT_LV=[0,5e3,2e4,5e4,1e5,25e4,5e5,1e6],RT_WEEK=6048e5,RT_COL=['#8a9aa8','#4f9d6a','#3f8fd2','#8f5bd6','#d9822b','#d0453f','#c9a227','#2fb5a8'];
 const rtLevel=p=>{let l=0;RT_LV.forEach((v,i)=>{if(p>=v)l=i});return l},rtK=n=>n>=1e6?n/1e6+'M':n>=1e3?n/1e3+'K':String(n);
 const rtBadge=l=>`<svg class="rtb" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5 3.5 5v6.2c0 5.1 3.6 9.9 8.5 11.3 4.9-1.4 8.5-6.2 8.5-11.3V5L12 1.5z" fill="${RT_COL[Math.min(l,RT_COL.length-1)]}"/><text x="12" y="16.2" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff" font-family="inherit">${l+1}</text></svg>`;
 async function rtGet(pid){const v=(await get(ref(db,'rating/'+pid))).val()||{};let p=+v.p||0,q=+v.q||0;const t=+v.t||0;
-  if(t&&Date.now()>=t){p+=q;q=0}return{p,q,t,lg:v.lg||{}}}
-async function rtMut(add,rec){const now=Date.now();
+  if(t&&nowS()>=t){p+=q;q=0}return{p,q,t,lg:v.lg||{}}}
+async function rtMut(add,rec){const now=nowS();
   await runTransaction(ref(db,'rating/'+uid),v=>{v=v||{};v.p=+v.p||0;v.q=+v.q||0;
     if(v.t&&now>=v.t){v.p+=v.q;v.q=0;v.lg=null;v.t=now+RT_WEEK}
     if(add){if(!v.t)v.t=now+RT_WEEK;v.q+=add;v.lg=v.lg||{};v.lg['k'+now+Math.floor(Math.random()*1e4)]=rec}
@@ -2467,7 +2474,7 @@ async function openRt(pid){if(!pid)return;const own=pid===uid;
   g('rtpill').innerHTML=ic('crown')+`<b>${r.p.toLocaleString('ru')}</b>`+(max?'':`<small>/${rtK(nxt)}</small>`);
   g('rtf').textContent='Уровень '+(l+1);g('rtn').textContent=max?'Максимум':'Уровень '+(l+2);
   let info='';
-  if(own){if(r.t){const d=Math.max(1,Math.ceil((r.t-Date.now())/864e5));info='Рейтинг обновится через '+pl(d,['день','дня','дней'])+'.'}
+  if(own){if(r.t){const d=Math.max(1,Math.ceil((r.t-nowS())/864e5));info='Рейтинг обновится через '+pl(d,['день','дня','дней'])+'.'}
     else info='Баллы начисляются за траты звёзд на подарки.';
     if(r.q>0)info+=`<br>В ожидании: ${pl(r.q,['балл','балла','баллов'])}. <button id="rtView">Посмотреть ›</button>`}
   g('rtinfo').innerHTML=info;g('rtlog').hidden=true;
@@ -2559,7 +2566,7 @@ onAuthStateChanged(auth,u=>{if(starsOff){starsOff();starsOff=null}if(giftsOff){g
   giftsOff=onValue(ref(db,'gifts/'+u.uid),s=>{const o=s.val()||{},old=MYG;MYG=o;renderMyGifts();
     if(!first)Object.entries(o).forEach(([k,v])=>{if(old[k]||!v||typeof v.ts!=='number'||v.ts<=t0-3000||v.f===u.uid||v.sf)return;
       toast(v.an?'Вам анонимно подарили подарок':(v.fn||'Кто-то')+' подарил(а) вам подарок')});
-    if(first)rtPaintMine();first=false},()=>{})});
+    if(first){srvSync().then(()=>{renderMyGifts();rtPaintMine()})}first=false},()=>{})});
 </script>
 <script>
 /* M3 Expressive: ripple, сворачивание FAB, лёгкая вибро-отдача (Android) */
