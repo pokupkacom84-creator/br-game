@@ -2465,10 +2465,10 @@ async function rtMut(add,rec){const now=nowS();
     if(add){if(!v.t)v.t=now+RT_WEEK;v.q+=add;v.lg=v.lg||{};v.lg['k'+now+Math.floor(Math.random()*1e4)]=rec}
     return v})}
 const rtAdd=(a,n)=>rtMut(a,{a,n:String(n).slice(0,24),ts:Date.now()});
-async function rtPaintMine(){if(!uid)return;try{const r=await rtGet(uid),b=g('mrt');b.innerHTML=rtBadge(rtLevel(r.p));b.hidden=false}catch(e){console.warn('rtPaintMine',e)}}
+async function rtPaintMine(){if(!uid)return;try{const r=await rtGet(uid),b=g('mrt');b.innerHTML=rtBadge(rtLevel(r.p));b.hidden=false}catch(e){console.warn('rtPaintMine',e);const b=g('mrt');b.innerHTML=rtBadge(0);b.hidden=false;if(!rtPaintMine.w){rtPaintMine.w=1;toast('Рейтинг: '+(e&&(e.code||e.message)||e))}}}
 async function openRt(pid){if(!pid)return;const own=pid===uid;
   try{if(own)await rtMut(0)}catch(e){}
-  let r;try{r=await rtGet(pid)}catch(e){return toast('Не удалось загрузить рейтинг')}
+  let r;try{r=await rtGet(pid)}catch(e){return toast('Рейтинг: '+(e&&(e.code||e.message)||e))}
   const l=rtLevel(r.p),max=l>=RT_LV.length-1,cur=RT_LV[l],nxt=max?cur:RT_LV[l+1],
     pct=max?100:Math.max(0,Math.min(100,(r.p-cur)/(nxt-cur)*100));
   g('rtpill').innerHTML=ic('crown')+`<b>${r.p.toLocaleString('ru')}</b>`+(max?'':`<small>/${rtK(nxt)}</small>`);
