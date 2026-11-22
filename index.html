@@ -1023,7 +1023,7 @@ blockquote.qt.cl.open::after{transform:rotate(-135deg)}
 .flr .fic{width:48px;height:48px;border-radius:8px;background:#7bc67b;color:#fff;display:grid;place-items:center;font-style:normal;font-weight:700;font-size:13px;flex:none}
 .flr b{display:block;font-size:16px;word-break:break-all;font-weight:600}.flr small{color:var(--onv)}
 
-.nrar{margin-left:8px;font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(127,127,127,.22);color:var(--onv)}
+
 img[src^="data:image/svg+xml"]{border-radius:14px}
 </style>
 </head>
@@ -2076,7 +2076,7 @@ async function mk(d,k,ch){const out=d.u===uid&&!ch,p=out?{}:await getP(d.u),nn=p
   if(d.rp)m.rp={n:esc(d.rp.n),t:esc(d.rp.t),c:clI(d.rp.c,PN)};
   m.vc=+d.vc||0;m.cc=+d.cc||0;m.fw=d.fw?esc(d.fw):'';m.fwr=String(d.fw||'');m.st=!!d.st;m.pv=d.pv||{};
   m.gf=/^data:image\/gif;base64,[A-Za-z0-9+\/=]+$/.test(d.gf||'')?d.gf:'';
-  m.pl=d.pl&&Array.isArray(d.pl.o)?{q:String(d.pl.q||'').slice(0,200),o:d.pl.o.map(x=>String(x).slice(0,100))}:null;m.gift=(d.gift&&/^[a-z0-9_]{1,20}$/.test(d.gift))?d.gift:'';m.gk=/^[A-Za-z0-9_-]{1,40}$/.test(d.gk||'')?d.gk:'';m.gp=+d.gp||0;m.gnft=/^\d{1,2}\.\d{1,2}\.\d{1,2}\.\d{1,9}$/.test(d.gnft||'')?d.gnft:'';m.gn=nn;return m}
+  m.pl=d.pl&&Array.isArray(d.pl.o)?{q:String(d.pl.q||'').slice(0,200),o:d.pl.o.map(x=>String(x).slice(0,100))}:null;m.gift=(d.gift&&/^[a-z0-9_]{1,20}$/.test(d.gift))?d.gift:'';m.gk=/^[A-Za-z0-9_-]{1,40}$/.test(d.gk||'')?d.gk:'';m.gp=+d.gp||0;m.gn=nn;return m}
 function watch(c){onChildAdded(query(ref(db,'chats/'+c.id+'/msgs'),limitToLast(1)),s=>{
   const d=s.val(),mine=d.u===uid,open=cur&&cur.id===c.id,men=!!(!mine&&c.g&&me&&me.un&&new RegExp('(^|\\s)@'+me.un+'(?![a-z0-9_])','i').test(String(d.t||'')));
   c.last=(mine&&!c.channel?'Вы: ':'')+(d.v?'Голосовое сообщение':d.vc?'Кружок':d.gf?'GIF':d.gift?'Подарок':d.pl?'Опрос: '+String(d.pl.q).slice(0,40):d.im?'Фото'+(d.t?' '+String(d.t).slice(0,50):''):d.f?'Файл: '+String(d.f.n).slice(0,40):String(d.t).slice(0,60));c.tm=d.tm||'';c.ts=typeof d.ts==='number'?d.ts:Date.now();if((c.cut&&c.ts<=c.cut)||(c.hm&&c.hm[s.key])){c.last=c.pun?'@'+c.pun:'';c.tm=''}
@@ -2826,44 +2826,8 @@ async function loadGifts(){try{const a=await (await fetch(GIFT_BASE+'gifts.json'
   try{renderMyGifts()}catch(e){}try{window.rerender&&rerender()}catch(e){}}
 setTimeout(loadGifts,0);
 const gById=id=>GIFTS.find(x=>x.id===id);window.gById=gById;
-/* ===== NFT-подарки (коллекционные): модель + фон + узор + номер. Новая коллекция = новый объект в NFT_COL ===== */
-const NFT_COL={cosmocat:{
- n:'Космо-кот',p:100,
- models:[
-  {n:'Астронавт',w:40,svg:(f)=>`${nHead(f||'#f2b66d')}<circle cx="50" cy="52" r="42" fill="#fff" fill-opacity=".14" stroke="#fff" stroke-width="4"/><path d="M30 38q20-14 40 0" stroke="#fff" stroke-opacity=".6" stroke-width="3" fill="none" stroke-linecap="round"/><rect x="40" y="88" width="20" height="6" rx="3" fill="#e0e6ee"/>`},
-  {n:'Пилот',w:30,svg:()=>`${nHead('#9aa7b5')}<circle cx="38" cy="52" r="10" fill="#7fd1ff" fill-opacity=".55" stroke="#4a3b2a" stroke-width="3.5"/><circle cx="62" cy="52" r="10" fill="#7fd1ff" fill-opacity=".55" stroke="#4a3b2a" stroke-width="3.5"/><path d="M48 52h4M22 50l-8-2M78 50l8-2" stroke="#4a3b2a" stroke-width="3.5" stroke-linecap="round"/>`},
-  {n:'Ракетчик',w:20,svg:()=>`<path d="M36 80q14 30 28 0z" fill="#ff7a3d"/><path d="M42 80q8 22 16 0z" fill="#ffd24a"/>${nHead('#f4f4f4')}<path d="M26 74q24 14 48 0l2 8q-26 16-52 0z" fill="#e5484d"/>`},
-  {n:'Пришелец',w:8,svg:()=>`<path d="M50 14V4" stroke="#6bd44a" stroke-width="3"/><circle cx="50" cy="4" r="4" fill="#ffe14a"/>${nHead('#7ed957',1)}<ellipse cx="30" cy="48" rx="6" ry="9" fill="#1b2a1b"/><ellipse cx="70" cy="48" rx="6" ry="9" fill="#1b2a1b"/><ellipse cx="50" cy="42" rx="5" ry="7" fill="#1b2a1b"/>`},
-  {n:'Звёздный',w:2,svg:()=>`${nHead('#ffd24a')}<path d="M50 4l4 9 10 1-7.5 6.5 2.5 9.5L50 25l-9 5.5 2.5-9.5L36 14l10-1z" fill="#fff6c8" stroke="#ff9d00" stroke-width="2"/><circle cx="18" cy="26" r="2.5" fill="#fff"/><circle cx="84" cy="62" r="2" fill="#fff"/>`}],
- backs:[
-  {n:'Нептун',w:20,c1:'#5fb4ff',c2:'#17407f',pc:'#cfe8ff'},{n:'Сатурн',w:18,c1:'#ffd36b',c2:'#9a6414',pc:'#fff1c6'},
-  {n:'Марс',w:16,c1:'#ff8a6b',c2:'#7a2418',pc:'#ffd2c4'},{n:'Нефрит',w:14,c1:'#6bdc9a',c2:'#1c6b43',pc:'#d2ffe6'},
-  {n:'Аметист',w:12,c1:'#b58cff',c2:'#46207f',pc:'#eadcff'},{n:'Туман',w:10,c1:'#b9c4d0',c2:'#4d5967',pc:'#f1f5f9'},
-  {n:'Лава',w:6,c1:'#ff9a3c',c2:'#6e1408',pc:'#ffe0b5'},{n:'Чёрная дыра',w:4,c1:'#5a4a8a',c2:'#07040f',pc:'#c9bdf2'}],
- pats:[
-  {n:'Звёзды',w:30,s:'<path d="M10 2l2.4 5 5.6.800-4 3.9 1 5.5-5-2.7-5 2.7 1-5.5-4-3.9 5.6-.800z"/>'},
-  {n:'Луны',w:25,s:'<path d="M13 3a8 8 0 1 0 4 14A7 7 0 0 1 13 3z"/>'},
-  {n:'Лапки',w:20,s:'<ellipse cx="10" cy="13" rx="5" ry="4"/><circle cx="4" cy="8" r="2"/><circle cx="8" cy="4" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="16" cy="8" r="2"/>'},
-  {n:'Ракеты',w:13,s:'<path d="M10 1c4 3 5 8 4 12H6c-1-4 0-9 4-12zM6 13l-3 4 4-1zM14 13l3 4-4-1z"/>'},
-  {n:'Рыбки',w:8,s:'<path d="M2 10c4-6 10-6 13 0-3 6-9 6-13 0zM15 10l4-4v8z"/>'},
-  {n:'Планеты',w:4,s:'<circle cx="10" cy="10" r="5"/><path d="M1 13c4 3 14-3 18-6" fill="none" stroke="currentColor" stroke-width="1.6"/>'}]}};
-function nHead(f,alien){const e=alien?'':'<ellipse cx="40" cy="52" rx="4.5" ry="6" fill="#222"/><ellipse cx="60" cy="52" rx="4.5" ry="6" fill="#222"/><path d="M47 60h6l-3 4z" fill="#e58a8a"/><path d="M24 58l-12-3M24 64l-12 3M76 58l12-3M76 64l12 3" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>';
-  return `<path d="M22 44L26 14l18 16q6-2 12 0l18-16 4 30q2 34-28 38-30-4-28-38z" fill="${f}"/><path d="M29 24l-1 11 9-7zM71 24l1 11-9-7z" fill="#000" fill-opacity=".16"/>${e}`}
-const nPick=a=>{const t=a.reduce((s,x)=>s+x.w,0);let r=Math.random()*t;for(let i=0;i<a.length;i++){r-=a[i].w;if(r<0)return i}return a.length-1};
-const nPct=(a,i)=>{const t=a.reduce((s,x)=>s+x.w,0),v=a[i].w/t*100;return(v<10?v.toFixed(1).replace('.0',''):Math.round(v))+'%'};
-function nftParse(s){const a=String(s||'').split('.').map(Number);return a.length===4&&a.every(x=>x>=0)?a:null}
-function nftSvg(col,s){const C=NFT_COL[col],p=nftParse(s);if(!C||!p)return'';const[m,b,t,n]=p,M=C.models[m],B=C.backs[b],P=C.pats[t];if(!M||!B||!P)return'';
-  const num='#'+n.toLocaleString('en-US');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><radialGradient id="g" cx=".5" cy=".4" r=".8"><stop offset="0" stop-color="${B.c1}"/><stop offset="1" stop-color="${B.c2}"/></radialGradient><pattern id="p" width="56" height="56" patternUnits="userSpaceOnUse"><g fill="${B.pc}" color="${B.pc}" opacity=".2"><g transform="translate(4 4) scale(1.2)">${P.s}</g><g transform="translate(32 32) rotate(-15 12 12) scale(1.2)">${P.s}</g></g></pattern></defs><rect width="200" height="200" fill="url(#g)"/><rect width="200" height="200" fill="url(#p)"/><circle cx="100" cy="108" r="64" fill="#fff" opacity=".1"/><g transform="translate(28 34) scale(1.440)">${M.svg()}</g><path d="M118 0h82v82z" fill="#000" opacity=".28"/><text x="168" y="30" transform="rotate(45 168 30)" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="12" fill="#fff">${num}</text></svg>`}
-const nftImg=(col,s)=>{const v=nftSvg(col,s);return v?'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(v):''};
-async function nftMint(col){const C=NFT_COL[col];if(!C)throw 'Неизвестная коллекция';
-  const tx=await runTransaction(ref(db,'nftSupply/'+col),v=>(+v||0)+1);if(!tx.committed)throw 'Не удалось выпустить подарок';
-  return [nPick(C.models),nPick(C.backs),nPick(C.pats),tx.snapshot.val()].join('.')}
-const gSrc=(G,v)=>{const s=v&&v.nft&&G.nft&&nftImg(G.nft,v.nft);return s||G.img};
-const gName=(G,v)=>{const p=v&&v.nft&&nftParse(v.nft);return p?G.n+' #'+p[3].toLocaleString('en-US'):G.n};
-function nftRows(col,s){const C=NFT_COL[col],p=nftParse(s);if(!C||!p)return'';const[m,b,t,n]=p,R=(k,a,i)=>`<div class="gr"><b>${k}</b><div>${esc(a[i].n)}<span class="nrar">${nPct(a,i)}</span></div></div>`;
-  return R('Модель',C.models,m)+R('Фон',C.backs,b)+R('Узор',C.pats,t)}
-GIFTS.push({id:'cosmocat',n:NFT_COL.cosmocat.n,p:NFT_COL.cosmocat.p,img:nftImg('cosmocat','0.0.0.1'),raw:true,nft:'cosmocat'});
+const gSrc=G=>G.img;
+const gName=G=>G.n;
 
 const STAR_SVG='<svg class="stsv" viewBox="0 0 24 24"><path d="M12 2.6l2.8 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2l-5.8 3.3 1.3-6.5L2.6 9.4l6.6-.8z"/></svg>';
 const stPill=n=>`<span class="stp">${STAR_SVG}<span>${n}</span></span>`;
@@ -2895,9 +2859,8 @@ function gdFrom(v){
   return `<span class="gfa" id="gdFa">${esc(nm[0]||'?').toUpperCase()}</span><span class="gfn" id="gdFn">${esc(nm)}</span>${v.f?'<span class="gfc" id="gdFc">отправить подарок</span>':''}`}
 function openGiftDet(k,v,own){const G=gById(v.g);if(!G)return;gCur={k,v,own};
   g('gdImg').src=gSrc(G,v);
-  g('gdT').textContent=v.nft?gName(G,v):own?'Подарок Вам':'Подарок · '+G.n;
+  g('gdT').textContent=own?'Подарок Вам':'Подарок · '+G.n;
   let h=`<div class="gr"><b>От</b><div>${gdFrom(v)}</div></div><div class="gr"><b>Дата</b><div>${esc(gDate(v.ts))}</div></div><div class="gr"><b>Стоимость</b><div>${STAR_SVG}<span>${+v.p||G.p}</span></div></div>`;
-  if(v.nft&&G.nft)h+=nftRows(G.nft,v.nft);
   if(v.x)h+=`<div class="gr gn">${esc(v.x)}</div>`;
   g('gdTb').innerHTML=h;gdPaintVis();g('gdet').hidden=false;
   if(!v.an&&v.f&&v.f!==uid)getP(v.f).then(d=>{if(!gCur||gCur.k!==k||g('gdet').hidden)return;const a=okAv(d.av),fa=g('gdFa'),fn=g('gdFn');
@@ -3026,21 +2989,19 @@ g('pirt').onclick=()=>openRt(g('pi').dataset.peer);
 async function sendGift(G,to,note,an){
   const tx=await runTransaction(ref(db,'stars/'+uid),v=>(+v||0)>=G.p?(+v||0)-G.p:undefined);
   if(!tx.committed)throw 'Недостаточно звёзд';
-  const k=push(ref(db,'gifts/'+to)).key,rec={g:G.id,ts:serverTimestamp(),p:G.p},self=to===uid;lastNft='';
+  const k=push(ref(db,'gifts/'+to)).key,rec={g:G.id,ts:serverTimestamp(),p:G.p},self=to===uid;
   if(note)rec.x=note.slice(0,120);
   if(an){rec.an=1;if(self)rec.sf=1}else{rec.f=uid;rec.fn=me.name}
   const refund=()=>runTransaction(ref(db,'stars/'+uid),v=>(+v||0)+G.p).catch(()=>{});
   try{
-    if(G.nft)rec.nft=await nftMint(G.nft);
     if(an&&!self)await set(ref(db,'giftSrc/'+k),uid);
     await set(ref(db,'gifts/'+to+'/'+k),rec)}
   catch(e){if(an&&!self)set(ref(db,'giftSrc/'+k),null).catch(()=>{});await refund();throw GER}
   rtAdd(G.p,G.n).then(rtPaintMine).catch(()=>{});
-  if(!self&&!an){try{const id=await giftChat(to);await fb.post(id,Object.assign({gift:G.id,gk:k,gp:G.p},rec.nft?{gnft:rec.nft}:{}),note)}catch(e){}}
-  if(rec.nft)lastNft=rec.nft;navigator.vibrate&&navigator.vibrate([12,40,12])}
-var lastNft='';
+  if(!self&&!an){try{const id=await giftChat(to);await fb.post(id,Object.assign({gift:G.id,gk:k,gp:G.p}),note)}catch(e){}}
+  navigator.vibrate&&navigator.vibrate([12,40,12])}
 function gDone(G){const d=document.createElement('div');d.className='gdone';
-  d.innerHTML=`<div class="gdc"><img src="${(lastNft&&G.nft&&nftImg(G.nft,lastNft))||G.img}" alt=""><b>${shopTo&&shopTo.uid===uid?'Подарок в вашем профиле':'Подарок отправлен!'}</b></div>`+Array.from({length:14},(_,i)=>`<i style="--a:${i*25.7}deg;--r:${90+(i%3)*28}px;--c:${i%2?'#ffb300':'#ff7a3d'}"></i>`).join('');
+  d.innerHTML=`<div class="gdc"><img src="${G.img}" alt=""><b>${shopTo&&shopTo.uid===uid?'Подарок в вашем профиле':'Подарок отправлен!'}</b></div>`+Array.from({length:14},(_,i)=>`<i style="--a:${i*25.7}deg;--r:${90+(i%3)*28}px;--c:${i%2?'#ffb300':'#ff7a3d'}"></i>`).join('');
   document.getElementById('app').appendChild(d);setTimeout(()=>d.remove(),2200)}
 
 /* --- звёзды --- */
@@ -3079,14 +3040,14 @@ g('piGift').onclick=async()=>{const pid=upPid();if(!pid||g('pi').dataset.del==='
 
 /* --- пузырь подарка в чате --- */
 window.giftHtml=m=>{const G=gById(m.gift);if(!G)return emHtml(m[1]);
-  return `<div class="gmsg"><div class="gimg"><img src="${gSrc(G,{nft:m.gnft})}" alt=""></div><b>${m[0]==='out'?'Вы подарили подарок':'Вам подарили подарок'}</b><span class="gnm">${esc(G.n)}</span>${stPill(G.p)}${m[1]?`<div class="gnote">${m[1]}</div>`:''}</div>`};
+  return `<div class="gmsg"><div class="gimg"><img src="${gSrc(G)}" alt=""></div><b>${m[0]==='out'?'Вы подарили подарок':'Вам подарили подарок'}</b><span class="gnm">${esc(G.n)}</span>${stPill(G.p)}${m[1]?`<div class="gnote">${m[1]}</div>`:''}</div>`};
 /* карточка подарка в чате (как в Telegram): служебная строка + карточка с кнопкой «Посмотреть» */
 window.giftBubble=(m,c,q)=>{const G=gById(m.gift),out=m[0]==='out',p=m.gp||G.p,
   nm=out?(c.n||'пользователя'):(m.gn||'Пользователь'),a=out?c.av:m.av,
   ava=a&&/^data:image\//.test(a)?`<i class="gca" style="background-image:url(${a})"></i>`:`<i class="gca">${esc((nm[0]||'?').toUpperCase())}</i>`,
   svc=out?`Вы отправили подарок стоимостью ${pl(p,['звезды','звёзд','звёзд'])}`:`${esc(nm)} отправил(а) Вам подарок стоимостью ${pl(p,['звезды','звёзд','звёзд'])}`;
   return `<div class="b gsv${isSel(m)?' sel':''}${q?' nan':''}" data-i="${c.m.indexOf(m)}"><div class="gsvt">${svc}</div>
-<div class="gcd"><img src="${gSrc(G,{nft:m.gnft})}" alt=""><div class="gct">Подарок ${out?'для':'от'} ${ava}<b>${esc(nm)}</b></div>${m.raw?`<div class="gcm">${esc(m.raw)}</div>`:''}<button class="gview press" type="button">Посмотреть</button></div>${rxHtml(m)}</div>`};
+<div class="gcd"><img src="${gSrc(G)}" alt=""><div class="gct">Подарок ${out?'для':'от'} ${ava}<b>${esc(nm)}</b></div>${m.raw?`<div class="gcm">${esc(m.raw)}</div>`:''}<button class="gview press" type="button">Посмотреть</button></div>${rxHtml(m)}</div>`};
 g('msgs').addEventListener('click',async e=>{const v=e.target.closest('.gview');if(!v)return;if(typeof SEL!=='undefined'&&SEL)return;
   const b=v.closest('.b'),m=b&&cur&&cur.m[+b.dataset.i];if(!m||!m.gk)return;
   const to=m[0]==='in'?uid:cur.peer;if(!to)return;
