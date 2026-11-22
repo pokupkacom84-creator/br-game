@@ -1707,12 +1707,12 @@ function renderPrem(){const b=$('#prbody');if(!b)return;const on=!!S.prem,dk=eff
  const F=[['verified','Галочка Premium','Значок рядом с ником. Нажмите — все увидят, что это Premium','#3b82f6'],['palette','Цвет профиля и имени','Цвет, фоновый эмодзи и цвет имени видят все','#f59e0b'],['sparkle','Рамка аватарки','Светящаяся рамка в вашем профиле видна всем','#34c759'],['chat','Цвет ваших сообщений','Свой оттенок пузырей','#5ac8fa'],['heart','Больше реакций','12 эмодзи вместо 6','#ff6a9e'],['smile','Premium-эмодзи','Анимированные эмодзи в сообщениях','#fbbf24'],['star','Эмодзи-статус','Эмодзи рядом с ником в профиле и чатах','#6a5cff']];
  b.innerHTML=`<div class="phero"><div class="pbadge">${ic('verified')}</div><h2>Premium YouChat</h2><p>${on?'Premium активен — спасибо, что с нами':'Поддержите проект и станьте его частью'}</p></div>
  <div class="pfc">${F.map(f=>`<div class="pfr"><span class="pfi" style="background:${f[3]}">${ic(f[0])}</span><div><b>${f[1]}</b><small>${f[2]}</small></div></div>`).join('')}</div>
- <button class="btn press pbuy" id="prTog">${on?'Отключить Premium':'Подключить Premium'}</button>
+ <button class="btn press pbuy" id="prTog">${on?'Продлить на 30 дней':'Подключить Premium'} · ${typeof PREM_RUB!=='undefined'?PREM_RUB:199} ₽</button>${on&&window.PEXP?`<div style="text-align:center;opacity:.7;margin:6px 0">Действует до ${new Date(window.PEXP).toLocaleDateString('ru-RU')}</div>`:''}
  <div id="prSet" class="${on?'':'dis'}"><button class="set press" id="pcOpen"><span>Цвет профиля и имени<small class="wr">Фоновый эмодзи и цвета видят все пользователи</small></span><span>›</span></button>
  <div class="sh2">Цвет ваших сообщений</div><div class="swg">${HUES.map(h=>`<button class="swc ${S.bc===h?'on':''}" data-b="${h}" style="background:${h?`hsl(${h} 55% ${dk?30:80}%)`:'var(--surf4)'};color:var(--on)">${h?'':ic('close')}</button>`).join('')}</div></div>`}
 $('#ppr').onclick=e=>{const t=e.target.closest('button');if(!t)return;
  if(t.id==='pprBack'){$('#ppr').classList.remove('show');return}
- if(t.id==='prTog'){S.prem=!S.prem;saveS();window.setPrem&&setPrem(S.prem);applyTheme();toast(S.prem?'Premium подключён':'Premium отключён');return}
+ if(t.id==='prTog'){window.payDlg?payDlg('p'):toast('Войдите в аккаунт');return}
  if(t.id==='pcOpen'){if(S.prem)openPcs();return}
  if(!S.prem)return;
  if('e' in t.dataset){if(t.dataset.e&&!isEst(t.dataset.e))return;S.est=t.dataset.e;window.setPrem&&setPrem(true)}else if('t' in t.dataset){S.wt=t.dataset.t;S.wp=0}else if('w' in t.dataset){S.wp=+t.dataset.w;S.wt=''}else if('b' in t.dataset)S.bc=+t.dataset.b;else return;
@@ -3223,11 +3223,26 @@ function gDone(G){const d=document.createElement('div');d.className='gdone';
 
 /* --- звёзды --- */
 function openStars(){paintStars();g('gstars').hidden=false}
-const PACKS=[25,50,100,250];
-g('stPacks').innerHTML=PACKS.map(n=>`<button class="set press" data-n="${n}"><span>${stPill(n)}<small class="wr">Пополнить баланс</small></span><span>Получить</span></button>`).join('');
+const PRICE_S={25:49,50:89,100:169,250:399},PREM_RUB=199,PACKS=[25,50,100,250],YM_WALLET='4100118891507332';
+g('stPacks').innerHTML=PACKS.map(n=>`<button class="set press" data-n="${n}"><span>${stPill(n)}<small class="wr">Оплата картой или кошельком ЮMoney</small></span><span>${PRICE_S[n]} ₽</span></button>`).join('');
+
+window.payDlg=(k,n)=>{
+  if(!uid)return;const rub=k==='p'?PREM_RUB:PRICE_S[n];if(!rub)return;
+  const w=document.createElement('div');w.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center';
+  const bt='width:100%;padding:14px;border:0;border-radius:14px;font:inherit;font-weight:600;margin-top:10px;cursor:pointer;';
+  w.innerHTML=`<div style="background:var(--bg);color:var(--on);width:100%;max-width:480px;border-radius:24px 24px 0 0;padding:20px 16px 24px"><div style="font-weight:700;font-size:18px">${k==='p'?'Premium на 30 дней':'Пополнение: '+n+' звёзд'}</div><div style="opacity:.7;margin:4px 0 6px">К оплате: ${rub} ₽. Звёзды или Premium начислятся автоматически после оплаты.</div><button data-m="AC" style="${bt}background:var(--p);color:var(--onp,#fff)">Банковской картой</button><button data-m="PC" style="${bt}background:var(--surf4);color:var(--on)">Кошельком ЮMoney</button><button data-m="" style="${bt}background:transparent;color:var(--on);opacity:.7">Отмена</button></div>`;
+  w.onclick=e=>{const b=e.target.closest('button');if(e.target===w||(b&&!b.dataset.m)){w.remove();return}if(!b)return;
+    const r=push(ref(db,'orders')),id=r.key;
+    const f=document.createElement('form');f.method='POST';f.action='https://yoomoney.ru/quickpay/confirm';f.target='_blank';f.style.display='none';
+    const F={receiver:YM_WALLET,'quickpay-form':'shop',paymentType:b.dataset.m,sum:String(rub),label:id,targets:k==='p'?'YouChat Premium 30 дней':'YouChat '+n+' звёзд',formcomment:'YouChat','short-dest':'YouChat'};
+    if(/^https?:/.test(location.href))F.successURL=location.href.split('#')[0];
+    for(const x in F){const i=document.createElement('input');i.type='hidden';i.name=x;i.value=F[x];f.appendChild(i)}
+    document.body.appendChild(f);f.submit();f.remove();w.remove();
+    set(r,{u:uid,k,n:k==='s'?n:0,st:0,ts:serverTimestamp()}).then(()=>{window._payWait=1;toast('Оплатите в открывшемся окне — зачисление автоматическое')},()=>toast('Не удалось создать заказ, платёж не проводите'))};
+  document.body.appendChild(w)};
 async function addStars(n){try{await runTransaction(ref(db,'stars/'+uid),v=>(+v||0)+n);navigator.vibrate&&navigator.vibrate(10);return true}
   catch(e){toast(GER);return false}}
-g('stPacks').onclick=async e=>{const b=e.target.closest('button[data-n]');if(!b||!uid)return;if(await addStars(+b.dataset.n))toast('Зачислено '+b.dataset.n+' звёзд')};
+g('stPacks').onclick=e=>{const b=e.target.closest('button[data-n]');if(!b||!uid)return;payDlg('s',+b.dataset.n)};
 g('stBonus').onclick=async()=>{if(!uid)return;const k='sb_'+uid,d=new Date().toISOString().slice(0,10);
   if(localStorage.getItem(k)===d)return toast('Бонус уже получен, приходите завтра');
   if(await addStars(10)){localStorage.setItem(k,d);toast('Ежедневный бонус: +10 звёзд')}};
@@ -3276,7 +3291,11 @@ async function giftChat(to){const id='dm_'+[uid,to].sort().join('_');
 /* --- подписки на баланс и подарки --- */
 onAuthStateChanged(auth,u=>{if(starsOff){starsOff();starsOff=null}if(giftsOff){giftsOff();giftsOff=null}
   STARS=0;MYG={};paintStars();renderMyGifts();if(!u)return;const t0=Date.now();
-  starsOff=onValue(ref(db,'stars/'+u.uid),s=>{STARS=+s.val()||0;paintStars();paintConf()},()=>{});
+  let sgot=false;starsOff=onValue(ref(db,'stars/'+u.uid),s=>{const o=STARS;STARS=+s.val()||0;if(sgot&&STARS>o&&window._payWait){window._payWait=0;toast('Оплата прошла: +'+(STARS-o)+' звёзд')}sgot=true;paintStars();paintConf()},()=>{});
+  window._premOff&&window._premOff();window._premOff=onValue(ref(db,'premium/'+u.uid),s=>{const ex=+s.val()||0,on=ex>Date.now();window.PEXP=ex;
+    if(on&&!S.prem){S.prem=true;saveS();window.setPrem&&setPrem(true);applyTheme();toast('Premium активирован')}
+    else if(!on&&S.prem){S.prem=false;saveS();window.setPrem&&setPrem(false);applyTheme()}
+    renderPrem()},()=>{});
   let first=true;
   srvSync().then(()=>rtPaintMine()).catch(()=>{});
   giftsOff=onValue(ref(db,'gifts/'+u.uid),s=>{const o=s.val()||{},old=MYG;MYG=o;renderMyGifts();
