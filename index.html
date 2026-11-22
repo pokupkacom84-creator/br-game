@@ -267,6 +267,7 @@ html.cmp .row{padding:6px 12px}html.cmp .row .av{width:44px;height:44px;font-siz
 .pfi{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;flex:none;color:#fff;font-size:24px}.pfi .ico{width:1em;height:1em}
 .pfr b{display:block;font-weight:500;line-height:1.3}.pfr small{display:block;color:var(--onv);margin-top:2px}
 .pbuy{width:100%;height:54px;border-radius:27px;margin:14px 0;font-size:16px;font-weight:600}
+.wcard{background:var(--surf2);border-radius:28px;padding:16px 14px 14px;margin:10px 0}.wct{color:var(--p);font-weight:600;font-size:15px;margin:0 4px 4px}
 .wtg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px 4px 6px}
 .wtc{position:relative;aspect-ratio:.82;border-radius:18px;border:3px solid transparent;overflow:hidden;padding:0;background-size:cover;background-position:center;transition:transform .25s cubic-bezier(.3,1.6,.5,1),border-color .2s}
 .wtc.on{border-color:var(--p);transform:scale(.97)}
@@ -903,6 +904,8 @@ button.stp b{width:22px;height:22px;border-radius:11px;background:color-mix(in s
 <button class="set press" id="sCmp"><span>Компактный список чатов<small class="wr">Уменьшает отступы и аватарки в списке</small></span><span class="sw" id="sCmpSw"><i></i></span></button>
 <button class="set press" id="sAnim"><span>Анимации<small class="wr">Плавные переходы и эффекты</small></span><span class="sw" id="sAnimSw"><i></i></span></button>
 
+<div class="sh2">Чат</div>
+<button class="set press" id="sWp"><span>Обои чата<small class="wr">Фон переписки и цвет карточек подарков</small></span><span>›</span></button>
 <div class="sh2">Уведомления и звук</div>
 <button class="set press" id="sNot"><span>Уведомления</span><span class="sw" id="sNotSw"><i></i></span></button>
 <button class="set press" id="sSnd"><span>Звуки сообщений</span><span class="sw" id="sSndSw"><i></i></span></button>
@@ -915,6 +918,7 @@ button.stp b{width:22px;height:22px;border-radius:11px;background:color-mix(in s
 </div>
 <div class="prof" id="ppriv"><div class="shd"><button class="icon-btn press" id="ppvBack" aria-label="Назад"><svg viewBox="0 -960 960 960"><path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"/></svg></button><div class="ph">Конфиденциальность</div></div>
 <div class="pcard pvc"><div class="pvt">Время в сети</div><div class="pvd">Кто видит «был(а) в сети» и зелёную точку</div><div class="seg"><button data-k="ls" data-v="all">Все</button><button data-k="ls" data-v="none">Никто</button></div><div class="pvt">Новые сообщения</div><div class="pvd">Кто может написать первым</div><div class="seg"><button data-k="nm" data-v="all">Все</button><button data-k="nm" data-v="ct">Контакты</button></div><div class="pvt">Приглашения в группы</div><div class="pvd">Кто может добавить вас в группу</div><div class="seg"><button data-k="gi" data-v="all">Все</button><button data-k="gi" data-v="ct">Контакты</button></div><div class="pvt">Подарки в профиле</div><div class="pvd">Кто видит ваши подарки</div><div class="seg"><button data-k="gf" data-v="all">Все</button><button data-k="gf" data-v="me">Только я</button></div></div></div>
+<div class="prof" id="pwp"><div class="shd"><button class="icon-btn press" id="pwpBack" aria-label="Назад"><svg viewBox="0 -960 960 960"><path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"/></svg></button><div class="ph">Обои чата</div></div><div id="wpbody"></div></div>
 <div class="prof" id="pdm"><div class="shd"><button class="icon-btn press" id="pdmBack" aria-label="Назад"><svg viewBox="0 -960 960 960"><path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"/></svg></button><div class="ph">Данные и память</div></div>
 <div class="mdn"><svg viewBox="0 0 220 220" id="mdSvg"></svg><div class="mdctr"><b id="mdTot">…</b><span id="mdQ"></span></div></div>
 <div class="mdt">Использование памяти</div><div class="mds" id="mdSub">Считаем…</div><div class="mbar"><i id="mdBar"></i></div>
@@ -1330,12 +1334,12 @@ function applyTheme(){const d=document.documentElement;
   d.style.setProperty('--fs',S.fs);d.classList.toggle('noanim',!S.anim);d.classList.toggle('cmp',!!S.cmp);
   const m=document.querySelector('meta[name=theme-color]');if(m)m.content=getComputedStyle(d).getPropertyValue('--bg').trim()||'#fef7ff';
   const dk=effDark(),pm=!!S.prem;d.classList.toggle('prem',pm);
-  const wtOn=pm&&S.wt&&WT.some(x=>x[0]===S.wt);
-  d.style.setProperty('--wp',wtOn?wtCss(S.wt,dk):pm&&S.wp?wpCss(S.wp,dk):'none');
-  const gc=wtOn?wtCard(S.wt,dk):(pm&&S.wp?[`hsl(${S.wp} ${dk?30:34}% ${dk?34:40}%/.78)`,`hsl(${(S.wp+45)%360} ${dk?30:34}% ${dk?30:34}%/.78)`]:null);
+  const wtOn=S.wt&&WT.some(x=>x[0]===S.wt);
+  d.style.setProperty('--wp',wtOn?wtCss(S.wt,dk):S.wp?wpCss(S.wp,dk):'none');
+  const gc=wtOn?wtCard(S.wt,dk):(S.wp?[`hsl(${S.wp} ${dk?30:34}% ${dk?34:40}%/.78)`,`hsl(${(S.wp+45)%360} ${dk?30:34}% ${dk?30:34}%/.78)`]:null);
   if(gc){d.style.setProperty('--gca',gc[0]);d.style.setProperty('--gcb',gc[1])}else{d.style.removeProperty('--gca');d.style.removeProperty('--gcb')}
   if(pm&&S.bc){d.style.setProperty('--ob',`hsl(${S.bc} 55% ${dk?30:88}%)`);d.style.setProperty('--oon',`hsl(${S.bc} 60% ${dk?92:15}%)`)}else{d.style.removeProperty('--ob');d.style.removeProperty('--oon')}
-  syncSet();renderPrem();premPaint()}
+  syncSet();renderPrem();renderWp();premPaint()}
 mqD.addEventListener&&mqD.addEventListener('change',()=>{if(S.mode==='system')applyTheme()});
 const PRESETS=['#6750a4','#005ac1','#006a6a','#386a20','#8b5000','#984061','#ba1a1a','#5c5f00'];
 function renderSw(){const g=$('#swg');if(!g)return;const av=window.myProf&&window.myProf.av,cur=(S.seed||'').toLowerCase();
@@ -1367,11 +1371,11 @@ const WKS={nature:['flower','leaf','circle','cloud','spark','leaf'],cosmic:['sta
 const WPOS=[[22,24,0,1.3],[86,18,20,1.1],[150,34,-15,1.4],[190,92,10,1],[120,84,35,1.5],[40,96,-20,1.2],[16,156,15,1.4],[78,148,0,1.1],[142,150,-25,1.5],[186,190,20,1.2],[52,200,5,1],[112,206,-10,1.3]];
 const wpPat=(k,dk)=>{const c=dk?'rgba(255,255,255,.16)':'rgba(0,0,0,.11)',L=WKS[k]||WKS.nature;
   const g=WPOS.map((q,i)=>`<path transform="translate(${q[0]} ${q[1]}) rotate(${q[2]}) scale(${q[3]})" d="${WSH[L[i%L.length]]}"/>`).join('');
-  return 'url("data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220"><g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${g}</g></svg>`)+'")'};
+  return "url('data:image/svg+xml,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220"><g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${g}</g></svg>`).replace(/'/g,'%27')+"')"};
 const wtCol=(w,dk)=>{const h=w[2],L=dk?[22,18,26]:[76,72,80],S2=dk?38:60;return h.map((x,i)=>`hsl(${x} ${S2}% ${L[i]}%)`)};
-const wtCss=(id,dk)=>{const w=WT.find(x=>x[0]===id);if(!w)return'';const c=wtCol(w,dk);
-  return `${wpPat(w[3],dk)} 0 0/220px 220px,radial-gradient(120% 70% at 12% 8%,${c[1]},transparent 62%),radial-gradient(100% 70% at 95% 45%,${c[2]},transparent 60%),linear-gradient(165deg,${c[0]},${c[2]})`};
-const wtCard=(id,dk)=>{const w=WT.find(x=>x[0]===id);return w?w[2].map((h,i)=>`hsl(${h} ${dk?30:34}% ${dk?[34,30][i]:[40,34][i]}%/.78)`):null};
+const wtCss=(id,dk,sz)=>{const w=WT.find(x=>x[0]===id);if(!w)return'';const c=wtCol(w,dk);
+  return `${wpPat(w[3],dk)} 0 0/${sz||220}px ${sz||220}px,radial-gradient(120% 70% at 12% 8%,${c[1]},transparent 62%),radial-gradient(100% 70% at 95% 45%,${c[2]},transparent 60%),linear-gradient(165deg,${c[0]},${c[2]})`};
+const wtCard=(id,dk)=>{const w=WT.find(x=>x[0]===id);return w?w[2].map((h,i)=>`hsl(${h} ${dk?30:34}% ${dk?[34,30,30][i]:[40,34,34][i]}%/.78)`):null};
 const wpCss=(h,dk)=>`linear-gradient(160deg,hsl(${h} 55% ${dk?18:88}%),hsl(${(h+45)%360} 60% ${dk?10:94}%))`;
 const bd=c=>c&&c.prem?'<i class="chk" role="img" aria-label="Premium"></i>':'';
 const PCA=['#5b94d6','#69ad4a','#d08a45','#c4665f','#9b6fd8','#5fa4c0','#c05f90','#8a96a3'],PCB=['#8cc8ee','#b4df6b','#f0c14f','#efae6e','#e08ef0','#9fe5d6','#f3bda5','#b6bfc9'];
@@ -1420,14 +1424,11 @@ window.premSync=m=>{const pc=clI(m.pc,PN),pp=clI(m.pp,8),nc=clI(m.nc,PN),es=isEs
   else if(!m.prem&&S.prem&&window.setPrem)setPrem(true);
   else{if(m.prem&&S.prem&&window.setPrem&&(S.pc!==pc||S.pp!==pp||S.nc!==nc||(S.est||'')!==es)){const k=[S.pc,S.pp,S.nc,S.est].join('|');if(window._psk!==k){window._psk=k;setPrem(true)}}premPaint()}};
 function renderPrem(){const b=$('#prbody');if(!b)return;const on=!!S.prem,dk=effDark();
- const F=[['verified','Галочка Premium','Значок рядом с ником. Нажмите — все увидят, что это Premium','#3b82f6'],['palette','Цвет профиля и имени','Цвет, фоновый эмодзи и цвет имени видят все','#f59e0b'],['sparkle','Рамка аватарки','Светящаяся рамка в вашем профиле видна всем','#34c759'],['image','Обои чатов','Градиентный фон переписки','#af52de'],['chat','Цвет ваших сообщений','Свой оттенок пузырей','#5ac8fa'],['heart','Больше реакций','12 эмодзи вместо 6','#ff6a9e'],['smile','Premium-эмодзи','Анимированные эмодзи в сообщениях','#fbbf24'],['star','Эмодзи-статус','Эмодзи рядом с ником в профиле и чатах','#6a5cff']];
+ const F=[['verified','Галочка Premium','Значок рядом с ником. Нажмите — все увидят, что это Premium','#3b82f6'],['palette','Цвет профиля и имени','Цвет, фоновый эмодзи и цвет имени видят все','#f59e0b'],['sparkle','Рамка аватарки','Светящаяся рамка в вашем профиле видна всем','#34c759'],['chat','Цвет ваших сообщений','Свой оттенок пузырей','#5ac8fa'],['heart','Больше реакций','12 эмодзи вместо 6','#ff6a9e'],['smile','Premium-эмодзи','Анимированные эмодзи в сообщениях','#fbbf24'],['star','Эмодзи-статус','Эмодзи рядом с ником в профиле и чатах','#6a5cff']];
  b.innerHTML=`<div class="phero"><div class="pbadge">${ic('verified')}</div><h2>Premium YouChat</h2><p>${on?'Premium активен — спасибо, что с нами':'Поддержите проект и станьте его частью'}</p></div>
  <div class="pfc">${F.map(f=>`<div class="pfr"><span class="pfi" style="background:${f[3]}">${ic(f[0])}</span><div><b>${f[1]}</b><small>${f[2]}</small></div></div>`).join('')}</div>
  <button class="btn press pbuy" id="prTog">${on?'Отключить Premium':'Подключить Premium'}</button>
  <div id="prSet" class="${on?'':'dis'}"><button class="set press" id="pcOpen"><span>Цвет профиля и имени<small class="wr">Фоновый эмодзи и цвета видят все пользователи</small></span><span>›</span></button>
- <div class="sh2">Обои чатов</div><div class="wtg"><button class="wtc none ${!S.wt&&!S.wp?'on':''}" data-w="0" aria-label="Без обоев">${ic('close')}</button>${WT.map(w=>`<button class="wtc ${S.wt===w[0]?'on':''}" data-t="${w[0]}" style="background:${wtCss(w[0],dk)}"><i class="qa"></i><i class="qb"></i><em>${w[1]}</em></button>`).join('')}</div>
- <div class="wtp" style="${S.wt?`background:${wtCss(S.wt,dk)}`:S.wp?`background:${wpCss(S.wp,dk)}`:''}"><div class="b in">Доброе утро! Как тебе обои?<span class="t">11:02</span></div><div class="b out">Выглядят круто<span class="t">11:17</span></div></div>
- <div class="sh2">Градиенты</div><div class="swg">${[0,...HUES.slice(1)].map((h,i)=>`<button class="swc ${!S.wt&&S.wp===(h||0)?'on':''}" data-w="${h}" style="background:${h?wpCss(h,dk):'var(--surf4)'};color:var(--on)">${h?'':ic('close')}</button>`).join('')}</div>
  <div class="sh2">Цвет ваших сообщений</div><div class="swg">${HUES.map(h=>`<button class="swc ${S.bc===h?'on':''}" data-b="${h}" style="background:${h?`hsl(${h} 55% ${dk?30:80}%)`:'var(--surf4)'};color:var(--on)">${h?'':ic('close')}</button>`).join('')}</div></div>`}
 $('#ppr').onclick=e=>{const t=e.target.closest('button');if(!t)return;
  if(t.id==='pprBack'){$('#ppr').classList.remove('show');return}
@@ -1436,6 +1437,14 @@ $('#ppr').onclick=e=>{const t=e.target.closest('button');if(!t)return;
  if(!S.prem)return;
  if('e' in t.dataset){if(t.dataset.e&&!isEst(t.dataset.e))return;S.est=t.dataset.e;window.setPrem&&setPrem(true)}else if('t' in t.dataset){S.wt=t.dataset.t;S.wp=0}else if('w' in t.dataset){S.wp=+t.dataset.w;S.wt=''}else if('b' in t.dataset)S.bc=+t.dataset.b;else return;
  saveS();applyTheme()};
+function renderWp(){const b=$('#wpbody');if(!b)return;const dk=effDark(),bg=S.wt?wtCss(S.wt,dk,260):S.wp?wpCss(S.wp,dk):'';
+ b.innerHTML=`<div class="wcard"><div class="wct">Выбрать обои</div><div class="wtg"><button class="wtc none ${!S.wt&&!S.wp?'on':''}" data-w="0" aria-label="Без обоев">${ic('close')}</button>${WT.map(w=>`<button class="wtc ${S.wt===w[0]?'on':''}" data-t="${w[0]}" style="background:${wtCss(w[0],dk,120)}"><i class="qa"></i><i class="qb"></i><em>${w[1]}</em></button>`).join('')}</div></div>
+ <div class="wtp" style="${bg?'background:'+bg:''}"><div class="b in">Доброе утро! Как тебе обои?<span class="t">11:02</span></div><div class="b out">Выглядят круто<span class="t">11:17</span></div></div>
+ <div class="wcard"><div class="wct">Градиенты</div><div class="swg">${[0,...HUES.slice(1)].map(h=>`<button class="swc ${!S.wt&&S.wp===(h||0)?'on':''}" data-w="${h}" style="background:${h?wpCss(h,dk):'var(--surf4)'};color:var(--on)">${h?'':ic('close')}</button>`).join('')}</div></div>`}
+$('#pwp').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
+ if(t.id==='pwpBack'){$('#pwp').classList.remove('show');return}
+ if('t' in t.dataset){S.wt=t.dataset.t;S.wp=0}else if('w' in t.dataset){S.wp=+t.dataset.w;S.wt=''}else return;
+ saveS();applyTheme()});
 $('#prof').addEventListener('click',e=>{if(e.target.closest('#pOpen'))$('#ppr').classList.add('show')});
 let PD={pc:0,pp:0,nc:0},PT='p';
 const escH=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1503,7 +1512,7 @@ document.addEventListener('pointerdown',e=>{if(!e.target.closest('#pk'))hidePick
 $('#pbPhoto').onclick=()=>$('#pav').click();$('#pbEdit').onclick=()=>$('#rAbout').click();
 $('#prof').addEventListener('click',e=>{if(e.target.closest('#sOpen'))$('#pset').classList.add('show')});
 $('#psetBack').onclick=()=>$('#pset').classList.remove('show');
-$('#nav').addEventListener('click',()=>document.querySelectorAll('#pset,#ppr,#pcs,#pdm,#ppriv').forEach(x=>x.classList.remove('show')));
+$('#nav').addEventListener('click',()=>document.querySelectorAll('#pset,#ppr,#pcs,#pdm,#ppriv,#pwp').forEach(x=>x.classList.remove('show')));
 $('#pset').onclick=e=>{
   const m=e.target.closest('#segMode button');if(m){S.mode=m.dataset.m;saveS();applyTheme();return}
   const f=e.target.closest('#segFs button');if(f){S.fs=+f.dataset.f;saveS();applyTheme();return}
@@ -1553,7 +1562,7 @@ function mdPaint(){
 }
 async function mdRefresh(){try{MD.data=await mdMeasure()}catch(e){MD.data={cache:0,emr:0,ls:0,svc:0,total:0,quota:0}}mdPaint()}
 function openMem(){$('#pdm').classList.add('show');MD.sel={c:1,e:1};mdRefresh()}
-$('#pset').addEventListener('click',e=>{if(e.target.closest('#sMem'))openMem();if(e.target.closest('#sPriv')){$('#ppriv').classList.add('show');window.pvPaint&&window.pvPaint()}});
+$('#pset').addEventListener('click',e=>{if(e.target.closest('#sMem'))openMem();if(e.target.closest('#sWp')){$('#pwp').classList.add('show');renderWp()}if(e.target.closest('#sPriv')){$('#ppriv').classList.add('show');window.pvPaint&&window.pvPaint()}});
 $('#ppvBack').onclick=()=>$('#ppriv').classList.remove('show');
 $('#pdmBack').onclick=()=>$('#pdm').classList.remove('show');
 $('#mdRows').onclick=e=>{const b=e.target.closest('.mr');if(!b||!MD.data)return;const k=b.dataset.r;if(k==='c'||k==='e'){MD.sel[k]=MD.sel[k]?0:1;mdPaint()}};
