@@ -959,6 +959,20 @@ html.noanim .sk-av,html.noanim .sk-l,html.noanim .row.sk,html.noanim .rin .row{a
  .toast{left:calc(var(--lw) + 16px)}
  #chat .b{max-width:min(82%,560px)}
 }
+
+/* ===== каналы как в Telegram ===== */
+#chat.chn .b{max-width:min(calc(100% - 58px),560px)}
+#chat.chn .b.out{align-self:flex-start;background-color:var(--surf3);color:var(--on);border-radius:20px 20px 20px 6px;transform-origin:left bottom}
+#chat.chn .b .t{margin-top:6px}
+#chat.chn .cmb{clear:both;display:flex;align-items:center;gap:8px;margin:8px -14px -7px;padding:10px 14px;border-top:1px solid color-mix(in srgb,var(--on) 12%,transparent);font-size:14px;font-weight:600;color:var(--p);text-align:left;width:auto}
+#chat.chn .cmb svg{width:20px;height:20px}
+#chat.chn .cmb .chv{margin-left:auto;width:8px;height:8px;border:solid currentColor;border-width:2px 2px 0 0;transform:rotate(45deg);opacity:.6;margin-right:4px}
+.shr{position:absolute;right:-46px;bottom:0;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:#fff;background:color-mix(in srgb,var(--on) 40%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:transform .2s var(--spring)}
+.shr:active{transform:scale(.88)}.shr svg{width:20px;height:20px}
+#chat.sel .shr{display:none}
+#chat .chfoot{padding:0 12px var(--safe-b);background:var(--surf2);border-top:1px solid color-mix(in srgb,var(--on) 8%,transparent)}
+#chat .chfoot button{height:52px;background:none;color:var(--p);font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:0}
+#chat .chfoot button svg{width:22px;height:22px}
 </style>
 </head>
 <body>
@@ -1293,7 +1307,7 @@ function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');cl
 function bubble(m,c,q){
   if(m.gift&&window.giftBubble&&gById(m.gift))return giftBubble(m,c,q);
   const out=m[0]==='out';
-  return `<div class="b ${m[0]}${bigE(m)?' big':''}${m.st||m.vc?' stk':''}${isSel(m)?' sel':''}${q?' nan':''}" data-i="${c.m.indexOf(m)}">${!out&&c.g&&m[3]?`<div class="who"${m.nc?` style="color:${m.nc}"`:''}>${m.av?`<i class="mav" style="background-image:url(${m.av})"></i>`:''}${m[3]}${m.pr?bd({prem:1}):''}</div>`:''}${m.fw?`<div class="fwd">${ic('fwd','m')}Переслано от <b>${m.fw}</b></div>`:''}${m.rp?rqHtml(m.rp):''}${m.del?'<i style="opacity:.6">Сообщение удалено</i>':m.v?voice(m):media(m)+(m.gift&&window.giftHtml?giftHtml(m):m.pl&&window.plHtml?plHtml(m):emHtml(m[1]))}${lpvHtml(m)}${c.channel&&c.disc&&m.k&&!m.del?`<button class="cmb" data-cm="1">${ic('chat','m')}${m.cc?pl(m.cc,['комментарий','комментария','комментариев']):'Комментировать'}</button>`:''}<span class="t">${c.channel&&!m.del?vwHtml(m,c):''}${m.ed&&!m.del?'изменено · ':''}${m[2]}${out?(window.tkHTML?tkHTML(m,c):tick+tick):''}</span>${rxHtml(m)}</div>`;
+  return `<div class="b ${m[0]}${bigE(m)?' big':''}${m.st||m.vc?' stk':''}${isSel(m)?' sel':''}${q?' nan':''}" data-i="${c.m.indexOf(m)}">${!out&&c.g&&m[3]?`<div class="who"${m.nc?` style="color:${m.nc}"`:''}>${m.av?`<i class="mav" style="background-image:url(${m.av})"></i>`:''}${m[3]}${m.pr?bd({prem:1}):''}</div>`:''}${m.fw?`<div class="fwd">${ic('fwd','m')}Переслано от <b>${m.fw}</b></div>`:''}${m.rp?rqHtml(m.rp):''}${m.del?'<i style="opacity:.6">Сообщение удалено</i>':m.v?voice(m):media(m)+(m.gift&&window.giftHtml?giftHtml(m):m.pl&&window.plHtml?plHtml(m):emHtml(m[1]))}${lpvHtml(m)}<span class="t">${c.channel&&!m.del?vwHtml(m,c):''}${m.ed&&!m.del?'изменено · ':''}${m[2]}${out&&!c.channel?(window.tkHTML?tkHTML(m,c):tick+tick):''}</span>${rxHtml(m)}${c.channel&&c.disc&&m.k&&!m.del?`<button class="cmb" data-cm="1">${ic('chat','m')}<span>${m.cc?pl(m.cc,['комментарий','комментария','комментариев']):'Оставить комментарий'}</span><i class="chv"></i></button>`:''}${c.channel&&m.k&&!m.del?`<button class="shr" data-sh="1" aria-label="Переслать">${ic('fwd','m')}</button>`:''}</div>`;
 }
 function openChat(id){window.fb&&setTimeout(()=>fb.sub(id),0);
   cur=chats.find(c=>c.id==id);cur.un=0;cur.men=0;if(window.fb)cur.m=[];
@@ -1725,6 +1739,8 @@ window.lsShow=a=>{
  $('#rows').innerHTML='<div class="mload"><svg viewBox="0 0 100 100"><path d=""/></svg></div>'+W.map((w,i)=>`<div class="row sk" style="--i:${i}"><div class="av sk-av"></div><div class="mid"><i class="sk-l" style="width:${w}%"></i><i class="sk-l" style="width:${Math.max(30,w-22)}%;height:12px"></i></div></div>`).join('');
  mlStart();return true};
 
+/* канал: кнопка «переслать» рядом с записью */
+$('#msgs').addEventListener('click',e=>{const b=e.target.closest('.shr');if(!b)return;e.stopPropagation();e.preventDefault();const bub=b.closest('.b'),m=cur&&cur.m[+bub.dataset.i];m&&window.fwdOpen&&fwdOpen([m])},true);
 /* двухпанельный режим: подсветка открытого чата */
 function hiRow(){const o=$('#chat').classList.contains('open')&&cur;document.querySelectorAll('#rows .row[data-id]').forEach(r=>r.classList.toggle('on',!!o&&r.dataset.id==cur.id))}
 new MutationObserver(hiRow).observe($('#chat'),{attributes:true,attributeFilter:['class']});
@@ -2493,7 +2509,8 @@ function addChannel(id){return dmp[id]||(dmp[id]=new Promise(res=>{
 /* состояние нижней панели: владелец пишет, подписчики видят кнопку уведомлений */
 window.chanUI=()=>{const c=cur,ch=!!(c&&c.channel),own=ch&&c.owner===uid,bar=document.querySelector('#chat .bar'),f=g('chFooter');
   $('#chat').classList.toggle('chn',ch);bar.hidden=ch&&!own;f.hidden=!ch||own;g('callBtn').hidden=ch||!!(c&&c.fav);g('vcallBtn').hidden=ch||!!(c&&c.fav);
-  if(ch&&!own)g('chMute').innerHTML=c.mute?ic('bell','m')+'Включить уведомления':ic('bellOff','m')+'Отключить уведомления'};
+  if(ch&&!own)g('chMute').innerHTML=c.mute?ic('bell','m')+'Включить звук':ic('bellOff','m')+'Отключить звук';
+  {const t=document.getElementById('inp');if(t){if(t.dataset.ph===undefined)t.dataset.ph=t.placeholder||'';t.placeholder=own?'Написать в канал…':t.dataset.ph}}};
 g('chMute').onclick=()=>{const c=cur;if(!c||!c.channel)return;const on=!c.mute;fb.pref(c.id,'m',on);c.mute=on;chanUI();renderList();toast(on?'Уведомления отключены':'Уведомления включены')};
 
 /* просмотры записей */
