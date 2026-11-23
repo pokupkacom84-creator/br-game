@@ -182,8 +182,14 @@ pre.rules{background:var(--s3);border-radius:16px;padding:12px;font-size:11px;ov
       <button class="btn t w" id="logout">Выйти</button>
     </section>
 
-    <!-- ЗАЯВКИ (только админ) -->
+    <!-- БЕСПЛАТНО -->
     <section class="page" id="p4">
+      <div class="shop-hero"><h2>Бесплатные читы</h2><p>Скачивание без ключа и оплаты</p></div>
+      <div id="freeList"><div class="empty">Загрузка…</div></div>
+    </section>
+
+    <!-- ЗАЯВКИ (только админ) -->
+    <section class="page" id="p5">
       <div class="sec" style="margin-top:4px">Ожидают подтверждения</div><div id="pend"></div>
       <div class="sec">Выдать ключ вручную</div>
       <div class="card">
@@ -192,6 +198,17 @@ pre.rules{background:var(--s3);border-radius:16px;padding:12px;font-size:11px;ov
         <button class="btn w" id="mGo">Выдать ключ</button>
       </div>
       <div class="sec">История</div><div id="hist"></div>
+      <div class="sec">Бесплатные читы — добавить</div>
+      <div class="card">
+        <label class="tf"><input id="fTitle" placeholder="Название" maxlength="60"></label>
+        <label class="tf" style="margin-top:8px"><input id="fVer" placeholder="Версия (1.2)" maxlength="20"></label>
+        <label class="tf" style="margin-top:8px"><input id="fUrl" placeholder="Ссылка на файл (https://…)" autocapitalize="off" spellcheck="false"></label>
+        <label class="tf" style="margin-top:8px"><input id="fDesc" placeholder="Описание" maxlength="160"></label>
+        <label class="tf" style="margin-top:8px"><input id="fTags" placeholder="Теги: ESP, Aim, Menu" maxlength="60"></label>
+        <div class="err" id="fErr" style="margin-top:8px"></div>
+        <button class="btn w" id="fGo">Добавить</button>
+      </div>
+      <div id="fAdm"></div>
     </section>
 
     <!-- МАГАЗИН -->
@@ -455,10 +472,10 @@ g('cols').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.h=+b.dat
 theme();paintCols();
 
 /* ===== вкладки ===== */
-const TABS=[['Главное','M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'],['Магазин','M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z'],['Настройки','M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58-1.92-3.32-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54h-3.84l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96-1.92 3.32 2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58 1.92 3.32 2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54h3.84l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96 1.92-3.32zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z'],['Профиль','M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4 0-8 2-8 5v3h16v-3c0-3-4-5-8-5z'],['Заявки','M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 14H6v-2h12v2zm0-4H6v-2h12v2zm0-4H6V7h12v2z']];
+const TABS=[['Главное','M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'],['Магазин','M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z'],['Настройки','M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58-1.92-3.32-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54h-3.84l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96-1.92 3.32 2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58 1.92 3.32 2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54h3.84l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96 1.92-3.32zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z'],['Профиль','M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4 0-8 2-8 5v3h16v-3c0-3-4-5-8-5z'],['Бесплатно','M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z'],['Заявки','M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 14H6v-2h12v2zm0-4H6v-2h12v2zm0-4H6V7h12v2z']];
 let isAdmin=false;
-function drawNav(){const n=isAdmin?5:4;
-  g('nav').innerHTML=TABS.slice(0,n).map((t,i)=>`<button data-i="${i}" class="${document.querySelector('.page.on')===g('p'+i)?'on':''}"><span class="pill"><svg viewBox="0 0 24 24"><path d="${t[1]}"/></svg></span>${t[0]}${i===4?'<span class="badge" id="badge" hidden></span>':''}</button>`).join('');
+function drawNav(){const n=isAdmin?6:5;
+  g('nav').innerHTML=TABS.slice(0,n).map((t,i)=>`<button data-i="${i}" class="${document.querySelector('.page.on')===g('p'+i)?'on':''}"><span class="pill"><svg viewBox="0 0 24 24"><path d="${t[1]}"/></svg></span>${t[0]}${i===5?'<span class="badge" id="badge" hidden></span>':''}</button>`).join('');
   paintBadge();try{paintBell()}catch(e){}}
 g('nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i;
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p===g('p'+i)));
@@ -780,6 +797,7 @@ function rulesText(a){const A=a||'ВАШ_UID',adm=`auth != null && auth.uid === 
   licenses:{'$uid':{'.read':'auth != null && auth.uid === $uid','.write':adm}},
   keys:{'$k':{'.read':true,'.write':adm,'hwid':{'.write':'!data.exists()','.validate':'newData.isString() && newData.val().length <= 32'}}},
   keysByUid:{'$u':{'.read':adm,'.write':adm}},
+  free:{'.read':true,'.write':adm},
   presence:{'.read':true,'$id':{'.write':true,'.validate':'newData.val() === 1 && $id.length <= 40'}},
   zorders:{'.read':adm,'$id':{'.read':true,'.write':`${adm} || (!data.exists() && newData.child('st').val() === 4 && ${pl} && newData.child('u').isString() && newData.child('u').val().length <= 200 && newData.child('dl').val() <= now + 960000 && (newData.child('src').val() === 'key' || (auth != null && newData.child('u').val() === auth.uid))) || (data.child('st').val() === 4 && now < data.child('dl').val() + 30000 && newData.child('u').val() === data.child('u').val() && (newData.child('st').val() === 0 || newData.child('st').val() === 5) && (data.child('src').val() === 'key' || (auth != null && auth.uid === data.child('u').val())))`}},
   zshots:{'$id':{'.read':adm,'.write':`${adm} || (!data.exists() && root.child('zorders/'+$id+'/st').val() === 4 && newData.isString() && newData.val().length < 250000)`}}},null,2).split('\n').slice(1,-1).join('\n')}
@@ -788,6 +806,36 @@ g('rx').onclick=()=>g('rsheet').hidden=true;g('rsheet').onclick=e=>{if(e.target=
 g('rCopyU').onclick=()=>{cp(uid);toast('UID скопирован')};
 g('rCopy').onclick=()=>{cp(g('rTxt').textContent);toast('Правила скопированы')};
 
+
+/* ===== БЕСПЛАТНО: узел free/{id} = {title,ver,url,desc,tags,ts}; читают все, пишет только админ ===== */
+const FREE_RE=/^https:\/\/[^\s"'<>]+$/i;
+let FREE={};
+function normUrl(u){u=(u||'').trim();
+  const m=u.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||u.match(/drive\.google\.com\/open\?id=([\w-]+)/);
+  if(m)return 'https://drive.google.com/uc?export=download&id='+m[1];
+  if(/dropbox\.com/i.test(u))return u.replace('dl=0','dl=1');
+  return u}
+function paintFree(){
+  const all=Object.entries(FREE).filter(([,f])=>f&&f.title).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
+  g('freeList').innerHTML=all.length?all.map(([id,f])=>{
+    const tags=(f.tags||'').split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="pkg-feat">${esc(t)}</span>`).join('');
+    return `<div class="pkg" style="margin-bottom:12px;cursor:default"><div class="pkg-top"><div><div class="pkg-title">${esc(f.title)}</div><div class="pkg-sub">${esc(f.desc||'')}</div></div><div class="pkg-price"><b style="font-size:18px">${f.ver?'v'+esc(f.ver):''}</b><small>${f.ts?fmtS(f.ts):''}</small></div></div>${tags?`<div class="pkg-feats">${tags}</div>`:''}<div style="padding:0 20px 20px"><button class="btn w" data-dl="${esc(id)}">Скачать</button></div></div>`}).join(''):'<div class="empty">Пока пусто — скоро добавим</div>';
+  g('fAdm').innerHTML=all.map(([id,f])=>`<div class="ord"><div class="h"><b>${esc(f.title)}</b><button class="btn d s" data-fdel="${esc(id)}">Удалить</button></div><div class="m">${f.ver?'v'+esc(f.ver)+' · ':''}${esc(f.url||'')}</div></div>`).join('')}
+onValue(ref(db,'free'),s=>{FREE=s.val()||{};paintFree()},()=>{g('freeList').innerHTML='<div class="empty">Раздел недоступен: админ должен опубликовать правила БД (Профиль → Настройка администратора)</div>'});
+/* скачивание: <a download> → WebView отдаёт файл в DownloadListener из Sketchware */
+function freeDl(id){const f=FREE[id];if(!f||!FREE_RE.test(f.url||''))return toast('Ссылка недоступна');
+  const a=document.createElement('a');a.href=f.url;a.download='';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();toast('Скачивание…');vib(15)}
+g('freeList').onclick=e=>{const b=e.target.closest('[data-dl]');if(b)freeDl(b.dataset.dl)};
+g('fAdm').onclick=async e=>{const b=e.target.closest('[data-fdel]');if(!b||!isAdmin)return;b.disabled=true;
+  try{await set(ref(db,'free/'+b.dataset.fdel),null);toast('Удалено')}catch(x){toast('Ошибка: '+errT(x));b.disabled=false}};
+g('fGo').onclick=async()=>{g('fErr').textContent='';if(!isAdmin)return;
+  const f={title:g('fTitle').value.trim(),ver:g('fVer').value.trim(),url:normUrl(g('fUrl').value),desc:g('fDesc').value.trim(),tags:g('fTags').value.trim()};
+  if(!f.title)return g('fErr').textContent='Введите название';
+  if(!FREE_RE.test(f.url))return g('fErr').textContent='Нужна прямая https-ссылка на файл';
+  g('fGo').disabled=true;
+  try{f.ts=serverTimestamp();await set(push(ref(db,'free')),f);['fTitle','fVer','fUrl','fDesc','fTags'].forEach(i=>g(i).value='');toast('Добавлено');vib(20)}
+  catch(x){g('fErr').textContent=errT(x)}
+  g('fGo').disabled=false};
 
 /* ===== МАГАЗИН ===== */
 let shopPlan=30;
