@@ -106,6 +106,11 @@ pre.rules{background:var(--s3);border-radius:16px;padding:12px;font-size:11px;ov
 .act-step .num{width:28px;height:28px;border-radius:50%;background:var(--pc);color:var(--onpc);display:grid;place-items:center;font-size:12px;font-weight:700;flex:none}
 .act-step .txt{font-size:13px}
 .launch-wrap{margin-top:4px}
+/* ===== ЭКРАН РЕГИСТРАЦИИ / ОПЛАТЫ ===== */
+#loginScreen,#regScreen{transition:opacity .25s}
+.tf span{font-size:18px;margin-right:8px;user-select:none}
+#payCardNum:active{opacity:.7}
+#ssLabel.has-file{border-color:var(--p);background:var(--s3)}
 </style>
 </head>
 <body>
@@ -276,25 +281,101 @@ pre.rules{background:var(--s3);border-radius:16px;padding:12px;font-size:11px;ov
   <div class="toast" id="toast"></div>
   <nav id="nav"></nav>
 
-  <!-- ВХОД: почта ИЛИ UID + ключ -->
-  <div class="auth" id="auth" hidden><div class="form">
-    <div class="logo">Z</div><h1 id="ah">Вход</h1>
-    <div class="seg" id="am" style="margin:0"><button data-m="mail" class="on">Почта</button><button data-m="key">UID + ключ</button></div>
+  <!-- ЭКРАН ВХОДА -->
+  <div class="auth" id="auth" hidden>
+    <!-- Вход -->
+    <div class="form" id="loginScreen">
+      <div class="logo">Z</div>
+      <h1>Вход</h1>
+      <p style="color:var(--onv);font-size:14px;margin-top:-4px">Zenith Monitor</p>
 
-    <div class="fx" id="mailF">
-      <label class="tf" id="fn" hidden><input id="aname" placeholder="Ник" maxlength="24"></label>
-      <label class="tf"><input id="aem" type="email" placeholder="Почта" autocomplete="email"></label>
-      <label class="tf"><input id="apw" type="password" placeholder="Пароль (от 6 символов)" autocomplete="current-password"></label>
-      <button class="link" id="asw">Нет аккаунта? Регистрация</button>
+      <div class="seg" id="am" style="margin:4px 0 0"><button data-m="mail" class="on">По почте</button><button data-m="key">По ключу</button></div>
+
+      <div class="fx" id="mailF">
+        <label class="tf"><input id="aem" type="email" placeholder="Почта" autocomplete="email"></label>
+        <label class="tf"><input id="apw" type="password" placeholder="Пароль" autocomplete="current-password"></label>
+      </div>
+
+      <div class="fx" id="keyF" hidden>
+        <label class="tf"><input id="kuid" placeholder="UID аккаунта Flux" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+        <label class="tf"><input id="kkey" placeholder="FLUX_KEY_XX000XX" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase"></label>
+      </div>
+
+      <div class="err" id="aerr"></div>
+      <button class="btn w" id="ago">Войти</button>
+      <button class="link" id="goRegBtn" style="text-align:center">Нет аккаунта? <b>Регистрация</b></button>
     </div>
 
-    <div class="fx" id="keyF" hidden>
-      <label class="tf"><input id="kuid" placeholder="UID аккаунта Flux" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
-      <label class="tf"><input id="kkey" placeholder="FLUX_KEY_XX000XX" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase"></label>
+    <!-- Регистрация -->
+    <div class="form" id="regScreen" hidden>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+        <button id="backToLogin" style="background:none;border:0;color:var(--p);cursor:pointer;padding:0;font-size:22px">←</button>
+        <div class="logo" style="width:48px;height:48px;font-size:22px">Z</div>
+      </div>
+      <h1>Регистрация</h1>
+      <p style="color:var(--onv);font-size:14px;margin-top:-4px">Создайте аккаунт Zenith</p>
+
+      <label class="tf" style="position:relative">
+        <span style="font-size:18px;margin-right:8px">👤</span>
+        <input id="aname" placeholder="Ник (отображается в профиле)" maxlength="24" autocomplete="nickname">
+      </label>
+      <label class="tf">
+        <span style="font-size:18px;margin-right:8px">✉</span>
+        <input id="aem2" type="email" placeholder="Почта" autocomplete="email">
+      </label>
+      <label class="tf">
+        <span style="font-size:18px;margin-right:8px">🔒</span>
+        <input id="apw2" type="password" placeholder="Пароль (от 6 символов)" autocomplete="new-password">
+      </label>
+
+      <div class="err" id="rerr"></div>
+      <button class="btn w" id="regGo">Создать аккаунт</button>
+      <button class="link" id="goLoginBtn" style="text-align:center">Уже есть аккаунт? <b>Войти</b></button>
+    </div>
+  </div>
+
+  <!-- SHEET: оплата со скриншотом -->
+  <div class="sheet" id="paySheet" hidden><div class="sc" id="paySheetInner">
+    <div class="dr"></div>
+    <div id="payStep1">
+      <h2 style="font-weight:500">Оплата ключа</h2>
+      <div id="payReqCard" style="background:var(--s3);border-radius:20px;padding:18px 20px;margin:4px 0 2px">
+        <div style="font-size:13px;color:var(--onv);margin-bottom:6px">Переведите точную сумму</div>
+        <div style="font-size:32px;font-weight:400;color:var(--p)" id="payAmt"></div>
+        <div style="font-size:13px;color:var(--onv);margin-top:4px">на карту:</div>
+        <div style="font-family:monospace;font-size:20px;letter-spacing:2px;margin-top:4px;cursor:pointer" id="payCardNum" title="Нажмите чтобы скопировать">2204 1201 4472 3133</div>
+        <div style="font-size:12px;color:var(--onv);margin-top:8px">В комментарии к переводу укажите ваш UID</div>
+      </div>
+      <div id="payUidBox" style="background:var(--s3);border-radius:12px;padding:10px 14px;font-size:12px;color:var(--onv);margin-bottom:8px;word-break:break-all">UID: <span id="payUidText" style="color:var(--on);font-family:monospace"></span></div>
+      <div style="display:flex;align-items:center;gap:10px;margin:4px 0 10px">
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--warn);fill:var(--warn)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        <span style="font-size:13px;color:var(--warn)">Оплатите в течение <b id="payTimer">15:00</b></span>
+      </div>
+
+      <div style="margin-bottom:10px">
+        <div style="font-size:14px;font-weight:500;margin-bottom:8px">Прикрепите скриншот чека</div>
+        <label id="ssLabel" style="display:flex;align-items:center;justify-content:center;gap:8px;border:2px dashed var(--out);border-radius:16px;padding:16px;cursor:pointer;min-height:70px;transition:.2s;text-align:center">
+          <svg viewBox="0 0 24 24" style="width:28px;height:28px;fill:var(--onv)"><path d="M4 5h13v7h2V5c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v9c0 1.1.9 2 2 2h8v-2H4V5zm10 4-4 5-3-3-4 5h13l-2-7z"/></svg>
+          <div>
+            <div id="ssLbl" style="font-size:14px;color:var(--onv)">Нажмите чтобы выбрать фото</div>
+            <div id="ssName" style="font-size:12px;color:var(--p);margin-top:2px"></div>
+          </div>
+          <input type="file" id="ssFile" accept="image/*" style="display:none">
+        </label>
+        <img id="ssPreview" style="display:none;width:100%;border-radius:14px;margin-top:8px;max-height:160px;object-fit:cover">
+      </div>
+
+      <div class="err" id="payErr"></div>
+      <button class="btn w" id="payConfirm">Подтвердить оплату</button>
     </div>
 
-    <div class="err" id="aerr"></div>
-    <button class="btn w" id="ago">Войти</button>
+    <div id="payStep2" hidden style="text-align:center;padding:16px 0">
+      <div style="font-size:48px;margin-bottom:12px">⏳</div>
+      <h2 style="font-weight:500;margin-bottom:8px">Заявка отправлена!</h2>
+      <p style="color:var(--onv);font-size:14px;margin-bottom:16px">Администратор проверит ваш чек и выдаст ключ. Обычно это занимает до 15 минут.</p>
+      <div id="payStep2Status"></div>
+      <button class="btn t w" id="payClose">Закрыть</button>
+    </div>
   </div></div>
 
   <div class="sheet" id="sheet" hidden><div class="sc">
@@ -445,24 +526,55 @@ function dropKey(msg){
   goTab(0);setAmode('key');g('aerr').textContent=msg||'';g('auth').hidden=false}
 
 /* ===== авторизация ===== */
-let reg=false,uid=null,LIC={active:false},amode='mail';
-function setReg(v){reg=v;if(amode==='mail'){g('ah').textContent=v?'Регистрация':'Вход';g('ago').textContent=v?'Создать аккаунт':'Войти'}g('asw').textContent=v?'Уже есть аккаунт? Войти':'Нет аккаунта? Регистрация';g('fn').hidden=!v;g('aerr').textContent=''}
-function setAmode(m){amode=m;g('am').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
-  g('mailF').hidden=m!=='mail';g('keyF').hidden=m!=='key';g('aerr').textContent='';
-  if(m==='key'){g('ah').textContent='Вход по ключу';g('ago').textContent='Войти'}else setReg(reg)}
+let uid=null,LIC={active:false},amode='mail';
+
+function showLogin(){g('loginScreen').hidden=false;g('regScreen').hidden=true;g('aerr').textContent=''}
+function showReg(){g('loginScreen').hidden=true;g('regScreen').hidden=false;g('rerr').textContent=''}
+g('goRegBtn').onclick=showReg;
+g('backToLogin').onclick=showLogin;
+g('goLoginBtn').onclick=showLogin;
+
+function setAmode(m){
+  amode=m;
+  g('am').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  g('mailF').hidden=m!=='mail';g('keyF').hidden=m!=='key';g('aerr').textContent=''}
 g('am').onclick=e=>{const b=e.target.closest('button');if(b)setAmode(b.dataset.m)};
-g('asw').onclick=()=>setReg(!reg);
-g('ago').onclick=async()=>{g('aerr').textContent='';
-  if(amode==='key'){const b=g('ago');b.disabled=true;b.textContent='Проверка…';
-    const r=await verifyKey(g('kuid').value,g('kkey').value);b.disabled=false;b.textContent='Войти';
+
+// Вход
+g('ago').onclick=async()=>{
+  g('aerr').textContent='';
+  if(amode==='key'){
+    const b=g('ago');b.disabled=true;b.textContent='Проверка…';
+    const r=await verifyKey(g('kuid').value,g('kkey').value);
+    b.disabled=false;b.textContent='Войти';
     if(r.e&&!r.x){g('aerr').textContent=r.e;return}
     if(auth.currentUser)await signOut(auth).catch(()=>{});
     enterKey(r);if(r.x){goTab(3);toast('Ключ истёк — продлите в профиле')}else toast('Вход выполнен');return}
   const em=g('aem').value.trim(),pw=g('apw').value;
-  try{if(!reg)await signInWithEmailAndPassword(auth,em,pw);
-    else{const n=g('aname').value.replace(/[<>&"']/g,'').trim();if(!n)throw {message:'Введите ник'};
-      const u=(await createUserWithEmailAndPassword(auth,em,pw)).user;await set(ref(db,'users/'+u.uid),{name:n})}}
-  catch(e){g('aerr').textContent=errT(e)}};
+  if(!em||!pw){g('aerr').textContent='Заполните все поля';return}
+  g('ago').disabled=true;g('ago').textContent='Входим…';
+  try{await signInWithEmailAndPassword(auth,em,pw)}
+  catch(e){g('aerr').textContent=errT(e)}
+  g('ago').disabled=false;g('ago').textContent='Войти'};
+
+// Регистрация
+g('regGo').onclick=async()=>{
+  g('rerr').textContent='';
+  const n=g('aname').value.replace(/[<>&"']/g,'').trim();
+  const em=g('aem2').value.trim();
+  const pw=g('apw2').value;
+  if(!n){g('rerr').textContent='Введите ник';return}
+  if(n.length<2){g('rerr').textContent='Ник слишком короткий';return}
+  if(!em){g('rerr').textContent='Введите почту';return}
+  if(!pw||pw.length<6){g('rerr').textContent='Пароль от 6 символов';return}
+  g('regGo').disabled=true;g('regGo').textContent='Создаём…';
+  try{
+    const u=(await createUserWithEmailAndPassword(auth,em,pw)).user;
+    await set(ref(db,'users/'+u.uid),{name:n});
+    toast('Добро пожаловать, '+n+'!')
+  }catch(e){g('rerr').textContent=errT(e)}
+  g('regGo').disabled=false;g('regGo').textContent='Создать аккаунт'};
+
 g('logout').onclick=async()=>{setRun(false);if(KS)dropKey('');else await signOut(auth)};
 
 let offs=[],expT=null;
@@ -470,7 +582,7 @@ onAuthStateChanged(auth,u=>{
   if(!u&&(KS||restoring))return; /* сессия по ключу живёт сама */
   if(u&&(KS||restoring)){KS=null;restoring=false;localStorage.removeItem('zks');clearInterval(ksT)}
   offs.forEach(f=>f());offs=[];clearInterval(expT);
-  if(!u){uid=null;isAdmin=false;LIC={active:false};drawNav();g('auth').hidden=false;return}
+  if(!u){uid=null;isAdmin=false;LIC={active:false};drawNav();showLogin();g('auth').hidden=false;return}
   uid=u.uid;isAdmin=!!ADMIN_UID&&uid===ADMIN_UID;g('auth').hidden=true;g('uidB').textContent=uid;g('pMail').textContent=u.email;
   g('rulesBtn').hidden=!(!ADMIN_UID||isAdmin);drawNav();
   offs.push(onValue(ref(db,'users/'+uid),s=>{const n=(s.val()||{}).name||u.email.split('@')[0];g('pName').textContent=n;g('av').textContent=n[0].toUpperCase()},()=>{}));
@@ -502,34 +614,78 @@ function paintLic(v){const was=LIC.active;
 g('copyKey').onclick=()=>{if(!LIC.key)return;navigator.clipboard&&navigator.clipboard.writeText(LIC.key);toast('Ключ скопирован')};
 g('goKey').onclick=()=>goTab(3);
 
-/* ===== покупка: создаётся заявка, админ подтверждает вручную ===== */
-let plan=30,pm='AC',ordOff=null;
-const openSheet=()=>{updNote();g('sheet').hidden=false};
-g('buy').onclick=openSheet;g('sx').onclick=()=>g('sheet').hidden=true;
-g('sheet').onclick=e=>{if(e.target===g('sheet'))g('sheet').hidden=true};
-document.querySelectorAll('.plan').forEach(p=>p.onclick=()=>{plan=+p.dataset.d;document.querySelectorAll('.plan').forEach(x=>x.classList.toggle('on',x===p));updNote()});
-g('pm').onclick=e=>{const b=e.target.closest('button');if(!b)return;pm=b.dataset.m;g('pm').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));updNote()};
-function updNote(){const card=pm==='CARD';g('cardB').hidden=!card;
-  g('payNote').textContent=card?`Переведите ${PRICES[plan]} ₽ на карту и укажите в комментарии ваш UID. Затем нажмите «Я оплатил» — заявка уйдёт администратору.`:`К оплате: ${PRICES[plan]} ₽. После оплаты нажмите «Я оплатил» — администратор проверит платёж и выдаст ключ.`;
-  g('pay').textContent=card?'Я оплатил (перевод на карту)':'Оплатить и отправить заявку'}
-g('cardB').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText('2204120144723133');toast('Номер карты скопирован')};
-g('pay').onclick=async()=>{if(!uid)return;const rub=PRICES[plan];g('pay').disabled=true;
-  try{const r=push(ref(db,'orders')),id=r.key;
-    await set(r,{u:uid,k:'key',src:KS?'key':'mail',plan,m:pm==='CARD'?'card':'ym',st:0,ts:serverTimestamp()});
-    localStorage.setItem('zo_'+uid,id);watchOrder(id);
-    if(pm!=='CARD'){const f=document.createElement('form');f.method='POST';f.action='https://yoomoney.ru/quickpay/confirm';f.target='_blank';f.style.display='none';
-      const F={receiver:WALLET,'quickpay-form':'shop',paymentType:pm,sum:String(rub),label:id,targets:`Zenith Monitor ключ на ${plan} дн.`,formcomment:'Zenith Monitor','short-dest':'Zenith Monitor'};
-      for(const k in F){const i=document.createElement('input');i.type='hidden';i.name=k;i.value=F[k];f.appendChild(i)}
-      document.body.appendChild(f);f.submit();f.remove()}
-    g('sheet').hidden=true;goTab(3);toast('Заявка отправлена администратору')}
-  catch(e){toast('Не удалось создать заявку: '+errT(e))}
-  g('pay').disabled=false};
+/* ===== покупка ===== */
+let ordOff=null;
+let payTimerInt=null;
+
+function openPaySheet(planDays){
+  if(!uid){toast('Войдите в аккаунт');return}
+  g('payAmt').textContent=PRICES[planDays]+' ₽ / '+planDays+' дней';
+  g('payUidText').textContent=uid;
+  g('payConfirm').dataset.plan=planDays;
+  g('payStep1').hidden=false;g('payStep2').hidden=true;
+  g('ssName').textContent='';g('ssPreview').style.display='none';
+  g('ssLabel').classList.remove('has-file');g('ssFile').value='';
+  g('payErr').textContent='';
+  g('paySheet').hidden=false;
+  // таймер 15 минут
+  clearInterval(payTimerInt);
+  let secs=15*60;
+  const tick=()=>{const m=Math.floor(secs/60),s=secs%60;g('payTimer').textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;if(secs--<=0){clearInterval(payTimerInt);g('payTimer').textContent='истёк';g('payConfirm').disabled=true;toast('Время оплаты истекло')}};
+  tick();payTimerInt=setInterval(tick,1000)
+}
+
+const openSheet=()=>openPaySheet(30); // для старых вызовов
+g('buy').onclick=()=>openPaySheet(30);
+g('payClose').onclick=()=>{g('paySheet').hidden=true;clearInterval(payTimerInt)};
+g('paySheet').onclick=e=>{if(e.target===g('paySheet')){g('paySheet').hidden=true;clearInterval(payTimerInt)}};
+g('payCardNum').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText('2204120144723133');toast('Номер карты скопирован')};
+
+// Скриншот чека
+g('ssFile').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  g('ssName').textContent=f.name;
+  g('ssLabel').classList.add('has-file');
+  const rd=new FileReader();
+  rd.onload=ev=>{g('ssPreview').src=ev.target.result;g('ssPreview').style.display='block'};
+  rd.readAsDataURL(f)};
+
+g('payConfirm').onclick=async()=>{
+  g('payErr').textContent='';
+  const planDays=+g('payConfirm').dataset.plan||30;
+  const f=g('ssFile').files[0];
+  if(!f){g('payErr').textContent='Прикрепите скриншот чека';return}
+  if(!uid){g('payErr').textContent='Не авторизованы';return}
+  g('payConfirm').disabled=true;g('payConfirm').textContent='Отправляем…';
+  try{
+    // Конвертируем скриншот в base64 (хранится в заявке)
+    const toB64=file=>new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file)});
+    const b64=await toB64(f);
+    const r=push(ref(db,'orders')),id=r.key;
+    await set(r,{u:uid,src:KS?'key':'mail',plan:planDays,m:'card',st:0,ts:serverTimestamp(),screenshot:b64.substring(0,65000)});
+    localStorage.setItem('zo_'+uid,id);
+    clearInterval(payTimerInt);
+    watchOrder(id);watchPayOrder(id);
+    g('payStep1').hidden=true;g('payStep2').hidden=false
+  }catch(e){g('payErr').textContent='Ошибка: '+errT(e);g('payConfirm').disabled=false;g('payConfirm').textContent='Подтвердить оплату'}};
+
 function watchOrder(id){ordOff&&ordOff();
   ordOff=onValue(ref(db,'orders/'+id),s=>{const o=s.val(),b=g('ordS');
     if(!o||o.st===2){b.innerHTML='';if(o&&o.st===2){localStorage.removeItem('zo_'+uid);if(KS)verifyKey(KS.u,KS.k).then(x=>{if(!x.e||x.x){enterKey(x);toast('Ключ продлён')}})}return}
     if(o.st===0||o.st===1)b.innerHTML=`<div class="status w">Заявка на ${o.plan} дн. ожидает подтверждения администратора. Ключ появится здесь автоматически.</div>`;
     else if(o.st===3){b.innerHTML=`<div class="status e">Заявка на ${o.plan} дн. отклонена${o.note?': '+esc(o.note):''}. Если вы оплатили — напишите администратору.</div>`;localStorage.removeItem('zo_'+uid)}},()=>{});
   offs.push(()=>{ordOff&&ordOff();ordOff=null})}
+
+function watchPayOrder(id){
+  onValue(ref(db,'orders/'+id),s=>{
+    const o=s.val(),b=g('payStep2Status');if(!o)return;
+    if(o.st===0||o.st===1)b.innerHTML=`<div class="status w" style="margin-bottom:12px">⏳ Ожидаем подтверждения администратора…</div>`;
+    else if(o.st===2){
+      const keyTxt=o.key?`<div class="keybox" style="font-size:14px;margin:10px 0">${esc(o.key)}</div>`:'';
+      b.innerHTML=`<div class="status o" style="margin-bottom:12px">✓ Оплата подтверждена! Ключ выдан.${keyTxt?'<br>Ваш ключ:':''}</div>${keyTxt}`;
+      toast('Ключ выдан!');vib([15,40,15])}
+    else if(o.st===3)b.innerHTML=`<div class="status e" style="margin-bottom:12px">✗ Заявка отклонена${o.note?': '+esc(o.note):''}. Напишите администратору.</div>`
+  },()=>{})}
 
 /* ===== админ: заявки и выдача ключей ===== */
 const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ',D='0123456789';
