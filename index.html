@@ -25,6 +25,7 @@ svg{width:24px;height:24px;fill:currentColor;flex:none}
 .hero{background:var(--pc);color:var(--onpc);border-radius:32px;padding:24px;margin-bottom:12px;position:relative;overflow:hidden}
 .hero:after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:var(--p);opacity:.15}
 .st{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:6px}
+.onl{margin-left:auto;position:relative;z-index:1;display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.25);border-radius:12px;padding:4px 10px;font-size:13px}.onl i{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(143,217,160,.2)}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--out)}.dot.on{background:var(--ok);box-shadow:0 0 0 4px rgba(143,217,160,.2)}
 .big{font-size:34px;margin:6px 0 16px}
 .btn{border:0;border-radius:100px;height:56px;padding:0 28px;font:500 16px inherit;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:10px;background:var(--p);color:var(--onp);transition:transform .15s}
@@ -136,7 +137,7 @@ pre.rules{background:var(--s3);border-radius:16px;padding:12px;font-size:11px;ov
     <!-- ГЛАВНОЕ -->
     <section class="page on" id="p0">
       <div class="hero">
-        <div class="st"><span class="dot" id="dot"></span><span id="stT">Мониторинг остановлен</span></div>
+        <div class="st"><span class="dot" id="dot"></span><span id="stT">Мониторинг остановлен</span><span class="onl"><i></i><span>Онлайн: <b id="onlN">—</b></span></span></div>
         <div style="opacity:.8;font-size:14px">Мониторинг производительности</div>
         <div class="big">Standoff 2</div>
         <button class="btn" id="run"><svg viewBox="0 0 24 24" id="runI"><path d="M8 5v14l11-7z"/></svg><span id="runT">Запустить</span></button>
@@ -429,7 +430,7 @@ const KEY_RECHECK_MS = 10*60*1000;
 
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import {getDatabase,ref,push,set,get,update,query,limitToLast,onValue,runTransaction,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+import {getDatabase,ref,push,set,get,update,query,limitToLast,onValue,runTransaction,serverTimestamp,onDisconnect} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 
 const app=initializeApp({apiKey:"AIzaSyB0uaLhHrYjWblrCBLTPx7mF_OmUhhld70",authDomain:"br-game-1f919.firebaseapp.com",databaseURL:"https://br-game-1f919-default-rtdb.firebaseio.com",projectId:"br-game-1f919",storageBucket:"br-game-1f919.firebasestorage.app",messagingSenderId:"758598814466",appId:"1:758598814466:web:85779913ac960b18a2901b"});
 const auth=getAuth(app),db=getDatabase(app),g=id=>document.getElementById(id);
@@ -639,6 +640,12 @@ g('goKey').onclick=()=>goTab(3);
 /* ===== покупка: анкета → 15 мин → чек → админ → уведомление ===== */
 const CARD='2204 1201 4472 3133',PAY_MS=15*60*1000;
 let srvOff=0;onValue(ref(db,'.info/serverTimeOffset'),x=>srvOff=x.val()||0);
+
+/* ===== ОНЛАЙН: presence/{sid}=1, снимается через onDisconnect; счётчик = число узлов ===== */
+const SID=[...crypto.getRandomValues(new Uint8Array(10))].map(x=>x.toString(16).padStart(2,'0')).join('');
+const myP=ref(db,'presence/'+SID);
+onValue(ref(db,'.info/connected'),s=>{if(s.val()===true)onDisconnect(myP).remove().then(()=>set(myP,1)).catch(()=>{})});
+onValue(ref(db,'presence'),s=>{g('onlN').textContent=s.numChildren()},()=>{g('onlN').textContent='—'}); /* «—» = правила не опубликованы */
 const nowS=()=>Date.now()+srvOff,mmss=ms=>{const t=Math.max(0,Math.ceil(ms/1000));return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')};
 let ordOff=null,payTimerInt=null,curOrd=null,payCur=null,shotData=null;
 const openSheet=()=>{goTab(1);toast('Выберите тариф и оплатите')};
@@ -773,6 +780,7 @@ function rulesText(a){const A=a||'ВАШ_UID',adm=`auth != null && auth.uid === 
   licenses:{'$uid':{'.read':'auth != null && auth.uid === $uid','.write':adm}},
   keys:{'$k':{'.read':true,'.write':adm,'hwid':{'.write':'!data.exists()','.validate':'newData.isString() && newData.val().length <= 32'}}},
   keysByUid:{'$u':{'.read':adm,'.write':adm}},
+  presence:{'.read':true,'$id':{'.write':true,'.validate':'newData.val() === 1 && $id.length <= 40'}},
   zorders:{'.read':adm,'$id':{'.read':true,'.write':`${adm} || (!data.exists() && newData.child('st').val() === 4 && ${pl} && newData.child('u').isString() && newData.child('u').val().length <= 200 && newData.child('dl').val() <= now + 960000 && (newData.child('src').val() === 'key' || (auth != null && newData.child('u').val() === auth.uid))) || (data.child('st').val() === 4 && now < data.child('dl').val() + 30000 && newData.child('u').val() === data.child('u').val() && (newData.child('st').val() === 0 || newData.child('st').val() === 5) && (data.child('src').val() === 'key' || (auth != null && auth.uid === data.child('u').val())))`}},
   zshots:{'$id':{'.read':adm,'.write':`${adm} || (!data.exists() && root.child('zorders/'+$id+'/st').val() === 4 && newData.isString() && newData.val().length < 250000)`}}},null,2).split('\n').slice(1,-1).join('\n')}
 g('rulesBtn').onclick=()=>{g('rUid').textContent=uid;g('rTxt').textContent=rulesText(ADMIN_UID||uid);g('rsheet').hidden=false};
