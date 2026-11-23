@@ -1010,15 +1010,17 @@ function paintBal(){g('refBal').textContent=bal()+' ₽';g('refN').textContent=R
 function updBalBtn(){const b=g('shopBal'),p=PRICES[shopPlan];
   if(!uid||KS||!p||bal()<p){b.hidden=true;return}
   b.hidden=false;b.textContent='Оплатить с баланса ('+bal()+' ₽)'}
+function loadCode(){const retry=()=>setTimeout(()=>{if(uid&&!KS&&!refCode)loadCode()},15000);
+  ensureCode(uid).then(c=>{refCode=c;g('refCode').textContent=c||'…';if(!c)retry()}).catch(()=>{g('refCode').textContent='…';retry()})}
 function startRef(){if(KS||!uid)return;g('refCard').hidden=false;g('refCode').textContent='…';
-  ensureCode(uid).then(c=>{refCode=c;g('refCode').textContent=c||'не удалось создать'}).catch(()=>{g('refCode').textContent='нет доступа — обновите правила БД'});
+  loadCode();
   offs.push(onValue(ref(db,'refby/'+uid),s=>{g('refEnter').hidden=!!s.val()},()=>{}));
   offs.push(onValue(ref(db,'refs/'+uid),s=>{RB.n=s.numChildren();paintBal()},()=>{}));
   offs.push(onValue(ref(db,'refbonus/'+uid),s=>{let t=0;s.forEach(x=>{t+=+x.val()||0});RB.b=t;paintBal()},()=>{}));
   offs.push(onValue(ref(db,'spent/'+uid),s=>{let t=0;s.forEach(x=>{t+=+x.val()||0});RB.s=t;paintBal()},()=>{}))}
 g('refCopy').onclick=()=>{if(!refCode)return;cp(refCode);toast('Код скопирован')};
 g('refShare').onclick=async()=>{if(!refCode)return;
-  const t='Zenith Monitor — мониторинг и FluxMod для Standoff 2. Зарегистрируйся и введи мой код приглашения: '+refCode;
+  const t='Скорее покупай FluxMod для Standoff 2! Зарегистрируйся и введи мой код приглашения: '+refCode+' — чтобы купить чит по самой выгодной цене. А главное — FluxMod работает без root!';
   try{if(navigator.share){await navigator.share({text:t});return}}catch(e){if(e&&e.name==='AbortError')return}
   cp(t);toast('Текст приглашения скопирован')};
 g('refApply').onclick=async()=>{g('refErr').textContent='';const v=g('refIn').value;if(!v.trim())return;
