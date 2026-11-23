@@ -436,6 +436,8 @@ const S=(()=>{try{return JSON.parse(localStorage.getItem('zs'))||{}}catch(e){ret
 S.h??=265;S.iv??=1;S.vib??=true;S.ovl??=true;S.log??=false;
 const save=()=>{try{localStorage.setItem('zs',JSON.stringify(S))}catch(e){}};
 const vib=n=>{if(S.vib&&navigator.vibrate)navigator.vibrate(n)};
+const nat=(t,m)=>{try{if(window.Android&&Android.showNotification)Android.showNotification(t,m)}catch(e){}};
+const cp=t=>{try{if(window.Android&&Android.copyText){Android.copyText(t);return}}catch(e){}try{navigator.clipboard&&navigator.clipboard.writeText(t)}catch(e){}};
 let tt;const toast=m=>{const e=g('toast');e.textContent=m;e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),2400)};
 const errT=e=>({'auth/invalid-credential':'Неверная почта или пароль','auth/email-already-in-use':'Эта почта уже зарегистрирована','auth/weak-password':'Пароль слишком короткий','auth/invalid-email':'Некорректная почта','auth/network-request-failed':'Нет сети','auth/too-many-requests':'Слишком много попыток','PERMISSION_DENIED':'Нет доступа: опубликуйте правила БД с вашим ADMIN_UID'}[e.code]||e.message||String(e));
 const fmtD=ts=>new Date(ts).toLocaleString('ru',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -628,7 +630,7 @@ function paintLic(v){const was=LIC.active;
     g('expT').textContent=`Действует до ${fmtD(LIC.exp)} (осталось ${d} д ${h} ч)`;g('keyS').textContent=`Активен · ${d} д ${h} ч`};
   upd();expT=setInterval(upd,6e4);g('copyKey').disabled=!LIC.key;
   if(LIC.active&&!was){toast('Ключ активирован!');vib([15,40,15])}}
-g('copyKey').onclick=()=>{if(!LIC.key)return;navigator.clipboard&&navigator.clipboard.writeText(LIC.key);toast('Ключ скопирован')};
+g('copyKey').onclick=()=>{if(!LIC.key)return;cp(LIC.key);toast('Ключ скопирован')};
 g('goKey').onclick=()=>goTab(3);
 
 /* ===== покупка: анкета → 15 мин → чек → админ → уведомление ===== */
@@ -660,7 +662,7 @@ function expire(id){update(ref(db,'zorders/'+id),{st:5}).catch(()=>{})}
 const closePay=()=>{g('paySheet').hidden=true;clearInterval(payTimerInt)};
 g('payClose').onclick=closePay;g('paySheet').onclick=e=>{if(e.target===g('paySheet'))closePay()};
 g('payCancel').onclick=()=>{if(payCur)expire(payCur.id);closePay();toast('Заявка отменена')};
-g('payCardNum').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(CARD.replace(/ /g,''));toast('Номер карты скопирован')};
+g('payCardNum').onclick=()=>{cp(CARD.replace(/ /g,''));toast('Номер карты скопирован')};
 
 /* скриншот: сжимаем в JPEG, чтобы влезал в БД целиком */
 function packImg(f){return new Promise((res,rej)=>{const im=new Image,u=URL.createObjectURL(f);
@@ -690,7 +692,7 @@ g('bell').onclick=()=>{const a=nGet();
   g('nSheet').hidden=false;a.forEach(x=>x.r=1);localStorage.setItem(nKey(),JSON.stringify(a));paintBell()};
 g('nx').onclick=()=>g('nSheet').hidden=true;g('nSheet').onclick=e=>{if(e.target===g('nSheet'))g('nSheet').hidden=true};
 function showOk(o){g('okUid').textContent=o.u;g('okKey').textContent=o.k;g('okExp').textContent=o.e?'Действует до '+fmtD(o.e):'';g('okM').hidden=false;vib([15,40,15])}
-g('okCopy').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(g('okKey').textContent);toast('Ключ скопирован')};
+g('okCopy').onclick=()=>{cp(g('okKey').textContent);toast('Ключ скопирован')};
 g('okGo').onclick=()=>{g('okM').hidden=true;goTab(3)};
 
 function watchOrder(id){ordOff&&ordOff();
@@ -701,11 +703,11 @@ function watchOrder(id){ordOff&&ordOff();
     if(o.st===0||o.st===1){set(`<div class="status w">Заявка на ${o.plan} дн. отправлена администратору. Вы получите уведомление, когда чек проверят.</div>`);
       if(!g('paySheet').hidden){g('payStep1').hidden=true;g('payStep2').hidden=false}return}
     if(o.st===2){set(`<div class="status o">✓ Оплата подтверждена, ключ выдан — он в Профиле.</div>`);
-      if(notify({id,t:'ok',u:o.u,k:o.key,e:o.exp})){closePay();showOk({u:o.u,k:o.key,e:o.exp})}
+      if(notify({id,t:'ok',u:o.u,k:o.key,e:o.exp})){closePay();showOk({u:o.u,k:o.key,e:o.exp});nat('Оплата подтверждена','Ключ: '+o.key+' · UID: '+o.u)}
       if(KS)verifyKey(KS.u,KS.k).then(x=>{if(!x.e||x.x)enterKey(x)});
       localStorage.removeItem('zo_'+uid);return}
     if(o.st===3){set(`<div class="status e">Заявка на ${o.plan} дн. отклонена${o.note?': '+esc(o.note):''}. Если вы оплатили — напишите администратору.</div>`);
-      if(notify({id,t:'no'})){closePay();toast('Оплата отклонена администратором');vib([30,50,30])}localStorage.removeItem('zo_'+uid)}},()=>{});
+      if(notify({id,t:'no'})){closePay();toast('Оплата отклонена администратором');nat('Заявка отклонена','Администратор отклонил оплату');vib([30,50,30])}localStorage.removeItem('zo_'+uid)}},()=>{});
   offs.push(()=>{ordOff&&ordOff();ordOff=null})}
 setInterval(()=>{const b=g('shopDraft'),o=curOrd;
   if(o&&o.st===4&&o.dl>nowS()){if(!b.firstChild)b.innerHTML='<div class="draft"><span>Незавершённая оплата · осталось <b id="dl"></b></span><button class="btn s" id="dlGo">Продолжить</button></div>';g('dl').textContent=mmss(o.dl-nowS());g('dlGo').onclick=()=>openPay(o)}else b.innerHTML=''},1000);
@@ -751,7 +753,7 @@ document.addEventListener('click',async e=>{
     else{await update(ref(db,'zorders/'+id),{st:3,at:serverTimestamp()});toast('Заявка отклонена')}
   }catch(x){toast('Ошибка: '+errT(x));update(ref(db,'zorders/'+id),{st:0}).catch(()=>{})}
   btn.disabled=false});
-let lastP=-1;function newPend(){const n=Object.values(ORD).filter(o=>o.st===0).length;if(lastP>=0&&n>lastP){toast('Новая оплата на проверку');vib([20,40,20])}lastP=n}
+let lastP=-1;function newPend(){const n=Object.values(ORD).filter(o=>o.st===0).length;if(lastP>=0&&n>lastP){toast('Новая оплата на проверку');nat('Новая оплата','Заявка ждёт проверки');vib([20,40,20])}lastP=n}
 g('pend').onclick=async e=>{const b=e.target.closest('[data-shot]');if(!b)return;b.disabled=true;
   try{const v=(await get(ref(db,'zshots/'+b.dataset.shot))).val();if(!v)toast('Чек не найден');else{g('shotImg').src=v;g('imgV').hidden=false}}catch(x){toast('Ошибка: '+errT(x))}b.disabled=false};
 g('ix').onclick=()=>g('imgV').hidden=true;
@@ -769,8 +771,8 @@ function rulesText(a){const A=a||'ВАШ_UID',adm=`auth != null && auth.uid === 
   zshots:{'$id':{'.read':adm,'.write':`${adm} || (!data.exists() && root.child('zorders/'+$id+'/st').val() === 4 && newData.isString() && newData.val().length < 250000)`}}},null,2).split('\n').slice(1,-1).join('\n')}
 g('rulesBtn').onclick=()=>{g('rUid').textContent=uid;g('rTxt').textContent=rulesText(ADMIN_UID||uid);g('rsheet').hidden=false};
 g('rx').onclick=()=>g('rsheet').hidden=true;g('rsheet').onclick=e=>{if(e.target===g('rsheet'))g('rsheet').hidden=true};
-g('rCopyU').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(uid);toast('UID скопирован')};
-g('rCopy').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(g('rTxt').textContent);toast('Правила скопированы')};
+g('rCopyU').onclick=()=>{cp(uid);toast('UID скопирован')};
+g('rCopy').onclick=()=>{cp(g('rTxt').textContent);toast('Правила скопированы')};
 
 
 /* ===== МАГАЗИН ===== */
