@@ -333,6 +333,8 @@ pre.rules{background:var(--s3);border-radius:16px;padding:12px;font-size:11px;ov
     </div>
   </div>
 
+  <div class="auth" id="splash" style="z-index:50"><div class="logo">Z</div></div>
+
   <!-- SHEET: оплата со скриншотом -->
   <div class="sheet" id="paySheet" hidden><div class="sc" id="paySheetInner">
     <div class="dr"></div>
@@ -528,7 +530,8 @@ function dropKey(msg){
 /* ===== авторизация ===== */
 let uid=null,LIC={active:false},amode='mail';
 
-const setAuth=h=>{g('auth').hidden=h;if(h)g('reg').hidden=true};
+const setAuth=h=>{const was=!g('auth').hidden||!g('reg').hidden;g('splash').hidden=true;g('auth').hidden=h;if(h){g('reg').hidden=true;if(was)goTab(0)}};
+setTimeout(()=>{if(!g('splash').hidden){g('splash').hidden=true;if(!auth.currentUser&&!KS)showLogin()}},6000);
 function showLogin(){g('auth').hidden=false;g('reg').hidden=true;g('aerr').textContent=''}
 function showReg(){g('auth').hidden=true;g('reg').hidden=false;g('rerr').textContent=''}
 g('aname').oninput=()=>{const v=g('aname').value.trim();g('rAv').textContent=v?v[0].toUpperCase():'?';g('rCnt').textContent=v.length+'/24'};
