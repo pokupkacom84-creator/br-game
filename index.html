@@ -347,6 +347,8 @@ pre.rules{background:var(--s3);border-radius:16px;padding:12px;font-size:11px;ov
         <div style="font-family:monospace;font-size:20px;letter-spacing:2px;margin-top:4px;cursor:pointer" id="payCardNum" title="Нажмите чтобы скопировать">2204 1201 4472 3133</div>
         <div style="font-size:12px;color:var(--onv);margin-top:8px">В комментарии к переводу укажите ваш UID</div>
       </div>
+      <div style="display:flex;gap:8px;margin:8px 0 4px"><button class="btn s" id="ymAc" style="flex:1;padding:0">ЮMoney: картой</button><button class="btn t s" id="ymPc" style="flex:1;padding:0">Кошелёк ЮMoney</button></div>
+      <div style="font-size:12px;color:var(--onv);margin-bottom:8px">Оплатите на странице ЮMoney, затем вернитесь сюда и прикрепите скриншот. Или переведите на карту ниже.</div>
       <div id="payUidBox" style="background:var(--s3);border-radius:12px;padding:10px 14px;font-size:12px;color:var(--onv);margin-bottom:8px;word-break:break-all">UID: <span id="payUidText" style="color:var(--on);font-family:monospace"></span></div>
       <div style="display:flex;align-items:center;gap:10px;margin:4px 0 10px">
         <svg viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--warn);fill:var(--warn)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
@@ -415,7 +417,7 @@ setTimeout(function(){if(!window.__zok)showSplashErr('Не загрузилис�
 <script type="module">
 /* ===== НАСТРОЙКА: вставьте сюда ваш UID (он виден в Профиле после первого входа) ===== */
 window.__zok=1;
-const ADMIN_UID = "VEn3IDLiZjVaCNQx2HnmtWiusb83";
+const ADMIN_UID = "";
 const WALLET = "4100118891507332";
 const PRICES = {7:150, 30:450, 90:750};
 
@@ -483,7 +485,8 @@ function setRun(v){run=v;vib(25);g('dot').classList.toggle('on',v);g('stT').text
   if(v){fpsArr=[];frames=0;t0=performance.now();raf=requestAnimationFrame(loop);tm=setInterval(sample,S.iv*1000);batt()}
   else{['fps','rtt','mem'].forEach(i=>g(i).textContent='—');if(ovl)ovl.style.display='none';
     if(S.log&&fpsArr.length){const a=fpsArr.reduce((x,y)=>x+y,0)/fpsArr.length;g('logCard').hidden=false;g('logT').textContent=`Средний FPS: ${a.toFixed(1)} · минимум: ${Math.min(...fpsArr)} · замеров: ${fpsArr.length}`}}}
-g('run').onclick=()=>{if(!LIC.active)return openSheet();setRun(!run)};
+function launchGame(){try{if(window.FluxNative&&FluxNative.launchGame)FluxNative.launchGame();else toast('Запуск игры доступен только из приложения')}catch(e){toast('Не удалось запустить игру')}}
+g('run').onclick=()=>{if(!LIC.active)return openSheet();const st=!run;setRun(st);if(st)launchGame()};
 
 /* menuBtn переопределён ниже в блоке КАТАЛОГ */;
 
@@ -646,7 +649,7 @@ async function startPurchase(plan){
   if(curOrd&&curOrd.st===4&&curOrd.dl>nowS())return openPay(curOrd);
   const r=push(ref(db,'zorders')),id=r.key,dl=nowS()+PAY_MS;
   try{await set(r,{u:uid,src:KS?'key':'mail',plan,m:'card',st:4,ts:serverTimestamp(),dl});
-    localStorage.setItem('zo_'+uid,id);watchOrder(id);openPay({id,plan,dl,st:4})}
+    localStorage.setItem('zo_'+uid,id);watchOrder(id);openPay({id,plan,dl,st:4});openYm('AC')}
   catch(e){toast('Ошибка: '+errT(e))}}
 function openPay(o){
   payCur=o;shotData=null;
@@ -658,6 +661,9 @@ function openPay(o){
   const tick=()=>{const left=o.dl-nowS();g('payTimer').textContent=left>0?mmss(left):'истёк';g('payBar').style.width=Math.max(0,left/PAY_MS*100)+'%';
     if(left<=0){clearInterval(payTimerInt);g('payConfirm').disabled=true;g('payErr').textContent='Время оплаты истекло — создайте новую заявку';expire(o.id)}};
   tick();payTimerInt=setInterval(tick,1000)}
+function ymUrl(o,t){return 'https://yoomoney.ru/quickpay/confirm?'+new URLSearchParams({receiver:WALLET,'quickpay-form':'button',sum:String(PRICES[o.plan]),label:o.id,paymentType:t,targets:'Zenith Monitor ключ на '+o.plan+' дн.'}).toString()}
+function openYm(t){if(!payCur)return;const u=ymUrl(payCur,t);try{if(window.Android&&Android.openExternalBrowser){Android.openExternalBrowser(u);return}}catch(e){}window.open(u,'_blank')}
+g('ymAc').onclick=()=>openYm('AC');g('ymPc').onclick=()=>openYm('PC');
 function expire(id){update(ref(db,'zorders/'+id),{st:5}).catch(()=>{})}
 const closePay=()=>{g('paySheet').hidden=true;clearInterval(payTimerInt)};
 g('payClose').onclick=closePay;g('paySheet').onclick=e=>{if(e.target===g('paySheet'))closePay()};
