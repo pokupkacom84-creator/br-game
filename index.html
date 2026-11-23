@@ -403,8 +403,15 @@ pre.rules{background:var(--s3);border-radius:16px;padding:12px;font-size:11px;ov
   </div></div>
 </div>
 
+<script>
+function showSplashErr(m){var s=document.getElementById('splash');if(!s||s.hidden)return;
+s.innerHTML='<div class="form" style="align-items:center;text-align:center"><div class="logo">Z</div><p style="color:#f2b8b5;font-size:14px;word-break:break-word">'+String(m).replace(/</g,'&lt;')+'</p><button class="btn" onclick="location.reload()">Повторить</button></div>'}
+window.addEventListener('error',function(e){showSplashErr((e.message||'Ошибка загрузки скрипта')+(e.lineno?' (строка '+e.lineno+')':''))},true);
+setTimeout(function(){if(!window.__zok)showSplashErr('Не загрузились скрипты Firebase. Проверьте интернет и нажмите «Повторить».')},8000);
+</script>
 <script type="module">
 /* ===== НАСТРОЙКА: вставьте сюда ваш UID (он виден в Профиле после первого входа) ===== */
+window.__zok=1;
 const ADMIN_UID = "";
 const WALLET = "4100118891507332";
 const PRICES = {7:150, 30:450, 90:750};
@@ -718,8 +725,8 @@ async function issue(userUid,days){
   return {key,exp}}
 const names={};
 async function nameOf(u){if(names[u])return names[u];try{const v=(await get(ref(db,'users/'+u))).val();return names[u]=(v&&v.name)||'Без ника'}catch(e){return 'Пользователь'}}
-let ORD={};
-function paintBadge(){const n=Object.values(ORD).filter(o=>o.st===0).length,b=g('badge');if(b){b.hidden=!n;b.textContent=n}}
+var ORD={};
+function paintBadge(){const n=Object.values(ORD||{}).filter(o=>o.st===0).length,b=g('badge');if(b){b.hidden=!n;b.textContent=n}}
 function watchAdmin(){offs.push(onValue(query(ref(db,'zorders'),limitToLast(100)),async s=>{ORD={};s.forEach(x=>{const v=x.val();if(v&&v.u)ORD[x.key]=v});paintBadge();newPend();await paintAdmin()},e=>toast('Заявки: '+errT(e))))}
 async function paintAdmin(){
   const all=Object.entries(ORD).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
