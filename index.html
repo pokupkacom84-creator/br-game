@@ -126,6 +126,10 @@ pre.rules{background:var(--s3);border-radius:16px;padding:12px;font-size:11px;ov
 .mo{text-align:center;padding:8px 0}.mo .ico{width:72px;height:72px;border-radius:50%;margin:0 auto 12px;display:grid;place-items:center;font-size:36px;background:#1f4a2c;color:var(--ok)}
 .nit{background:var(--s3);border-radius:18px;padding:12px 16px}.nit b{font-size:15px}.nit div{font-size:13px;color:var(--onv);margin-top:4px;word-break:break-all}
 .shotv{width:100%;border-radius:14px;margin:8px 0;max-height:60vh;object-fit:contain;background:var(--s3)}
+.fimg{width:100%;height:170px;object-fit:cover;display:block;background:var(--s3)}
+.rt{font-size:12px;font-weight:700;padding:3px 10px;border-radius:10px;letter-spacing:.5px}
+.rt.r{background:#4a3d12;color:var(--warn)}.rt.n{background:#1f4a2c;color:var(--ok)}
+.fthumb{width:44px;height:44px;border-radius:10px;object-fit:cover;flex:none}
 .draft{background:#4a3d12;color:var(--warn);border-radius:20px;padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;font-size:14px}.draft span{flex:1}
 </style>
 </head>
@@ -205,6 +209,13 @@ pre.rules{background:var(--s3);border-radius:16px;padding:12px;font-size:11px;ov
         <label class="tf" style="margin-top:8px"><input id="fUrl" placeholder="Ссылка на файл (https://…)" autocapitalize="off" spellcheck="false"></label>
         <label class="tf" style="margin-top:8px"><input id="fDesc" placeholder="Описание" maxlength="160"></label>
         <label class="tf" style="margin-top:8px"><input id="fTags" placeholder="Теги: ESP, Aim, Menu" maxlength="60"></label>
+        <label id="fImgLabel" style="display:flex;align-items:center;justify-content:center;gap:8px;border:2px dashed var(--out);border-radius:16px;padding:14px;cursor:pointer;min-height:64px;margin-top:8px;text-align:center">
+          <svg viewBox="0 0 24 24" style="width:26px;height:26px;fill:var(--onv)"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3 3.5-4.5 4.5 6H5l3.5-4.5z"/></svg>
+          <span id="fImgLbl" style="font-size:14px;color:var(--onv)">Прикрепить изображение</span>
+          <input type="file" id="fImg" accept="image/*" style="display:none">
+        </label>
+        <div style="position:relative;display:none" id="fImgBox"><img id="fImgPrev" class="shotv" style="max-height:160px;object-fit:cover"><button class="btn d s" id="fImgDel" type="button" style="margin-top:4px">Убрать изображение</button></div>
+        <div class="seg" id="fRoot" style="margin:12px 0 0"><button data-r="" class="on" type="button">Не указано</button><button data-r="root" type="button">ROOT</button><button data-r="noroot" type="button">NO ROOT</button></div>
         <div class="err" id="fErr" style="margin-top:8px"></div>
         <button class="btn w" id="fGo">Добавить</button>
       </div>
@@ -807,9 +818,23 @@ g('rCopyU').onclick=()=>{cp(uid);toast('UID скопирован')};
 g('rCopy').onclick=()=>{cp(g('rTxt').textContent);toast('Правила скопированы')};
 
 
-/* ===== БЕСПЛАТНО: узел free/{id} = {title,ver,url,desc,tags,ts}; читают все, пишет только админ ===== */
+/* ===== БЕСПЛАТНО: узел free/{id} = {title,ver,url,desc,tags,img,root,ts}; читают все, пишет только админ ===== */
 const FREE_RE=/^https:\/\/[^\s"'<>]+$/i;
 let FREE={};
+const IMG_RE=/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/;
+const rootBadge=r=>r==='root'?'<span class="rt r">ROOT</span>':r==='noroot'?'<span class="rt n">NO ROOT</span>':'';
+let fImgData=null,fRootV='';
+function packFreeImg(f){return new Promise((res,rej)=>{const im=new Image,u=URL.createObjectURL(f);
+  im.onload=()=>{let w=im.width,h=im.height;const k=Math.min(1,800/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
+    const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);URL.revokeObjectURL(u);
+    let q=.8,d=c.toDataURL('image/jpeg',q);while(d.length>120000&&q>.3){q-=.1;d=c.toDataURL('image/jpeg',q)}res(d)};
+  im.onerror=()=>rej(new Error('Не удалось прочитать изображение'));im.src=u})}
+const fImgReset=()=>{fImgData=null;g('fImg').value='';g('fImgBox').style.display='none';g('fImgLbl').textContent='Прикрепить изображение';g('fImgLabel').style.borderColor=''};
+g('fImg').onchange=async e=>{const f=e.target.files[0];if(!f)return;
+  try{fImgData=await packFreeImg(f)}catch(x){fImgData=null;g('fErr').textContent=x.message;return}
+  g('fErr').textContent='';g('fImgPrev').src=fImgData;g('fImgBox').style.display='block';g('fImgLbl').textContent=f.name;g('fImgLabel').style.borderColor='var(--p)'};
+g('fImgDel').onclick=fImgReset;
+g('fRoot').onclick=e=>{const b=e.target.closest('button');if(!b)return;fRootV=b.dataset.r;g('fRoot').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))};
 function normUrl(u){u=(u||'').trim();
   const m=u.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||u.match(/drive\.google\.com\/open\?id=([\w-]+)/);
   if(m)return 'https://drive.google.com/uc?export=download&id='+m[1];
@@ -819,8 +844,9 @@ function paintFree(){
   const all=Object.entries(FREE).filter(([,f])=>f&&f.title).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
   g('freeList').innerHTML=all.length?all.map(([id,f])=>{
     const tags=(f.tags||'').split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="pkg-feat">${esc(t)}</span>`).join('');
-    return `<div class="pkg" style="margin-bottom:12px;cursor:default"><div class="pkg-top"><div><div class="pkg-title">${esc(f.title)}</div><div class="pkg-sub">${esc(f.desc||'')}</div></div><div class="pkg-price"><b style="font-size:18px">${f.ver?'v'+esc(f.ver):''}</b><small>${f.ts?fmtS(f.ts):''}</small></div></div>${tags?`<div class="pkg-feats">${tags}</div>`:''}<div style="padding:0 20px 20px"><button class="btn w" data-dl="${esc(id)}">Скачать</button></div></div>`}).join(''):'<div class="empty">Пока пусто — скоро добавим</div>';
-  g('fAdm').innerHTML=all.map(([id,f])=>`<div class="ord"><div class="h"><b>${esc(f.title)}</b><button class="btn d s" data-fdel="${esc(id)}">Удалить</button></div><div class="m">${f.ver?'v'+esc(f.ver)+' · ':''}${esc(f.url||'')}</div></div>`).join('')}
+    const rb=rootBadge(f.root);
+    return `<div class="pkg" style="margin-bottom:12px;cursor:default">${f.img&&IMG_RE.test(f.img)?`<img class="fimg" src="${f.img}" alt="">`:''}<div class="pkg-top"><div><div class="pkg-title">${esc(f.title)}</div><div class="pkg-sub">${esc(f.desc||'')}</div>${rb?`<div style="margin-top:8px">${rb}</div>`:''}</div><div class="pkg-price"><b style="font-size:18px">${f.ver?'v'+esc(f.ver):''}</b><small>${f.ts?fmtS(f.ts):''}</small></div></div>${tags?`<div class="pkg-feats">${tags}</div>`:''}<div style="padding:0 20px 20px"><button class="btn w" data-dl="${esc(id)}">Скачать</button></div></div>`}).join(''):'<div class="empty">Пока пусто — скоро добавим</div>';
+  g('fAdm').innerHTML=all.map(([id,f])=>`<div class="ord"><div class="h"><div style="display:flex;align-items:center;gap:10px;min-width:0">${f.img&&IMG_RE.test(f.img)?`<img class="fthumb" src="${f.img}" alt="">`:''}<b>${esc(f.title)}</b>${rootBadge(f.root)}</div><button class="btn d s" data-fdel="${esc(id)}">Удалить</button></div><div class="m">${f.ver?'v'+esc(f.ver)+' · ':''}${esc(f.url||'')}</div></div>`).join('')}
 onValue(ref(db,'free'),s=>{FREE=s.val()||{};paintFree()},()=>{g('freeList').innerHTML='<div class="empty">Раздел временно недоступен</div>'});
 /* скачивание: <a download> → WebView отдаёт файл в DownloadListener из Sketchware */
 function freeDl(id){const f=FREE[id];if(!f||!FREE_RE.test(f.url||''))return toast('Ссылка недоступна');
@@ -830,10 +856,11 @@ g('fAdm').onclick=async e=>{const b=e.target.closest('[data-fdel]');if(!b||!isAd
   try{await set(ref(db,'free/'+b.dataset.fdel),null);toast('Удалено')}catch(x){toast('Ошибка: '+errT(x));b.disabled=false}};
 g('fGo').onclick=async()=>{g('fErr').textContent='';if(!isAdmin)return;
   const f={title:g('fTitle').value.trim(),ver:g('fVer').value.trim(),url:normUrl(g('fUrl').value),desc:g('fDesc').value.trim(),tags:g('fTags').value.trim()};
+  if(fImgData)f.img=fImgData;if(fRootV)f.root=fRootV;
   if(!f.title)return g('fErr').textContent='Введите название';
   if(!FREE_RE.test(f.url))return g('fErr').textContent='Нужна прямая https-ссылка на файл';
   g('fGo').disabled=true;
-  try{f.ts=serverTimestamp();await set(push(ref(db,'free')),f);['fTitle','fVer','fUrl','fDesc','fTags'].forEach(i=>g(i).value='');toast('Добавлено');vib(20)}
+  try{f.ts=serverTimestamp();await set(push(ref(db,'free')),f);['fTitle','fVer','fUrl','fDesc','fTags'].forEach(i=>g(i).value='');fImgReset();fRootV='';g('fRoot').querySelectorAll('button').forEach((x,i)=>x.classList.toggle('on',i===0));toast('Добавлено');vib(20)}
   catch(x){g('fErr').textContent=errT(x)}
   g('fGo').disabled=false};
 
