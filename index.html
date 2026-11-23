@@ -392,7 +392,7 @@ pre.rules{background:var(--s3);border-radius:16px;padding:12px;font-size:11px;ov
 
   <div class="sheet" id="rsheet" hidden><div class="sc">
     <div class="dr"></div><h2 style="font-weight:500">Настройка администратора</h2>
-    <div class="mut">1) Скопируйте ваш UID и вставьте его в начало файла: <b>const ADMIN_UID = "…"</b><br>2) Вставьте правила ниже в Firebase → Realtime Database → Rules → Опубликовать.</div>
+    <div class="mut">1) Скопируйте ваш UID и вставьте его в начало файла: <b>const ADMIN_UID = "…"</b><br>2) Добавьте узлы ниже внутрь вашего "rules": {…} в Firebase → Realtime Database → Rules (остальные правила не удаляйте) → Опубликовать.</div>
     <div class="keybox" id="rUid" style="font-size:12px"></div>
     <button class="btn t s" id="rCopyU">Копировать UID</button>
     <pre class="rules" id="rTxt"></pre>
@@ -629,7 +629,7 @@ g('buy').onclick=()=>goTab(1);
 async function startPurchase(plan){
   if(!uid)return toast('Войдите в аккаунт');
   if(curOrd&&curOrd.st===4&&curOrd.dl>nowS())return openPay(curOrd);
-  const r=push(ref(db,'orders')),id=r.key,dl=nowS()+PAY_MS;
+  const r=push(ref(db,'zorders')),id=r.key,dl=nowS()+PAY_MS;
   try{await set(r,{u:uid,src:KS?'key':'mail',plan,m:'card',st:4,ts:serverTimestamp(),dl});
     localStorage.setItem('zo_'+uid,id);watchOrder(id);openPay({id,plan,dl,st:4})}
   catch(e){toast('Ошибка: '+errT(e))}}
@@ -643,7 +643,7 @@ function openPay(o){
   const tick=()=>{const left=o.dl-nowS();g('payTimer').textContent=left>0?mmss(left):'истёк';g('payBar').style.width=Math.max(0,left/PAY_MS*100)+'%';
     if(left<=0){clearInterval(payTimerInt);g('payConfirm').disabled=true;g('payErr').textContent='Время оплаты истекло — создайте новую заявку';expire(o.id)}};
   tick();payTimerInt=setInterval(tick,1000)}
-function expire(id){update(ref(db,'orders/'+id),{st:5}).catch(()=>{})}
+function expire(id){update(ref(db,'zorders/'+id),{st:5}).catch(()=>{})}
 const closePay=()=>{g('paySheet').hidden=true;clearInterval(payTimerInt)};
 g('payClose').onclick=closePay;g('paySheet').onclick=e=>{if(e.target===g('paySheet'))closePay()};
 g('payCancel').onclick=()=>{if(payCur)expire(payCur.id);closePay();toast('Заявка отменена')};
@@ -664,7 +664,7 @@ g('payConfirm').onclick=async()=>{
   if(!shotData)return g('payErr').textContent='Прикрепите скриншот чека';
   if(nowS()>=o.dl)return g('payErr').textContent='Время оплаты истекло';
   g('payConfirm').disabled=true;g('payConfirm').textContent='Отправляем админу…';
-  try{await set(ref(db,'shots/'+o.id),shotData);await update(ref(db,'orders/'+o.id),{st:0,paid:serverTimestamp()});
+  try{await set(ref(db,'zshots/'+o.id),shotData);await update(ref(db,'zorders/'+o.id),{st:0,paid:serverTimestamp()});
     clearInterval(payTimerInt);g('payStep1').hidden=true;g('payStep2').hidden=false;vib(20)}
   catch(e){g('payErr').textContent='Ошибка: '+errT(e);g('payConfirm').disabled=false;g('payConfirm').textContent='Подтвердить оплату'}};
 
@@ -681,7 +681,7 @@ g('okCopy').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(g('o
 g('okGo').onclick=()=>{g('okM').hidden=true;goTab(3)};
 
 function watchOrder(id){ordOff&&ordOff();
-  ordOff=onValue(ref(db,'orders/'+id),s=>{const o=s.val();curOrd=o?{...o,id}:null;
+  ordOff=onValue(ref(db,'zorders/'+id),s=>{const o=s.val();curOrd=o?{...o,id}:null;
     const box=[g('ordS'),g('shopOrdS')],set=h=>box.forEach(b=>b.innerHTML=h);
     if(!o||o.st===5){set('');localStorage.removeItem('zo_'+uid);curOrd=null;return}
     if(o.st===4){if(o.dl<=nowS()){expire(id);return}set('');return}
@@ -717,7 +717,7 @@ const names={};
 async function nameOf(u){if(names[u])return names[u];try{const v=(await get(ref(db,'users/'+u))).val();return names[u]=(v&&v.name)||'Без ника'}catch(e){return 'Пользователь'}}
 let ORD={};
 function paintBadge(){const n=Object.values(ORD).filter(o=>o.st===0).length,b=g('badge');if(b){b.hidden=!n;b.textContent=n}}
-function watchAdmin(){offs.push(onValue(query(ref(db,'orders'),limitToLast(100)),async s=>{ORD={};s.forEach(x=>{const v=x.val();if(v&&v.u)ORD[x.key]=v});paintBadge();newPend();await paintAdmin()},e=>toast('Заявки: '+errT(e))))}
+function watchAdmin(){offs.push(onValue(query(ref(db,'zorders'),limitToLast(100)),async s=>{ORD={};s.forEach(x=>{const v=x.val();if(v&&v.u)ORD[x.key]=v});paintBadge();newPend();await paintAdmin()},e=>toast('Заявки: '+errT(e))))}
 async function paintAdmin(){
   const all=Object.entries(ORD).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
   const pend=all.filter(([,o])=>o.st===0),done=all.filter(([,o])=>o.st===2||o.st===3).slice(0,30);
@@ -731,16 +731,16 @@ document.addEventListener('click',async e=>{
   const ok=e.target.closest('[data-ok]'),no=e.target.closest('[data-no]');if(!isAdmin||(!ok&&!no))return;
   const id=(ok||no).dataset.ok||(ok||no).dataset.no,o=ORD[id];if(!o)return;const btn=ok||no;btn.disabled=true;
   try{
-    const tx=await runTransaction(ref(db,'orders/'+id+'/st'),v=>v===0?1:undefined);
+    const tx=await runTransaction(ref(db,'zorders/'+id+'/st'),v=>v===0?1:undefined);
     if(!tx.committed){toast('Заявка уже обработана');return}
-    if(ok){if(!PRICES[o.plan]){await update(ref(db,'orders/'+id),{st:3,note:'неверный тариф'});return}
-      const r=await issue(o.u,o.plan);await update(ref(db,'orders/'+id),{st:2,key:r.key,exp:r.exp,at:serverTimestamp()});toast('Ключ выдан: '+r.key);vib([15,40,15])}
-    else{await update(ref(db,'orders/'+id),{st:3,at:serverTimestamp()});toast('Заявка отклонена')}
-  }catch(x){toast('Ошибка: '+errT(x));update(ref(db,'orders/'+id),{st:0}).catch(()=>{})}
+    if(ok){if(!PRICES[o.plan]){await update(ref(db,'zorders/'+id),{st:3,note:'неверный тариф'});return}
+      const r=await issue(o.u,o.plan);await update(ref(db,'zorders/'+id),{st:2,key:r.key,exp:r.exp,at:serverTimestamp()});toast('Ключ выдан: '+r.key);vib([15,40,15])}
+    else{await update(ref(db,'zorders/'+id),{st:3,at:serverTimestamp()});toast('Заявка отклонена')}
+  }catch(x){toast('Ошибка: '+errT(x));update(ref(db,'zorders/'+id),{st:0}).catch(()=>{})}
   btn.disabled=false});
 let lastP=-1;function newPend(){const n=Object.values(ORD).filter(o=>o.st===0).length;if(lastP>=0&&n>lastP){toast('Новая оплата на проверку');vib([20,40,20])}lastP=n}
 g('pend').onclick=async e=>{const b=e.target.closest('[data-shot]');if(!b)return;b.disabled=true;
-  try{const v=(await get(ref(db,'shots/'+b.dataset.shot))).val();if(!v)toast('Чек не найден');else{g('shotImg').src=v;g('imgV').hidden=false}}catch(x){toast('Ошибка: '+errT(x))}b.disabled=false};
+  try{const v=(await get(ref(db,'zshots/'+b.dataset.shot))).val();if(!v)toast('Чек не найден');else{g('shotImg').src=v;g('imgV').hidden=false}}catch(x){toast('Ошибка: '+errT(x))}b.disabled=false};
 g('ix').onclick=()=>g('imgV').hidden=true;
 let mD=30;
 g('mDays').onclick=e=>{const b=e.target.closest('button');if(!b)return;mD=+b.dataset.d;g('mDays').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))};
@@ -748,13 +748,12 @@ g('mGo').onclick=async()=>{const u=g('mUid').value.trim();if(!isAdmin||u.length<
   try{const r=await issue(u,mD);g('mUid').value='';toast('Выдан ключ '+r.key)}catch(x){toast('Ошибка: '+errT(x))}};
 
 /* ===== настройка администратора: правила БД ===== */
-function rulesText(a){const A=a||'ВАШ_UID',adm=`auth != null && auth.uid === '${A}'`,pl="(newData.child('plan').val() === 7 || newData.child('plan').val() === 30 || newData.child('plan').val() === 90)";return JSON.stringify({rules:{
-  users:{'$uid':{'.read':`auth != null && (auth.uid === $uid || auth.uid === '${A}')`,'.write':'auth != null && auth.uid === $uid'}},
+function rulesText(a){const A=a||'ВАШ_UID',adm=`auth != null && auth.uid === '${A}'`,pl="(newData.child('plan').val() === 7 || newData.child('plan').val() === 30 || newData.child('plan').val() === 90)";return JSON.stringify({
   licenses:{'$uid':{'.read':'auth != null && auth.uid === $uid','.write':adm}},
   keys:{'$k':{'.read':true,'.write':adm,'hwid':{'.write':'!data.exists()','.validate':'newData.isString() && newData.val().length <= 32'}}},
   keysByUid:{'$u':{'.read':adm,'.write':adm}},
-  orders:{'.read':adm,'$id':{'.read':true,'.write':`${adm} || (!data.exists() && newData.child('st').val() === 4 && ${pl} && newData.child('u').isString() && newData.child('u').val().length <= 200 && newData.child('dl').val() <= now + 960000 && (newData.child('src').val() === 'key' || (auth != null && newData.child('u').val() === auth.uid))) || (data.child('st').val() === 4 && now < data.child('dl').val() + 30000 && newData.child('u').val() === data.child('u').val() && (newData.child('st').val() === 0 || newData.child('st').val() === 5) && (data.child('src').val() === 'key' || (auth != null && auth.uid === data.child('u').val())))`}},
-  shots:{'$id':{'.read':adm,'.write':`${adm} || (!data.exists() && root.child('orders/'+$id+'/st').val() === 4 && newData.isString() && newData.val().length < 250000)`}}}},null,2)}
+  zorders:{'.read':adm,'$id':{'.read':true,'.write':`${adm} || (!data.exists() && newData.child('st').val() === 4 && ${pl} && newData.child('u').isString() && newData.child('u').val().length <= 200 && newData.child('dl').val() <= now + 960000 && (newData.child('src').val() === 'key' || (auth != null && newData.child('u').val() === auth.uid))) || (data.child('st').val() === 4 && now < data.child('dl').val() + 30000 && newData.child('u').val() === data.child('u').val() && (newData.child('st').val() === 0 || newData.child('st').val() === 5) && (data.child('src').val() === 'key' || (auth != null && auth.uid === data.child('u').val())))`}},
+  zshots:{'$id':{'.read':adm,'.write':`${adm} || (!data.exists() && root.child('zorders/'+$id+'/st').val() === 4 && newData.isString() && newData.val().length < 250000)`}}},null,2).split('\n').slice(1,-1).join('\n')}
 g('rulesBtn').onclick=()=>{g('rUid').textContent=uid;g('rTxt').textContent=rulesText(ADMIN_UID||uid);g('rsheet').hidden=false};
 g('rx').onclick=()=>g('rsheet').hidden=true;g('rsheet').onclick=e=>{if(e.target===g('rsheet'))g('rsheet').hidden=true};
 g('rCopyU').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(uid);toast('UID скопирован')};
