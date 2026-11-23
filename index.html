@@ -183,6 +183,9 @@ nav{padding:12px 2px 16px}
 nav button{min-width:0;padding:0 1px;font-size:11px;letter-spacing:0;white-space:nowrap}
 nav .pill{width:52px;max-width:100%}
 nav button>svg,nav .pill svg{flex:none}
+[hidden]{display:none!important}
+.refbal{display:flex;justify-content:space-between;align-items:center;background:var(--pc);color:var(--onpc);border-radius:var(--rm);padding:14px 18px;margin:8px 0 12px}
+.refbal span{font-size:14px}.refbal b{font-size:28px;font-weight:400}
 </style>
 </head>
 <body>
@@ -248,6 +251,21 @@ nav button>svg,nav .pill svg{flex:none}
         <div class="mut" id="expT" style="text-align:center"></div>
         <div id="ordS"></div>
         <div style="display:flex;gap:10px;margin-top:14px"><button class="btn t" id="copyKey" style="flex:1;padding:0">Копировать</button><button class="btn" id="buy" style="flex:1;padding:0">Купить</button></div>
+      </div>
+      <div class="card" id="refCard" hidden>
+        <div class="mut">Реферальная программа</div>
+        <div class="refbal"><span>Баланс</span><b id="refBal">0 ₽</b></div>
+        <div class="mut">Ваш код приглашения</div>
+        <div class="keybox" id="refCode">…</div>
+        <div style="display:flex;gap:10px"><button class="btn t" id="refCopy" style="flex:1;padding:0">Копировать код</button><button class="btn" id="refShare" style="flex:1;padding:0">Поделиться</button></div>
+        <div class="grid" style="margin:14px 0 0"><div class="stat"><span>Приглашено</span><b id="refN">0</b></div><div class="stat"><span>За покупки</span><b id="refBuy">0 ₽</b></div></div>
+        <div class="mut" style="margin-top:12px;font-size:13px">+10 ₽ за каждого друга, зарегистрировавшегося с вашим кодом, и 50% от цены каждой его покупки — на баланс. Баланс можно потратить на ключ в Магазине.</div>
+        <div id="refEnter" hidden style="margin-top:14px">
+          <div class="mut">Вас пригласили? Введите код друга</div>
+          <label class="tf" style="margin-top:6px"><input id="refIn" placeholder="ZEN-XXXXXXX" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase"></label>
+          <div class="err" id="refErr" style="margin-top:6px"></div>
+          <button class="btn t w" id="refApply">Применить код</button>
+        </div>
       </div>
       <button class="btn t w" id="rulesBtn" style="margin-bottom:10px" hidden>Настройка администратора</button>
       <button class="btn t w" id="logout">Выйти</button>
@@ -364,6 +382,7 @@ nav button>svg,nav .pill svg{flex:none}
       <div id="shopDraft"></div>
       <div class="act-card"><h3>Оплата переводом</h3><p>Нажмите «Оплатить» — создастся заявка и вы увидите реквизиты. На оплату даётся 15 минут: переведите сумму, прикрепите скриншот чека и подтвердите оплату. Администратор проверит чек, и вы получите уведомление с ключом и UID.</p></div>
       <button class="btn w" id="shopPay" style="margin-bottom:8px">Оплатить</button>
+      <button class="btn t w" id="shopBal" style="margin-bottom:8px" hidden></button>
       <div id="shopOrdS"></div>
 
       <!-- Как активировать — показывается после оплаты -->
@@ -423,6 +442,7 @@ nav button>svg,nav .pill svg{flex:none}
       <label class="tf"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg><input id="aem2" type="email" placeholder="Почта" autocomplete="email"></label>
       <label class="tf"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.8-2.2-5-5-5S7 3.2 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.7 1.3-3 3-3s3 1.3 3 3v2H9V6z"/></svg><input id="apw2" type="password" placeholder="Пароль (от 6 символов)" autocomplete="new-password"><button class="eye" id="rEye" type="button" aria-label="Показать"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.7 7.6 1 12c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5c-1.7-4.4-6-7.5-11-7.5zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg></button></label>
       <div class="pwb" id="rBar"><i></i><i></i><i></i></div>
+      <label class="tf"><svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35L12 3l-.5-.65C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 12 7.4 15.38 12 17 10.83 14.92 8H20v6z"/></svg><input id="arc" placeholder="Код приглашения (необязательно)" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase"></label>
       <div class="err" id="rerr"></div>
       <button class="btn w" id="regGo">Создать аккаунт</button>
       <button class="link" id="goLoginBtn" style="text-align:center">Уже есть аккаунт? <b>Войти</b></button>
@@ -516,6 +536,7 @@ window.__zok=1;
 const ADMIN_UID = "VEn3IDLiZjVaCNQx2HnmtWiusb83";
 const WALLET = "4100118891507332";
 const PRICES = {7:150, 30:450, 90:750};
+const REF_BONUS = 10; /* ₽ за регистрацию друга по коду; за его покупки — 50% цены */
 
 /* ===== FLUX: вход по UID + ключу (ключи, заказы и лицензии в одной БД) ===== */
 const KEY_DBS = ["https://br-game-1f919-default-rtdb.firebaseio.com","https://game-cd07d-default-rtdb.firebaseio.com"]; /* сначала новая БД, потом старая из FluxMod */
@@ -640,7 +661,7 @@ async function verifyKey(u,k){
 function enterKey(r){
   KS=r;restoring=false;localStorage.setItem('zks',JSON.stringify({u:r.u,k:r.k}));
   offs.forEach(f=>f());offs=[];clearInterval(expT);clearInterval(ksT);
-  uid=r.u;isAdmin=false;LIC={active:!r.exp||r.exp>Date.now(),key:r.k,exp:r.exp};
+  uid=r.u;isAdmin=false;LIC={active:!r.exp||r.exp>Date.now(),key:r.k,exp:r.exp};stopRef();
   setAuth(true);g('uidB').textContent=r.u;g('pMail').textContent='Вход по ключу';g('pName').textContent=r.u;g('av').textContent=r.u[0].toUpperCase();
   g('rulesBtn').hidden=true;g('keyB').textContent=r.k;g('copyKey').disabled=false;g('ordS').innerHTML='';drawNav();
   const lo=localStorage.getItem('zo_'+uid);if(lo)watchOrder(lo);
@@ -655,7 +676,7 @@ function enterKey(r){
 }
 function dropKey(msg){
   setRun(false);KS=null;restoring=false;localStorage.removeItem('zks');clearInterval(expT);clearInterval(ksT);
-  LIC={active:false};uid=null;isAdmin=false;drawNav();
+  LIC={active:false};uid=null;isAdmin=false;stopRef();drawNav();
   g('keyB').textContent='нет активного ключа';g('expT').textContent='';g('keyS').textContent='—';g('kkey').value='';
   goTab(0);setAmode('key');g('aerr').textContent=msg||'';setAuth(false)}
 
@@ -710,7 +731,7 @@ g('regGo').onclick=async()=>{
   try{
     const u=(await createUserWithEmailAndPassword(auth,em,pw)).user;
     await set(ref(db,'users/'+u.uid),{name:n});
-    toast('Добро пожаловать, '+n+'!')
+    toast('Добро пожаловать, '+n+'!');const rc0=g('arc').value.trim();if(rc0){try{const r=await applyRef(rc0,u.uid);toast(r.ok?'Код принят: другу +'+REF_BONUS+' ₽':'Код: '+r.e)}catch(x){toast('Код не применён: '+errT(x))}}
   }catch(e){g('rerr').textContent=errT(e)}
   g('regGo').disabled=false;g('regGo').textContent='Создать аккаунт'};
 
@@ -721,11 +742,12 @@ onAuthStateChanged(auth,u=>{
   if(!u&&(KS||restoring))return; /* сессия по ключу живёт сама */
   if(u&&(KS||restoring)){KS=null;restoring=false;localStorage.removeItem('zks');clearInterval(ksT)}
   offs.forEach(f=>f());offs=[];clearInterval(expT);
-  if(!u){uid=null;isAdmin=false;LIC={active:false};drawNav();showLogin();setAuth(false);return}
+  if(!u){uid=null;isAdmin=false;LIC={active:false};stopRef();drawNav();showLogin();setAuth(false);return}
   uid=u.uid;isAdmin=!!ADMIN_UID&&uid===ADMIN_UID;setAuth(true);g('uidB').textContent=uid;g('pMail').textContent=u.email;
   g('rulesBtn').hidden=!(!ADMIN_UID||isAdmin);drawNav();
   offs.push(onValue(ref(db,'users/'+uid),s=>{const n=(s.val()||{}).name||u.email.split('@')[0];g('pName').textContent=n;g('av').textContent=n[0].toUpperCase()},()=>{}));
   offs.push(onValue(ref(db,'licenses/'+uid),s=>paintLic(s.val()),()=>{}));
+  startRef();
   const last=localStorage.getItem('zo_'+uid);if(last)watchOrder(last);
   if(isAdmin)watchAdmin()});
 
@@ -867,8 +889,8 @@ async function paintAdmin(){
   const pend=all.filter(([,o])=>o.st===0),done=all.filter(([,o])=>o.st===2||o.st===3).slice(0,30);
   for(const [,o] of all)o._n=await nameOf(o.u);
   const card=([id,o],act)=>`<div class="ord"><div class="h"><b>${esc(o._n)}</b><span class="tag ${o.st===2?'o':o.st===3?'e':'w'}">${o.st===2?'выдан':o.st===3?'отклонён':'ожидает'}</span></div>
-  <div class="m">${o.plan} дн. · ${PRICES[o.plan]||'?'} ₽ · перевод на карту · ${(o.paid||o.ts)?fmtS(o.paid||o.ts):''}<br>UID: ${esc(o.u)}${o.key?'<br>Ключ: '+esc(o.key):''}</div>
-  ${act?`<button class="btn t s w" data-shot="${id}" style="margin-bottom:8px">Посмотреть чек</button><div class="a"><button class="btn s" data-ok="${id}">Принять</button><button class="btn s d" data-no="${id}">Отклонить</button></div>`:''}</div>`;
+  <div class="m">${o.plan} дн. · ${PRICES[o.plan]||'?'} ₽ · ${o.bal?'с баланса':'перевод на карту'} · ${(o.paid||o.ts)?fmtS(o.paid||o.ts):''}<br>UID: ${esc(o.u)}${o.key?'<br>Ключ: '+esc(o.key):''}</div>
+  ${act?`${o.bal?'':`<button class="btn t s w" data-shot="${id}" style="margin-bottom:8px">Посмотреть чек</button>`}<div class="a"><button class="btn s" data-ok="${id}">Принять</button><button class="btn s d" data-no="${id}">Отклонить</button></div>`:''}</div>`;
   g('pend').innerHTML=pend.length?pend.map(x=>card(x,true)).join(''):'<div class="empty">Новых заявок нет</div>';
   g('hist').innerHTML=done.length?done.map(x=>card(x,false)).join(''):'<div class="empty">Пока пусто</div>'}
 document.addEventListener('click',async e=>{
@@ -878,7 +900,11 @@ document.addEventListener('click',async e=>{
     const tx=await runTransaction(ref(db,'zorders/'+id+'/st'),v=>v===0?1:undefined);
     if(!tx.committed){toast('Заявка уже обработана');return}
     if(ok){if(!PRICES[o.plan]){await update(ref(db,'zorders/'+id),{st:3,note:'неверный тариф'});return}
-      const r=await issue(o.u,o.plan);await update(ref(db,'zorders/'+id),{st:2,key:r.key,exp:r.exp,at:serverTimestamp()});toast('Ключ выдан: '+r.key);vib([15,40,15])}
+      if(o.bal){const b=await balOf(o.u);if(b<PRICES[o.plan]){await update(ref(db,'zorders/'+id),{st:3,note:'недостаточно средств на балансе'});toast('На балансе пользователя недостаточно средств');return}}
+      const r=await issue(o.u,o.plan);await update(ref(db,'zorders/'+id),{st:2,key:r.key,exp:r.exp,at:serverTimestamp()});toast('Ключ выдан: '+r.key);vib([15,40,15]);
+      try{if(o.bal)await set(ref(db,'spent/'+o.u+'/'+id),PRICES[o.plan]);
+        else{const inv=(await get(ref(db,'refby/'+o.u))).val();if(inv)await set(ref(db,'refbonus/'+inv+'/'+id),PRICES[o.plan]/2)}}
+      catch(x){toast('Ключ выдан, но баланс не обновлён: '+errT(x))}}
     else{await update(ref(db,'zorders/'+id),{st:3,at:serverTimestamp()});toast('Заявка отклонена')}
   }catch(x){toast('Ошибка: '+errT(x));update(ref(db,'zorders/'+id),{st:0}).catch(()=>{})}
   btn.disabled=false});
@@ -899,6 +925,11 @@ function rulesText(a){const A=a||'ВАШ_UID',adm=`auth != null && auth.uid === 
   free:{'.read':true,'.write':adm},
   presence:{'.read':true,'$id':{'.write':true,'.validate':'newData.val() === 1 && $id.length <= 40'}},
   zorders:{'.read':adm,'$id':{'.read':true,'.write':`${adm} || (!data.exists() && newData.child('st').val() === 4 && ${pl} && newData.child('u').isString() && newData.child('u').val().length <= 200 && newData.child('dl').val() <= now + 960000 && (newData.child('src').val() === 'key' || (auth != null && newData.child('u').val() === auth.uid))) || (data.child('st').val() === 4 && now < data.child('dl').val() + 30000 && newData.child('u').val() === data.child('u').val() && (newData.child('st').val() === 0 || newData.child('st').val() === 5) && (data.child('src').val() === 'key' || (auth != null && auth.uid === data.child('u').val())))`}},
+  refcodes:{'$c':{'.read':true,'.write':"auth != null && !data.exists() && newData.val() === auth.uid"}},
+  refby:{'$u':{'.read':`auth != null && auth.uid === $u || (${adm})`,'.write':"auth != null && auth.uid === $u && !data.exists() && newData.isString() && newData.val() !== $u"}},
+  refs:{'$i':{'.read':`auth != null && auth.uid === $i || (${adm})`,'$j':{'.write':"auth != null && auth.uid === $j && !data.exists() && $i !== $j && root.child('refby/'+$j).val() === $i"}}},
+  refbonus:{'$i':{'.read':`auth != null && auth.uid === $i || (${adm})`,'.write':adm}},
+  spent:{'$i':{'.read':`auth != null && auth.uid === $i || (${adm})`,'.write':adm}},
   zshots:{'$id':{'.read':adm,'.write':`${adm} || (!data.exists() && root.child('zorders/'+$id+'/st').val() === 4 && newData.isString() && newData.val().length < 250000)`}}},null,2).split('\n').slice(1,-1).join('\n')}
 g('rulesBtn').onclick=()=>{g('rUid').textContent=uid;g('rTxt').textContent=rulesText(ADMIN_UID||uid);g('rsheet').hidden=false};
 g('rx').onclick=()=>g('rsheet').hidden=true;g('rsheet').onclick=e=>{if(e.target===g('rsheet'))g('rsheet').hidden=true};
@@ -952,9 +983,65 @@ g('fGo').onclick=async()=>{g('fErr').textContent='';if(!isAdmin)return;
   catch(x){g('fErr').textContent=errT(x)}
   g('fGo').disabled=false};
 
+/* ===== РЕФЕРАЛЫ: код вида ZEN-XXXXXXX; баланс = 10 ₽ × друзей + 50% их покупок − потрачено ===== */
+const A32='ABCDEFGHJKMNPQRSTUVWXYZ23456789',CODE_RE=/^ZEN-[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{7}$/;
+const h32=t=>{let h=2166136261;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0};
+function codeFor(u,n){let a=h32(u+'|'+n),b=h32('z|'+u+'|'+n),r='';for(let i=0;i<4;i++){r+=A32[a%31];a=Math.floor(a/31)}for(let i=0;i<3;i++){r+=A32[b%31];b=Math.floor(b/31)}return 'ZEN-'+r}
+function normCode(t){t=(t||'').trim().toUpperCase().replace(/\s/g,'');if(/^[A-Z2-9]{7}$/.test(t))t='ZEN-'+t;return CODE_RE.test(t)?t:null}
+async function ensureCode(u){const k='zrc_'+u,c0=localStorage.getItem(k);if(c0)return c0;
+  for(let i=0;i<8;i++){const c=codeFor(u,i),cur=(await get(ref(db,'refcodes/'+c))).val();
+    if(cur===u){localStorage.setItem(k,c);return c}
+    if(!cur){try{await set(ref(db,'refcodes/'+c),u);localStorage.setItem(k,c);return c}catch(e){}}}
+  return null}
+async function applyRef(raw,u){u=u||uid;if(!u||KS)return{e:'Войдите по почте'};
+  const c=normCode(raw);if(!c)return{e:'Неверный формат кода'};
+  if((await get(ref(db,'refby/'+u))).val())return{e:'Вы уже использовали код'};
+  const inv=(await get(ref(db,'refcodes/'+c))).val();
+  if(!inv)return{e:'Код не найден'};if(inv===u)return{e:'Нельзя использовать свой код'};
+  await set(ref(db,'refby/'+u),inv);
+  await set(ref(db,'refs/'+inv+'/'+u),{ts:serverTimestamp()});
+  return{ok:1}}
+async function balOf(u){const [a,b,c]=await Promise.all([get(ref(db,'refs/'+u)),get(ref(db,'refbonus/'+u)),get(ref(db,'spent/'+u))]);
+  const sum=x=>{let t=0;x.forEach(y=>{t+=+y.val()||0});return t};return a.size*REF_BONUS+sum(b)-sum(c)}
+let RB={n:0,b:0,s:0},refCode=null;
+const bal=()=>RB.n*REF_BONUS+RB.b-RB.s;
+function stopRef(){RB={n:0,b:0,s:0};refCode=null;g('refCard').hidden=true;g('shopBal').hidden=true}
+function paintBal(){g('refBal').textContent=bal()+' ₽';g('refN').textContent=RB.n;g('refBuy').textContent=RB.b+' ₽';updBalBtn()}
+function updBalBtn(){const b=g('shopBal'),p=PRICES[shopPlan];
+  if(!uid||KS||!p||bal()<p){b.hidden=true;return}
+  b.hidden=false;b.textContent='Оплатить с баланса ('+bal()+' ₽)'}
+function startRef(){if(KS||!uid)return;g('refCard').hidden=false;g('refCode').textContent='…';
+  ensureCode(uid).then(c=>{refCode=c;g('refCode').textContent=c||'не удалось создать'}).catch(()=>{g('refCode').textContent='нет доступа — обновите правила БД'});
+  offs.push(onValue(ref(db,'refby/'+uid),s=>{g('refEnter').hidden=!!s.val()},()=>{}));
+  offs.push(onValue(ref(db,'refs/'+uid),s=>{RB.n=s.numChildren();paintBal()},()=>{}));
+  offs.push(onValue(ref(db,'refbonus/'+uid),s=>{let t=0;s.forEach(x=>{t+=+x.val()||0});RB.b=t;paintBal()},()=>{}));
+  offs.push(onValue(ref(db,'spent/'+uid),s=>{let t=0;s.forEach(x=>{t+=+x.val()||0});RB.s=t;paintBal()},()=>{}))}
+g('refCopy').onclick=()=>{if(!refCode)return;cp(refCode);toast('Код скопирован')};
+g('refShare').onclick=async()=>{if(!refCode)return;
+  const t='Zenith Monitor — мониторинг и FluxMod для Standoff 2. Зарегистрируйся и введи мой код приглашения: '+refCode;
+  try{if(navigator.share){await navigator.share({text:t});return}}catch(e){if(e&&e.name==='AbortError')return}
+  cp(t);toast('Текст приглашения скопирован')};
+g('refApply').onclick=async()=>{g('refErr').textContent='';const v=g('refIn').value;if(!v.trim())return;
+  g('refApply').disabled=true;
+  try{const r=await applyRef(v);if(r.ok){g('refIn').value='';toast('Код принят: другу +'+REF_BONUS+' ₽');vib(20)}else g('refErr').textContent=r.e}
+  catch(x){g('refErr').textContent=errT(x)}
+  g('refApply').disabled=false};
+g('shopBal').onclick=async()=>{if(!uid||KS)return;const p=shopPlan;
+  if(bal()<PRICES[p])return toast('Недостаточно средств на балансе');
+  if(curOrd&&(curOrd.st===0||curOrd.st===1))return toast('Предыдущая заявка ещё проверяется');
+  g('shopBal').disabled=true;
+  try{const r=push(ref(db,'zorders')),id=r.key;
+    await set(r,{u:uid,src:'mail',plan:p,m:'card',st:4,ts:serverTimestamp(),dl:nowS()+PAY_MS});
+    await update(ref(db,'zorders/'+id),{st:0,bal:1,paid:serverTimestamp()});
+    localStorage.setItem('zo_'+uid,id);watchOrder(id);toast('Заявка отправлена — ключ выдаст администратор');vib(20)}
+  catch(x){toast('Ошибка: '+errT(x))}
+  g('shopBal').disabled=false};
+/* ссылка-приглашение вида ?ref=ZEN-XXXXXXX подставит код в регистрацию */
+try{const q=normCode(new URLSearchParams(location.search).get('ref'));if(q){g('arc').value=q;g('arc').dispatchEvent(new Event('input'))}}catch(e){}
+
 /* ===== МАГАЗИН ===== */
 let shopPlan=30;
-document.querySelectorAll('.pkg').forEach(p=>p.onclick=()=>{shopPlan=+p.dataset.plan;document.querySelectorAll('.pkg').forEach(x=>x.classList.toggle('pop',x===p));vib(8)});
+document.querySelectorAll('.pkg').forEach(p=>p.onclick=()=>{shopPlan=+p.dataset.plan;document.querySelectorAll('.pkg').forEach(x=>x.classList.toggle('pop',x===p));vib(8);updBalBtn()});
 g('shopPay').onclick=async()=>{g('shopPay').disabled=true;await startPurchase(shopPlan);g('shopPay').disabled=false};
 
 // Кнопка «Перейти в Профиль» из блока активации
