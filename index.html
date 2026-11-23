@@ -459,7 +459,7 @@ const vib=n=>{if(S.vib&&navigator.vibrate)navigator.vibrate(n)};
 const nat=(t,m)=>{try{if(window.Android&&Android.showNotification)Android.showNotification(t,m)}catch(e){}};
 const cp=t=>{try{if(window.Android&&Android.copyText){Android.copyText(t);return}}catch(e){}try{navigator.clipboard&&navigator.clipboard.writeText(t)}catch(e){}};
 let tt;const toast=m=>{const e=g('toast');e.textContent=m;e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),2400)};
-const errT=e=>({'auth/invalid-credential':'Неверная почта или пароль','auth/email-already-in-use':'Эта почта уже зарегистрирована','auth/weak-password':'Пароль слишком короткий','auth/invalid-email':'Некорректная почта','auth/network-request-failed':'Нет сети','auth/too-many-requests':'Слишком много попыток','PERMISSION_DENIED':'Нет доступа: опубликуйте правила БД с вашим ADMIN_UID'}[e.code]||e.message||String(e));
+const errT=e=>({'auth/invalid-credential':'Неверная почта или пароль','auth/email-already-in-use':'Эта почта уже зарегистрирована','auth/weak-password':'Пароль слишком короткий','auth/invalid-email':'Некорректная почта','auth/network-request-failed':'Нет сети','auth/too-many-requests':'Слишком много попыток','PERMISSION_DENIED':'Нет доступа'}[e.code]||e.message||String(e));
 const fmtD=ts=>new Date(ts).toLocaleString('ru',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
 const fmtS=ts=>new Date(ts).toLocaleString('ru',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
 
@@ -626,7 +626,7 @@ onAuthStateChanged(auth,u=>{
   uid=u.uid;isAdmin=!!ADMIN_UID&&uid===ADMIN_UID;setAuth(true);g('uidB').textContent=uid;g('pMail').textContent=u.email;
   g('rulesBtn').hidden=!(!ADMIN_UID||isAdmin);drawNav();
   offs.push(onValue(ref(db,'users/'+uid),s=>{const n=(s.val()||{}).name||u.email.split('@')[0];g('pName').textContent=n;g('av').textContent=n[0].toUpperCase()},()=>{}));
-  offs.push(onValue(ref(db,'licenses/'+uid),s=>paintLic(s.val()),()=>{if(!window.__licW){window.__licW=1;toast('Опубликуйте правила БД: Профиль → Настройка администратора')}}));
+  offs.push(onValue(ref(db,'licenses/'+uid),s=>paintLic(s.val()),()=>{}));
   const last=localStorage.getItem('zo_'+uid);if(last)watchOrder(last);
   if(isAdmin)watchAdmin()});
 
@@ -821,7 +821,7 @@ function paintFree(){
     const tags=(f.tags||'').split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="pkg-feat">${esc(t)}</span>`).join('');
     return `<div class="pkg" style="margin-bottom:12px;cursor:default"><div class="pkg-top"><div><div class="pkg-title">${esc(f.title)}</div><div class="pkg-sub">${esc(f.desc||'')}</div></div><div class="pkg-price"><b style="font-size:18px">${f.ver?'v'+esc(f.ver):''}</b><small>${f.ts?fmtS(f.ts):''}</small></div></div>${tags?`<div class="pkg-feats">${tags}</div>`:''}<div style="padding:0 20px 20px"><button class="btn w" data-dl="${esc(id)}">Скачать</button></div></div>`}).join(''):'<div class="empty">Пока пусто — скоро добавим</div>';
   g('fAdm').innerHTML=all.map(([id,f])=>`<div class="ord"><div class="h"><b>${esc(f.title)}</b><button class="btn d s" data-fdel="${esc(id)}">Удалить</button></div><div class="m">${f.ver?'v'+esc(f.ver)+' · ':''}${esc(f.url||'')}</div></div>`).join('')}
-onValue(ref(db,'free'),s=>{FREE=s.val()||{};paintFree()},()=>{g('freeList').innerHTML='<div class="empty">Раздел недоступен: админ должен опубликовать правила БД (Профиль → Настройка администратора)</div>'});
+onValue(ref(db,'free'),s=>{FREE=s.val()||{};paintFree()},()=>{g('freeList').innerHTML='<div class="empty">Раздел временно недоступен</div>'});
 /* скачивание: <a download> → WebView отдаёт файл в DownloadListener из Sketchware */
 function freeDl(id){const f=FREE[id];if(!f||!FREE_RE.test(f.url||''))return toast('Ссылка недоступна');
   const a=document.createElement('a');a.href=f.url;a.download='';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();toast('Скачивание…');vib(15)}
