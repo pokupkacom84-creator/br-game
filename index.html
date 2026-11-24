@@ -130,6 +130,22 @@ pre.rules{background:var(--s3);border-radius:16px;padding:12px;font-size:11px;ov
 .rt{font-size:12px;font-weight:700;padding:3px 10px;border-radius:10px;letter-spacing:.5px}
 .rt.r{background:#4a3d12;color:var(--warn)}.rt.n{background:#1f4a2c;color:var(--ok)}
 .fthumb{width:44px;height:44px;border-radius:10px;object-fit:cover;flex:none}
+/* отзывы */
+.rvh{display:flex;align-items:center;gap:16px;position:relative;z-index:1;margin-top:14px}
+.rvh b{font-size:44px;font-weight:400;line-height:1}
+.rvh small{display:block;font-size:13px;opacity:.8;margin-top:4px}
+.stars{display:inline-flex;gap:2px;vertical-align:middle}.stars svg{width:18px;height:18px;fill:#f5b301}.stars svg.off{fill:var(--out);opacity:.45}
+.rv{background:var(--s2);border-radius:24px;padding:16px;margin-bottom:12px}
+.rv .h{display:flex;align-items:center;gap:12px}
+.rv .av{width:48px;height:48px;border-radius:50%;flex:none;object-fit:cover;background:var(--pc);color:var(--onpc);display:grid;place-items:center;font-size:20px;font-weight:500}
+.rv .n{font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rv .d{font-size:12px;color:var(--onv);margin-left:auto;flex:none;align-self:flex-start}
+.rv .tx{font-size:15px;line-height:1.45;margin-top:12px;white-space:pre-wrap;word-break:break-word}
+.stp{display:flex;gap:6px;margin:12px 0 4px}.stp button{background:none;border:0;padding:4px;cursor:pointer}.stp svg{width:34px;height:34px;fill:var(--out);opacity:.45;transition:.15s}.stp button.on svg{fill:#f5b301;opacity:1}
+.rvav{width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none}
+nav.n6 button,nav.n7 button{font-size:11px;min-width:0}nav.n6 .pill,nav.n7 .pill{width:calc(100% - 6px);max-width:64px}
+nav.n7 button{font-size:10px}
+
 .draft{background:#4a3d12;color:var(--warn);border-radius:20px;padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;font-size:14px}.draft span{flex:1}
 
 /* ===== MATERIAL 3 ===== */
@@ -283,8 +299,14 @@ input,textarea{-webkit-user-select:text;user-select:text}
       <div id="freeList"><div class="empty">Загрузка…</div></div>
     </section>
 
-    <!-- ЗАЯВКИ (только админ) -->
+    <!-- ОТЗЫВЫ (видят все) -->
     <section class="page" id="p5">
+      <div class="shop-hero"><h2>Отзывы</h2><p>Что говорят пользователи FluxMod</p><div class="rvh" id="rvHero"></div></div>
+      <div id="rvList"><div class="empty">Загрузка…</div></div>
+    </section>
+
+    <!-- ЗАЯВКИ (только админ) -->
+    <section class="page" id="p6">
       <div class="sec" style="margin-top:4px">Ожидают подтверждения</div><div id="pend"></div>
       <div class="sec">Выдать ключ вручную</div>
       <div class="card">
@@ -311,6 +333,23 @@ input,textarea{-webkit-user-select:text;user-select:text}
         <button class="btn w" id="fGo">Добавить</button>
       </div>
       <div id="fAdm"></div>
+      <div class="sec">Отзывы — добавить</div>
+      <div class="card">
+        <label class="tf"><input id="rvNick" placeholder="Ник пользователя" maxlength="24" autocomplete="off"></label>
+        <label id="rvAvLabel" style="display:flex;align-items:center;gap:12px;border:2px dashed var(--out);border-radius:16px;padding:10px 14px;cursor:pointer;min-height:64px;margin-top:8px">
+          <img id="rvAvPrev" class="rvav" alt="" hidden>
+          <svg id="rvAvIco" viewBox="0 0 24 24" style="width:26px;height:26px;fill:var(--onv)"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3 3.5-4.5 4.5 6H5l3.5-4.5z"/></svg>
+          <span id="rvAvLbl" style="font-size:14px;color:var(--onv)">Фото пользователя (необязательно)</span>
+          <input type="file" id="rvImg" accept="image/*" style="display:none">
+        </label>
+        <button class="btn d s" id="rvImgDel" type="button" style="margin-top:6px" hidden>Убрать фото</button>
+        <label class="tf" style="margin-top:8px;height:auto;min-height:56px;padding:12px 18px"><textarea id="rvText" placeholder="Текст отзыва" maxlength="500" rows="4" style="flex:1;min-width:0;background:none;border:0;outline:0;color:var(--on);font:16px inherit;resize:none"></textarea></label>
+        <div class="mut" style="margin-top:12px">Оценка</div>
+        <div class="stp" id="rvStars"><button type="button" data-s="1" aria-label="1"><svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></button><button type="button" data-s="2" aria-label="2"><svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></button><button type="button" data-s="3" aria-label="3"><svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></button><button type="button" data-s="4" aria-label="4"><svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></button><button type="button" data-s="5" aria-label="5"><svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></button></div>
+        <div class="err" id="rvErr" style="margin-top:8px"></div>
+        <button class="btn w" id="rvGo">Опубликовать отзыв</button>
+      </div>
+      <div id="rvAdm"></div>
     </section>
 
     <!-- МАГАЗИН -->
@@ -577,10 +616,10 @@ g('cols').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.h=+b.dat
 theme();paintCols();
 
 /* ===== вкладки ===== */
-const TABS=[['Главное','M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'],['Магазин','M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z'],['Настройки','M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58-1.92-3.32-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54h-3.84l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96-1.92 3.32 2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58 1.92 3.32 2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54h3.84l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96 1.92-3.32zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z'],['Профиль','M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4 0-8 2-8 5v3h16v-3c0-3-4-5-8-5z'],['Бесплатно','M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z'],['Заявки','M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 14H6v-2h12v2zm0-4H6v-2h12v2zm0-4H6V7h12v2z']];
+const TABS=[['Главное','M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'],['Магазин','M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z'],['Настройки','M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58-1.92-3.32-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54h-3.84l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96-1.92 3.32 2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58 1.92 3.32 2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54h3.84l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96 1.92-3.32zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z'],['Профиль','M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4 0-8 2-8 5v3h16v-3c0-3-4-5-8-5z'],['Бесплатно','M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z'],['Отзывы','M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z'],['Заявки','M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 14H6v-2h12v2zm0-4H6v-2h12v2zm0-4H6V7h12v2z']];
 let isAdmin=false;
-function drawNav(){const n=isAdmin?6:5;
-  g('nav').innerHTML=TABS.slice(0,n).map((t,i)=>`<button data-i="${i}" class="${document.querySelector('.page.on')===g('p'+i)?'on':''}"><span class="pill"><svg viewBox="0 0 24 24"><path d="${t[1]}"/></svg></span>${t[0]}${i===5?'<span class="badge" id="badge" hidden></span>':''}</button>`).join('');
+function drawNav(){const n=isAdmin?7:6;g('nav').className='n'+n;
+  g('nav').innerHTML=TABS.slice(0,n).map((t,i)=>`<button data-i="${i}" class="${document.querySelector('.page.on')===g('p'+i)?'on':''}"><span class="pill"><svg viewBox="0 0 24 24"><path d="${t[1]}"/></svg></span>${t[0]}${i===6?'<span class="badge" id="badge" hidden></span>':''}</button>`).join('');
   paintBadge();try{paintBell()}catch(e){}}
 g('nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i;
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p===g('p'+i)));
@@ -928,6 +967,7 @@ g('mGo').onclick=async()=>{const u=g('mUid').value.trim();if(!isAdmin||u.length<
 function rulesText(a){const A=a||'ВАШ_UID',adm=`auth != null && auth.uid === '${A}'`,pl="(newData.child('plan').val() === 7 || newData.child('plan').val() === 30 || newData.child('plan').val() === 90)";return JSON.stringify({
   users:{'$uid':{'.read':`auth != null && (auth.uid === $uid || auth.uid === '${A}')`,'.write':'auth != null && auth.uid === $uid',name:{'.validate':'newData.isString() && newData.val().length <= 48'}}},
   free:{'.read':true,'.write':adm},
+  reviews:{'.read':true,'.write':adm},
   presence:{'.read':true,'$id':{'.write':true,'.validate':'newData.val() === 1 && $id.length <= 40'}},
   licenses:{'$uid':{'.read':'auth != null && auth.uid === $uid','.write':adm}},
   keys:{'$k':{'.read':true,'.write':adm,'hwid':{'.write':'!data.exists()','.validate':'newData.isString() && newData.val().length <= 32'}}},
@@ -1014,6 +1054,42 @@ g('fGo').onclick=async()=>{g('fErr').textContent='';if(!isAdmin)return;
   try{f.ts=serverTimestamp();await set(push(ref(db,'free')),f);['fTitle','fVer','fUrl','fDesc','fTags'].forEach(i=>g(i).value='');fImgReset();fRootV='';g('fRoot').querySelectorAll('button').forEach((x,i)=>x.classList.toggle('on',i===0));toast('Добавлено');vib(20)}
   catch(x){g('fErr').textContent=errT(x)}
   g('fGo').disabled=false};
+
+/* ===== ОТЗЫВЫ: узел reviews/{id} = {nick,text,stars,img,ts}; читают все (в реальном времени), пишет только админ ===== */
+let REV={},rvImgData=null,rvStarsV=5;
+const starsH=n=>`<span class="stars" aria-label="${n} из 5">${[1,2,3,4,5].map(i=>`<svg viewBox="0 0 24 24" class="${i<=n?'':'off'}"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>`).join('')}</span>`;
+function packAvatar(f){return new Promise((res,rej)=>{const im=new Image,u=URL.createObjectURL(f);
+  im.onload=()=>{const s=Math.min(im.width,im.height),sx=(im.width-s)/2,sy=(im.height-s)/2,z=192;
+    const c=document.createElement('canvas');c.width=z;c.height=z;c.getContext('2d').drawImage(im,sx,sy,s,s,0,0,z,z);URL.revokeObjectURL(u);
+    let q=.85,d=c.toDataURL('image/jpeg',q);while(d.length>40000&&q>.3){q-=.1;d=c.toDataURL('image/jpeg',q)}res(d)};
+  im.onerror=()=>rej(new Error('Не удалось прочитать изображение'));im.src=u})}
+const rvAvH=(r,cls)=>r.img&&IMG_RE.test(r.img)?`<img class="av" src="${r.img}" alt="">`:`<div class="av">${esc((r.nick||'?').trim().charAt(0).toUpperCase())}</div>`;
+function paintReviews(){
+  const all=Object.entries(REV).filter(([,r])=>r&&r.nick&&r.text).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
+  const n=all.length,avg=n?all.reduce((s,[,r])=>s+(+r.stars||0),0)/n:0;
+  g('rvHero').innerHTML=n?`<b>${avg.toFixed(1).replace('.',',')}</b><div>${starsH(Math.round(avg))}<small>${n} ${n%10===1&&n%100!==11?'отзыв':(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?'отзыва':'отзывов'}</small></div>`:'';
+  g('rvList').innerHTML=n?all.map(([id,r])=>`<div class="rv"><div class="h">${rvAvH(r)}<div style="min-width:0"><div class="n">${esc(r.nick)}</div>${starsH(Math.max(1,Math.min(5,+r.stars||5)))}</div>${r.ts?`<div class="d">${fmtS(r.ts)}</div>`:''}</div><div class="tx">${esc(r.text)}</div></div>`).join(''):'<div class="empty">Отзывов пока нет</div>';
+  g('rvAdm').innerHTML=all.map(([id,r])=>`<div class="ord"><div class="h"><div style="display:flex;align-items:center;gap:10px;min-width:0">${r.img&&IMG_RE.test(r.img)?`<img class="fthumb" style="border-radius:50%" src="${r.img}" alt="">`:''}<b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.nick)}</b>${starsH(+r.stars||5)}</div><button class="btn d s" data-rdel="${esc(id)}">Удалить</button></div><div class="m">${esc(r.text)}</div></div>`).join('')}
+onValue(ref(db,'reviews'),s=>{REV=s.val()||{};paintReviews()},()=>{g('rvList').innerHTML='<div class="empty">Раздел временно недоступен</div>'});
+const rvPaintStars=()=>g('rvStars').querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.s<=rvStarsV));
+rvPaintStars();
+g('rvStars').onclick=e=>{const b=e.target.closest('button');if(!b)return;rvStarsV=+b.dataset.s;rvPaintStars();vib(8)};
+const rvImgReset=()=>{rvImgData=null;g('rvImg').value='';g('rvAvPrev').hidden=true;g('rvAvIco').style.display='';g('rvImgDel').hidden=true;g('rvAvLbl').textContent='Фото пользователя (необязательно)';g('rvAvLabel').style.borderColor=''};
+g('rvImg').onchange=async e=>{const f=e.target.files[0];if(!f)return;
+  try{rvImgData=await packAvatar(f)}catch(x){rvImgData=null;g('rvErr').textContent=x.message;return}
+  g('rvErr').textContent='';g('rvAvPrev').src=rvImgData;g('rvAvPrev').hidden=false;g('rvAvIco').style.display='none';g('rvImgDel').hidden=false;g('rvAvLbl').textContent=f.name;g('rvAvLabel').style.borderColor='var(--p)'};
+g('rvImgDel').onclick=rvImgReset;
+g('rvGo').onclick=async()=>{g('rvErr').textContent='';if(!isAdmin)return;
+  const r={nick:g('rvNick').value.trim(),text:g('rvText').value.trim(),stars:rvStarsV};
+  if(!r.nick)return g('rvErr').textContent='Введите ник';
+  if(!r.text)return g('rvErr').textContent='Введите текст отзыва';
+  if(rvImgData)r.img=rvImgData;
+  g('rvGo').disabled=true;
+  try{r.ts=serverTimestamp();await set(push(ref(db,'reviews')),r);g('rvNick').value='';g('rvText').value='';rvImgReset();rvStarsV=5;rvPaintStars();toast('Отзыв опубликован');vib(20)}
+  catch(x){g('rvErr').textContent=errT(x)}
+  g('rvGo').disabled=false};
+g('rvAdm').onclick=async e=>{const b=e.target.closest('[data-rdel]');if(!b||!isAdmin)return;b.disabled=true;
+  try{await set(ref(db,'reviews/'+b.dataset.rdel),null);toast('Удалено')}catch(x){toast('Ошибка: '+errT(x));b.disabled=false}};
 
 /* ===== РЕФЕРАЛЫ: код вида ZEN-XXXXXXX; баланс = 10 ₽ × друзей + 50% их покупок − потрачено ===== */
 const A32='ABCDEFGHJKMNPQRSTUVWXYZ23456789',CODE_RE=/^ZEN-[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{7}$/;
