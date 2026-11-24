@@ -939,7 +939,7 @@ function rulesText(a){const A=a||'ВАШ_UID',adm=`auth != null && auth.uid === 
   refs:{'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'$j':{'.write':"auth != null && auth.uid === $j && !data.exists() && $i !== $j && root.child('refby/'+$j).val() === $i"}}},
   refbonus:{'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'.write':adm}},
   spent:{'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'.write':adm}},
-  free_stats:{'$fid':{'.read':true,'downloads':{'.write':'newData.isNumber() && ((!data.exists() && newData.val() === 1) || (data.exists() && newData.val() === data.val() + 1))'},'views':{'.write':'newData.isNumber() && ((!data.exists() && newData.val() === 1) || (data.exists() && newData.val() === data.val() + 1))' }}},
+  free_stats:{'$fid':{'.read':true,'downloads':{'.write':'newData.isNumber() && newData.val() >= 0'},'views':{'.write':'newData.isNumber() && newData.val() >= 0'}}},
   free_dl:{'$fid':{'$uid':{'.read':false,'.write':'!data.exists() && newData.val() === 1'}}},
   free_view:{'$fid':{'$uid':{'.read':false,'.write':'!data.exists() && newData.val() === 1'}}}},null,2).split('\n').slice(1,-1).join('\n')}
 g('rulesBtn').onclick=()=>{g('rUid').textContent=uid;g('rTxt').textContent=rulesText(ADMIN_UID||uid);g('rsheet').hidden=false};
@@ -981,18 +981,23 @@ function paintFree(){
     return `<div class="pkg" style="margin-bottom:12px;cursor:default" data-view="${esc(id)}">${f.img&&IMG_RE.test(f.img)?`<img class="fimg" src="${f.img}" alt="">`:''}<div class="pkg-top"><div><div class="pkg-title">${esc(f.title)}</div><div class="pkg-sub">${esc(f.desc||'')}</div>${rb?`<div style="margin-top:8px">${rb}</div>`:''}</div><div class="pkg-price"><b style="font-size:18px">${f.ver?'v'+esc(f.ver):''}</b><small>${f.ts?fmtS(f.ts):''}</small></div></div>${tags?`<div class="pkg-feats">${tags}</div>`:''}<div class="free-stats"><span class="free-stat"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg><span id="views-${esc(id)}">${views}</span></span><span class="free-stat"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg><span id="dls-${esc(id)}">${dls}</span></span></div><div style="padding:0 20px 20px"><button class="btn w" data-dl="${esc(id)}">Скачать</button></div></div>`}).join(''):'<div class="empty">Пока пусто — скоро добавим</div>';
   g('fAdm').innerHTML=all.map(([id,f])=>`<div class="ord"><div class="h"><div style="display:flex;align-items:center;gap:10px;min-width:0">${f.img&&IMG_RE.test(f.img)?`<img class="fthumb" src="${f.img}" alt="">`:''}<b>${esc(f.title)}</b>${rootBadge(f.root)}</div><button class="btn d s" data-fdel="${esc(id)}">Удалить</button></div><div class="m">${f.ver?'v'+esc(f.ver)+' · ':''}${esc(f.url||'')}</div></div>`).join('')}
 onValue(ref(db,'free'),s=>{FREE=s.val()||{};paintFree();loadStats();if(document.querySelector('#p4.on'))trackViews()},()=>{g('freeList').innerHTML='<div class="empty">Раздел временно недоступен</div>'});
+/* инкремент счётчика: читаем текущее → пишем +1 (без транзакции, т.к. правила строгие) */
+async function incStat(id,field,elId){
+  try{
+    const snap=await get(ref(db,'free_stats/'+id+'/'+field));
+    const cur=snap.val()||0;
+    await set(ref(db,'free_stats/'+id+'/'+field),cur+1);
+    const el=g(elId+'-'+id);if(el)el.textContent=cur+1;
+  }catch(e){console.warn('incStat',field,e.message)}}
 /* скачивание: <a download> → WebView отдаёт файл в DownloadListener из Sketchware */
 function freeDl(id){const f=FREE[id];if(!f||!FREE_RE.test(f.url||''))return toast('Ссылка недоступна');
   const a=document.createElement('a');a.href=f.url;a.download='';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();toast('Скачивание…');vib(15);
-  /* инкрементируем счётчик скачиваний — один раз на пользователя */
   const userKey=(uid||('anon_'+(localStorage.getItem('_did')||''))).replace(/[.#$\[\]]/g,'_');
   if(!userKey)return;
   const markerRef=ref(db,'free_dl/'+id+'/'+userKey);
   get(markerRef).then(snap=>{if(snap.val())return;
-    return set(markerRef,1)
-      .then(()=>runTransaction(ref(db,'free_stats/'+id+'/downloads'),v=>(v||0)+1))
-      .then(tx=>{if(tx&&tx.committed){const el=g('dls-'+id);if(el)el.textContent=tx.snapshot.val()}})
-  }).catch(()=>{})}
+    return set(markerRef,1).then(()=>incStat(id,'downloads','dls'))
+  }).catch(e=>console.warn('dl marker',e.message))}
 /* просмотр карточки: инкремент один раз на пользователя */
 const _viewed=new Set();
 function trackViews(){const userKey=(uid||('anon_'+(localStorage.getItem('_did')||''))).replace(/[.#$\[\]]/g,'_');
@@ -1000,10 +1005,8 @@ function trackViews(){const userKey=(uid||('anon_'+(localStorage.getItem('_did')
     if(!userKey)return;
     const markerRef=ref(db,'free_view/'+id+'/'+userKey);
     get(markerRef).then(snap=>{if(snap.val())return;
-      return set(markerRef,1)
-        .then(()=>runTransaction(ref(db,'free_stats/'+id+'/views'),v=>(v||0)+1))
-        .then(tx=>{if(tx&&tx.committed){const el=g('views-'+id);if(el)el.textContent=tx.snapshot.val()}})
-    }).catch(()=>{})})}
+      return set(markerRef,1).then(()=>incStat(id,'views','views'))
+    }).catch(e=>console.warn('view marker',e.message))})}
 /* загружаем актуальные счётчики из free_stats при отрисовке */
 function loadStats(){Object.keys(FREE).forEach(id=>{get(ref(db,'free_stats/'+id)).then(s=>{const v=s.val()||{};
   const ev=g('views-'+id),ed=g('dls-'+id);if(ev)ev.textContent=v.views||0;if(ed)ed.textContent=v.downloads||0}).catch(()=>{})})}
