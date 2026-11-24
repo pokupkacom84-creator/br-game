@@ -926,19 +926,21 @@ g('mGo').onclick=async()=>{const u=g('mUid').value.trim();if(!isAdmin||u.length<
 
 /* ===== настройка администратора: правила БД ===== */
 function rulesText(a){const A=a||'ВАШ_UID',adm=`auth != null && auth.uid === '${A}'`,pl="(newData.child('plan').val() === 7 || newData.child('plan').val() === 30 || newData.child('plan').val() === 90)";return JSON.stringify({
+  users:{'$uid':{'.read':`auth != null && (auth.uid === $uid || auth.uid === '${A}')`,'.write':'auth != null && auth.uid === $uid',name:{'.validate':'newData.isString() && newData.val().length <= 48'}}},
+  free:{'.read':true,'.write':adm},
+  presence:{'.read':true,'$id':{'.write':true,'.validate':'newData.val() === 1 && $id.length <= 40'}},
   licenses:{'$uid':{'.read':'auth != null && auth.uid === $uid','.write':adm}},
   keys:{'$k':{'.read':true,'.write':adm,'hwid':{'.write':'!data.exists()','.validate':'newData.isString() && newData.val().length <= 32'}}},
   keysByUid:{'$u':{'.read':adm,'.write':adm}},
-  free:{'.read':true,'.write':adm},
-  presence:{'.read':true,'$id':{'.write':true,'.validate':'newData.val() === 1 && $id.length <= 40'}},
   zorders:{'.read':adm,'$id':{'.read':true,'.write':`${adm} || (!data.exists() && newData.child('st').val() === 4 && ${pl} && newData.child('u').isString() && newData.child('u').val().length <= 200 && newData.child('dl').val() <= now + 960000 && (newData.child('src').val() === 'key' || (auth != null && newData.child('u').val() === auth.uid))) || (data.child('st').val() === 4 && now < data.child('dl').val() + 30000 && newData.child('u').val() === data.child('u').val() && (newData.child('st').val() === 0 || newData.child('st').val() === 5) && (data.child('src').val() === 'key' || (auth != null && auth.uid === data.child('u').val())))`}},
-  refcodes:{'$c':{'.read':true,'.write':"auth != null && !data.exists() && newData.val() === auth.uid"}},
-  refby:{'$u':{'.read':`auth != null && auth.uid === $u || (${adm})`,'.write':"auth != null && auth.uid === $u && !data.exists() && newData.isString() && newData.val() !== $u"}},
-  refs:{'$i':{'.read':`auth != null && auth.uid === $i || (${adm})`,'$j':{'.write':"auth != null && auth.uid === $j && !data.exists() && $i !== $j && root.child('refby/'+$j).val() === $i"}}},
-  refbonus:{'$i':{'.read':`auth != null && auth.uid === $i || (${adm})`,'.write':adm}},
-  spent:{'$i':{'.read':`auth != null && auth.uid === $i || (${adm})`,'.write':adm}},
   zshots:{'$id':{'.read':adm,'.write':`${adm} || (!data.exists() && root.child('zorders/'+$id+'/st').val() === 4 && newData.isString() && newData.val().length < 250000)`}},
-  free_dl:{'$fid':{'$uid':{'.read':'auth != null && auth.uid === $uid','.write':'!data.exists() && newData.val() === 1'}}}},null,2).split('\n').slice(1,-1).join('\n')}
+  refcodes:{'$c':{'.read':true,'.write':"auth != null && !data.exists() && newData.val() === auth.uid"}},
+  refby:{'$u':{'.read':`auth != null && (auth.uid === $u || auth.uid === '${A}')`,'.write':"auth != null && auth.uid === $u && !data.exists() && newData.isString() && newData.val() !== $u"}},
+  refs:{'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'$j':{'.write':"auth != null && auth.uid === $j && !data.exists() && $i !== $j && root.child('refby/'+$j).val() === $i"}}},
+  refbonus:{'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'.write':adm}},
+  spent:{'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'.write':adm}},
+  free_dl:{'$fid':{'$uid':{'.read':false,'.write':'!data.exists() && newData.val() === 1'}}},
+  free_view:{'$fid':{'$uid':{'.read':false,'.write':'!data.exists() && newData.val() === 1'}}}},null,2).split('\n').slice(1,-1).join('\n')}
 g('rulesBtn').onclick=()=>{g('rUid').textContent=uid;g('rTxt').textContent=rulesText(ADMIN_UID||uid);g('rsheet').hidden=false};
 g('rx').onclick=()=>g('rsheet').hidden=true;g('rsheet').onclick=e=>{if(e.target===g('rsheet'))g('rsheet').hidden=true};
 g('rCopyU').onclick=()=>{cp(uid);toast('UID скопирован')};
@@ -989,11 +991,16 @@ function freeDl(id){const f=FREE[id];if(!f||!FREE_RE.test(f.url||''))return toas
     return set(markerRef,1).then(()=>runTransaction(ref(db,'free/'+id+'/downloads'),v=>(v||0)+1))
       .then(tx=>{if(tx&&tx.committed){const el=g('dls-'+id);if(el)el.textContent=tx.snapshot.val()}})
   }).catch(()=>{})}
-/* просмотр карточки: инкремент при первом показе раздела */
+/* просмотр карточки: инкремент один раз на пользователя */
 const _viewed=new Set();
-function trackViews(){g('freeList').querySelectorAll('[data-view]').forEach(card=>{const id=card.dataset.view;if(_viewed.has(id))return;_viewed.add(id);
-  const vRef=ref(db,'free/'+id+'/views');
-  runTransaction(vRef,v=>(v||0)+1).then(tx=>{if(tx.committed){const el=g('views-'+id);if(el)el.textContent=tx.snapshot.val()}}).catch(()=>{})})}
+function trackViews(){const userKey=(uid||('anon_'+(localStorage.getItem('_did')||''))).replace(/[.#$\[\]]/g,'_');
+  g('freeList').querySelectorAll('[data-view]').forEach(card=>{const id=card.dataset.view;if(_viewed.has(id))return;_viewed.add(id);
+    if(!userKey)return;
+    const markerRef=ref(db,'free_view/'+id+'/'+userKey);
+    get(markerRef).then(snap=>{if(snap.val())return; /* уже смотрел */
+      return set(markerRef,1).then(()=>runTransaction(ref(db,'free/'+id+'/views'),v=>(v||0)+1))
+        .then(tx=>{if(tx&&tx.committed){const el=g('views-'+id);if(el)el.textContent=tx.snapshot.val()}})
+    }).catch(()=>{})})}
 g('freeList').onclick=e=>{const b=e.target.closest('[data-dl]');if(b)freeDl(b.dataset.dl)};
 g('fAdm').onclick=async e=>{const b=e.target.closest('[data-fdel]');if(!b||!isAdmin)return;b.disabled=true;
   try{await set(ref(db,'free/'+b.dataset.fdel),null);toast('Удалено')}catch(x){toast('Ошибка: '+errT(x));b.disabled=false}};
