@@ -1127,11 +1127,16 @@ function relT(ts){const a=new Date(ts),b=new Date(),d=b-a;
   if(dd<=0){if(d<60000)return 'только что';const m=Math.floor(d/60000);return m<60?m+' мин назад':Math.floor(d/3600000)+' ч назад'}
   if(dd===1)return 'вчера';if(dd<7)return dd+' дн. назад';
   return a.toLocaleDateString('ru',a.getFullYear()!==b.getFullYear()?{day:'numeric',month:'long',year:'numeric'}:{day:'numeric',month:'long'})}
-function packAvatar(f){return new Promise((res,rej)=>{const im=new Image,u=URL.createObjectURL(f);
-  im.onload=()=>{const k=Math.min(1,900/Math.max(im.width,im.height)),w=Math.round(im.width*k),h=Math.round(im.height*k);
-    const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(im,0,0,w,h);URL.revokeObjectURL(u);
+function packAvatar(f){return new Promise((res,rej)=>{
+  const bad=()=>rej(new Error('Не удалось прочитать изображение'));
+  const draw=(src,sw,sh)=>{const k=Math.min(1,900/Math.max(sw,sh)),w=Math.max(1,Math.round(sw*k)),h=Math.max(1,Math.round(sh*k));
+    const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(src,0,0,w,h);
     let q=.82,d=c.toDataURL('image/jpeg',q);while(d.length>120000&&q>.3){q-=.08;d=c.toDataURL('image/jpeg',q)}res(d)};
-  im.onerror=()=>rej(new Error('Не удалось прочитать изображение'));im.src=u})}
+  const u=URL.createObjectURL(f),im=new Image;
+  im.onload=()=>{URL.revokeObjectURL(u);try{draw(im,im.naturalWidth||im.width,im.naturalHeight||im.height)}catch(x){bad()}};
+  im.onerror=()=>{URL.revokeObjectURL(u);
+    if(window.createImageBitmap)createImageBitmap(f).then(b=>{try{draw(b,b.width,b.height)}catch(x){bad()}},bad);else bad()};
+  im.src=u})}
 const rvSt=r=>Math.max(1,Math.min(5,+r.stars||5)),rvPics=r=>{const a=Array.isArray(r.imgs)?r.imgs:(r.imgs&&typeof r.imgs==='object'?Object.values(r.imgs):[]);if(r.img)a.unshift(r.img);return a.filter(x=>typeof x==='string'&&IMG_RE.test(x)).slice(0,4)},rvPh=r=>rvPics(r).length>0;
 const rvPass=r=>rvF==='all'||(rvF==='ph'?rvPh(r):rvF==='5'?rvSt(r)===5:rvF==='4'?rvSt(r)===4:rvSt(r)<=3);
 function paintReviews(){
@@ -1155,11 +1160,15 @@ g('rvStars').onclick=e=>{const b=e.target.closest('button');if(!b)return;rvStars
 const rvImgReset=()=>{rvImgs=[];g('rvImg').value='';rvThumbs()};
 function rvThumbs(){g('rvThumbs').innerHTML=rvImgs.map((u,i)=>`<div class="rth"><img src="${u}" alt=""><button type="button" data-rmimg="${i}" aria-label="Убрать">×</button></div>`).join('');
   g('rvAvLbl').textContent=rvImgs.length?`Добавлено ${rvImgs.length} из 4 — добавить ещё`:'Фото отзыва (до 4, необязательно)';g('rvAvLabel').style.borderColor=rvImgs.length?'var(--p)':''}
-g('rvImg').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;g('rvErr').textContent='';
-  const room=4-rvImgs.length;if(room<=0){g('rvErr').textContent='Максимум 4 фото';return}
-  if(fs.length>room)g('rvErr').textContent='Максимум 4 фото — лишние пропущены';
-  for(const f of fs.slice(0,room)){try{rvImgs.push(await packAvatar(f,rvImgs.length))}catch(x){g('rvErr').textContent=x.message}}
-  rvThumbs()};
+g('rvImg').onchange=async e=>{const fs=[...e.target.files];e.target.value='';const er=g('rvErr');er.textContent='';
+  if(!fs.length){er.textContent='Фото не получено — выберите снова';return}
+  const room=4-rvImgs.length;if(room<=0){er.textContent='Максимум 4 фото';return}
+  const take=fs.slice(0,room);let bad=0;
+  for(let i=0;i<take.length;i++){g('rvAvLbl').textContent='Обработка '+(i+1)+' из '+take.length+'…';
+    try{rvImgs.push(await packAvatar(take[i]))}catch(x){bad++}}
+  rvThumbs();
+  if(bad)er.textContent='Не прочиталось фото: '+bad+' (нужен JPG/PNG/WebP)';
+  else if(fs.length>room)er.textContent='Максимум 4 фото — лишние пропущены'};
 g('rvThumbs').onclick=e=>{const b=e.target.closest('[data-rmimg]');if(!b)return;rvImgs.splice(+b.dataset.rmimg,1);rvThumbs();g('rvErr').textContent=''};
 g('rvGo').onclick=async()=>{g('rvErr').textContent='';if(!isAdmin)return;
   const r={nick:g('rvNick').value.trim(),text:g('rvText').value.trim(),stars:rvStarsV},rp=g('rvReply').value.trim();
