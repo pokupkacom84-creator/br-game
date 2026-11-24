@@ -937,7 +937,8 @@ function rulesText(a){const A=a||'ВАШ_UID',adm=`auth != null && auth.uid === 
   refs:{'$i':{'.read':`auth != null && auth.uid === $i || (${adm})`,'$j':{'.write':"auth != null && auth.uid === $j && !data.exists() && $i !== $j && root.child('refby/'+$j).val() === $i"}}},
   refbonus:{'$i':{'.read':`auth != null && auth.uid === $i || (${adm})`,'.write':adm}},
   spent:{'$i':{'.read':`auth != null && auth.uid === $i || (${adm})`,'.write':adm}},
-  zshots:{'$id':{'.read':adm,'.write':`${adm} || (!data.exists() && root.child('zorders/'+$id+'/st').val() === 4 && newData.isString() && newData.val().length < 250000)`}}},null,2).split('\n').slice(1,-1).join('\n')}
+  zshots:{'$id':{'.read':adm,'.write':`${adm} || (!data.exists() && root.child('zorders/'+$id+'/st').val() === 4 && newData.isString() && newData.val().length < 250000)`}},
+  free_dl:{'$fid':{'$uid':{'.read':'auth != null && auth.uid === $uid','.write':'!data.exists() && newData.val() === 1'}}}},null,2).split('\n').slice(1,-1).join('\n')}
 g('rulesBtn').onclick=()=>{g('rUid').textContent=uid;g('rTxt').textContent=rulesText(ADMIN_UID||uid);g('rsheet').hidden=false};
 g('rx').onclick=()=>g('rsheet').hidden=true;g('rsheet').onclick=e=>{if(e.target===g('rsheet'))g('rsheet').hidden=true};
 g('rCopyU').onclick=()=>{cp(uid);toast('UID скопирован')};
@@ -946,6 +947,8 @@ g('rCopy').onclick=()=>{cp(g('rTxt').textContent);toast('Правила скоп
 
 /* ===== БЕСПЛАТНО: узел free/{id} = {title,ver,url,desc,tags,img,root,ts}; читают все, пишет только админ ===== */
 const FREE_RE=/^https:\/\/[^\s"'<>]+$/i;
+/* анонимный ID устройства для дедупликации скачиваний без аккаунта */
+(()=>{try{if(!localStorage.getItem('_did'))localStorage.setItem('_did',[...crypto.getRandomValues(new Uint8Array(8))].map(x=>x.toString(16).padStart(2,'0')).join(''))}catch(e){}})();
 let FREE={};
 const IMG_RE=/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/;
 const rootBadge=r=>r==='root'?'<span class="rt r">ROOT</span>':r==='noroot'?'<span class="rt n">NO ROOT</span>':'';
@@ -978,9 +981,14 @@ onValue(ref(db,'free'),s=>{FREE=s.val()||{};paintFree();if(document.querySelecto
 /* скачивание: <a download> → WebView отдаёт файл в DownloadListener из Sketchware */
 function freeDl(id){const f=FREE[id];if(!f||!FREE_RE.test(f.url||''))return toast('Ссылка недоступна');
   const a=document.createElement('a');a.href=f.url;a.download='';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();toast('Скачивание…');vib(15);
-  /* инкрементируем счётчик скачиваний */
-  const dlRef=ref(db,'free/'+id+'/downloads');
-  runTransaction(dlRef,v=>(v||0)+1).then(tx=>{if(tx.committed){const el=g('dls-'+id);if(el)el.textContent=tx.snapshot.val()}}).catch(()=>{})}
+  /* инкрементируем счётчик скачиваний — один раз на пользователя */
+  const userKey=uid||('anon_'+(localStorage.getItem('_did')||''));
+  if(!userKey)return;
+  const markerRef=ref(db,'free_dl/'+id+'/'+userKey.replace(/[.#$\[\]]/g,'_'));
+  get(markerRef).then(snap=>{if(snap.val())return; /* уже скачивал */
+    return set(markerRef,1).then(()=>runTransaction(ref(db,'free/'+id+'/downloads'),v=>(v||0)+1))
+      .then(tx=>{if(tx&&tx.committed){const el=g('dls-'+id);if(el)el.textContent=tx.snapshot.val()}})
+  }).catch(()=>{})}
 /* просмотр карточки: инкремент при первом показе раздела */
 const _viewed=new Set();
 function trackViews(){g('freeList').querySelectorAll('[data-view]').forEach(card=>{const id=card.dataset.view;if(_viewed.has(id))return;_viewed.add(id);
