@@ -1075,6 +1075,11 @@ function paintFree(){
     const st=ST[id]||{},views=st.views||0,dls=st.downloads||0;
     return `<div class="pkg" style="margin-bottom:12px;cursor:default" data-view="${esc(id)}">${f.img&&IMG_RE.test(f.img)?`<img class="fimg" src="${f.img}" alt="">`:''}<div class="pkg-top"><div><div class="pkg-title">${esc(f.title)}</div><div class="pkg-sub">${esc(f.desc||'')}</div>${rb?`<div style="margin-top:8px">${rb}</div>`:''}</div><div class="pkg-price"><b style="font-size:18px">${f.ver?'v'+esc(f.ver):''}</b><small>${f.ts?fmtS(f.ts):''}</small></div></div>${tags?`<div class="pkg-feats">${tags}</div>`:''}<div class="free-stats"><span class="free-stat"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg><span id="views-${esc(id)}">${views}</span></span><span class="free-stat"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg><span id="dls-${esc(id)}">${dls}</span></span></div><div style="padding:0 20px 20px"><button class="btn w" data-dl="${esc(id)}">Скачать</button></div></div>`}).join(''):'<div class="empty">Пока пусто — скоро добавим</div>';
   g('fAdm').innerHTML=all.map(([id,f])=>`<div class="ord"><div class="h"><div style="display:flex;align-items:center;gap:10px;min-width:0">${f.img&&IMG_RE.test(f.img)?`<img class="fthumb" src="${f.img}" alt="">`:''}<b>${esc(f.title)}</b>${rootBadge(f.root)}</div><button class="btn d s" data-fdel="${esc(id)}">Удалить</button></div><div class="m">${f.ver?'v'+esc(f.ver)+' · ':''}${esc(f.url||'')}</div></div>`).join('')}
+let ST={};const stOff={},stBusy=new Set();
+function subStats(){
+  Object.keys(FREE).forEach(id=>{if(stOff[id])return;
+    stOff[id]=onValue(ref(db,'free_stats/'+id),s=>{ST[id]=s.val()||{};paintStat(id)},()=>{})});
+  Object.keys(stOff).forEach(id=>{if(!(id in FREE)){try{stOff[id]()}catch(e){}delete stOff[id];delete ST[id]}})}
 const FC='zfree_cache';
 try{const c=JSON.parse(localStorage.getItem(FC)||'null');if(c&&typeof c==='object'&&Object.keys(c).length){FREE=c;paintFree()}}catch(e){}
 const freeSlow=setTimeout(()=>{if(!Object.keys(FREE).length)g('freeList').innerHTML='<div class="empty">Долго грузится… проверьте интернет, список подгрузится сам</div>'},10000);
@@ -1083,7 +1088,6 @@ onValue(ref(db,'free'),s=>{clearTimeout(freeSlow);FREE=s.val()||{};subStats();pa
   setTimeout(startReviews,400)},()=>{g('freeList').innerHTML='<div class="empty">Раздел временно недоступен</div>'});
 /* счётчики: free_stats/{id}/{views|downloads}. живая подписка, +1 через транзакцию, один раз на устройство.
    метка «сделано» ставится только после успешной записи — раньше при ошибке правил она ставилась зря и счётчик больше не пытался */
-let ST={};const stOff={},stBusy=new Set();
 function paintStat(id){const s=ST[id]||{},v=g('views-'+id),d=g('dls-'+id);if(v)v.textContent=s.views||0;if(d)d.textContent=s.downloads||0;}
 const lsKey=(t,id)=>'fst2_'+t+'_'+id;
 const isDone=(t,id)=>{try{return !!localStorage.getItem(lsKey(t,id))}catch(e){return false}};
