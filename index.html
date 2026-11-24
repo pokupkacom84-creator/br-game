@@ -163,6 +163,8 @@ pre.rules{background:var(--s3);border-radius:16px;padding:12px;font-size:11px;ov
 .rv .tx{font-size:15px;line-height:1.45;margin-top:12px;white-space:pre-wrap;word-break:break-word}
 .stp{display:flex;gap:6px;margin:12px 0 4px}.stp button{background:none;border:0;padding:4px;cursor:pointer}.stp svg{width:34px;height:34px;fill:var(--out);opacity:.45;transition:.15s}.stp button.on svg{fill:#f5b301;opacity:1}
 .rvav{width:56px;height:56px;border-radius:12px;object-fit:cover;flex:none}
+.rvg{display:grid;gap:6px;margin-top:12px;grid-template-columns:1fr 1fr}.rvg.n1{grid-template-columns:1fr}.rvg .rvph{margin-top:0;height:160px;max-height:none}.rvg.n1 .rvph{height:auto;max-height:360px}.rvg.n3 .rvph:first-child{grid-column:1/-1}
+.rth{position:relative;width:64px;height:64px}.rth img{width:100%;height:100%;border-radius:12px;object-fit:cover}.rth button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:#ba1a1a;color:#fff;font-size:13px;line-height:1;cursor:pointer}
 .rvph{display:block;width:100%;max-height:360px;object-fit:cover;border-radius:16px;margin-top:12px;cursor:zoom-in;background:var(--s3)}
 .zv{position:absolute;inset:0;z-index:70;background:rgba(0,0,0,.94);display:flex;flex-direction:column}.zv[hidden]{display:none}
 .zv .zb{flex:1;overflow:auto;display:flex;touch-action:pan-x pan-y pinch-zoom;-webkit-overflow-scrolling:touch}
@@ -260,9 +262,6 @@ span[hidden]{display:none!important}
       </div>
       <!-- Скрытые элементы для совместимости со старым JS -->
       <span id="runT" hidden></span>
-      <span id="fps" hidden></span><span id="rtt" hidden></span><span id="mem" hidden></span><span id="bat" hidden></span>
-      <span id="sw-ovl" hidden></span><span id="sw-log" hidden></span>
-      <div id="logCard" hidden><span id="logT"></span></div>
       <!-- Баланс в главном -->
       <div id="homeBalCard" hidden style="background:var(--s2);border-radius:var(--rm);padding:16px 20px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
         <div><div style="font-size:13px;color:var(--onv)">Баланс</div><div style="font-size:24px;font-weight:400;color:var(--p)" id="homeBalAmt">0 ₽</div></div>
@@ -329,14 +328,6 @@ span[hidden]{display:none!important}
         <div class="seg" data-seg="sh"><button data-v="0">Строгие</button><button data-v="1">Стандарт</button><button data-v="2">Круглые</button></div>
         <div style="display:flex;justify-content:space-between"><span>Размер интерфейса</span><b id="fsV" style="color:var(--p)"></b></div>
         <div class="slider" style="margin-top:8px"><input type="range" id="fs" min="0.9" max="1.2" step="0.05"></div></div>
-      <div class="sec">Мониторинг</div>
-      <div class="list" style="padding:16px 20px"><div style="display:flex;justify-content:space-between"><span>Интервал обновления</span><b id="ivV" style="color:var(--p)">1 с</b></div><div class="slider" style="margin-top:12px"><input type="range" id="iv" min="0.5" max="3" step="0.5" value="1"></div></div>
-      <div class="list" style="padding:16px 20px"><div>Положение оверлея FPS</div>
-        <div class="seg" data-seg="op"><button data-v="tl">↖</button><button data-v="tr">↗</button><button data-v="bl">↙</button><button data-v="br">↘</button></div>
-        <div style="display:flex;justify-content:space-between"><span>Прозрачность оверлея</span><b id="oaV" style="color:var(--p)"></b></div>
-        <div class="slider" style="margin-top:8px"><input type="range" id="oa" min="0.3" max="1" step="0.1"></div></div>
-      <div class="sec">Показывать метрики</div>
-      <div class="list"><div class="row" data-sw="mfps"><div><div class="t">FPS</div></div><span class="sw" id="sw-mfps"></span></div><div class="row" data-sw="mrtt"><div><div class="t">Задержка сети</div></div><span class="sw" id="sw-mrtt"></span></div><div class="row" data-sw="mmem"><div><div class="t">Память JS</div></div><span class="sw" id="sw-mmem"></span></div><div class="row" data-sw="mbat"><div><div class="t">Заряд</div></div><span class="sw" id="sw-mbat"></span></div></div>
       <div class="sec">Система</div>
       <div class="list"><div class="row" data-sw="vib"><div><div class="t">Вибро-отклик</div></div><span class="sw" id="sw-vib"></span></div><div class="row" data-sw="nt"><div><div class="t">Уведомления</div><div class="s">Системные уведомления приложения</div></div><span class="sw" id="sw-nt"></span></div><div class="row" data-sw="an"><div><div class="t">Анимации</div><div class="s">Переходы и ripple-эффекты</div></div><span class="sw" id="sw-an"></span></div></div>
       <div class="sec">Лицензия</div>
@@ -367,7 +358,7 @@ span[hidden]{display:none!important}
         <div class="seg" id="mDays" style="margin-top:12px"><button data-d="7">7 дн</button><button data-d="30" class="on">30 дн</button><button data-d="90">90 дн</button></div>
         <button class="btn w" id="mGo">Выдать ключ</button>
       </div>
-      <div class="sec">История</div><div id="hist"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between"><div class="sec">История</div><button class="btn d s" id="histClear" hidden>Очистить</button></div><div id="hist"></div>
       <div class="sec">Бесплатные читы — добавить</div>
       <div class="card">
         <label class="tf"><input id="fTitle" placeholder="Название" maxlength="60"></label>
@@ -390,12 +381,11 @@ span[hidden]{display:none!important}
       <div class="card">
         <label class="tf"><input id="rvNick" placeholder="Ник пользователя" maxlength="24" autocomplete="off"></label>
         <label id="rvAvLabel" style="display:flex;align-items:center;gap:12px;border:2px dashed var(--out);border-radius:16px;padding:10px 14px;cursor:pointer;min-height:64px;margin-top:8px">
-          <img id="rvAvPrev" class="rvav" alt="" hidden>
-          <svg id="rvAvIco" viewBox="0 0 24 24" style="width:26px;height:26px;fill:var(--onv)"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3 3.5-4.5 4.5 6H5l3.5-4.5z"/></svg>
-          <span id="rvAvLbl" style="font-size:14px;color:var(--onv)">Фото отзыва (необязательно)</span>
-          <input type="file" id="rvImg" accept="image/*" style="display:none">
+          <svg viewBox="0 0 24 24" style="width:26px;height:26px;fill:var(--onv);flex:none"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3 3.5-4.5 4.5 6H5l3.5-4.5z"/></svg>
+          <span id="rvAvLbl" style="font-size:14px;color:var(--onv)">Фото отзыва (до 4, необязательно)</span>
+          <input type="file" id="rvImg" accept="image/*" multiple style="display:none">
         </label>
-        <button class="btn d s" id="rvImgDel" type="button" style="margin-top:6px" hidden>Убрать фото</button>
+        <div id="rvThumbs" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>
         <label class="tf" style="margin-top:8px;height:auto;min-height:56px;padding:12px 18px"><textarea id="rvText" placeholder="Текст отзыва" maxlength="500" rows="4" style="flex:1;min-width:0;background:none;border:0;outline:0;color:var(--on);font:16px inherit;resize:none"></textarea></label>
         <label class="tf" style="margin-top:8px"><input id="rvReply" placeholder="Ответ администрации (необязательно)" maxlength="300" autocomplete="off"></label>
         <div class="mut" style="margin:12px 0 4px">Дата отзыва (по умолчанию — сейчас)</div>
@@ -664,7 +654,7 @@ const app=initializeApp({apiKey:"AIzaSyB0uaLhHrYjWblrCBLTPx7mF_OmUhhld70",authDo
 const auth=getAuth(app),db=getDatabase(app),g=id=>document.getElementById(id);
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const S=(()=>{try{return JSON.parse(localStorage.getItem('zs'))||{}}catch(e){return{}}})();
-S.h??=265;S.iv??=1;S.vib??=true;S.ovl??=true;S.log??=false;
+S.h??=265;S.vib??=true;
 const save=()=>{try{localStorage.setItem('zs',JSON.stringify(S))}catch(e){}};
 const vib=n=>{if(S.vib&&navigator.vibrate)navigator.vibrate(n)};
 const nat=(t,m)=>{try{if(S.nt!==false&&window.Android&&Android.showNotification)Android.showNotification(t,m)}catch(e){}};
@@ -703,41 +693,27 @@ g('qProf').onclick=()=>goTab(3);
 const hbs=g('homeBalShopBtn');if(hbs)hbs.onclick=()=>goTab(1);
 
 /* ===== переключатели ===== */
-['ovl','log','vib'].forEach(k=>{const el=g('sw-'+k);if(el)el.classList.toggle('on',!!S[k])});
+['vib'].forEach(k=>{const el=g('sw-'+k);if(el)el.classList.toggle('on',!!S[k])});
 document.querySelectorAll('[data-sw]').forEach(r=>r.onclick=()=>{const k=r.dataset.sw;S[k]=!S[k];save();const sw=g('sw-'+k);if(sw)sw.classList.toggle('on',!!S[k]);vib(10)});
-g('iv').value=S.iv;g('ivV').textContent=S.iv+' с';
-g('iv').oninput=e=>{S.iv=+e.target.value;g('ivV').textContent=S.iv+' с';save()};
 
-/* ===== реальный мониторинг: FPS, память, сеть, заряд ===== */
-let run=false,raf=0,frames=0,t0=0,tm=0,fpsArr=[],ovl=null;
-function ensureOvl(){if(ovl)return ovl;ovl=document.createElement('div');ovl.style.cssText='position:fixed;top:8px;right:8px;z-index:99;background:rgba(0,0,0,.6);color:#8fd9a0;font:600 13px monospace;padding:4px 10px;border-radius:10px;pointer-events:none';document.body.appendChild(ovl);return ovl}
-const loop=()=>{if(!run)return;frames++;raf=requestAnimationFrame(loop)};
-function sample(){const now=performance.now(),fps=Math.round(frames*1000/(now-t0));frames=0;t0=now;fpsArr.push(fps);g('fps').textContent=fps;
-  const rtt=navigator.connection&&navigator.connection.rtt;g('rtt').textContent=rtt!=null?rtt+' мс':'н/д';
-  const m=performance.memory;g('mem').textContent=m?Math.round(m.usedJSHeapSize/1048576)+' МБ':'н/д';
-  if(S.ovl){ensureOvl().style.display='block';posOvl();ovl.textContent=fps+' FPS'}else if(ovl)ovl.style.display='none'}
-async function batt(){try{const b=await navigator.getBattery();const u=()=>g('bat').textContent=Math.round(b.level*100)+'%'+(b.charging?' ⚡':'');u();b.onlevelchange=u;b.onchargingchange=u}catch(e){g('bat').textContent='н/д'}}
-function setRun(v){run=v;vib(25);g('dot').classList.toggle('on',v);g('stT').textContent=v?'Мониторинг активен':'Мониторинг остановлен';g('runT').textContent=v?'Остановить':'Запустить';
-  g('runI').innerHTML=v?'<path d="M6 6h12v12H6z"/>':'<path d="M8 5v14l11-7z"/>';clearInterval(tm);cancelAnimationFrame(raf);
-  if(v){fpsArr=[];frames=0;t0=performance.now();raf=requestAnimationFrame(loop);tm=setInterval(sample,S.iv*1000);batt()}
-  else{['fps','rtt','mem'].forEach(i=>g(i).textContent='—');if(ovl)ovl.style.display='none';
-    if(S.log&&fpsArr.length){const a=fpsArr.reduce((x,y)=>x+y,0)/fpsArr.length;g('logCard').hidden=false;g('logT').textContent=`Средний FPS: ${a.toFixed(1)} · минимум: ${Math.min(...fpsArr)} · замеров: ${fpsArr.length}`}}}
+/* ===== запуск меню ===== */
+let run=false;
+function setRun(v){run=v;vib(25);if(g('dot'))g('dot').classList.toggle('on',v);if(g('stT'))g('stT').textContent=v?'Меню запущено':'Меню остановлено';if(g('runT'))g('runT').textContent=v?'Остановить':'Запустить';if(g('runI'))g('runI').innerHTML=v?'<path d="M6 6h12v12H6z"/>':'<path d="M8 5v14l11-7z"/>'}
 function launchGame(){try{if(window.FluxNative&&FluxNative.launchGame)FluxNative.launchGame();else toast('Запуск игры доступен только из приложения')}catch(e){toast('Не удалось запустить игру')}}
 if(g('run'))g('run').onclick=()=>{if(!LIC.active)return openSheet();const st=!run;setRun(st);if(st)launchGame()};
 
 /* ===== MATERIAL 3: расширенные настройки ===== */
-Object.entries({th:'auto',sh:'1',op:'tr',fs:1,oa:1,am:false,dn:false,an:true,nt:true,mfps:true,mrtt:true,mmem:true,mbat:true}).forEach(([k,v])=>{S[k]??=v});
+Object.entries({th:'auto',sh:'1',fs:1,am:false,dn:false,an:true,nt:true}).forEach(([k,v])=>{S[k]??=v});
 const mq=matchMedia('(prefers-color-scheme: light)');
-function posOvl(){if(!ovl)return;const p=S.op||'tr';Object.assign(ovl.style,{top:p[0]==='t'?'8px':'auto',bottom:p[0]==='b'?'96px':'auto',left:p[1]==='l'?'8px':'auto',right:p[1]==='r'?'8px':'auto',opacity:S.oa})}
 function applyPrefs(){const d=document.documentElement,th=S.th==='auto'?(mq.matches?'light':'dark'):S.th;
   d.dataset.th=th;d.dataset.am=S.am&&th==='dark'?1:0;d.dataset.sh=S.sh;d.dataset.dn=S.dn?1:0;d.dataset.an=S.an?1:0;d.style.setProperty('--fs',S.fs);
-  document.querySelectorAll('[data-m]').forEach(e=>e.style.display=S['m'+e.dataset.m]===false?'none':'');posOvl();
+  
   document.querySelector('meta[name=theme-color]').content=getComputedStyle(document.body).backgroundColor}
-['am','dn','an','nt','mfps','mrtt','mmem','mbat'].forEach(k=>g('sw-'+k).classList.toggle('on',!!S[k]));
+['am','dn','an','nt'].forEach(k=>g('sw-'+k).classList.toggle('on',!!S[k]));
 document.addEventListener('click',e=>{if(e.target.closest('[data-sw]'))setTimeout(applyPrefs)});
 document.querySelectorAll('[data-seg]').forEach(sg=>{const k=sg.dataset.seg,paint=()=>sg.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===String(S[k])));paint();
   sg.onclick=e=>{const b=e.target.closest('button');if(!b)return;S[k]=b.dataset.v;save();paint();applyPrefs();vib(10)}});
-[['fs',v=>Math.round(v*100)+'%'],['oa',v=>Math.round(v*100)+'%']].forEach(([k,f])=>{g(k).value=S[k];g(k+'V').textContent=f(S[k]);g(k).oninput=e=>{S[k]=+e.target.value;g(k+'V').textContent=f(S[k]);save();applyPrefs()}});
+[['fs',v=>Math.round(v*100)+'%']].forEach(([k,f])=>{g(k).value=S[k];g(k+'V').textContent=f(S[k]);g(k).oninput=e=>{S[k]=+e.target.value;g(k+'V').textContent=f(S[k]);save();applyPrefs()}});
 g('resetS').onclick=()=>{try{localStorage.removeItem('zs')}catch(e){}location.reload()};
 mq.addEventListener('change',()=>{if(S.th==='auto')applyPrefs()});
 document.addEventListener('pointerdown',e=>{const h=e.target.closest('.btn,.row,.pkg,.plan,.ib,nav button');if(!h||h.disabled||!S.an)return;
@@ -1012,7 +988,7 @@ async function paintAdmin(){
   <div class="m">${o.plan} дн. · ${PRICES[o.plan]||'?'} ₽ · ${o.bal?'с баланса':'перевод на карту'} · ${(o.paid||o.ts)?fmtS(o.paid||o.ts):''}<br>UID: ${esc(o.u)}${o.key?'<br>Ключ: '+esc(o.key):''}</div>
   ${act?`${o.bal?'':`<button class="btn t s w" data-shot="${id}" style="margin-bottom:8px">Посмотреть чек</button>`}<div class="a"><button class="btn s" data-ok="${id}">Принять</button><button class="btn s d" data-no="${id}">Отклонить</button></div>`:''}</div>`;
   g('pend').innerHTML=pend.length?pend.map(x=>card(x,true)).join(''):'<div class="empty">Новых заявок нет</div>';
-  g('hist').innerHTML=done.length?done.map(x=>card(x,false)).join(''):'<div class="empty">Пока пусто</div>'}
+  g('histClear').hidden=!all.some(([,o])=>o.st===2||o.st===3);g('hist').innerHTML=done.length?done.map(x=>card(x,false)).join(''):'<div class="empty">Пока пусто</div>'}
 document.addEventListener('click',async e=>{
   const ok=e.target.closest('[data-ok]'),no=e.target.closest('[data-no]');if(!isAdmin||(!ok&&!no))return;
   const id=(ok||no).dataset.ok||(ok||no).dataset.no,o=ORD[id];if(!o)return;const btn=ok||no;btn.disabled=true;
@@ -1031,6 +1007,12 @@ document.addEventListener('click',async e=>{
 let lastP=-1;function newPend(){const n=Object.values(ORD).filter(o=>o.st===0).length;if(lastP>=0&&n>lastP){toast('Новая оплата на проверку');nat('Новая оплата','Заявка ждёт проверки');vib([20,40,20])}lastP=n}
 g('pend').onclick=async e=>{const b=e.target.closest('[data-shot]');if(!b)return;b.disabled=true;
   try{const v=(await get(ref(db,'zshots/'+b.dataset.shot))).val();if(!v)toast('Чек не найден');else{g('shotImg').src=v;g('imgV').hidden=false}}catch(x){toast('Ошибка: '+errT(x))}b.disabled=false};
+g('histClear').onclick=async()=>{if(!isAdmin)return;
+  const ids=Object.entries(ORD).filter(([,o])=>o.st===2||o.st===3).map(([id])=>id);if(!ids.length)return;
+  if(!confirm('Удалить из истории '+ids.length+' заявок (выданные и отклонённые)? Ключи и балансы пользователей не изменятся.'))return;
+  const b=g('histClear');b.disabled=true;
+  try{const u={};ids.forEach(id=>{u['zorders/'+id]=null;u['zshots/'+id]=null});await update(ref(db),u);toast('История очищена');vib(20)}
+  catch(x){toast('Ошибка: '+errT(x))}b.disabled=false};
 g('ix').onclick=()=>g('imgV').hidden=true;
 let mD=30;
 g('mDays').onclick=e=>{const b=e.target.closest('button');if(!b)return;mD=+b.dataset.d;g('mDays').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))};
@@ -1130,7 +1112,7 @@ g('fGo').onclick=async()=>{g('fErr').textContent='';if(!isAdmin)return;
   g('fGo').disabled=false};
 
 /* ===== ОТЗЫВЫ: узел reviews/{id} = {nick,text,stars,img,reply,ts}; читают все (в реальном времени), пишет только админ ===== */
-let REV={},rvImgData=null,rvStarsV=5,rvF='all';
+let REV={},rvImgs=[],rvStarsV=5,rvF='all';
 const starsH=n=>`<span class="stars" aria-label="${n} из 5">${[1,2,3,4,5].map(i=>`<svg viewBox="0 0 24 24" class="${i<=n?'':'off'}"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>`).join('')}</span>`;
 const hueOf=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h%360};
 const plR=n=>n%10===1&&n%100!==11?'отзыв':(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?'отзыва':'отзывов';
@@ -1140,11 +1122,11 @@ function relT(ts){const a=new Date(ts),b=new Date(),d=b-a;
   if(dd===1)return 'вчера';if(dd<7)return dd+' дн. назад';
   return a.toLocaleDateString('ru',a.getFullYear()!==b.getFullYear()?{day:'numeric',month:'long',year:'numeric'}:{day:'numeric',month:'long'})}
 function packAvatar(f){return new Promise((res,rej)=>{const im=new Image,u=URL.createObjectURL(f);
-  im.onload=()=>{const k=Math.min(1,1100/Math.max(im.width,im.height)),w=Math.round(im.width*k),h=Math.round(im.height*k);
+  im.onload=()=>{const k=Math.min(1,900/Math.max(im.width,im.height)),w=Math.round(im.width*k),h=Math.round(im.height*k);
     const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(im,0,0,w,h);URL.revokeObjectURL(u);
-    let q=.82,d=c.toDataURL('image/jpeg',q);while(d.length>190000&&q>.3){q-=.08;d=c.toDataURL('image/jpeg',q)}res(d)};
+    let q=.82,d=c.toDataURL('image/jpeg',q);while(d.length>120000&&q>.3){q-=.08;d=c.toDataURL('image/jpeg',q)}res(d)};
   im.onerror=()=>rej(new Error('Не удалось прочитать изображение'));im.src=u})}
-const rvSt=r=>Math.max(1,Math.min(5,+r.stars||5)),rvPh=r=>!!(r.img&&IMG_RE.test(r.img));
+const rvSt=r=>Math.max(1,Math.min(5,+r.stars||5)),rvPics=r=>{const a=Array.isArray(r.imgs)?r.imgs:(r.imgs&&typeof r.imgs==='object'?Object.values(r.imgs):[]);if(r.img)a.unshift(r.img);return a.filter(x=>typeof x==='string'&&IMG_RE.test(x)).slice(0,4)},rvPh=r=>rvPics(r).length>0;
 const rvPass=r=>rvF==='all'||(rvF==='ph'?rvPh(r):rvF==='5'?rvSt(r)===5:rvF==='4'?rvSt(r)===4:rvSt(r)<=3);
 function paintReviews(){
   const all=Object.entries(REV).filter(([,r])=>r&&r.nick&&r.text).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
@@ -1153,23 +1135,27 @@ function paintReviews(){
   g('rvHero').innerHTML=n?`<div class="ra"><b>${avg.toFixed(1).replace('.',',')}</b>${starsH(Math.round(avg))}<small>${n} ${plR(n)}</small></div><div class="rbars">${[5,4,3,2,1].map(s=>`<div class="rbar"><span>${s}</span><i><b style="width:${Math.round(cnt[s]/n*100)}%"></b></i><em>${cnt[s]}</em></div>`).join('')}</div>`:'';
   const shown=all.filter(([,r])=>rvPass(r));
   g('rvList').innerHTML=n?(shown.length?shown.map(([id,r])=>{const long=r.text.length>220;
-    return `<div class="rv"><div class="h"><div class="av" style="background:hsl(${hueOf(r.nick)} 45% 40%);color:#fff">${esc(r.nick.trim().charAt(0).toUpperCase()||'?')}</div><div style="min-width:0;flex:1"><div class="n">${esc(r.nick)}</div><div class="sub">${starsH(rvSt(r))}<span>${r.ts?relT(r.ts):''}</span></div></div></div><div class="tx${long?' cl':''}">${esc(r.text)}</div>${long?'<button class="more" data-more>Читать полностью</button>':''}${rvPh(r)?`<img class="rvph" src="${r.img}" alt="Фото к отзыву" data-zoom="${esc(id)}">`:''}${r.reply?`<div class="rrep"><div class="rt2">Ответ администрации</div>${esc(r.reply)}</div>`:''}</div>`}).join(''):'<div class="empty">Нет отзывов по этому фильтру</div>'):'<div class="empty">Отзывов пока нет</div>';
-  g('rvAdm').innerHTML=all.map(([id,r])=>`<div class="ord"><div class="h"><div style="display:flex;align-items:center;gap:10px;min-width:0">${rvPh(r)?`<img class="fthumb" src="${r.img}" alt="">`:''}<b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.nick)}</b>${starsH(rvSt(r))}</div><button class="btn d s" data-rdel="${esc(id)}">Удалить</button></div><div class="m">${esc(r.text)}</div><label class="tf" style="height:44px;margin-bottom:8px"><input data-rin="${esc(id)}" placeholder="Ответ администрации" maxlength="300" value="${esc(r.reply||'')}"></label><button class="btn t s w" data-rsave="${esc(id)}">Сохранить ответ</button></div>`).join('')}
+    return `<div class="rv"><div class="h"><div class="av" style="background:hsl(${hueOf(r.nick)} 45% 40%);color:#fff">${esc(r.nick.trim().charAt(0).toUpperCase()||'?')}</div><div style="min-width:0;flex:1"><div class="n">${esc(r.nick)}</div><div class="sub">${starsH(rvSt(r))}<span>${r.ts?relT(r.ts):''}</span></div></div></div><div class="tx${long?' cl':''}">${esc(r.text)}</div>${long?'<button class="more" data-more>Читать полностью</button>':''}${rvPh(r)?`<div class="rvg n${rvPics(r).length}">${rvPics(r).map(u=>`<img class="rvph" src="${u}" alt="Фото к отзыву" data-zoom="1">`).join('')}</div>`:''}${r.reply?`<div class="rrep"><div class="rt2">Ответ администрации</div>${esc(r.reply)}</div>`:''}</div>`}).join(''):'<div class="empty">Нет отзывов по этому фильтру</div>'):'<div class="empty">Отзывов пока нет</div>';
+  g('rvAdm').innerHTML=all.map(([id,r])=>`<div class="ord"><div class="h"><div style="display:flex;align-items:center;gap:10px;min-width:0">${rvPh(r)?`<img class="fthumb" src="${rvPics(r)[0]}" alt="">`:''}<b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.nick)}</b>${starsH(rvSt(r))}</div><button class="btn d s" data-rdel="${esc(id)}">Удалить</button></div><div class="m">${esc(r.text)}</div><label class="tf" style="height:44px;margin-bottom:8px"><input data-rin="${esc(id)}" placeholder="Ответ администрации" maxlength="300" value="${esc(r.reply||'')}"></label><button class="btn t s w" data-rsave="${esc(id)}">Сохранить ответ</button></div>`).join('')}
 onValue(ref(db,'reviews'),s=>{REV=s.val()||{};paintReviews()},()=>{g('rvList').innerHTML='<div class="empty">Раздел временно недоступен</div>'});
 g('rvChips').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;rvF=b.dataset.f;g('rvChips').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===b));paintReviews();vib(8)};
 const rvPaintStars=()=>g('rvStars').querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.s<=rvStarsV));
 rvPaintStars();
 g('rvStars').onclick=e=>{const b=e.target.closest('button');if(!b)return;rvStarsV=+b.dataset.s;rvPaintStars();vib(8)};
-const rvImgReset=()=>{rvImgData=null;g('rvImg').value='';g('rvAvPrev').hidden=true;g('rvAvIco').style.display='';g('rvImgDel').hidden=true;g('rvAvLbl').textContent='Фото отзыва (необязательно)';g('rvAvLabel').style.borderColor=''};
-g('rvImg').onchange=async e=>{const f=e.target.files[0];if(!f)return;
-  try{rvImgData=await packAvatar(f)}catch(x){rvImgData=null;g('rvErr').textContent=x.message;return}
-  g('rvErr').textContent='';g('rvAvPrev').src=rvImgData;g('rvAvPrev').hidden=false;g('rvAvIco').style.display='none';g('rvImgDel').hidden=false;g('rvAvLbl').textContent=f.name;g('rvAvLabel').style.borderColor='var(--p)'};
-g('rvImgDel').onclick=rvImgReset;
+const rvImgReset=()=>{rvImgs=[];g('rvImg').value='';rvThumbs()};
+function rvThumbs(){g('rvThumbs').innerHTML=rvImgs.map((u,i)=>`<div class="rth"><img src="${u}" alt=""><button type="button" data-rmimg="${i}" aria-label="Убрать">×</button></div>`).join('');
+  g('rvAvLbl').textContent=rvImgs.length?`Добавлено ${rvImgs.length} из 4 — добавить ещё`:'Фото отзыва (до 4, необязательно)';g('rvAvLabel').style.borderColor=rvImgs.length?'var(--p)':''}
+g('rvImg').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;g('rvErr').textContent='';
+  const room=4-rvImgs.length;if(room<=0){g('rvErr').textContent='Максимум 4 фото';return}
+  if(fs.length>room)g('rvErr').textContent='Максимум 4 фото — лишние пропущены';
+  for(const f of fs.slice(0,room)){try{rvImgs.push(await packAvatar(f,rvImgs.length))}catch(x){g('rvErr').textContent=x.message}}
+  rvThumbs()};
+g('rvThumbs').onclick=e=>{const b=e.target.closest('[data-rmimg]');if(!b)return;rvImgs.splice(+b.dataset.rmimg,1);rvThumbs();g('rvErr').textContent=''};
 g('rvGo').onclick=async()=>{g('rvErr').textContent='';if(!isAdmin)return;
   const r={nick:g('rvNick').value.trim(),text:g('rvText').value.trim(),stars:rvStarsV},rp=g('rvReply').value.trim();
   if(!r.nick)return g('rvErr').textContent='Введите ник';
   if(!r.text)return g('rvErr').textContent='Введите текст отзыва';
-  if(rp)r.reply=rp;if(rvImgData)r.img=rvImgData;
+  if(rp)r.reply=rp;if(rvImgs.length)r.imgs=rvImgs.slice(0,4);
   let ts=serverTimestamp();const dv=g('rvDate').value;
   if(dv){const now=new Date(),today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
     if(dv>today)return g('rvErr').textContent='Дата не может быть в будущем';
