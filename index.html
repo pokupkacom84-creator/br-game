@@ -679,7 +679,7 @@ let isAdmin=false;
 function drawNav(){const vis=TABS.map((t,i)=>[t,i]).filter(([t,i])=>i!==2&&(i<6||isAdmin));g('nav').className='n'+vis.length;
   g('nav').innerHTML=vis.map(([t,i])=>`<button data-i="${i}" class="${document.querySelector('.page.on')===g('p'+i)?'on':''}"><span class="pill"><svg viewBox="0 0 24 24"><path d="${t[1]}"/></svg></span>${t[0]}${i===6?'<span class="badge" id="badge" hidden></span>':''}</button>`).join('');
   paintBadge();try{paintBell()}catch(e){}}
-g('nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i;
+g('nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i;if(i===5||i===6)startReviews();
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p===g('p'+i)));
   g('nav').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));g('title').textContent=TABS[i][0];vib(8);
   if(i===4)setTimeout(trackViews,100)};
@@ -1075,7 +1075,12 @@ function paintFree(){
     const st=ST[id]||{},views=st.views||0,dls=st.downloads||0;
     return `<div class="pkg" style="margin-bottom:12px;cursor:default" data-view="${esc(id)}">${f.img&&IMG_RE.test(f.img)?`<img class="fimg" src="${f.img}" alt="">`:''}<div class="pkg-top"><div><div class="pkg-title">${esc(f.title)}</div><div class="pkg-sub">${esc(f.desc||'')}</div>${rb?`<div style="margin-top:8px">${rb}</div>`:''}</div><div class="pkg-price"><b style="font-size:18px">${f.ver?'v'+esc(f.ver):''}</b><small>${f.ts?fmtS(f.ts):''}</small></div></div>${tags?`<div class="pkg-feats">${tags}</div>`:''}<div class="free-stats"><span class="free-stat"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg><span id="views-${esc(id)}">${views}</span></span><span class="free-stat"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg><span id="dls-${esc(id)}">${dls}</span></span></div><div style="padding:0 20px 20px"><button class="btn w" data-dl="${esc(id)}">Скачать</button></div></div>`}).join(''):'<div class="empty">Пока пусто — скоро добавим</div>';
   g('fAdm').innerHTML=all.map(([id,f])=>`<div class="ord"><div class="h"><div style="display:flex;align-items:center;gap:10px;min-width:0">${f.img&&IMG_RE.test(f.img)?`<img class="fthumb" src="${f.img}" alt="">`:''}<b>${esc(f.title)}</b>${rootBadge(f.root)}</div><button class="btn d s" data-fdel="${esc(id)}">Удалить</button></div><div class="m">${f.ver?'v'+esc(f.ver)+' · ':''}${esc(f.url||'')}</div></div>`).join('')}
-onValue(ref(db,'free'),s=>{FREE=s.val()||{};subStats();paintFree();if(document.querySelector('#p4.on'))trackViews()},()=>{g('freeList').innerHTML='<div class="empty">Раздел временно недоступен</div>'});
+const FC='zfree_cache';
+try{const c=JSON.parse(localStorage.getItem(FC)||'null');if(c&&typeof c==='object'&&Object.keys(c).length){FREE=c;paintFree()}}catch(e){}
+const freeSlow=setTimeout(()=>{if(!Object.keys(FREE).length)g('freeList').innerHTML='<div class="empty">Долго грузится… проверьте интернет, список подгрузится сам</div>'},10000);
+onValue(ref(db,'free'),s=>{clearTimeout(freeSlow);FREE=s.val()||{};subStats();paintFree();if(document.querySelector('#p4.on'))trackViews();
+  try{const l={};Object.entries(FREE).forEach(([k,v])=>{if(v){const{img,...r}=v;l[k]=r}});localStorage.setItem(FC,JSON.stringify(l))}catch(e){}
+  setTimeout(startReviews,400)},()=>{g('freeList').innerHTML='<div class="empty">Раздел временно недоступен</div>'});
 /* счётчики: free_stats/{id}/{views|downloads}. живая подписка, +1 через транзакцию, один раз на устройство.
    метка «сделано» ставится только после успешной записи — раньше при ошибке правил она ставилась зря и счётчик больше не пытался */
 let ST={};const stOff={},stBusy=new Set();
@@ -1134,7 +1139,11 @@ function paintReviews(){
   g('rvList').innerHTML=n?(shown.length?shown.map(([id,r])=>{const long=r.text.length>220;
     return `<div class="rv"><div class="h"><div class="av" style="background:hsl(${hueOf(r.nick)} 45% 40%);color:#fff">${esc(r.nick.trim().charAt(0).toUpperCase()||'?')}</div><div style="min-width:0;flex:1"><div class="n">${esc(r.nick)}</div><div class="sub">${starsH(rvSt(r))}<span>${r.ts?relT(r.ts):''}</span></div></div></div><div class="tx${long?' cl':''}">${esc(r.text)}</div>${long?'<button class="more" data-more>Читать полностью</button>':''}${rvPh(r)?`<div class="rvg n${rvPics(r).length}">${rvPics(r).map(u=>`<img class="rvph" src="${u}" alt="Фото к отзыву" data-zoom="1">`).join('')}</div>`:''}${r.reply?`<div class="rrep"><div class="rt2">Ответ администрации</div>${esc(r.reply)}</div>`:''}</div>`}).join(''):'<div class="empty">Нет отзывов по этому фильтру</div>'):'<div class="empty">Отзывов пока нет</div>';
   g('rvAdm').innerHTML=all.map(([id,r])=>`<div class="ord"><div class="h"><div style="display:flex;align-items:center;gap:10px;min-width:0">${rvPh(r)?`<img class="fthumb" src="${rvPics(r)[0]}" alt="">`:''}<b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.nick)}</b>${starsH(rvSt(r))}</div><button class="btn d s" data-rdel="${esc(id)}">Удалить</button></div><div class="m">${esc(r.text)}</div><label class="tf" style="height:44px;margin-bottom:8px"><input data-rin="${esc(id)}" placeholder="Ответ администрации" maxlength="300" value="${esc(r.reply||'')}"></label><button class="btn t s w" data-rsave="${esc(id)}">Сохранить ответ</button></div>`).join('')}
-onValue(ref(db,'reviews'),s=>{REV=s.val()||{};paintReviews()},()=>{g('rvList').innerHTML='<div class="empty">Раздел временно недоступен</div>'});
+let rvOn=false;
+function startReviews(){if(rvOn)return;rvOn=true;
+  onValue(query(ref(db,'reviews'),limitToLast(40)),s=>{REV=s.val()||{};paintReviews()},()=>{g('rvList').innerHTML='<div class="empty">Раздел временно недоступен</div>'})}
+g('rvList').innerHTML='<div class="empty">Загрузка…</div>';
+setTimeout(startReviews,8000);
 g('rvChips').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;rvF=b.dataset.f;g('rvChips').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===b));paintReviews();vib(8)};
 const rvPaintStars=()=>g('rvStars').querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.s<=rvStarsV));
 rvPaintStars();
