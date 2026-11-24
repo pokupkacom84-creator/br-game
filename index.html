@@ -234,6 +234,13 @@ input,textarea{-webkit-user-select:text;user-select:text}
 .free-stats{display:flex;gap:16px;padding:0 20px 16px;align-items:center}
 .free-stat{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--onv)}
 .free-stat svg{width:14px;height:14px;fill:var(--onv);flex:none}
+/* Главный экран — hero */
+#p0 .hero{padding-bottom:28px;min-height:200px;display:flex;flex-direction:column;justify-content:flex-end}
+/* Категории магазина */
+#shopCats{display:flex;overflow-x:auto;gap:8px;margin:8px 0 4px;padding:0 0 2px;scrollbar-width:none}
+#shopCats::-webkit-scrollbar{display:none}
+/* Скрытые stub-элементы совместимости */
+span[hidden]{display:none!important}
 </style>
 </head>
 <body>
@@ -243,25 +250,31 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div class="pages">
     <!-- ГЛАВНОЕ -->
     <section class="page on" id="p0">
-      <div class="hero">
-        <div class="st"><span class="dot" id="dot"></span><span id="stT">Мониторинг остановлен</span></div>
-        <div style="opacity:.8;font-size:14px">Мониторинг производительности</div>
-        <div class="big">Standoff 2</div>
-        <button class="btn" id="run"><svg viewBox="0 0 24 24" id="runI"><path d="M8 5v14l11-7z"/></svg><span id="runT">Запустить</span></button>
-        <button class="btn t" id="menuBtn" style="width:100%;margin-top:10px"><svg viewBox="0 0 24 24" style="width:20px;height:20px"><path d="M8 5v14l11-7z"/></svg><span id="menuBtnT">Запустить меню FluxMod</span></button>
+      <div class="hero" style="padding-bottom:28px">
+        <div class="st"><span class="dot on" id="dot"></span><span id="stT">FluxMod — Standoff 2</span>
+          <span class="onl" style="margin-left:auto"><i></i>Онлайн</span>
+        </div>
+        <div class="big" style="font-size:30px;margin:10px 0 6px">FluxMod Menu</div>
+        <div style="opacity:.8;font-size:14px;margin-bottom:20px">Чит-меню для Standoff 2 без ROOT</div>
+        <button class="btn w" id="menuBtn" style="height:56px;font-size:16px"><svg viewBox="0 0 24 24" style="width:22px;height:22px"><path d="M8 5v14l11-7z"/></svg><span id="menuBtnT">Запустить меню FluxMod</span></button>
       </div>
-      <div class="grid">
-        <div class="stat" data-m="fps"><span>FPS (экран)</span><b id="fps">—</b></div>
-        <div class="stat" data-m="rtt"><span>Задержка сети</span><b id="rtt">—</b></div>
-        <div class="stat" data-m="mem"><span>Память JS</span><b id="mem">—</b></div>
-        <div class="stat" data-m="bat"><span>Заряд</span><b id="bat">—</b></div>
+      <!-- Скрытые элементы для совместимости со старым JS -->
+      <span id="runT" hidden></span>
+      <span id="fps" hidden></span><span id="rtt" hidden></span><span id="mem" hidden></span><span id="bat" hidden></span>
+      <span id="sw-ovl" hidden></span><span id="sw-log" hidden></span>
+      <div id="logCard" hidden><span id="logT"></span></div>
+      <!-- Баланс в главном -->
+      <div id="homeBalCard" hidden style="background:var(--s2);border-radius:var(--rm);padding:16px 20px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
+        <div><div style="font-size:13px;color:var(--onv)">Баланс</div><div style="font-size:24px;font-weight:400;color:var(--p)" id="homeBalAmt">0 ₽</div></div>
+        <button class="btn s" onclick="goTab(1)">В магазин</button>
       </div>
-      <div class="sec">Быстрые параметры</div>
+      <!-- Быстрый доступ -->
+      <div class="sec" style="margin-top:4px">Быстрый доступ</div>
       <div class="list">
-        <div class="row" data-sw="ovl"><div><div class="t">Оверлей FPS</div><div class="s">Счётчик в углу экрана</div></div><span class="sw on" id="sw-ovl"></span></div>
-        <div class="row" data-sw="log"><div><div class="t">Журнал сессии</div><div class="s">Средний и минимальный FPS</div></div><span class="sw" id="sw-log"></span></div>
+        <div class="row" onclick="goTab(1)"><div><div class="t">🛒 Магазин</div><div class="s">Читы, прокси, VPN</div></div><span>›</span></div>
+        <div class="row" onclick="goTab(5)"><div><div class="t">⭐ Отзывы</div><div class="s">Что говорят пользователи</div></div><span>›</span></div>
+        <div class="row" onclick="goTab(3)"><div><div class="t">👤 Профиль</div><div class="s">Ключ и настройки аккаунта</div></div><span>›</span></div>
       </div>
-      <div class="card" id="logCard" hidden><div class="mut">Сессия</div><div id="logT" style="margin-top:6px"></div></div>
     </section>
 
     <!-- ПРОФИЛЬ + НАСТРОЙКИ -->
@@ -386,96 +399,263 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <!-- МАГАЗИН -->
     <section class="page" id="p1">
       <div class="shop-hero">
-        <h2>Каталог ключей</h2>
-        <p>Доступ к FluxMod меню для Standoff 2</p>
+        <h2>Магазин FluxMod</h2>
+        <p>Читы, прокси, VPN — всё в одном месте</p>
       </div>
 
-      <div class="sec" style="margin-top:4px">Выберите тариф</div>
-      <div class="pkg-grid">
-        <!-- 7 дней -->
-        <div class="pkg" data-plan="7" id="pkg7">
-          <div class="pkg-top">
-            <div>
-              <div class="pkg-title">7 дней</div>
-              <div class="pkg-sub">Попробовать FluxMod</div>
+      <!-- Баланс в магазине -->
+      <div id="shopBalDisplay" hidden style="background:var(--pc);color:var(--onpc);border-radius:var(--rm);padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
+        <div><div style="font-size:13px;opacity:.8">Ваш баланс</div><div style="font-size:26px;font-weight:400" id="shopBalAmt">0 ₽</div></div>
+        <svg viewBox="0 0 24 24" style="width:28px;height:28px;fill:currentColor;opacity:.6"><path d="M21 18v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1h-9a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9zm-9-2h10V8H12v8zm4-2.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>
+      </div>
+
+      <!-- Категории каталога -->
+      <div class="chips" id="shopCats" style="margin-bottom:0">
+        <button class="chip on" data-cat="cheats">🎯 Читы</button>
+        <button class="chip" data-cat="proxy">🌐 Прокси</button>
+        <button class="chip" data-cat="vpn">🔒 VPN</button>
+      </div>
+
+      <!-- === КАТЕГОРИЯ: ЧИТЫ === -->
+      <div id="catCheats">
+        <div class="sec" style="margin-top:4px">Выберите тариф</div>
+        <div class="pkg-grid">
+          <!-- 7 дней -->
+          <div class="pkg" data-plan="7" id="pkg7">
+            <div class="pkg-top">
+              <div>
+                <div class="pkg-title">7 дней</div>
+                <div class="pkg-sub">Попробовать FluxMod</div>
+              </div>
+              <div class="pkg-price">
+                <b>150 ₽</b>
+                <small>21 ₽ / день</small>
+              </div>
             </div>
-            <div class="pkg-price">
-              <b>150 ₽</b>
-              <small>21 ₽ / день</small>
+            <div class="pkg-feats">
+              <span class="pkg-feat">ESP</span>
+              <span class="pkg-feat">Silent Aim</span>
+              <span class="pkg-feat">FOV-круг</span>
+              <span class="pkg-feat">Прицел</span>
             </div>
           </div>
-          <div class="pkg-feats">
-            <span class="pkg-feat">ESP</span>
-            <span class="pkg-feat">Silent Aim</span>
-            <span class="pkg-feat">FOV-круг</span>
-            <span class="pkg-feat">Прицел</span>
+          <!-- 30 дней -->
+          <div class="pkg pop" data-plan="30" id="pkg30">
+            <span class="pkg-badge">Популярный</span>
+            <div class="pkg-top">
+              <div>
+                <div class="pkg-title">30 дней</div>
+                <div class="pkg-sub">Оптимальный выбор</div>
+              </div>
+              <div class="pkg-price">
+                <b>450 ₽</b>
+                <small>15 ₽ / день</small>
+              </div>
+            </div>
+            <div class="pkg-feats">
+              <span class="pkg-feat">ESP</span>
+              <span class="pkg-feat">Silent Aim</span>
+              <span class="pkg-feat">FOV-круг</span>
+              <span class="pkg-feat">Прицел</span>
+              <span class="pkg-feat">Эффекты экрана</span>
+              <span class="pkg-feat">Темы</span>
+            </div>
+          </div>
+          <!-- 90 дней -->
+          <div class="pkg" data-plan="90" id="pkg90">
+            <div class="pkg-top">
+              <div>
+                <div class="pkg-title">90 дней</div>
+                <div class="pkg-sub">Максимальная выгода</div>
+              </div>
+              <div class="pkg-price">
+                <b>750 ₽</b>
+                <small>8 ₽ / день</small>
+              </div>
+            </div>
+            <div class="pkg-feats">
+              <span class="pkg-feat">Всё из 30 дней</span>
+              <span class="pkg-feat">Пресеты конфигов</span>
+              <span class="pkg-feat">HUD-панель</span>
+              <span class="pkg-feat">Музыкальный плеер</span>
+              <span class="pkg-feat">Приоритетная поддержка</span>
+            </div>
           </div>
         </div>
-        <!-- 30 дней -->
-        <div class="pkg pop" data-plan="30" id="pkg30">
-          <span class="pkg-badge">Популярный</span>
-          <div class="pkg-top">
-            <div>
-              <div class="pkg-title">30 дней</div>
-              <div class="pkg-sub">Оптимальный выбор</div>
+
+        <div id="shopDraft"></div>
+        <div class="act-card"><h3>Оплата переводом</h3><p>Нажмите «Оплатить» — создастся заявка и вы увидите реквизиты. На оплату даётся 15 минут: переведите сумму, прикрепите скриншот чека и подтвердите оплату. Администратор проверит чек, и вы получите уведомление с ключом и UID.</p></div>
+        <button class="btn w" id="shopPay" style="margin-bottom:8px">Оплатить</button>
+        <button class="btn t w" id="shopBal" style="margin-bottom:8px" hidden></button>
+        <div id="shopOrdS"></div>
+
+        <!-- Как активировать — показывается после оплаты -->
+        <div id="shopActBlock" hidden>
+          <div class="sec" style="margin-top:16px">Как активировать</div>
+          <div class="act-card">
+            <h3>После оплаты</h3>
+            <p>Администратор выдаст ключ в течение нескольких минут. Следуйте шагам:</p>
+            <div class="act-steps">
+              <div class="act-step"><span class="num">1</span><span class="txt">Перейдите во вкладку <b>Профиль</b> — ключ появится автоматически</span></div>
+              <div class="act-step"><span class="num">2</span><span class="txt">Нажмите <b>Копировать</b> рядом с ключом</span></div>
+              <div class="act-step"><span class="num">3</span><span class="txt">Вернитесь на <b>Главное</b> и нажмите «Запустить меню FluxMod»</span></div>
+              <div class="act-step"><span class="num">4</span><span class="txt">Вставьте ключ в открывшееся окно меню</span></div>
             </div>
-            <div class="pkg-price">
-              <b>450 ₽</b>
-              <small>15 ₽ / день</small>
-            </div>
-          </div>
-          <div class="pkg-feats">
-            <span class="pkg-feat">ESP</span>
-            <span class="pkg-feat">Silent Aim</span>
-            <span class="pkg-feat">FOV-круг</span>
-            <span class="pkg-feat">Прицел</span>
-            <span class="pkg-feat">Эффекты экрана</span>
-            <span class="pkg-feat">Темы</span>
-          </div>
-        </div>
-        <!-- 90 дней -->
-        <div class="pkg" data-plan="90" id="pkg90">
-          <div class="pkg-top">
-            <div>
-              <div class="pkg-title">90 дней</div>
-              <div class="pkg-sub">Максимальная выгода</div>
-            </div>
-            <div class="pkg-price">
-              <b>750 ₽</b>
-              <small>8 ₽ / день</small>
-            </div>
-          </div>
-          <div class="pkg-feats">
-            <span class="pkg-feat">Всё из 30 дней</span>
-            <span class="pkg-feat">Пресеты конфигов</span>
-            <span class="pkg-feat">HUD-панель</span>
-            <span class="pkg-feat">Музыкальный плеер</span>
-            <span class="pkg-feat">Приоритетная поддержка</span>
+            <button class="btn t w" id="goProfile">Перейти в Профиль</button>
           </div>
         </div>
       </div>
 
-      <div id="shopDraft"></div>
-      <div class="act-card"><h3>Оплата переводом</h3><p>Нажмите «Оплатить» — создастся заявка и вы увидите реквизиты. На оплату даётся 15 минут: переведите сумму, прикрепите скриншот чека и подтвердите оплату. Администратор проверит чек, и вы получите уведомление с ключом и UID.</p></div>
-      <button class="btn w" id="shopPay" style="margin-bottom:8px">Оплатить</button>
-      <button class="btn t w" id="shopBal" style="margin-bottom:8px" hidden></button>
-      <div id="shopOrdS"></div>
-
-      <!-- Как активировать — показывается после оплаты -->
-      <div id="shopActBlock" hidden>
-        <div class="sec" style="margin-top:16px">Как активировать</div>
+      <!-- === КАТЕГОРИЯ: ПРОКСИ === -->
+      <div id="catProxy" hidden>
+        <div class="sec" style="margin-top:4px">Прокси-серверы</div>
+        <div class="pkg-grid">
+          <div class="pkg" data-plan-proxy="basic" id="pkgProxy1" onclick="selectProxy(this)">
+            <div class="pkg-top">
+              <div>
+                <div class="pkg-title">Basic</div>
+                <div class="pkg-sub">HTTP/HTTPS прокси</div>
+              </div>
+              <div class="pkg-price">
+                <b>99 ₽</b>
+                <small>в месяц</small>
+              </div>
+            </div>
+            <div class="pkg-feats">
+              <span class="pkg-feat">HTTP/HTTPS</span>
+              <span class="pkg-feat">5 IP</span>
+              <span class="pkg-feat">Россия</span>
+              <span class="pkg-feat">1 Гбит/с</span>
+            </div>
+          </div>
+          <div class="pkg" data-plan-proxy="socks" id="pkgProxy2" onclick="selectProxy(this)">
+            <div class="pkg-top">
+              <div>
+                <div class="pkg-title">SOCKS5</div>
+                <div class="pkg-sub">Игровой прокси</div>
+              </div>
+              <div class="pkg-price">
+                <b>199 ₽</b>
+                <small>в месяц</small>
+              </div>
+            </div>
+            <div class="pkg-feats">
+              <span class="pkg-feat">SOCKS5</span>
+              <span class="pkg-feat">10 IP</span>
+              <span class="pkg-feat">СНГ + EU</span>
+              <span class="pkg-feat">Низкий пинг</span>
+            </div>
+          </div>
+          <div class="pkg" data-plan-proxy="premium" id="pkgProxy3" onclick="selectProxy(this)">
+            <span class="pkg-badge">Лучший</span>
+            <div class="pkg-top">
+              <div>
+                <div class="pkg-title">Premium</div>
+                <div class="pkg-sub">Максимум скорости</div>
+              </div>
+              <div class="pkg-price">
+                <b>349 ₽</b>
+                <small>в месяц</small>
+              </div>
+            </div>
+            <div class="pkg-feats">
+              <span class="pkg-feat">HTTP/SOCKS5</span>
+              <span class="pkg-feat">25 IP</span>
+              <span class="pkg-feat">СНГ, EU, US</span>
+              <span class="pkg-feat">Ротация IP</span>
+              <span class="pkg-feat">Анонимность</span>
+            </div>
+          </div>
+        </div>
         <div class="act-card">
-          <h3>После оплаты</h3>
-          <p>Администратор выдаст ключ в течение нескольких минут. Следуйте шагам:</p>
-          <div class="act-steps">
-            <div class="act-step"><span class="num">1</span><span class="txt">Перейдите во вкладку <b>Профиль</b> — ключ появится автоматически</span></div>
-            <div class="act-step"><span class="num">2</span><span class="txt">Нажмите <b>Копировать</b> рядом с ключом</span></div>
-            <div class="act-step"><span class="num">3</span><span class="txt">Вернитесь на <b>Главное</b> и нажмите «Запустить меню FluxMod»</span></div>
-            <div class="act-step"><span class="num">4</span><span class="txt">Вставьте ключ в открывшееся окно меню</span></div>
+          <h3>Как это работает</h3>
+          <p>После оплаты администратор вышлет список IP-адресов, портов и данные для авторизации в течение 15 минут.</p>
+          <div class="act-steps" style="margin-bottom:0">
+            <div class="act-step"><span class="num">1</span><span class="txt">Оплатите нужный тариф</span></div>
+            <div class="act-step"><span class="num">2</span><span class="txt">Получите данные в <b>Профиле</b></span></div>
+            <div class="act-step"><span class="num">3</span><span class="txt">Настройте прокси в браузере или игре</span></div>
           </div>
-          <button class="btn t w" id="goProfile">Перейти в Профиль</button>
         </div>
+        <button class="btn w" id="proxyPay" style="margin-bottom:8px" onclick="startProxyPurchase()">Оплатить прокси</button>
+        <button class="btn t w" id="proxyBalBtn" style="margin-bottom:8px" hidden onclick="payProxyBalance()">Оплатить с баланса</button>
       </div>
+
+      <!-- === КАТЕГОРИЯ: VPN === -->
+      <div id="catVpn" hidden>
+        <div class="sec" style="margin-top:4px">VPN-подписки</div>
+        <div class="pkg-grid">
+          <div class="pkg" data-plan-vpn="month" id="pkgVpn1" onclick="selectVpn(this)">
+            <div class="pkg-top">
+              <div>
+                <div class="pkg-title">1 месяц</div>
+                <div class="pkg-sub">Защита трафика</div>
+              </div>
+              <div class="pkg-price">
+                <b>149 ₽</b>
+                <small>разовый платёж</small>
+              </div>
+            </div>
+            <div class="pkg-feats">
+              <span class="pkg-feat">WireGuard</span>
+              <span class="pkg-feat">5 устройств</span>
+              <span class="pkg-feat">СНГ, EU, US</span>
+              <span class="pkg-feat">Нет логов</span>
+            </div>
+          </div>
+          <div class="pkg pop" data-plan-vpn="quarter" id="pkgVpn2" onclick="selectVpn(this)">
+            <span class="pkg-badge">Выгодно</span>
+            <div class="pkg-top">
+              <div>
+                <div class="pkg-title">3 месяца</div>
+                <div class="pkg-sub">Оптимальный выбор</div>
+              </div>
+              <div class="pkg-price">
+                <b>349 ₽</b>
+                <small>~116 ₽ / мес</small>
+              </div>
+            </div>
+            <div class="pkg-feats">
+              <span class="pkg-feat">WireGuard/OpenVPN</span>
+              <span class="pkg-feat">10 устройств</span>
+              <span class="pkg-feat">20+ стран</span>
+              <span class="pkg-feat">Нет логов</span>
+              <span class="pkg-feat">Kill Switch</span>
+            </div>
+          </div>
+          <div class="pkg" data-plan-vpn="year" id="pkgVpn3" onclick="selectVpn(this)">
+            <div class="pkg-top">
+              <div>
+                <div class="pkg-title">12 месяцев</div>
+                <div class="pkg-sub">Максимум выгоды</div>
+              </div>
+              <div class="pkg-price">
+                <b>999 ₽</b>
+                <small>~83 ₽ / мес</small>
+              </div>
+            </div>
+            <div class="pkg-feats">
+              <span class="pkg-feat">Все протоколы</span>
+              <span class="pkg-feat">∞ устройств</span>
+              <span class="pkg-feat">40+ стран</span>
+              <span class="pkg-feat">Нет логов</span>
+              <span class="pkg-feat">Kill Switch</span>
+              <span class="pkg-feat">Раздельный туннель</span>
+            </div>
+          </div>
+        </div>
+        <div class="act-card">
+          <h3>Как подключить VPN</h3>
+          <p>После оплаты вы получите конфигурационный файл для WireGuard или данные OpenVPN.</p>
+          <div class="act-steps" style="margin-bottom:0">
+            <div class="act-step"><span class="num">1</span><span class="txt">Оплатите подписку</span></div>
+            <div class="act-step"><span class="num">2</span><span class="txt">Скачайте конфиг из <b>Профиля</b></span></div>
+            <div class="act-step"><span class="num">3</span><span class="txt">Импортируйте в WireGuard или OpenVPN</span></div>
+          </div>
+        </div>
+        <button class="btn w" id="vpnPay" style="margin-bottom:8px" onclick="startVpnPurchase()">Оплатить VPN</button>
+        <button class="btn t w" id="vpnBalBtn" style="margin-bottom:8px" hidden onclick="payVpnBalance()">Оплатить с баланса</button>
+      </div>
+
     </section>
   </div>
 
@@ -663,8 +843,8 @@ const goTab=i=>{if(i===3)showPane('pnAcc');const b=g('nav').querySelector('[data
 drawNav();
 
 /* ===== переключатели ===== */
-['ovl','log','vib'].forEach(k=>g('sw-'+k).classList.toggle('on',!!S[k]));
-document.querySelectorAll('[data-sw]').forEach(r=>r.onclick=()=>{const k=r.dataset.sw;S[k]=!S[k];save();g('sw-'+k).classList.toggle('on',!!S[k]);vib(10)});
+['ovl','log','vib'].forEach(k=>{const el=g('sw-'+k);if(el)el.classList.toggle('on',!!S[k])});
+document.querySelectorAll('[data-sw]').forEach(r=>r.onclick=()=>{const k=r.dataset.sw;S[k]=!S[k];save();const sw=g('sw-'+k);if(sw)sw.classList.toggle('on',!!S[k]);vib(10)});
 g('iv').value=S.iv;g('ivV').textContent=S.iv+' с';
 g('iv').oninput=e=>{S.iv=+e.target.value;g('ivV').textContent=S.iv+' с';save()};
 
@@ -683,7 +863,7 @@ function setRun(v){run=v;vib(25);g('dot').classList.toggle('on',v);g('stT').text
   else{['fps','rtt','mem'].forEach(i=>g(i).textContent='—');if(ovl)ovl.style.display='none';
     if(S.log&&fpsArr.length){const a=fpsArr.reduce((x,y)=>x+y,0)/fpsArr.length;g('logCard').hidden=false;g('logT').textContent=`Средний FPS: ${a.toFixed(1)} · минимум: ${Math.min(...fpsArr)} · замеров: ${fpsArr.length}`}}}
 function launchGame(){try{if(window.FluxNative&&FluxNative.launchGame)FluxNative.launchGame();else toast('Запуск игры доступен только из приложения')}catch(e){toast('Не удалось запустить игру')}}
-g('run').onclick=()=>{if(!LIC.active)return openSheet();const st=!run;setRun(st);if(st)launchGame()};
+if(g('run'))g('run').onclick=()=>{if(!LIC.active)return openSheet();const st=!run;setRun(st);if(st)launchGame()};
 
 /* ===== MATERIAL 3: расширенные настройки ===== */
 Object.entries({th:'auto',sh:'1',op:'tr',fs:1,oa:1,am:false,dn:false,an:true,nt:true,mfps:true,mrtt:true,mmem:true,mbat:true}).forEach(([k,v])=>{S[k]??=v});
@@ -1171,8 +1351,24 @@ async function balOf(u){const [a,b,c]=await Promise.all([get(ref(db,'refs/'+u)),
   const sum=x=>{let t=0;x.forEach(y=>{t+=+y.val()||0});return t};return a.size*REF_BONUS+sum(b)-sum(c)}
 let RB={n:0,b:0,s:0},refCode=null;
 const bal=()=>RB.n*REF_BONUS+RB.b-RB.s;
-function stopRef(){RB={n:0,b:0,s:0};refCode=null;g('refCard').hidden=true;g('shopBal').hidden=true}
-function paintBal(){g('refBal').textContent=bal()+' ₽';g('refN').textContent=RB.n;g('refBuy').textContent=RB.b+' ₽';updBalBtn()}
+function stopRef(){RB={n:0,b:0,s:0};refCode=null;g('refCard').hidden=true;g('shopBal').hidden=true;
+  const hb=g('homeBalCard');if(hb)hb.hidden=true;
+  const sb=g('shopBalDisplay');if(sb)sb.hidden=true;
+}
+function paintBal(){
+  const b=bal();
+  g('refBal').textContent=b+' ₽';g('refN').textContent=RB.n;g('refBuy').textContent=RB.b+' ₽';
+  // Баланс в главном
+  const hb=g('homeBalCard'),ha=g('homeBalAmt');
+  if(hb&&ha){hb.hidden=(!uid||KS||b<=0);ha.textContent=b+' ₽'}
+  // Баланс в магазине
+  const sb=g('shopBalDisplay'),sa=g('shopBalAmt');
+  if(sb&&sa){sb.hidden=(!uid||KS||b<=0);sa.textContent=b+' ₽'}
+  updBalBtn();
+  // текущая категория
+  const activeCat=document.querySelector('#shopCats .chip.on');
+  if(activeCat)updateCatBalBtns(activeCat.dataset.cat);
+}
 function updBalBtn(){const b=g('shopBal'),p=PRICES[shopPlan];
   if(!uid||KS||!p||bal()<p){b.hidden=true;return}
   b.hidden=false;b.textContent='Оплатить с баланса ('+bal()+' ₽)'}
@@ -1207,25 +1403,91 @@ g('shopBal').onclick=async()=>{if(!uid||KS)return;const p=shopPlan;
 /* ссылка-приглашение вида ?ref=ZEN-XXXXXXX подставит код в регистрацию */
 try{const q=normCode(new URLSearchParams(location.search).get('ref'));if(q){g('arc').value=q;g('arc').dispatchEvent(new Event('input'))}}catch(e){}
 
-/* ===== МАГАЗИН ===== */
+/* ===== МАГАЗИН — каталоги ===== */
 let shopPlan=30;
-document.querySelectorAll('.pkg').forEach(p=>p.onclick=()=>{shopPlan=+p.dataset.plan;document.querySelectorAll('.pkg').forEach(x=>x.classList.toggle('pop',x===p));vib(8);updBalBtn()});
+
+// Переключение категорий магазина
+const SHOP_CATS={cheats:'catCheats',proxy:'catProxy',vpn:'catVpn'};
+document.querySelectorAll('#shopCats .chip').forEach(c=>c.onclick=()=>{
+  document.querySelectorAll('#shopCats .chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on');
+  const cat=c.dataset.cat;
+  Object.values(SHOP_CATS).forEach(id=>{const el=g(id);if(el)el.hidden=true});
+  const el=g(SHOP_CATS[cat]);if(el)el.hidden=false;
+  updateCatBalBtns(cat);
+  vib(8);
+});
+
+// Выбор тарифа чита
+document.querySelectorAll('.pkg[data-plan]').forEach(p=>p.onclick=()=>{
+  shopPlan=+p.dataset.plan;
+  document.querySelectorAll('.pkg[data-plan]').forEach(x=>x.classList.remove('pop'));
+  p.classList.add('pop');
+  vib(8);updBalBtn();
+});
 g('shopPay').onclick=async()=>{g('shopPay').disabled=true;await startPurchase(shopPlan);g('shopPay').disabled=false};
+
+// Прокси
+let proxyPlan='basic';
+window.selectProxy=el=>{document.querySelectorAll('[data-plan-proxy]').forEach(x=>x.classList.remove('pop'));el.classList.add('pop');proxyPlan=el.dataset.planProxy;vib(8);updateCatBalBtns('proxy')};
+window.startProxyPurchase=()=>toast('Оплата прокси — переведите сумму администратору');
+const PROXY_PRICES={basic:99,socks:199,premium:349};
+window.payProxyBalance=async()=>{
+  const p=PROXY_PRICES[proxyPlan]||99;
+  if(bal()<p)return toast('Недостаточно средств на балансе');
+  if(!uid||KS)return toast('Войдите в аккаунт');
+  g('proxyBalBtn').disabled=true;
+  try{const r=push(ref(db,'zorders')),id=r.key;
+    await set(r,{u:uid,src:'mail',plan:'proxy_'+proxyPlan,m:'balance',st:0,ts:serverTimestamp(),bal:1,paid:serverTimestamp()});
+    toast('Заявка на прокси отправлена — ключ выдаст администратор');vib(20)}
+  catch(x){toast('Ошибка: '+errT(x))}
+  g('proxyBalBtn').disabled=false;
+};
+
+// VPN
+let vpnPlan='month';
+window.selectVpn=el=>{document.querySelectorAll('[data-plan-vpn]').forEach(x=>x.classList.remove('pop'));el.classList.add('pop');vpnPlan=el.dataset.planVpn;vib(8);updateCatBalBtns('vpn')};
+window.startVpnPurchase=()=>toast('Оплата VPN — переведите сумму администратору');
+const VPN_PRICES={month:149,quarter:349,year:999};
+window.payVpnBalance=async()=>{
+  const p=VPN_PRICES[vpnPlan]||149;
+  if(bal()<p)return toast('Недостаточно средств на балансе');
+  if(!uid||KS)return toast('Войдите в аккаунт');
+  g('vpnBalBtn').disabled=true;
+  try{const r=push(ref(db,'zorders')),id=r.key;
+    await set(r,{u:uid,src:'mail',plan:'vpn_'+vpnPlan,m:'balance',st:0,ts:serverTimestamp(),bal:1,paid:serverTimestamp()});
+    toast('Заявка на VPN отправлена — ключ выдаст администратор');vib(20)}
+  catch(x){toast('Ошибка: '+errT(x))}
+  g('vpnBalBtn').disabled=false;
+};
+
+// Обновить кнопки оплаты с баланса по категории
+function updateCatBalBtns(cat){
+  if(!uid||KS)return;
+  const b=bal();
+  if(cat==='proxy'){const p=PROXY_PRICES[proxyPlan]||99;const btn=g('proxyBalBtn');if(btn){btn.hidden=b<p;if(!btn.hidden)btn.textContent='Оплатить с баланса ('+b+' ₽)'}}
+  if(cat==='vpn'){const p=VPN_PRICES[vpnPlan]||149;const btn=g('vpnBalBtn');if(btn){btn.hidden=b<p;if(!btn.hidden)btn.textContent='Оплатить с баланса ('+b+' ₽)'}}
+}
 
 // Кнопка «Перейти в Профиль» из блока активации
 g('goProfile').onclick=()=>goTab(3);
 
 // Обновляем кнопку menuBtn с учётом статуса ключа
 function updateMenuBtn(){
-  const t=g('menuBtnT');
-  if(LIC.active){t.textContent='Запустить меню FluxMod'}
-  else{t.textContent='Получить ключ для запуска меню'}
+  const btn=g('menuBtn'),t=g('menuBtnT');
+  if(LIC.active){
+    t.textContent='Запустить меню FluxMod';
+    btn.style.background='';btn.style.color='';
+  }else{
+    t.textContent='Купить ключ — от 150 ₽';
+    btn.style.background='var(--pc)';btn.style.color='var(--onpc)';
+  }
 }
 updateMenuBtn();
 
-// Если нет ключа — ведём в Магазин, иначе запускаем меню
+// Одна кнопка: есть ключ — запускаем меню, нет — в магазин
 g('menuBtn').onclick=()=>{
-  if(!LIC.active){goTab(1);return}  // 1 = Магазин
+  if(!LIC.active){goTab(1);return}
   if(!window.FluxNative||!FluxNative.launch)return toast('Меню запускается только из приложения');
   try{FluxNative.launch(uid||'');toast('Введите ключ в окне меню')}catch(e){toast('Не удалось запустить меню')}
 };
