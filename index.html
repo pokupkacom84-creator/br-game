@@ -189,6 +189,9 @@ input,textarea{-webkit-user-select:text;user-select:text}
 .keybox,pre.rules{-webkit-user-select:text;user-select:text}
 .refbal{display:flex;justify-content:space-between;align-items:center;background:var(--pc);color:var(--onpc);border-radius:var(--rm);padding:14px 18px;margin:8px 0 12px}
 .refbal span{font-size:14px}.refbal b{font-size:28px;font-weight:400}
+.free-stats{display:flex;gap:16px;padding:0 20px 16px;align-items:center}
+.free-stat{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--onv)}
+.free-stat svg{width:14px;height:14px;fill:var(--onv);flex:none}
 </style>
 </head>
 <body>
@@ -199,7 +202,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <!-- ГЛАВНОЕ -->
     <section class="page on" id="p0">
       <div class="hero">
-        <div class="st"><span class="dot" id="dot"></span><span id="stT">Мониторинг остановлен</span><span class="onl"><i></i><span>Онлайн: <b id="onlN">—</b></span></span></div>
+        <div class="st"><span class="dot" id="dot"></span><span id="stT">Мониторинг остановлен</span></div>
         <div style="opacity:.8;font-size:14px">Мониторинг производительности</div>
         <div class="big">Standoff 2</div>
         <button class="btn" id="run"><svg viewBox="0 0 24 24" id="runI"><path d="M8 5v14l11-7z"/></svg><span id="runT">Запустить</span></button>
@@ -581,7 +584,8 @@ function drawNav(){const n=isAdmin?6:5;
   paintBadge();try{paintBell()}catch(e){}}
 g('nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i;
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p===g('p'+i)));
-  g('nav').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));g('title').textContent=TABS[i][0];vib(8)};
+  g('nav').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));g('title').textContent=TABS[i][0];vib(8);
+  if(i===4)setTimeout(trackViews,100)};
 const goTab=i=>g('nav').children[i].click();
 drawNav();
 
@@ -967,12 +971,21 @@ function paintFree(){
   g('freeList').innerHTML=all.length?all.map(([id,f])=>{
     const tags=(f.tags||'').split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="pkg-feat">${esc(t)}</span>`).join('');
     const rb=rootBadge(f.root);
-    return `<div class="pkg" style="margin-bottom:12px;cursor:default">${f.img&&IMG_RE.test(f.img)?`<img class="fimg" src="${f.img}" alt="">`:''}<div class="pkg-top"><div><div class="pkg-title">${esc(f.title)}</div><div class="pkg-sub">${esc(f.desc||'')}</div>${rb?`<div style="margin-top:8px">${rb}</div>`:''}</div><div class="pkg-price"><b style="font-size:18px">${f.ver?'v'+esc(f.ver):''}</b><small>${f.ts?fmtS(f.ts):''}</small></div></div>${tags?`<div class="pkg-feats">${tags}</div>`:''}<div style="padding:0 20px 20px"><button class="btn w" data-dl="${esc(id)}">Скачать</button></div></div>`}).join(''):'<div class="empty">Пока пусто — скоро добавим</div>';
+    const views=f.views||0,dls=f.downloads||0;
+    return `<div class="pkg" style="margin-bottom:12px;cursor:default" data-view="${esc(id)}">${f.img&&IMG_RE.test(f.img)?`<img class="fimg" src="${f.img}" alt="">`:''}<div class="pkg-top"><div><div class="pkg-title">${esc(f.title)}</div><div class="pkg-sub">${esc(f.desc||'')}</div>${rb?`<div style="margin-top:8px">${rb}</div>`:''}</div><div class="pkg-price"><b style="font-size:18px">${f.ver?'v'+esc(f.ver):''}</b><small>${f.ts?fmtS(f.ts):''}</small></div></div>${tags?`<div class="pkg-feats">${tags}</div>`:''}<div class="free-stats"><span class="free-stat"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg><span id="views-${esc(id)}">${views}</span></span><span class="free-stat"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg><span id="dls-${esc(id)}">${dls}</span></span></div><div style="padding:0 20px 20px"><button class="btn w" data-dl="${esc(id)}">Скачать</button></div></div>`}).join(''):'<div class="empty">Пока пусто — скоро добавим</div>';
   g('fAdm').innerHTML=all.map(([id,f])=>`<div class="ord"><div class="h"><div style="display:flex;align-items:center;gap:10px;min-width:0">${f.img&&IMG_RE.test(f.img)?`<img class="fthumb" src="${f.img}" alt="">`:''}<b>${esc(f.title)}</b>${rootBadge(f.root)}</div><button class="btn d s" data-fdel="${esc(id)}">Удалить</button></div><div class="m">${f.ver?'v'+esc(f.ver)+' · ':''}${esc(f.url||'')}</div></div>`).join('')}
-onValue(ref(db,'free'),s=>{FREE=s.val()||{};paintFree()},()=>{g('freeList').innerHTML='<div class="empty">Раздел временно недоступен</div>'});
+onValue(ref(db,'free'),s=>{FREE=s.val()||{};paintFree();if(document.querySelector('#p4.on'))trackViews()},()=>{g('freeList').innerHTML='<div class="empty">Раздел временно недоступен</div>'});
 /* скачивание: <a download> → WebView отдаёт файл в DownloadListener из Sketchware */
 function freeDl(id){const f=FREE[id];if(!f||!FREE_RE.test(f.url||''))return toast('Ссылка недоступна');
-  const a=document.createElement('a');a.href=f.url;a.download='';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();toast('Скачивание…');vib(15)}
+  const a=document.createElement('a');a.href=f.url;a.download='';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();toast('Скачивание…');vib(15);
+  /* инкрементируем счётчик скачиваний */
+  const dlRef=ref(db,'free/'+id+'/downloads');
+  runTransaction(dlRef,v=>(v||0)+1).then(tx=>{if(tx.committed){const el=g('dls-'+id);if(el)el.textContent=tx.snapshot.val()}}).catch(()=>{})}
+/* просмотр карточки: инкремент при первом показе раздела */
+const _viewed=new Set();
+function trackViews(){g('freeList').querySelectorAll('[data-view]').forEach(card=>{const id=card.dataset.view;if(_viewed.has(id))return;_viewed.add(id);
+  const vRef=ref(db,'free/'+id+'/views');
+  runTransaction(vRef,v=>(v||0)+1).then(tx=>{if(tx.committed){const el=g('views-'+id);if(el)el.textContent=tx.snapshot.val()}}).catch(()=>{})})}
 g('freeList').onclick=e=>{const b=e.target.closest('[data-dl]');if(b)freeDl(b.dataset.dl)};
 g('fAdm').onclick=async e=>{const b=e.target.closest('[data-fdel]');if(!b||!isAdmin)return;b.disabled=true;
   try{await set(ref(db,'free/'+b.dataset.fdel),null);toast('Удалено')}catch(x){toast('Ошибка: '+errT(x));b.disabled=false}};
