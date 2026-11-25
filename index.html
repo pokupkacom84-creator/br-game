@@ -291,6 +291,10 @@ a{text-decoration:none;color:inherit;-webkit-user-drag:none}img{-webkit-user-dra
 .rlr{text-align:center;min-height:24px;font-size:14px;color:var(--onv);margin:10px 0 12px;position:relative}
 .rlr.win{color:var(--p);font-weight:500;font-size:16px}
 .rlo{font-size:11.5px;color:var(--onv);opacity:.8;text-align:center;margin-top:10px;line-height:1.4}
+/* фикс слайда: прозрачный фон у img, изолированный слой, навигация выше контента */
+.shot .ph img{background:none}
+.shot .ph,.rlw{isolation:isolate}
+nav{z-index:20}
 </style>
 </head>
 <body>
@@ -1300,7 +1304,7 @@ document.addEventListener('contextmenu',e=>{if(!e.target.closest('input,textarea
 /* ===== РУЛЕТКА: раз в 24 ч. Приз = f(серверное время записи), считают и проверяют правила БД ===== */
 const RL_SEG=[100,0,5,0,50,0,5,0];
 const RL_P=t=>{const r=t%1000;return r<5?100:r<25?50:r<145?5:0};
-const rlReady=()=>!RL.last||nowS()>=RL.last+864e5;
+const rlReady=()=>isAdmin||!RL.last||nowS()>=RL.last+864e5;
 const hms=ms=>{const t=Math.max(0,Math.ceil(ms/1000));return[Math.floor(t/3600),Math.floor(t%3600/60),t%60].map(x=>String(x).padStart(2,'0')).join(':')};
 function rlBuild(){const pt=(a,r)=>{const t=a*Math.PI/180;return[(r*Math.sin(t)).toFixed(2),(-r*Math.cos(t)).toFixed(2)]};let h='';
   RL_SEG.forEach((v,i)=>{const p1=pt(i*45-22.5,96),p2=pt(i*45+22.5,96);
@@ -1311,6 +1315,7 @@ function rlBuild(){const pt=(a,r)=>{const t=a*Math.PI/180;return[(r*Math.sin(t))
   g('rlSvg').innerHTML=h}
 function rlPaint(){const c=g('rlCard');if(!c||c.hidden)return;
   g('rlWon').textContent='Выиграно: '+(+RL.won||0)+' ₽';
+  g('rlCard').querySelector('.rls').textContent=isAdmin?'Админ: без ограничения по времени':'Крутите раз в 24 часа — выигрыш падает на баланс';
   if(rlBusy)return;const b=g('rlGo');
   if(rlReady()){b.disabled=false;b.textContent='Крутить'}else{b.disabled=true;b.textContent='Следующая через '+hms(RL.last+864e5-nowS())}}
 async function rlClaim(){const s=(await get(ref(db,'roulette/'+uid))).val()||{};if(!s.last||s.claimed===s.last)return;
