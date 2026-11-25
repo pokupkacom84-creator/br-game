@@ -331,7 +331,7 @@ nav{z-index:20}
         <div class="rlw"><div class="rlp"></div><svg id="rlSvg" viewBox="-100 -100 200 200" aria-label="Колесо рулетки"></svg></div>
         <div class="rlr" id="rlRes">Испытайте удачу</div>
         <button class="btn w" id="rlGo" type="button" style="height:52px">Крутить</button>
-        
+        <div class="rlo">Шансы: 5 ₽ — 12%, 50 ₽ — 2%, 100 ₽ — 0,5%, без выигрыша — 85,5%.</div>
       </div>
       <!-- Как выглядит чит -->
       <div class="sec" style="margin-top:4px">Как выглядит FluxMod</div>
@@ -386,33 +386,6 @@ nav{z-index:20}
       <div class="list"><div class="row" data-sw="vib"><div><div class="t">Вибро-отклик</div></div><span class="sw" id="sw-vib"></span></div><div class="row" data-sw="nt"><div><div class="t">Уведомления</div><div class="s">Системные уведомления приложения</div></div><span class="sw" id="sw-nt"></span></div><div class="row" data-sw="an"><div><div class="t">Анимации</div><div class="s">Переходы и ripple-эффекты</div></div><span class="sw" id="sw-an"></span></div></div>
       <div class="sec">Лицензия</div>
       <div class="list"><div class="row" id="goKey"><div><div class="t">Ключ доступа</div><div class="s" id="keyS">—</div></div><span>›</span></div></div>
-      <div class="sec">Конфиги</div>
-      <div class="list" style="padding:16px 20px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span>Слот</span>
-          <div class="seg" id="cfgSlotSeg">
-            <button data-v="1" class="on">1</button>
-            <button data-v="2">2</button>
-            <button data-v="3">3</button>
-            <button data-v="4">4</button>
-          </div>
-        </div>
-        <div id="cfgSlotName" class="mut" style="margin-top:8px;font-size:12px;min-height:16px"></div>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn t" id="cfgSave" style="flex:1;padding:0">Сохранить</button>
-          <button class="btn" id="cfgLoad" style="flex:1;padding:0">Загрузить</button>
-        </div>
-      </div>
-      <div class="list" style="padding:16px 20px;margin-top:0">
-        <div class="mut" style="font-size:12px;margin-bottom:8px">Код конфига (копировать / вставить)</div>
-        <label class="tf"><textarea id="cfgCode" rows="3" placeholder="Вставьте код конфига для импорта..." style="width:100%;resize:vertical;font-size:12px;font-family:monospace;line-height:1.4" spellcheck="false"></textarea></label>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn t" id="cfgExport" style="flex:1;padding:0">Экспорт</button>
-          <button class="btn t" id="cfgImport" style="flex:1;padding:0">Импорт</button>
-          <button class="btn t" id="cfgShare" style="flex:1;padding:0">Поделиться</button>
-        </div>
-        <div class="err" id="cfgErr" style="margin-top:6px"></div>
-      </div>
       <button class="btn d w" id="resetS" style="margin-top:8px">Сбросить настройки</button>
       </div>
     </section>
@@ -792,135 +765,6 @@ document.querySelectorAll('[data-seg]').forEach(sg=>{const k=sg.dataset.seg,pain
   sg.onclick=e=>{const b=e.target.closest('button');if(!b)return;S[k]=b.dataset.v;save();paint();applyPrefs();vib(10)}});
 [['fs',v=>Math.round(v*100)+'%']].forEach(([k,f])=>{g(k).value=S[k];g(k+'V').textContent=f(S[k]);g(k).oninput=e=>{S[k]=+e.target.value;g(k+'V').textContent=f(S[k]);save();applyPrefs()}});
 g('resetS').onclick=()=>{try{localStorage.removeItem('zs')}catch(e){}location.reload()};
-/* ===== CONFIG MANAGEMENT ===== */
-(function(){
-  var CFG_KEY='zs_cfg_';
-  var curSlot=1;
-
-  function getSlotKey(n){return CFG_KEY+n}
-
-  function getSlotMeta(n){
-    try{
-      var raw=localStorage.getItem(getSlotKey(n)+'_meta');
-      return raw?JSON.parse(raw):null;
-    }catch(e){return null}
-  }
-
-  function saveSlotMeta(n,meta){
-    try{localStorage.setItem(getSlotKey(n)+'_meta',JSON.stringify(meta))}catch(e){}
-  }
-
-  function updateSlotLabel(){
-    var meta=getSlotMeta(curSlot);
-    var el=g('cfgSlotName');
-    if(!el)return;
-    if(meta&&meta.ts){
-      var d=new Date(meta.ts);
-      el.textContent='Сохранён: '+d.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
-    } else {
-      el.textContent='Слот пуст';
-    }
-  }
-
-  // Segmented control for slot selection
-  var seg=g('cfgSlotSeg');
-  if(seg){
-    seg.querySelectorAll('button').forEach(function(btn){
-      btn.onclick=function(){
-        seg.querySelectorAll('button').forEach(function(b){b.classList.remove('on')});
-        btn.classList.add('on');
-        curSlot=parseInt(btn.dataset.v);
-        updateSlotLabel();
-        g('cfgCode').value='';
-        g('cfgErr').textContent='';
-      };
-    });
-  }
-
-  updateSlotLabel();
-
-  // Save current settings to slot
-  g('cfgSave')&&(g('cfgSave').onclick=function(){
-    try{
-      var data=JSON.parse(localStorage.getItem('zs')||'{}');
-      localStorage.setItem(getSlotKey(curSlot),JSON.stringify(data));
-      saveSlotMeta(curSlot,{ts:Date.now()});
-      updateSlotLabel();
-      g('cfgErr').textContent='';
-      toast('Конфиг сохранён в слот '+curSlot);
-      vib(20);
-    }catch(e){g('cfgErr').textContent='Ошибка сохранения'}
-  });
-
-  // Load settings from slot
-  g('cfgLoad')&&(g('cfgLoad').onclick=function(){
-    try{
-      var raw=localStorage.getItem(getSlotKey(curSlot));
-      if(!raw){g('cfgErr').textContent='Слот пуст';return}
-      var data=JSON.parse(raw);
-      localStorage.setItem('zs',JSON.stringify(data));
-      g('cfgErr').textContent='';
-      toast('Конфиг загружен — перезапуск...');
-      vib([20,30,20]);
-      setTimeout(function(){location.reload()},700);
-    }catch(e){g('cfgErr').textContent='Ошибка загрузки'}
-  });
-
-  // Export: encode current settings as shareable base64 string
-  g('cfgExport')&&(g('cfgExport').onclick=function(){
-    try{
-      var data=JSON.parse(localStorage.getItem('zs')||'{}');
-      var json=JSON.stringify(data);
-      var b64=btoa(unescape(encodeURIComponent(json)));
-      var code='FMCFG:'+b64;
-      var ta=g('cfgCode');
-      ta.value=code;
-      ta.select();
-      cp(code);
-      g('cfgErr').textContent='';
-      toast('Код скопирован в буфер');
-      vib(15);
-    }catch(e){g('cfgErr').textContent='Ошибка экспорта'}
-  });
-
-  // Import: decode base64 config code and apply
-  g('cfgImport')&&(g('cfgImport').onclick=function(){
-    var code=(g('cfgCode').value||'').trim();
-    if(!code){g('cfgErr').textContent='Вставьте код конфига';return}
-    try{
-      var b64=code.startsWith('FMCFG:')?code.slice(6):code;
-      var json=decodeURIComponent(escape(atob(b64)));
-      var data=JSON.parse(json);
-      if(typeof data!=='object'||Array.isArray(data))throw new Error('bad');
-      localStorage.setItem('zs',JSON.stringify(data));
-      g('cfgErr').textContent='';
-      toast('Конфиг импортирован — перезапуск...');
-      vib([20,30,20]);
-      setTimeout(function(){location.reload()},700);
-    }catch(e){g('cfgErr').textContent='Неверный код конфига'}
-  });
-
-  // Share: use navigator.share or copy to clipboard
-  g('cfgShare')&&(g('cfgShare').onclick=function(){
-    try{
-      var data=JSON.parse(localStorage.getItem('zs')||'{}');
-      var json=JSON.stringify(data);
-      var b64=btoa(unescape(encodeURIComponent(json)));
-      var code='FMCFG:'+b64;
-      var text='Мой конфиг FluxMod:
-'+code;
-      if(navigator.share){
-        navigator.share({title:'FluxMod Config',text:text}).catch(function(){});
-      } else {
-        cp(code);
-        toast('Код скопирован в буфер');
-      }
-      vib(15);
-    }catch(e){toast('Ошибка')}
-  });
-})();
-/* ===== END CONFIG ===== */
-
 mq.addEventListener('change',()=>{if(S.th==='auto')applyPrefs()});
 document.addEventListener('pointerdown',e=>{const h=e.target.closest('.btn,.row,.pkg,.plan,.ib,nav button');if(!h||h.disabled||!S.an)return;
   const r=h.getBoundingClientRect(),d=Math.max(r.width,r.height)*2,x=document.createElement('span');x.className='rip';
