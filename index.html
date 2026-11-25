@@ -457,7 +457,7 @@ function rulesText(a){const A=a||'ВАШ_UID',adm=`auth != null && auth.uid === 
   zshots:{'$id':{'.read':adm,'.write':`${adm} || (!data.exists() && root.child('zorders/'+$id+'/st').val() === 4 && newData.isString() && newData.val().length < 250000)`}},
   refcodes:{'$c':{'.read':true,'.write':"auth != null && !data.exists() && newData.val() === auth.uid"}},
   refby:{'.read':adm,'$u':{'.read':`auth != null && (auth.uid === $u || auth.uid === '${A}')`,'.write':"auth != null && auth.uid === $u && !data.exists() && newData.isString() && newData.val() !== $u"}},
-  refs:{'.read':adm,'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'$j':{'.write':`${adm} || (auth != null && auth.uid === $j && !data.exists() && $i !== $j && root.child('refby/'+$j).val() === $i)`}}},
+  refs:{'.read':adm,'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'$j':{'.read':`auth != null && (auth.uid === $j || auth.uid === $i || auth.uid === '${A}')`,'.write':`${adm} || (auth != null && auth.uid === $j && !data.exists() && $i !== $j && root.child('refby/'+$j).val() === $i)`}}},
   refbonus:{'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'.write':adm}},
   spent:{'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'.write':adm}},
   free_stats:{'$fid':{'.read':true,'$f':{'.write':`${adm} || (($f === 'views' || $f === 'downloads') && newData.isNumber() && newData.val() === (data.exists() ? data.val() : 0) + 1)`}}}},null,2).split('\n').slice(1,-1).join('\n')}
