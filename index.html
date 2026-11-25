@@ -568,7 +568,11 @@ function paintPx(){
       +(items.length?items.map(o=>pxCard(o.x,{tag:'Премиум'},'v'+esc(o.id))).join(''):'<div class="empty">Приватные прокси скоро появятся</div>')}
   else{
     const was=PXV.prem&&typeof PXV.prem.exp==='number'&&PXV.prem.exp>0;
-    h=`<div class="card"><div style="font-size:18px;font-weight:500;margin-bottom:6px">${was?'Премиум истёк':'Премиум-доступ'}</div><div class="pxn" style="padding:0 0 12px">${was?'Срок доступа закончился.':'Приватные прокси видят только покупатели премиума.'} После оплаты сообщите администратору свой UID — доступ откроется здесь автоматически.</div><div class="keybox" style="font-size:13px;margin-bottom:10px">${esc(u)}</div><div style="display:flex;gap:8px"><button class="btn t" style="flex:1;padding:0" data-cpuid="1" type="button">Копировать UID</button>${PX_BUY_URL?`<button class="btn" style="flex:1;padding:0" data-buy="1" type="button">${was?'Продлить':'Купить'}</button>`:''}</div></div>`}
+    h=`<div class="card"><div style="font-size:18px;font-weight:500;margin-bottom:6px">${was?'Премиум истёк':'Премиум-доступ'}</div><div class="pxn" style="padding:0 0 12px">${was?'Срок доступа закончился.':'Закрытый список прокси доступен после подтверждения оплаты.'} Выберите тариф, оплатите и отправьте UID администратору для подтверждения.</div><div class="keybox" style="font-size:13px;margin-bottom:10px">UID: ${esc(u)}</div><button class="btn t w s" data-cpuid="1" type="button">Копировать UID</button></div>`
+      +`<div class="pkg-grid"><div class="pkg"><div class="pkg-top"><div><div class="pkg-title">7 дней</div><div class="pkg-sub">Премиум Telegram proxy</div></div><div class="pkg-price"><b>100 ₽</b></div></div><div class="pxr"><button class="btn w" data-paypx="7" type="button">Оплатить</button></div></div>`
+      +`<div class="pkg pop"><div class="pkg-top"><div><div class="pkg-title">30 дней</div><div class="pkg-sub">Премиум Telegram proxy</div></div><div class="pkg-price"><b>300 ₽</b></div></div><div class="pxr"><button class="btn w" data-paypx="30" type="button">Оплатить</button></div></div>`
+      +`<div class="pkg"><div class="pkg-top"><div><div class="pkg-title">90 дней</div><div class="pkg-sub">Премиум Telegram proxy</div></div><div class="pkg-price"><b>700 ₽</b></div></div><div class="pxr"><button class="btn w" data-paypx="90" type="button">Оплатить</button></div></div>`
+      +`<div class="pxn">После оплаты сохраните квитанцию и отправьте её вместе с UID. Премиум активируется после проверки платежа администратором.</div>`}
   v.innerHTML=h}
 function pxItem(k){
   if(k[0]==='f')return PXF.list[+k.slice(1)];
@@ -619,6 +623,7 @@ g('p7').onclick=e=>{
   if(t.dataset.prof)return goTab(3);
   if(t.dataset.cpuid){cp(PXV.uid||'');toast('UID скопирован');return vib(10)}
   if(t.dataset.buy){pxExt(PX_BUY_URL);return}
+  if(t.dataset.paypx){const days=Number(t.dataset.paypx),amount={7:100,30:300,90:700}[days];if(!amount||!PXV.uid)return toast('Войдите в аккаунт');const label='px_'+PXV.uid+'_'+days+'_'+Date.now();const url='https://yoomoney.ru/quickpay/confirm?'+new URLSearchParams({receiver:'4100118891507332','quickpay-form':'button',sum:String(amount),label,paymentType:'AC',targets:'FluxMod Telegram proxy Premium '+days+' days'}).toString();pxExt(url);toast('После оплаты отправьте UID и квитанцию администратору');return}
   const k=t.dataset.go||t.dataset.cp;if(!k)return;
   const p=pxItem(k);if(!p)return toast('Прокси недоступен');
   if(t.dataset.go){toast('Открываем Telegram…');vib(15);pxOpenTg(p.link)}
