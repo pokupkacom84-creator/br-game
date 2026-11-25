@@ -255,7 +255,7 @@ span[hidden]{display:none!important}
     <section class="page on" id="p0">
       <div class="hero" style="padding-bottom:28px">
         <div class="st"><span class="dot on" id="dot"></span><span id="stT">FluxMod — Standoff 2</span>
-          <span class="onl" style="margin-left:auto"><i></i>Онлайн</span>
+          <span class="onl" style="margin-left:auto" title="Активных пользователей"><i></i><span id="onlN">…</span></span>
         </div>
         <div class="big" style="font-size:30px;margin:10px 0 6px">FluxMod Menu</div>
         <div style="opacity:.8;font-size:14px;margin-bottom:20px">Чит-меню для Standoff 2 без ROOT</div>
@@ -263,6 +263,12 @@ span[hidden]{display:none!important}
       </div>
       <!-- Скрытые элементы для совместимости со старым JS -->
       <span id="runT" hidden></span>
+      <!-- Админ: число онлайн на главном -->
+      <div id="onlAdm" hidden style="background:var(--s2);border-radius:var(--rm);padding:16px 20px;margin-bottom:12px">
+        <div style="font-size:13px;color:var(--onv);margin-bottom:8px">Онлайн на главном (пусто = реальный счётчик)</div>
+        <label class="tf"><input id="onlIn" type="number" inputmode="numeric" min="0" max="9999999" placeholder="Например 1284" autocomplete="off"></label>
+        <div style="display:flex;gap:8px;margin-top:8px"><button class="btn w" id="onlSave" type="button">Сохранить</button><button class="btn t w" id="onlReset" type="button">Сбросить</button></div>
+      </div>
       <!-- Баланс в главном -->
       <div id="homeBalCard" hidden style="background:var(--s2);border-radius:var(--rm);padding:16px 20px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
         <div><div style="font-size:13px;color:var(--onv)">Баланс</div><div style="font-size:24px;font-weight:400;color:var(--p)" id="homeBalAmt">0 ₽</div></div>
@@ -676,7 +682,7 @@ theme();paintCols();
 /* ===== вкладки ===== */
 const TABS=[['Главное','M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'],['Магазин','M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z'],['Настройки','M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58-1.92-3.32-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54h-3.84l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96-1.92 3.32 2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58 1.92 3.32 2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54h3.84l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96 1.92-3.32zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z'],['Профиль','M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4 0-8 2-8 5v3h16v-3c0-3-4-5-8-5z'],['Бесплатно','M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z'],['Отзывы','M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z'],['Заявки','M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 14H6v-2h12v2zm0-4H6v-2h12v2zm0-4H6V7h12v2z']];
 let isAdmin=false;
-function drawNav(){const vis=TABS.map((t,i)=>[t,i]).filter(([t,i])=>i!==2&&(i<6||isAdmin));g('nav').className='n'+vis.length;
+function drawNav(){g('onlAdm').hidden=!isAdmin;const vis=TABS.map((t,i)=>[t,i]).filter(([t,i])=>i!==2&&(i<6||isAdmin));g('nav').className='n'+vis.length;
   g('nav').innerHTML=vis.map(([t,i])=>`<button data-i="${i}" class="${document.querySelector('.page.on')===g('p'+i)?'on':''}"><span class="pill"><svg viewBox="0 0 24 24"><path d="${t[1]}"/></svg></span>${t[0]}${i===6?'<span class="badge" id="badge" hidden></span>':''}</button>`).join('');
   paintBadge();try{paintBell()}catch(e){}}
 g('nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i;if(i===5||i===6)startReviews();
@@ -880,7 +886,16 @@ let srvOff=0;onValue(ref(db,'.info/serverTimeOffset'),x=>srvOff=x.val()||0);
 const SID=[...crypto.getRandomValues(new Uint8Array(10))].map(x=>x.toString(16).padStart(2,'0')).join('');
 const myP=ref(db,'presence/'+SID);
 onValue(ref(db,'.info/connected'),s=>{if(s.val()===true)onDisconnect(myP).remove().then(()=>set(myP,1)).catch(()=>{})});
-onValue(ref(db,'presence'),s=>{g('onlN').textContent=s.numChildren()},()=>{g('onlN').textContent='—'}); /* «—» = правила не опубликованы */
+let onlFake=null,onlReal;
+const paintOnl=()=>{const n=onlFake!=null?onlFake:onlReal;g('onlN').textContent=n===undefined?'…':n===null?'—':n.toLocaleString('ru')};
+onValue(ref(db,'presence'),s=>{onlReal=s.numChildren();paintOnl()},()=>{onlReal=null;paintOnl()}); /* «—» = правила не опубликованы */
+onValue(ref(db,'online'),s=>{const v=s.val();onlFake=(typeof v==='number'&&v>=0)?Math.floor(v):null;paintOnl();
+  const i=g('onlIn');if(i&&document.activeElement!==i)i.value=onlFake==null?'':onlFake},()=>{});
+g('onlSave').onclick=async()=>{if(!isAdmin)return;const v=g('onlIn').value.trim();
+  if(!/^\d{1,7}$/.test(v))return toast('Введите число от 0 до 9999999');
+  try{await set(ref(db,'online'),+v);toast('Онлайн: '+v);vib(15)}catch(x){toast(errT(x))}};
+g('onlReset').onclick=async()=>{if(!isAdmin)return;
+  try{await set(ref(db,'online'),null);g('onlIn').value='';toast('Сброшено — реальный онлайн')}catch(x){toast(errT(x))}};
 const nowS=()=>Date.now()+srvOff,mmss=ms=>{const t=Math.max(0,Math.ceil(ms/1000));return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')};
 let ordOff=null,payTimerInt=null,curOrd=null,payCur=null,shotData=null;
 const openSheet=()=>{goTab(1);toast('Выберите тариф и оплатите')};
@@ -1026,6 +1041,7 @@ function rulesText(a){const A=a||'ВАШ_UID',adm=`auth != null && auth.uid === 
   free:{'.read':true,'.write':adm},
   reviews:{'.read':true,'.write':adm},
   presence:{'.read':true,'$id':{'.write':true,'.validate':'newData.val() === 1 && $id.length <= 40'}},
+  online:{'.read':true,'.write':adm,'.validate':'newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999'},
   licenses:{'$uid':{'.read':'auth != null && auth.uid === $uid','.write':adm}},
   keys:{'$k':{'.read':true,'.write':adm,'hwid':{'.write':'!data.exists()','.validate':'newData.isString() && newData.val().length <= 32'}}},
   keysByUid:{'$u':{'.read':adm,'.write':adm}},
