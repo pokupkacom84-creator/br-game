@@ -913,13 +913,16 @@ async function repairAllReferralCredits(){
   return{added,skipped,total:Object.keys(by).length}
 }
 function startRef(){if(KS||!uid)return;g('refCard').hidden=false;g('rlCard').hidden=false;rlPaint();g('refCode').textContent='…';
+  const oldRepair=g('refRepair');if(!isAdmin&&oldRepair)oldRepair.remove();
   if(isAdmin&&!g('refRepair')){
     const b=document.createElement('button');b.id='refRepair';b.className='btn t w';b.style.marginTop='12px';b.textContent='Восстановить начисления всем приглашавшим';
     b.onclick=async()=>{if(!confirm('Проверить все введённые коды и начислить недостающие 10 ₽ пригласившим? Повторного начисления уже учтённых приглашений не будет.'))return;b.disabled=true;try{const r=await repairAllReferralCredits();toast('Готово: начислено '+r.added+' приглашений из '+r.total);const snap=await get(ref(db,'refs/'+uid));RB.n=snap.size;paintBal()}catch(e){toast('Ошибка восстановления: '+errT(e))}b.disabled=false};
     g('refCard').appendChild(b);
   }
+  g('refEnter').hidden=false;
+  g('refErr').textContent='';
   loadCode();
-  offs.push(onValue(ref(db,'refby/'+uid),s=>{const inviter=s.val();g('refEnter').hidden=!!inviter;if(inviter)ensureReferralCredit(uid,inviter).catch(()=>{})},()=>{}));
+  offs.push(onValue(ref(db,'refby/'+uid),s=>{const inviter=s.val();g('refEnter').hidden=!!inviter;if(inviter)ensureReferralCredit(uid,inviter).catch(()=>{})},()=>{g('refEnter').hidden=false}));
   offs.push(onValue(ref(db,'refs/'+uid),s=>{RB.n=s.numChildren();paintBal()},()=>{}));
   offs.push(onValue(ref(db,'refbonus/'+uid),s=>{let t=0;s.forEach(x=>{t+=+x.val()||0});RB.b=t;paintBal()},()=>{}));
   offs.push(onValue(ref(db,'spent/'+uid),s=>{let t=0;s.forEach(x=>{t+=+x.val()||0});RB.s=t;paintBal()},()=>{}));
