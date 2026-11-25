@@ -132,7 +132,7 @@ async function verifyKey(u,k){
 function enterKey(r){
   KS=r;restoring=false;localStorage.setItem('zks',JSON.stringify({u:r.u,k:r.k}));
   offs.forEach(f=>f());offs=[];clearInterval(expT);clearInterval(ksT);
-  uid=r.u;isAdmin=false;LIC={active:!r.exp||r.exp>Date.now(),key:r.k,exp:r.exp};stopRef();
+  uid=r.u;isAdmin=false;LIC={active:!r.exp||r.exp>Date.now(),key:r.k,exp:r.exp};applyChannelAnnouncement();stopRef();
   setAuth(true);g('uidB').textContent=r.u;g('pMail').textContent='Вход по ключу';g('pName').textContent=r.u;g('av').textContent=r.u[0].toUpperCase();
   g('rulesBtn').hidden=true;g('keyB').textContent=r.k;g('copyKey').disabled=false;g('ordS').innerHTML='';drawNav();
   const lo=localStorage.getItem('zo_'+uid);if(lo)watchOrder(lo);
@@ -214,7 +214,7 @@ onAuthStateChanged(auth,u=>{
   if(u&&(KS||restoring)){KS=null;restoring=false;localStorage.removeItem('zks');clearInterval(ksT)}
   offs.forEach(f=>f());offs=[];clearInterval(expT);
   if(!u){uid=null;isAdmin=false;LIC={active:false};stopRef();drawNav();showLogin();setAuth(false);return}
-  uid=u.uid;isAdmin=!!ADMIN_UID&&uid===ADMIN_UID;setAuth(true);g('uidB').textContent=uid;g('pMail').textContent=u.email;
+  uid=u.uid;isAdmin=!!ADMIN_UID&&uid===ADMIN_UID;applyChannelAnnouncement();setAuth(true);g('uidB').textContent=uid;g('pMail').textContent=u.email;
   g('rulesBtn').hidden=!(!ADMIN_UID||isAdmin);drawNav();
   offs.push(onValue(ref(db,'users/'+uid),s=>{const n=(s.val()||{}).name||u.email.split('@')[0];g('pName').textContent=n;g('av').textContent=n[0].toUpperCase()},()=>{}));
   offs.push(onValue(ref(db,'licenses/'+uid),s=>paintLic(s.val()),()=>{}));
@@ -319,9 +319,38 @@ const nKey=()=>'zn_'+uid,nGet=()=>{try{return JSON.parse(localStorage.getItem(nK
 function paintBell(){if(!uid)return;const n=nGet().filter(x=>!x.r).length,b=g('bellB');b.hidden=!n;b.textContent=n}
 function notify(o){const a=nGet();if(a.some(x=>x.id===o.id&&x.t===o.t))return false;a.unshift({...o,ts:Date.now(),r:0});localStorage.setItem(nKey(),JSON.stringify(a.slice(0,30)));paintBell();return true}
 g('bell').onclick=()=>{const a=nGet();
-  g('nList').innerHTML=a.length?a.map(x=>`<div class="nit"><b>${x.t==='ok'?'✓ Оплата подтверждена':'✗ Заявка отклонена'}</b><div>${x.t==='ok'?`UID: ${esc(x.u)}<br>Ключ: ${esc(x.k)}<br>`:''}${fmtS(x.ts)}</div></div>`).join(''):'<div class="empty">Уведомлений нет</div>';
+  g('nList').innerHTML=a.length?a.map(x=>{const title=x.t==='ok'?'✓ Оплата подтверждена':x.t==='announcement'?`📢 ${esc(x.title||'Объявление')}`:'✗ Заявка отклонена';const body=x.t==='ok'?`UID: ${esc(x.u)}<br>Ключ: ${esc(x.k)}<br>`:x.t==='announcement'?`${esc(x.body||'')}${x.url?`<br><a href="${esc(x.url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;color:var(--p)">Открыть канал @FluxsMods ↗</a>`:''}`:'';return `<div class="nit"><b>${title}</b><div>${body}${body?'<br>':''}${fmtS(x.ts)}</div></div>`}).join(''):'<div class="empty">Уведомлений нет</div>';
   g('nSheet').hidden=false;a.forEach(x=>x.r=1);localStorage.setItem(nKey(),JSON.stringify(a));paintBell()};
 g('nx').onclick=()=>g('nSheet').hidden=true;g('nSheet').onclick=e=>{if(e.target===g('nSheet'))g('nSheet').hidden=true};
+
+const CHANNEL_ANNOUNCEMENT={id:'flux_channel_2026_11',title:'Мы создали новый Telegram-канал!',body:'Теперь новости, обновления и свежие материалы FluxMod будут выходить в нашем новом канале. Подписывайтесь, чтобы ничего не пропустить!',url:'https://t.me/FluxsMods'};
+let announcementOff=null,currentChannelAnnouncement=null;
+function applyChannelAnnouncement(){
+  const v=currentChannelAnnouncement;if(!uid||!v||v.id!==CHANNEL_ANNOUNCEMENT.id)return;
+  if(notify({id:v.id,t:'announcement',title:v.title,body:v.body,url:v.url})){
+    nat(v.title,v.body||'Подпишитесь на @FluxsMods');
+    toast('📢 Новое уведомление: наш Telegram-канал');
+  }
+}
+function watchChannelAnnouncement(){
+  if(announcementOff){announcementOff();announcementOff=null}
+  announcementOff=onValue(ref(db,'announcements/current'),s=>{
+    currentChannelAnnouncement=s.val();applyChannelAnnouncement();
+  },()=>{});
+}
+watchChannelAnnouncement();
+if(ADMIN_UID&&auth.currentUser&&auth.currentUser.uid===ADMIN_UID){
+  get(ref(db,'announcements/current')).then(s=>{
+    const v=s.val();if(!v||v.id!==CHANNEL_ANNOUNCEMENT.id)return set(ref(db,'announcements/current'),{...CHANNEL_ANNOUNCEMENT,createdAt:serverTimestamp()});
+  }).catch(()=>{});
+}
+onAuthStateChanged(auth,u=>{
+  if(u&&u.uid===ADMIN_UID){
+    get(ref(db,'announcements/current')).then(s=>{
+      const v=s.val();if(!v||v.id!==CHANNEL_ANNOUNCEMENT.id)return set(ref(db,'announcements/current'),{...CHANNEL_ANNOUNCEMENT,createdAt:serverTimestamp()});
+    }).catch(()=>{});
+  }
+});
 function showOk(o){g('okUid').textContent=o.u;g('okKey').textContent=o.k;g('okExp').textContent=o.e?'Действует до '+fmtD(o.e):'';g('okM').hidden=false;vib([15,40,15])}
 g('okCopy').onclick=()=>{cp(g('okKey').textContent);toast('Ключ скопирован')};
 g('okGo').onclick=()=>{g('okM').hidden=true;goTab(3)};
@@ -412,6 +441,7 @@ const rlRules=(A,adm)=>{const L="data.child('last').val()",C="data.child('claime
     last:{'.validate':'newData.isNumber()'},claimed:{'.validate':'newData.isNumber()'},won:{'.validate':'newData.isNumber() && newData.val() >= 0'},'$other':{'.validate':false}}}};
 function rulesText(a){const A=a||'ВАШ_UID',adm=`auth != null && auth.uid === '${A}'`,pl="(newData.child('plan').val() === 7 || newData.child('plan').val() === 30 || newData.child('plan').val() === 90)";return JSON.stringify({
   users:{'$uid':{'.read':`auth != null && (auth.uid === $uid || auth.uid === '${A}')`,'.write':'auth != null && auth.uid === $uid',name:{'.validate':'newData.isString() && newData.val().length <= 48'}}},
+  announcements:{'.read':true,'.write':adm},
   free:{'.read':true,'.write':adm},
   pproxy:{'.read':adm,users:{'$u':{'.read':`auth != null && (auth.uid === $u || auth.uid === '${A}')`,'.write':adm}},list:{'.read':`auth != null && (auth.uid === '${A}' || root.child('pproxy/users/'+auth.uid+'/exp').val() === 0 || root.child('pproxy/users/'+auth.uid+'/exp').val() > now)`,'.write':adm}},
   reviews:{'.read':true,'.write':adm},
