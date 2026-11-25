@@ -202,7 +202,7 @@ g('regGo').onclick=async()=>{
   try{
     const u=(await createUserWithEmailAndPassword(auth,em,pw)).user;
     await set(ref(db,'users/'+u.uid),{name:n});
-    toast('Добро пожаловать, '+n+'!');const rc0=g('arc').value.trim();if(rc0){try{const r=await applyRef(rc0,u.uid);toast(r.ok?'Код принят: другу +'+REF_BONUS+' ₽':'Код: '+r.e)}catch(x){toast('Код не применён: '+errT(x))}}
+    toast('Добро пожаловать, '+n+'!');const rc0=g('arc').value.trim();if(rc0){try{const r=await applyRef(rc0,u.uid);toast(r.ok?'Код принят: пригласившему начислено +'+REF_BONUS+' ₽':'Код: '+r.e)}catch(x){toast('Код не применён: '+errT(x))}}
   }catch(e){g('rerr').textContent=errT(e)}
   g('regGo').disabled=false;g('regGo').textContent='Создать аккаунт'};
 
@@ -454,8 +454,8 @@ function rulesText(a){const A=a||'ВАШ_UID',adm=`auth != null && auth.uid === 
   zorders:{'.read':adm,'$id':{'.read':true,'.write':`${adm} || (!data.exists() && newData.child('st').val() === 4 && ${pl} && newData.child('u').isString() && newData.child('u').val().length <= 200 && newData.child('dl').val() <= now + 960000 && (newData.child('src').val() === 'key' || (auth != null && newData.child('u').val() === auth.uid))) || (data.child('st').val() === 4 && now < data.child('dl').val() + 30000 && newData.child('u').val() === data.child('u').val() && (newData.child('st').val() === 0 || newData.child('st').val() === 5) && (data.child('src').val() === 'key' || (auth != null && auth.uid === data.child('u').val())))`}},
   zshots:{'$id':{'.read':adm,'.write':`${adm} || (!data.exists() && root.child('zorders/'+$id+'/st').val() === 4 && newData.isString() && newData.val().length < 250000)`}},
   refcodes:{'$c':{'.read':true,'.write':"auth != null && !data.exists() && newData.val() === auth.uid"}},
-  refby:{'$u':{'.read':`auth != null && (auth.uid === $u || auth.uid === '${A}')`,'.write':"auth != null && auth.uid === $u && !data.exists() && newData.isString() && newData.val() !== $u"}},
-  refs:{'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'$j':{'.write':"auth != null && auth.uid === $j && !data.exists() && $i !== $j && root.child('refby/'+$j).val() === $i"}}},
+  refby:{'.read':adm,'$u':{'.read':`auth != null && (auth.uid === $u || auth.uid === '${A}')`,'.write':"auth != null && auth.uid === $u && !data.exists() && newData.isString() && newData.val() !== $u"}},
+  refs:{'.read':adm,'.write':adm,'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'$j':{'.write':"auth != null && auth.uid === $j && !data.exists() && $i !== $j && root.child('refby/'+$j).val() === $i"}}},
   refbonus:{'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'.write':adm}},
   spent:{'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'.write':adm}},
   free_stats:{'$fid':{'.read':true,'$f':{'.write':`${adm} || (($f === 'views' || $f === 'downloads') && newData.isNumber() && newData.val() === (data.exists() ? data.val() : 0) + 1)`}}}},null,2).split('\n').slice(1,-1).join('\n')}
@@ -855,13 +855,22 @@ async function ensureCode(u){const k='zrc_'+u,c0=localStorage.getItem(k);if(c0)r
     if(cur===u){localStorage.setItem(k,c);return c}
     if(!cur){try{await set(ref(db,'refcodes/'+c),u);localStorage.setItem(k,c);return c}catch(e){}}}
   return null}
+async function ensureReferralCredit(invitee,inviter){
+  if(!invitee||!inviter||invitee===inviter)return false;
+  const creditRef=ref(db,'refs/'+inviter+'/'+invitee);
+  const existing=await get(creditRef);
+  if(existing.exists())return false;
+  await set(creditRef,{ts:serverTimestamp(),source:'referral'});
+  return true
+}
 async function applyRef(raw,u){u=u||uid;if(!u||KS)return{e:'Войдите по почте'};
   const c=normCode(raw);if(!c)return{e:'Неверный формат кода'};
-  if((await get(ref(db,'refby/'+u))).val())return{e:'Вы уже использовали код'};
+  const already=(await get(ref(db,'refby/'+u))).val();
+  if(already){try{await ensureReferralCredit(u,already)}catch(e){}return{e:'Вы уже использовали код'}}
   const inv=(await get(ref(db,'refcodes/'+c))).val();
   if(!inv)return{e:'Код не найден'};if(inv===u)return{e:'Нельзя использовать свой код'};
   await set(ref(db,'refby/'+u),inv);
-  await set(ref(db,'refs/'+inv+'/'+u),{ts:serverTimestamp()});
+  await ensureReferralCredit(u,inv);
   return{ok:1}}
 async function balOf(u){const [a,b,c,d]=await Promise.all([get(ref(db,'refs/'+u)),get(ref(db,'refbonus/'+u)),get(ref(db,'spent/'+u)),get(ref(db,'roulette/'+u+'/won')).catch(()=>null)]);
   const sum=x=>{let t=0;x.forEach(y=>{t+=+y.val()||0});return t};return a.size*REF_BONUS+sum(b)-sum(c)+(+((d&&d.val())||0))}
@@ -887,9 +896,28 @@ function updBalBtn(){const b=g('shopBal'),p=PRICES[shopPlan];
   b.hidden=false;b.textContent='Оплатить с баланса ('+bal()+' ₽)'}
 function loadCode(){const retry=()=>setTimeout(()=>{if(uid&&!KS&&!refCode)loadCode()},15000);
   ensureCode(uid).then(c=>{refCode=c;g('refCode').textContent=c||'…';if(!c)retry()}).catch(()=>{g('refCode').textContent='…';retry()})}
+async function repairAllReferralCredits(){
+  if(!isAdmin)throw new Error('Недостаточно прав');
+  const [bySnap,refsSnap]=await Promise.all([get(ref(db,'refby')),get(ref(db,'refs'))]);
+  const by=bySnap.val()||{},all=refsSnap.val()||{},updates={};
+  let added=0,skipped=0;
+  for(const [invitee,inviter] of Object.entries(by)){
+    if(!invitee||!inviter||invitee===inviter){skipped++;continue}
+    if(all[inviter]&&all[inviter][invitee]){skipped++;continue}
+    updates['refs/'+inviter+'/'+invitee]={ts:Date.now(),source:'referral_recovery'};
+    added++;
+  }
+  if(added)await update(ref(db),updates);
+  return{added,skipped,total:Object.keys(by).length}
+}
 function startRef(){if(KS||!uid)return;g('refCard').hidden=false;g('rlCard').hidden=false;rlPaint();g('refCode').textContent='…';
+  if(isAdmin&&!g('refRepair')){
+    const b=document.createElement('button');b.id='refRepair';b.className='btn t w';b.style.marginTop='12px';b.textContent='Восстановить начисления всем приглашавшим';
+    b.onclick=async()=>{if(!confirm('Проверить все введённые коды и начислить недостающие 10 ₽ пригласившим? Повторного начисления уже учтённых приглашений не будет.'))return;b.disabled=true;try{const r=await repairAllReferralCredits();toast('Готово: начислено '+r.added+' приглашений из '+r.total);const snap=await get(ref(db,'refs/'+uid));RB.n=snap.size;paintBal()}catch(e){toast('Ошибка восстановления: '+errT(e))}b.disabled=false};
+    g('refCard').appendChild(b);
+  }
   loadCode();
-  offs.push(onValue(ref(db,'refby/'+uid),s=>{g('refEnter').hidden=!!s.val()},()=>{}));
+  offs.push(onValue(ref(db,'refby/'+uid),s=>{const inviter=s.val();g('refEnter').hidden=!!inviter;if(inviter)ensureReferralCredit(uid,inviter).catch(()=>{})},()=>{}));
   offs.push(onValue(ref(db,'refs/'+uid),s=>{RB.n=s.numChildren();paintBal()},()=>{}));
   offs.push(onValue(ref(db,'refbonus/'+uid),s=>{let t=0;s.forEach(x=>{t+=+x.val()||0});RB.b=t;paintBal()},()=>{}));
   offs.push(onValue(ref(db,'spent/'+uid),s=>{let t=0;s.forEach(x=>{t+=+x.val()||0});RB.s=t;paintBal()},()=>{}));
@@ -902,7 +930,7 @@ g('refShare').onclick=async()=>{if(!refCode)return;
   cp(t);toast('Текст приглашения скопирован')};
 g('refApply').onclick=async()=>{g('refErr').textContent='';const v=g('refIn').value;if(!v.trim())return;
   g('refApply').disabled=true;
-  try{const r=await applyRef(v);if(r.ok){g('refIn').value='';toast('Код принят: другу +'+REF_BONUS+' ₽');vib(20)}else g('refErr').textContent=r.e}
+  try{const r=await applyRef(v);if(r.ok){g('refIn').value='';toast('Код принят: пригласившему начислено +'+REF_BONUS+' ₽');vib(20)}else g('refErr').textContent=r.e}
   catch(x){g('refErr').textContent=errT(x)}
   g('refApply').disabled=false};
 g('shopBal').onclick=async()=>{if(!uid||KS)return;const p=shopPlan;
