@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#141218">
 <title>FluxMod</title>
 <style>
@@ -256,6 +256,19 @@ span[hidden]{display:none!important}
 .gcard{display:flex;gap:14px;align-items:flex-start;background:var(--s2);border-radius:var(--rm);padding:16px;margin:0 0 12px}
 .gcard .gi{flex:none;width:40px;height:40px;border-radius:12px;background:#fff;color:#4285f4;font:700 24px/40px sans-serif;text-align:center}
 .gcard b{display:block;font-size:15px;font-weight:500;color:var(--on);margin-bottom:4px}.gcard span{font-size:13px;line-height:1.45;color:var(--onv)}
+
+/* нативный вид приложения */
+html,body{overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:manipulation}
+*{-webkit-touch-callout:none;scrollbar-width:none}*::-webkit-scrollbar{display:none}
+a{text-decoration:none;color:inherit;-webkit-user-drag:none}img{-webkit-user-drag:none}
+.pages,.shots,.sheet .sc{overscroll-behavior:contain}
+.top{padding-top:calc(16px + env(safe-area-inset-top,0px))}
+#app{padding-bottom:env(safe-area-inset-bottom,0px)}
+.btn:active:not(:disabled),.ib:active,.chip:active{transform:scale(.96);transition:transform .08s}
+/* зум фото: pinch + pan + двойной тап */
+.zv .zb{overflow:hidden;touch-action:none}
+.zv img,.zv.z img{margin:auto;max-width:100%;max-height:100%;width:auto;cursor:default;touch-action:none;will-change:transform;-webkit-user-drag:none}
+.zv .zh{pointer-events:none}
 </style>
 </head>
 <body>
@@ -292,25 +305,6 @@ span[hidden]{display:none!important}
       <div class="sdots" id="sdots"></div>
       <div class="shmenu">Меню: Оверлей · Профиль · Читы · Интерфейс · Темы</div>
       <div class="gcard"><div class="gi">G</div><div><b>Вход через Google</b><span>В чите есть вход через Google. Заходите в игру через свой Google-аккаунт — FluxMod запускается поверх игры, ничего перепривязывать не нужно.</span></div></div>
-      <!-- Быстрый доступ -->
-      <div class="sec" style="margin-top:4px">Быстрый доступ</div>
-      <div class="list">
-        <div class="row" id="qShop" style="cursor:pointer">
-          <svg viewBox="0 0 24 24" style="flex:none;width:22px;height:22px;fill:var(--p);pointer-events:none"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
-          <div style="pointer-events:none"><div class="t">Магазин</div><div class="s">Ключи FluxMod</div></div>
-          <svg viewBox="0 0 24 24" style="flex:none;width:18px;height:18px;fill:var(--onv);pointer-events:none"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
-        </div>
-        <div class="row" id="qRev" style="cursor:pointer">
-          <svg viewBox="0 0 24 24" style="flex:none;width:22px;height:22px;fill:var(--p);pointer-events:none"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-          <div style="pointer-events:none"><div class="t">Отзывы</div><div class="s">Что говорят пользователи</div></div>
-          <svg viewBox="0 0 24 24" style="flex:none;width:18px;height:18px;fill:var(--onv);pointer-events:none"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
-        </div>
-        <div class="row" id="qProf" style="cursor:pointer">
-          <svg viewBox="0 0 24 24" style="flex:none;width:22px;height:22px;fill:var(--p);pointer-events:none"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4 0-8 2-8 5v3h16v-3c0-3-4-5-8-5z"/></svg>
-          <div style="pointer-events:none"><div class="t">Профиль</div><div class="s">Ключ и настройки аккаунта</div></div>
-          <svg viewBox="0 0 24 24" style="flex:none;width:18px;height:18px;fill:var(--onv);pointer-events:none"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
-        </div>
-      </div>
     </section>
 
     <!-- ПРОФИЛЬ + НАСТРОЙКИ -->
@@ -530,7 +524,7 @@ span[hidden]{display:none!important}
   </div>
 
   <div class="toast" id="toast"></div>
-  <div class="zv" id="zv" hidden><button class="zx" id="zx" aria-label="Закрыть">✕</button><div class="zb" id="zb"><img id="zImg" alt=""></div><div class="zh">Нажмите на фото, чтобы приблизить</div></div>
+  <div class="zv" id="zv" hidden><button class="zx" id="zx" aria-label="Закрыть">✕</button><div class="zb" id="zb"><img id="zImg" alt=""></div><div class="zh">Двумя пальцами — приблизить, двойной тап — увеличить</div></div>
   <nav id="nav"></nav>
 
   <!-- ЭКРАН ВХОДА -->
@@ -711,10 +705,6 @@ const showPane=id=>{document.querySelectorAll('.pane').forEach(p=>p.classList.to
 g('ptabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;showPane(b.dataset.p);document.querySelector('.pages').scrollTo({top:0});vib(8)};
 const goTab=i=>{if(i===3)showPane('pnAcc');const b=g('nav').querySelector('[data-i="'+i+'"]');if(b)b.click()};
 drawNav();
-// Быстрый доступ с главного экрана
-g('qShop').onclick=()=>goTab(1);
-g('qRev').onclick=()=>goTab(5);
-g('qProf').onclick=()=>goTab(3);
 const hbs=g('homeBalShopBtn');if(hbs)hbs.onclick=()=>goTab(1);
 
 /* ===== переключатели ===== */
@@ -1217,12 +1207,41 @@ g('rvGo').onclick=async()=>{g('rvErr').textContent='';if(!isAdmin)return;
   try{await set(push(ref(db,'reviews')),r);['rvNick','rvText','rvReply','rvDate'].forEach(i=>g(i).value='');rvImgReset();rvStarsV=5;rvPaintStars();toast('Отзыв опубликован');vib(20)}
   catch(x){g('rvErr').textContent=errT(x)}
   g('rvGo').disabled=false};
-const zClose=()=>{g('zv').hidden=true;g('zv').classList.remove('z');g('zImg').removeAttribute('src')};
+const zClose=()=>{g('zv').hidden=true;g('zv').classList.remove('z');g('zImg').removeAttribute('src');if(window.__zReset)window.__zReset()};
 g('rvList').onclick=e=>{
   const m=e.target.closest('[data-more]');if(m){const c=m.previousElementSibling.classList.toggle('cl');m.textContent=c?'Читать полностью':'Свернуть';return}
   const i=e.target.closest('[data-zoom]');if(!i)return;g('zImg').src=i.src;g('zv').classList.remove('z');g('zv').hidden=false;g('zb').scrollTo(0,0);vib(8)};
-g('zImg').onclick=e=>{e.stopPropagation();const z=g('zv').classList.toggle('z');if(z){const b=g('zb');b.scrollLeft=(b.scrollWidth-b.clientWidth)/2;b.scrollTop=(b.scrollHeight-b.clientHeight)/2}};
-g('zx').onclick=zClose;g('zb').onclick=e=>{if(e.target===g('zb'))zClose()};
+g('zx').onclick=zClose;
+/* зум фото: щипок двумя пальцами, перетаскивание, двойной тап */
+(()=>{const zb=g('zb'),im=g('zImg'),pts=new Map();
+  let sc=1,tx=0,ty=0,gs={},lastTap=0,lastX=0,lastY=0;
+  const apply=()=>{im.style.transform=`translate(${tx}px,${ty}px) scale(${sc})`};
+  const clamp=()=>{const mx=Math.max(0,(im.offsetWidth*sc-zb.clientWidth)/2),my=Math.max(0,(im.offsetHeight*sc-zb.clientHeight)/2);
+    tx=Math.max(-mx,Math.min(mx,tx));ty=Math.max(-my,Math.min(my,ty))};
+  const reset=()=>{sc=1;tx=ty=0;pts.clear();im.style.transition='';apply()};window.__zReset=reset;
+  const rel=(x,y)=>{const r=zb.getBoundingClientRect();return{x:x-r.left-r.width/2,y:y-r.top-r.height/2}};
+  const two=()=>{const a=[...pts.values()],m=rel((a[0].x+a[1].x)/2,(a[0].y+a[1].y)/2);return{d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)||1,mx:m.x,my:m.y}};
+  const zoomAt=(fx,fy,ns)=>{tx=fx-(fx-tx)*ns/sc;ty=fy-(fy-ty)*ns/sc;sc=ns;clamp();
+    im.style.transition='transform .2s';apply();setTimeout(()=>{im.style.transition=''},220)};
+  zb.addEventListener('pointerdown',e=>{if(e.target.closest('.zx'))return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size===2){const t=two();gs={two:1,d:t.d,s:sc,mx:t.mx,my:t.my,tx,ty}}
+    else{gs={x:e.clientX,y:e.clientY,tx,ty,t:Date.now(),mv:0}}});
+  zb.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size>=2&&gs.two){const t=two(),ns=Math.max(1,Math.min(5,gs.s*t.d/gs.d));
+      tx=t.mx-(gs.mx-gs.tx)*ns/gs.s;ty=t.my-(gs.my-gs.ty)*ns/gs.s;sc=ns;clamp();apply()}
+    else if(pts.size===1&&!gs.two){gs.mv=Math.max(gs.mv,Math.hypot(e.clientX-gs.x,e.clientY-gs.y));
+      if(sc>1){tx=gs.tx+e.clientX-gs.x;ty=gs.ty+e.clientY-gs.y;clamp();apply()}}});
+  const up=e=>{if(!pts.has(e.pointerId))return;pts.delete(e.pointerId);
+    if(pts.size===1){const p=[...pts.values()][0];gs={x:p.x,y:p.y,tx,ty,t:Date.now(),mv:99}}
+    else if(pts.size===0){
+      if(sc<1.02){sc=1;tx=ty=0;apply()}
+      if(!gs.two&&gs.mv<10&&Date.now()-gs.t<300&&e.target===im){const n=Date.now();
+        if(n-lastTap<300&&Math.hypot(e.clientX-lastX,e.clientY-lastY)<40){lastTap=0;if(sc>1)zoomAt(0,0,1),tx=ty=0,apply();else{const f=rel(e.clientX,e.clientY);zoomAt(f.x,f.y,2.5)}}
+        else{lastTap=n;lastX=e.clientX;lastY=e.clientY}}
+      gs={}}};
+  zb.addEventListener('pointerup',up);zb.addEventListener('pointercancel',up);
+  zb.onclick=e=>{if(e.target===zb&&sc===1)zClose()};
+})();
 /* галерея на главном: точки + зум */
 (()=>{const w=g('shots'),d=g('sdots'),n=w.children.length;
   d.innerHTML=Array.from({length:n},(_,i)=>`<i${i?'':' class="on"'}></i>`).join('');
@@ -1230,6 +1249,15 @@ g('zx').onclick=zClose;g('zb').onclick=e=>{if(e.target===g('zb'))zClose()};
   w.addEventListener('scroll',mark,{passive:true});
   w.onclick=e=>{const i=e.target.closest('[data-zoom]');if(!i)return;g('zImg').src=i.src;g('zv').classList.remove('z');g('zv').hidden=false;g('zb').scrollTo(0,0);vib(8)};
 })();
+/* системная кнопка «назад» (вызывается из Java) и запрет контекстного меню */
+window.__back=()=>{
+  if(!g('zv').hidden){zClose();return true}
+  if(!g('paySheet').hidden){closePay();return true}
+  for(const id of ['okM','nSheet','imgV','rsheet']){const e=g(id);if(e&&!e.hidden){e.hidden=true;return true}}
+  if(!g('reg').hidden){showLogin();return true}
+  if(!document.querySelector('#p0.on')&&g('auth').hidden){goTab(0);return true}
+  return false};
+document.addEventListener('contextmenu',e=>{if(!e.target.closest('input,textarea,.keybox,pre.rules'))e.preventDefault()});
 g('rvAdm').onclick=async e=>{if(!isAdmin)return;const d=e.target.closest('[data-rdel]'),s=e.target.closest('[data-rsave]');
   if(d){d.disabled=true;try{await set(ref(db,'reviews/'+d.dataset.rdel),null);toast('Удалено')}catch(x){toast('Ошибка: '+errT(x));d.disabled=false}return}
   if(s){const id=s.dataset.rsave,v=(g('rvAdm').querySelector('[data-rin="'+id+'"]')||{}).value?.trim()||'';s.disabled=true;
