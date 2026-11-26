@@ -44,12 +44,12 @@ const TABS=[['Главное','M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'],['Мага�
 const NAVORD=[0,1,7,4,5,3,6,2];
 let isAdmin=false;
 function drawNav(){g('onlAdm').hidden=!isAdmin;const vis=TABS.map((t,i)=>[t,i]).filter(([t,i])=>i!==2&&(i!==6||isAdmin)).sort((a,b)=>NAVORD.indexOf(a[1])-NAVORD.indexOf(b[1]));g('nav').className='n'+vis.length;
-g('nav').innerHTML=vis.map(([t,i])=>`<button data-i="${i}" class="${document.querySelector('.page.on')===g('p'+i)?'on':''}"><span class="pill"><svg viewBox="0 0 24 24"><path d="${t[1]}"/></svg></span>${t[0]}${i===6?'<span class="badge" id="badge" hidden></span>':''}</button>`).join('');
-paintBadge();try{paintBell()}catch(e){}try{pxSync()}catch(e){}}
+  g('nav').innerHTML=vis.map(([t,i])=>`<button data-i="${i}" class="${document.querySelector('.page.on')===g('p'+i)?'on':''}"><span class="pill"><svg viewBox="0 0 24 24"><path d="${t[1]}"/></svg></span>${t[0]}${i===6?'<span class="badge" id="badge" hidden></span>':''}</button>`).join('');
+  paintBadge();try{paintBell()}catch(e){}try{pxSync()}catch(e){}}
 g('nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i;if(i===5||i===6)startReviews();
-document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p===g('p'+i)));
-g('nav').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));g('title').textContent=TABS[i][0];vib(8);
-if(i===4)setTimeout(trackViews,100);if(i===7)try{pxShow()}catch(e){}};
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p===g('p'+i)));
+  g('nav').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));g('title').textContent=TABS[i][0];vib(8);
+  if(i===4)setTimeout(trackViews,100);if(i===7)try{pxShow()}catch(e){}};
 const showPane=id=>{document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id===id));g('ptabs').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.p===id))};
 g('ptabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;showPane(b.dataset.p);document.querySelector('.pages').scrollTo({top:0});vib(8)};
 const goTab=i=>{if(i===3)showPane('pnAcc');const p=g('p'+i);if(!p)return;document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));p.classList.add('on');document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('on',Number(x.dataset.i)===i));if(g('title'))g('title').textContent=(TABS[i]&&TABS[i][0])||p.querySelector('h2')?.textContent||((i===7)?'Прокси':'');if(i===7){try{pxShow()}catch(e){console.error('pxShow',e)}}};
@@ -65,70 +65,70 @@ if(g('run'))g('run').onclick=()=>{if(!LIC.active)return openSheet();const st=!ru
 Object.entries({th:'auto',sh:'1',fs:1,am:false,dn:false,an:true,nt:true}).forEach(([k,v])=>{S[k]??=v});
 const mq=matchMedia('(prefers-color-scheme: light)');
 function applyPrefs(){const d=document.documentElement,th=S.th==='auto'?(mq.matches?'light':'dark'):S.th;
-d.dataset.th=th;d.dataset.am=S.am&&th==='dark'?1:0;d.dataset.sh=S.sh;d.dataset.dn=S.dn?1:0;d.dataset.an=S.an?1:0;d.style.setProperty('--fs',S.fs);
-document.querySelector('meta[name=theme-color]').content=getComputedStyle(document.body).backgroundColor}
+  d.dataset.th=th;d.dataset.am=S.am&&th==='dark'?1:0;d.dataset.sh=S.sh;d.dataset.dn=S.dn?1:0;d.dataset.an=S.an?1:0;d.style.setProperty('--fs',S.fs);
+  document.querySelector('meta[name=theme-color]').content=getComputedStyle(document.body).backgroundColor}
 ['am','dn','an','nt'].forEach(k=>g('sw-'+k).classList.toggle('on',!!S[k]));
 document.addEventListener('click',e=>{if(e.target.closest('[data-sw]'))setTimeout(applyPrefs)});
 document.querySelectorAll('[data-seg]').forEach(sg=>{const k=sg.dataset.seg,paint=()=>sg.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===String(S[k])));paint();
-sg.onclick=e=>{const b=e.target.closest('button');if(!b)return;S[k]=b.dataset.v;save();paint();applyPrefs();vib(10)}});
+  sg.onclick=e=>{const b=e.target.closest('button');if(!b)return;S[k]=b.dataset.v;save();paint();applyPrefs();vib(10)}});
 [['fs',v=>Math.round(v*100)+'%']].forEach(([k,f])=>{g(k).value=S[k];g(k+'V').textContent=f(S[k]);g(k).oninput=e=>{S[k]=+e.target.value;g(k+'V').textContent=f(S[k]);save();applyPrefs()}});
 g('resetS').onclick=()=>{try{localStorage.removeItem('zs')}catch(e){}location.reload()};
 mq.addEventListener('change',()=>{if(S.th==='auto')applyPrefs()});
 document.addEventListener('pointerdown',e=>{const h=e.target.closest('.btn,.row,.pkg,.plan,.ib,nav button');if(!h||h.disabled||!S.an)return;
-const r=h.getBoundingClientRect(),d=Math.max(r.width,r.height)*2,x=document.createElement('span');x.className='rip';
-x.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;
-if(getComputedStyle(h).position==='static')h.style.position='relative';h.style.overflow='hidden';h.appendChild(x);setTimeout(()=>x.remove(),600)});
+  const r=h.getBoundingClientRect(),d=Math.max(r.width,r.height)*2,x=document.createElement('span');x.className='rip';
+  x.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;
+  if(getComputedStyle(h).position==='static')h.style.position='relative';h.style.overflow='hidden';h.appendChild(x);setTimeout(()=>x.remove(),600)});
 applyPrefs();
 ;
 let KS=null,ksT=null,restoring=!!localStorage.getItem('zks');
 async function hwid(){try{if(window.FluxNative&&FluxNative.hwid)return String(FluxNative.hwid())}catch(e){}return null}
 async function verifyKey(u,k){
-u=(u||'').trim();k=(k||'').trim().toUpperCase();
-if(!u||u.length>200||!UID_RE.test(u))return{e:'Введите корректный UID'};
-if(!KEY_RE.test(k))return{e:'Неверный формат ключа'};
-let o=null,base=null,res=null;const errs=[];
-for(const b of KEY_DBS){
-try{const r=await fetch(b+'/keys/'+k+'.json');
-if(!r.ok){errs.push(b.slice(8,20)+' HTTP '+r.status);continue}
-const v=await r.json();if(v){o=v;base=b;res=r;break}
-}catch(x){errs.push(b.slice(8,20)+' '+(x&&x.message||'сеть'))}
-}
-if(!o)return{e:'Неверный UID или ключ'+(errs.length?' ['+errs.join('; ')+']':''),n:errs.length>0};
-try{
-if((o.status||'active')!=='active')return{e:'Ключ отключён администратором'};
-if(u!==(o.uid||''))return{e:'Неверный UID или ключ'};
-const exp=+o.expiresAt||0;
-const now=Date.parse(res.headers.get('Date')||'')||Date.now();
-const me=await hwid();
-if(!me){}else if(!o.hwid){
-const p=await fetch(base+'/keys/'+k+'/hwid.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(me)});
-if(!p.ok)return{e:'Не удалось привязать устройство (HTTP '+p.status+')'};
-}else if(o.hwid!==me)return{e:'Ключ привязан к другому устройству'};
-if(exp>0&&now>exp)return{e:'Срок действия ключа истёк',x:1,u,k,exp};
-return{u,k,exp};
-}catch(x){return{e:'Ошибка: '+(x&&x.message),n:true}}
+  u=(u||'').trim();k=(k||'').trim().toUpperCase();
+  if(!u||u.length>200||!UID_RE.test(u))return{e:'Введите корректный UID'};
+  if(!KEY_RE.test(k))return{e:'Неверный формат ключа'};
+  let o=null,base=null,res=null;const errs=[];
+  for(const b of KEY_DBS){
+    try{const r=await fetch(b+'/keys/'+k+'.json');
+      if(!r.ok){errs.push(b.slice(8,20)+' HTTP '+r.status);continue}
+      const v=await r.json();if(v){o=v;base=b;res=r;break}
+    }catch(x){errs.push(b.slice(8,20)+' '+(x&&x.message||'сеть'))}
+  }
+  if(!o)return{e:'Неверный UID или ключ'+(errs.length?' ['+errs.join('; ')+']':''),n:errs.length>0};
+  try{
+    if((o.status||'active')!=='active')return{e:'Ключ отключён администратором'};
+    if(u!==(o.uid||''))return{e:'Неверный UID или ключ'};
+    const exp=+o.expiresAt||0;
+    const now=Date.parse(res.headers.get('Date')||'')||Date.now();
+    const me=await hwid();
+    if(!me){}else if(!o.hwid){
+      const p=await fetch(base+'/keys/'+k+'/hwid.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(me)});
+      if(!p.ok)return{e:'Не удалось привязать устройство (HTTP '+p.status+')'};
+    }else if(o.hwid!==me)return{e:'Ключ привязан к другому устройству'};
+    if(exp>0&&now>exp)return{e:'Срок действия ключа истёк',x:1,u,k,exp};
+    return{u,k,exp};
+  }catch(x){return{e:'Ошибка: '+(x&&x.message),n:true}}
 }
 function enterKey(r){
-KS=r;restoring=false;localStorage.setItem('zks',JSON.stringify({u:r.u,k:r.k}));
-offs.forEach(f=>f());offs=[];clearInterval(expT);clearInterval(ksT);
-uid=r.u;isAdmin=false;LIC={active:!r.exp||r.exp>Date.now(),key:r.k,exp:r.exp};applyChannelAnnouncement();stopRef();
-setAuth(true);g('uidB').textContent=r.u;g('pMail').textContent='Вход по ключу';g('pName').textContent=r.u;g('av').textContent=r.u[0].toUpperCase();
-g('rulesBtn').hidden=true;g('keyB').textContent=r.k;g('copyKey').disabled=false;g('ordS').innerHTML='';drawNav();
-const lo=localStorage.getItem('zo_'+uid);if(lo)watchOrder(lo);
-const upd=()=>{
-if(!r.exp){g('expT').textContent='Бессрочный ключ';g('keyS').textContent='Активен · бессрочно';return}
-const left=r.exp-Date.now();
-if(left<=0){LIC.active=false;if(run)setRun(false);g('expT').textContent='Срок ключа истёк '+fmtD(r.exp);g('keyS').textContent='Истёк — продлите';clearInterval(expT);return}
-const d=Math.floor(left/864e5),h=Math.floor(left%864e5/36e5);
-g('expT').textContent=`Действует до ${fmtD(r.exp)} (осталось ${d} д ${h} ч)`;g('keyS').textContent=`Активен · ${d} д ${h} ч`};
-upd();expT=setInterval(upd,6e4);
-ksT=setInterval(async()=>{if(!KS)return;const x=await verifyKey(KS.u,KS.k);if(x.n)return;if(x.e&&!x.x)dropKey(x.e);else if(x.exp!==KS.exp)enterKey(x)},KEY_RECHECK_MS);
+  KS=r;restoring=false;localStorage.setItem('zks',JSON.stringify({u:r.u,k:r.k}));
+  offs.forEach(f=>f());offs=[];clearInterval(expT);clearInterval(ksT);
+  uid=r.u;isAdmin=false;LIC={active:!r.exp||r.exp>Date.now(),key:r.k,exp:r.exp};applyChannelAnnouncement();stopRef();
+  setAuth(true);g('uidB').textContent=r.u;g('pMail').textContent='Вход по ключу';g('pName').textContent=r.u;g('av').textContent=r.u[0].toUpperCase();
+  g('rulesBtn').hidden=true;g('keyB').textContent=r.k;g('copyKey').disabled=false;g('ordS').innerHTML='';drawNav();
+  const lo=localStorage.getItem('zo_'+uid);if(lo)watchOrder(lo);
+  const upd=()=>{
+    if(!r.exp){g('expT').textContent='Бессрочный ключ';g('keyS').textContent='Активен · бессрочно';return}
+    const left=r.exp-Date.now();
+    if(left<=0){LIC.active=false;if(run)setRun(false);g('expT').textContent='Срок ключа истёк '+fmtD(r.exp);g('keyS').textContent='Истёк — продлите';clearInterval(expT);return}
+    const d=Math.floor(left/864e5),h=Math.floor(left%864e5/36e5);
+    g('expT').textContent=`Действует до ${fmtD(r.exp)} (осталось ${d} д ${h} ч)`;g('keyS').textContent=`Активен · ${d} д ${h} ч`};
+  upd();expT=setInterval(upd,6e4);
+  ksT=setInterval(async()=>{if(!KS)return;const x=await verifyKey(KS.u,KS.k);if(x.n)return;if(x.e&&!x.x)dropKey(x.e);else if(x.exp!==KS.exp)enterKey(x)},KEY_RECHECK_MS);
 }
 function dropKey(msg){
-setRun(false);KS=null;restoring=false;localStorage.removeItem('zks');clearInterval(expT);clearInterval(ksT);
-LIC={active:false};uid=null;isAdmin=false;stopRef();drawNav();
-g('keyB').textContent='нет активного ключа';g('expT').textContent='';g('keyS').textContent='—';g('kkey').value='';
-goTab(0);setAmode('key');g('aerr').textContent=msg||'';setAuth(false)}
+  setRun(false);KS=null;restoring=false;localStorage.removeItem('zks');clearInterval(expT);clearInterval(ksT);
+  LIC={active:false};uid=null;isAdmin=false;stopRef();drawNav();
+  g('keyB').textContent='нет активного ключа';g('expT').textContent='';g('keyS').textContent='—';g('kkey').value='';
+  goTab(0);setAmode('key');g('aerr').textContent=msg||'';setAuth(false)}
 let uid=null,LIC={active:false},amode='mail';
 const setAuth=h=>{const was=!g('auth').hidden||!g('reg').hidden;g('splash').hidden=true;g('auth').hidden=h;if(h){g('reg').hidden=true;if(was)goTab(0)}};
 setTimeout(()=>{if(!g('splash').hidden){g('splash').hidden=true;if(!auth.currentUser&&!KS)showLogin()}},6000);
@@ -141,73 +141,75 @@ g('goRegBtn').onclick=showReg;
 g('backToLogin').onclick=showLogin;
 g('goLoginBtn').onclick=showLogin;
 function setAmode(m){
-amode=m;
-g('am').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
-g('mailF').hidden=m!=='mail';g('keyF').hidden=m!=='key';g('aerr').textContent=''}
+  amode=m;
+  g('am').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  g('mailF').hidden=m!=='mail';g('keyF').hidden=m!=='key';g('aerr').textContent=''}
 g('am').onclick=e=>{const b=e.target.closest('button');if(b)setAmode(b.dataset.m)};
+// Вход
 g('ago').onclick=async()=>{
-g('aerr').textContent='';
-if(amode==='key'){
-const b=g('ago');b.disabled=true;b.textContent='Проверка…';
-const r=await verifyKey(g('kuid').value,g('kkey').value);
-b.disabled=false;b.textContent='Войти';
-if(r.e&&!r.x){g('aerr').textContent=r.e;return}
-if(auth.currentUser)await signOut(auth).catch(()=>{});
-enterKey(r);if(r.x){goTab(3);toast('Ключ истёк — продлите в профиле')}else toast('Вход выполнен');return}
-const em=g('aem').value.trim(),pw=g('apw').value;
-if(!em||!pw){g('aerr').textContent='Заполните все поля';return}
-g('ago').disabled=true;g('ago').textContent='Входим…';
-try{await signInWithEmailAndPassword(auth,em,pw)}
-catch(e){g('aerr').textContent=errT(e)}
-g('ago').disabled=false;g('ago').textContent='Войти'};
+  g('aerr').textContent='';
+  if(amode==='key'){
+    const b=g('ago');b.disabled=true;b.textContent='Проверка…';
+    const r=await verifyKey(g('kuid').value,g('kkey').value);
+    b.disabled=false;b.textContent='Войти';
+    if(r.e&&!r.x){g('aerr').textContent=r.e;return}
+    if(auth.currentUser)await signOut(auth).catch(()=>{});
+    enterKey(r);if(r.x){goTab(3);toast('Ключ истёк — продлите в профиле')}else toast('Вход выполнен');return}
+  const em=g('aem').value.trim(),pw=g('apw').value;
+  if(!em||!pw){g('aerr').textContent='Заполните все поля';return}
+  g('ago').disabled=true;g('ago').textContent='Входим…';
+  try{await signInWithEmailAndPassword(auth,em,pw)}
+  catch(e){g('aerr').textContent=errT(e)}
+  g('ago').disabled=false;g('ago').textContent='Войти'};
+// Регистрация
 g('regGo').onclick=async()=>{
-g('rerr').textContent='';
-const n=g('aname').value.replace(/[<>&"']/g,'').trim();
-const em=g('aem2').value.trim();
-const pw=g('apw2').value;
-if(!n){g('rerr').textContent='Введите ник';return}
-if(!/^[\p{L}\p{N}_.\- ]{2,24}$/u.test(n)){g('rerr').textContent='Ник: 2–24 символа, буквы, цифры, _ . -';return}
-if(!em){g('rerr').textContent='Введите почту';return}
-if(!pw||pw.length<6){g('rerr').textContent='Пароль от 6 символов';return}
-g('regGo').disabled=true;g('regGo').textContent='Создаём…';
-try{
-const u=(await createUserWithEmailAndPassword(auth,em,pw)).user;
-await set(ref(db,'users/'+u.uid),{name:n});
-toast('Добро пожаловать, '+n+'!');const rc0=g('arc').value.trim();if(rc0){try{const r=await applyRef(rc0,u.uid);toast(r.ok?'Код принят: пригласившему начислено +'+REF_BONUS+' ₽':'Код: '+r.e)}catch(x){toast('Код не применён: '+errT(x))}}
-}catch(e){g('rerr').textContent=errT(e)}
-g('regGo').disabled=false;g('regGo').textContent='Создать аккаунт'};
+  g('rerr').textContent='';
+  const n=g('aname').value.replace(/[<>&"']/g,'').trim();
+  const em=g('aem2').value.trim();
+  const pw=g('apw2').value;
+  if(!n){g('rerr').textContent='Введите ник';return}
+  if(!/^[\p{L}\p{N}_.\- ]{2,24}$/u.test(n)){g('rerr').textContent='Ник: 2–24 символа, буквы, цифры, _ . -';return}
+  if(!em){g('rerr').textContent='Введите почту';return}
+  if(!pw||pw.length<6){g('rerr').textContent='Пароль от 6 символов';return}
+  g('regGo').disabled=true;g('regGo').textContent='Создаём…';
+  try{
+    const u=(await createUserWithEmailAndPassword(auth,em,pw)).user;
+    await set(ref(db,'users/'+u.uid),{name:n});
+    toast('Добро пожаловать, '+n+'!');const rc0=g('arc').value.trim();if(rc0){try{const r=await applyRef(rc0,u.uid);toast(r.ok?'Код принят: пригласившему начислено +'+REF_BONUS+' ₽':'Код: '+r.e)}catch(x){toast('Код не применён: '+errT(x))}}
+  }catch(e){g('rerr').textContent=errT(e)}
+  g('regGo').disabled=false;g('regGo').textContent='Создать аккаунт'};
 g('logout').onclick=async()=>{setRun(false);if(KS)dropKey('');else await signOut(auth)};
 let offs=[],expT=null;
 onAuthStateChanged(auth,u=>{
-if(!u&&(KS||restoring))return; 
-if(u&&(KS||restoring)){KS=null;restoring=false;localStorage.removeItem('zks');clearInterval(ksT)}
-offs.forEach(f=>f());offs=[];clearInterval(expT);
-if(!u){uid=null;isAdmin=false;LIC={active:false};stopRef();drawNav();showLogin();setAuth(false);return}
-uid=u.uid;isAdmin=!!ADMIN_UID&&uid===ADMIN_UID;applyChannelAnnouncement();setAuth(true);g('uidB').textContent=uid;g('pMail').textContent=u.email;
-g('rulesBtn').hidden=!(!ADMIN_UID||isAdmin);drawNav();
-offs.push(onValue(ref(db,'users/'+uid),s=>{const n=(s.val()||{}).name||u.email.split('@')[0];g('pName').textContent=n;g('av').textContent=n[0].toUpperCase()},()=>{}));
-offs.push(onValue(ref(db,'licenses/'+uid),s=>paintLic(s.val()),()=>{}));
-startRef();
-const last=localStorage.getItem('zo_'+uid);if(last)watchOrder(last);
-if(isAdmin)watchAdmin()});
+  if(!u&&(KS||restoring))return; 
+  if(u&&(KS||restoring)){KS=null;restoring=false;localStorage.removeItem('zks');clearInterval(ksT)}
+  offs.forEach(f=>f());offs=[];clearInterval(expT);
+  if(!u){uid=null;isAdmin=false;LIC={active:false};stopRef();drawNav();showLogin();setAuth(false);return}
+  uid=u.uid;isAdmin=!!ADMIN_UID&&uid===ADMIN_UID;applyChannelAnnouncement();setAuth(true);g('uidB').textContent=uid;g('pMail').textContent=u.email;
+  g('rulesBtn').hidden=!(!ADMIN_UID||isAdmin);drawNav();
+  offs.push(onValue(ref(db,'users/'+uid),s=>{const n=(s.val()||{}).name||u.email.split('@')[0];g('pName').textContent=n;g('av').textContent=n[0].toUpperCase()},()=>{}));
+  offs.push(onValue(ref(db,'licenses/'+uid),s=>paintLic(s.val()),()=>{}));
+  startRef();
+  const last=localStorage.getItem('zo_'+uid);if(last)watchOrder(last);
+  if(isAdmin)watchAdmin()});
 (async()=>{
-if(!restoring)return;
-let sv=null;try{sv=JSON.parse(localStorage.getItem('zks'))}catch(e){}
-if(!sv||!sv.u||!sv.k){restoring=false;localStorage.removeItem('zks');if(!auth.currentUser)setAuth(false);return}
-const r=await verifyKey(sv.u,sv.k);
-if(!restoring)return; 
-if(r.e&&!r.x){restoring=false;if(!r.n)localStorage.removeItem('zks');setAmode('key');g('kuid').value=sv.u;g('aerr').textContent=r.e;setAuth(false);return}
-enterKey(r)})();
+  if(!restoring)return;
+  let sv=null;try{sv=JSON.parse(localStorage.getItem('zks'))}catch(e){}
+  if(!sv||!sv.u||!sv.k){restoring=false;localStorage.removeItem('zks');if(!auth.currentUser)setAuth(false);return}
+  const r=await verifyKey(sv.u,sv.k);
+  if(!restoring)return; 
+  if(r.e&&!r.x){restoring=false;if(!r.n)localStorage.removeItem('zks');setAmode('key');g('kuid').value=sv.u;g('aerr').textContent=r.e;setAuth(false);return}
+  enterKey(r)})();
 function paintLic(v){const was=LIC.active;
-LIC=v&&v.exp>Date.now()?{active:true,key:v.key,exp:v.exp}:{active:false,key:v&&v.key,exp:v&&v.exp};
-g('keyB').textContent=LIC.key||'нет активного ключа';clearInterval(expT);
-const upd=()=>{if(!LIC.exp){g('expT').textContent='';g('keyS').textContent='Не активирован';return}
-const left=LIC.exp-Date.now();
-if(left<=0){LIC.active=false;g('expT').textContent='Срок ключа истёк '+fmtD(LIC.exp);g('keyS').textContent='Истёк';if(run)setRun(false);clearInterval(expT);return}
-const d=Math.floor(left/864e5),h=Math.floor(left%864e5/36e5);
-g('expT').textContent=`Действует до ${fmtD(LIC.exp)} (осталось ${d} д ${h} ч)`;g('keyS').textContent=`Активен · ${d} д ${h} ч`};
-upd();expT=setInterval(upd,6e4);g('copyKey').disabled=!LIC.key;
-if(LIC.active&&!was){toast('Ключ активирован!');vib([15,40,15])}}
+  LIC=v&&v.exp>Date.now()?{active:true,key:v.key,exp:v.exp}:{active:false,key:v&&v.key,exp:v&&v.exp};
+  g('keyB').textContent=LIC.key||'нет активного ключа';clearInterval(expT);
+  const upd=()=>{if(!LIC.exp){g('expT').textContent='';g('keyS').textContent='Не активирован';return}
+    const left=LIC.exp-Date.now();
+    if(left<=0){LIC.active=false;g('expT').textContent='Срок ключа истёк '+fmtD(LIC.exp);g('keyS').textContent='Истёк';if(run)setRun(false);clearInterval(expT);return}
+    const d=Math.floor(left/864e5),h=Math.floor(left%864e5/36e5);
+    g('expT').textContent=`Действует до ${fmtD(LIC.exp)} (осталось ${d} д ${h} ч)`;g('keyS').textContent=`Активен · ${d} д ${h} ч`};
+  upd();expT=setInterval(upd,6e4);g('copyKey').disabled=!LIC.key;
+  if(LIC.active&&!was){toast('Ключ активирован!');vib([15,40,15])}}
 g('copyKey').onclick=()=>{if(!LIC.key)return;cp(LIC.key);toast('Ключ скопирован')};
 g('goKey').onclick=()=>{showPane('pnAcc');document.querySelector('.pages').scrollTo({top:0,behavior:'smooth'});vib(8)};
 const CARD='2204 1201 4472 3133',PAY_MS=15*60*1000;
@@ -219,33 +221,33 @@ let onlFake=null,onlReal;
 const paintOnl=()=>{const n=onlFake!=null?onlFake:onlReal;g('onlN').textContent=n===undefined?'…':n===null?'—':n.toLocaleString('ru')};
 onValue(ref(db,'presence'),s=>{onlReal=s.numChildren();paintOnl()},()=>{onlReal=null;paintOnl()}); 
 onValue(ref(db,'online'),s=>{const v=s.val();onlFake=(typeof v==='number'&&v>=0)?Math.floor(v):null;paintOnl();
-const i=g('onlIn');if(i&&document.activeElement!==i)i.value=onlFake==null?'':onlFake},()=>{});
+  const i=g('onlIn');if(i&&document.activeElement!==i)i.value=onlFake==null?'':onlFake},()=>{});
 g('onlSave').onclick=async()=>{if(!isAdmin)return;const v=g('onlIn').value.trim();
-if(!/^\d{1,7}$/.test(v))return toast('Введите число от 0 до 9999999');
-try{await set(ref(db,'online'),+v);toast('Онлайн: '+v);vib(15)}catch(x){toast(errT(x))}};
+  if(!/^\d{1,7}$/.test(v))return toast('Введите число от 0 до 9999999');
+  try{await set(ref(db,'online'),+v);toast('Онлайн: '+v);vib(15)}catch(x){toast(errT(x))}};
 g('onlReset').onclick=async()=>{if(!isAdmin)return;
-try{await set(ref(db,'online'),null);g('onlIn').value='';toast('Сброшено — реальный онлайн')}catch(x){toast(errT(x))}};
+  try{await set(ref(db,'online'),null);g('onlIn').value='';toast('Сброшено — реальный онлайн')}catch(x){toast(errT(x))}};
 const nowS=()=>Date.now()+srvOff,mmss=ms=>{const t=Math.max(0,Math.ceil(ms/1000));return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')};
 let ordOff=null,payTimerInt=null,curOrd=null,payCur=null,shotData=null;
 const openSheet=()=>{goTab(1);toast('Выберите тариф и оплатите')};
 g('buy').onclick=()=>goTab(1);
 async function startPurchase(plan){
-if(!uid)return toast('Войдите в аккаунт');
-if(curOrd&&curOrd.st===4&&curOrd.dl>nowS())return openPay(curOrd);
-const r=push(ref(db,'zorders')),id=r.key,dl=nowS()+PAY_MS;
-try{await set(r,{u:uid,src:KS?'key':'mail',plan,m:'card',st:4,ts:serverTimestamp(),dl});
-localStorage.setItem('zo_'+uid,id);watchOrder(id);openPay({id,plan,dl,st:4});openYm('AC')}
-catch(e){toast('Ошибка: '+errT(e))}}
+  if(!uid)return toast('Войдите в аккаунт');
+  if(curOrd&&curOrd.st===4&&curOrd.dl>nowS())return openPay(curOrd);
+  const r=push(ref(db,'zorders')),id=r.key,dl=nowS()+PAY_MS;
+  try{await set(r,{u:uid,src:KS?'key':'mail',plan,m:'card',st:4,ts:serverTimestamp(),dl});
+    localStorage.setItem('zo_'+uid,id);watchOrder(id);openPay({id,plan,dl,st:4});openYm('AC')}
+  catch(e){toast('Ошибка: '+errT(e))}}
 function openPay(o){
-payCur=o;shotData=null;
-g('payAmt').textContent=PRICES[o.plan]+' ₽ / '+o.plan+' дней';g('payUidText').textContent=uid;
-g('payStep1').hidden=false;g('payStep2').hidden=true;g('ssName').textContent='';g('ssPreview').style.display='none';
-g('ssLabel').classList.remove('has-file');g('ssFile').value='';g('payErr').textContent='';
-g('payConfirm').disabled=false;g('payConfirm').textContent='Подтвердить оплату';g('paySheet').hidden=false;
-clearInterval(payTimerInt);
-const tick=()=>{const left=o.dl-nowS();g('payTimer').textContent=left>0?mmss(left):'истёк';g('payBar').style.width=Math.max(0,left/PAY_MS*100)+'%';
-if(left<=0){clearInterval(payTimerInt);g('payConfirm').disabled=true;g('payErr').textContent='Время оплаты истекло — создайте новую заявку';expire(o.id)}};
-tick();payTimerInt=setInterval(tick,1000)}
+  payCur=o;shotData=null;
+  g('payAmt').textContent=PRICES[o.plan]+' ₽ / '+o.plan+' дней';g('payUidText').textContent=uid;
+  g('payStep1').hidden=false;g('payStep2').hidden=true;g('ssName').textContent='';g('ssPreview').style.display='none';
+  g('ssLabel').classList.remove('has-file');g('ssFile').value='';g('payErr').textContent='';
+  g('payConfirm').disabled=false;g('payConfirm').textContent='Подтвердить оплату';g('paySheet').hidden=false;
+  clearInterval(payTimerInt);
+  const tick=()=>{const left=o.dl-nowS();g('payTimer').textContent=left>0?mmss(left):'истёк';g('payBar').style.width=Math.max(0,left/PAY_MS*100)+'%';
+    if(left<=0){clearInterval(payTimerInt);g('payConfirm').disabled=true;g('payErr').textContent='Время оплаты истекло — создайте новую заявку';expire(o.id)}};
+  tick();payTimerInt=setInterval(tick,1000)}
 function ymUrl(o,t){return 'https://yoomoney.ru/quickpay/confirm?'+new URLSearchParams({receiver:WALLET,'quickpay-form':'button',sum:String(PRICES[o.plan]),label:o.id,paymentType:t,targets:'FluxMod ключ на '+o.plan+' дн.'}).toString()}
 function openYm(t){if(!payCur)return;const u=ymUrl(payCur,t);try{if(window.Android&&Android.openExternalBrowser){Android.openExternalBrowser(u);return}}catch(e){}window.open(u,'_blank')}
 g('ymAc').onclick=()=>openYm('AC');g('ymPc').onclick=()=>openYm('PC');
@@ -255,161 +257,161 @@ g('payClose').onclick=closePay;g('paySheet').onclick=e=>{if(e.target===g('payShe
 g('payCancel').onclick=()=>{if(payCur)expire(payCur.id);closePay();toast('Заявка отменена')};
 g('payCardNum').onclick=()=>{cp(CARD.replace(/ /g,''));toast('Номер карты скопирован')};
 function packImg(f){return new Promise((res,rej)=>{const im=new Image,u=URL.createObjectURL(f);
-im.onload=()=>{let w=im.width,h=im.height;const k=Math.min(1,1100/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
-const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);URL.revokeObjectURL(u);
-let q=.7,d=c.toDataURL('image/jpeg',q);while(d.length>230000&&q>.2){q-=.1;d=c.toDataURL('image/jpeg',q)}res(d)};
-im.onerror=()=>rej(new Error('Не удалось прочитать изображение'));im.src=u})}
+  im.onload=()=>{let w=im.width,h=im.height;const k=Math.min(1,1100/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
+    const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);URL.revokeObjectURL(u);
+    let q=.7,d=c.toDataURL('image/jpeg',q);while(d.length>230000&&q>.2){q-=.1;d=c.toDataURL('image/jpeg',q)}res(d)};
+  im.onerror=()=>rej(new Error('Не удалось прочитать изображение'));im.src=u})}
 g('ssFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;
-try{shotData=await packImg(f)}catch(x){shotData=null;g('payErr').textContent=x.message;return}
-g('payErr').textContent='';g('ssName').textContent=f.name;g('ssLabel').classList.add('has-file');g('ssPreview').src=shotData;g('ssPreview').style.display='block'};
+  try{shotData=await packImg(f)}catch(x){shotData=null;g('payErr').textContent=x.message;return}
+  g('payErr').textContent='';g('ssName').textContent=f.name;g('ssLabel').classList.add('has-file');g('ssPreview').src=shotData;g('ssPreview').style.display='block'};
 g('payConfirm').onclick=async()=>{
-g('payErr').textContent='';const o=payCur;if(!o||!uid)return;
-if(!shotData)return g('payErr').textContent='Прикрепите скриншот чека';
-if(nowS()>=o.dl)return g('payErr').textContent='Время оплаты истекло';
-g('payConfirm').disabled=true;g('payConfirm').textContent='Отправляем админу…';
-try{await set(ref(db,'zshots/'+o.id),shotData);await update(ref(db,'zorders/'+o.id),{st:0,paid:serverTimestamp()});
-clearInterval(payTimerInt);g('payStep1').hidden=true;g('payStep2').hidden=false;vib(20)}
-catch(e){g('payErr').textContent='Ошибка: '+errT(e);g('payConfirm').disabled=false;g('payConfirm').textContent='Подтвердить оплату'}};
+  g('payErr').textContent='';const o=payCur;if(!o||!uid)return;
+  if(!shotData)return g('payErr').textContent='Прикрепите скриншот чека';
+  if(nowS()>=o.dl)return g('payErr').textContent='Время оплаты истекло';
+  g('payConfirm').disabled=true;g('payConfirm').textContent='Отправляем админу…';
+  try{await set(ref(db,'zshots/'+o.id),shotData);await update(ref(db,'zorders/'+o.id),{st:0,paid:serverTimestamp()});
+    clearInterval(payTimerInt);g('payStep1').hidden=true;g('payStep2').hidden=false;vib(20)}
+  catch(e){g('payErr').textContent='Ошибка: '+errT(e);g('payConfirm').disabled=false;g('payConfirm').textContent='Подтвердить оплату'}};
 const nKey=()=>'zn_'+uid,nGet=()=>{try{return JSON.parse(localStorage.getItem(nKey()))||[]}catch(e){return[]}};
 function paintBell(){if(!uid)return;const n=nGet().filter(x=>!x.r).length,b=g('bellB');b.hidden=!n;b.textContent=n}
 function notify(o){const a=nGet();if(a.some(x=>x.id===o.id&&x.t===o.t))return false;a.unshift({...o,ts:Date.now(),r:0});localStorage.setItem(nKey(),JSON.stringify(a.slice(0,30)));paintBell();return true}
 g('bell').onclick=()=>{const a=nGet();
-g('nList').innerHTML=a.length?a.map(x=>{const title=x.t==='ok'?'✓ Оплата подтверждена':x.t==='announcement'?`📢 ${esc(x.title||'Объявление')}`:'✗ Заявка отклонена';const body=x.t==='ok'?`UID: ${esc(x.u)}<br>Ключ: ${esc(x.k)}<br>`:x.t==='announcement'?`${esc(x.body||'')}${x.url?`<br><a href="${esc(x.url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;color:var(--p)">Открыть канал @FluxsMods ↗</a>`:''}`:'';return `<div class="nit"><b>${title}</b><div>${body}${body?'<br>':''}${fmtS(x.ts)}</div></div>`}).join(''):'<div class="empty">Уведомлений нет</div>';
-g('nSheet').hidden=false;a.forEach(x=>x.r=1);localStorage.setItem(nKey(),JSON.stringify(a));paintBell()};
+  g('nList').innerHTML=a.length?a.map(x=>{const title=x.t==='ok'?'✓ Оплата подтверждена':x.t==='announcement'?`📢 ${esc(x.title||'Объявление')}`:'✗ Заявка отклонена';const body=x.t==='ok'?`UID: ${esc(x.u)}<br>Ключ: ${esc(x.k)}<br>`:x.t==='announcement'?`${esc(x.body||'')}${x.url?`<br><a href="${esc(x.url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;color:var(--p)">Открыть канал @FluxsMods ↗</a>`:''}`:'';return `<div class="nit"><b>${title}</b><div>${body}${body?'<br>':''}${fmtS(x.ts)}</div></div>`}).join(''):'<div class="empty">Уведомлений нет</div>';
+  g('nSheet').hidden=false;a.forEach(x=>x.r=1);localStorage.setItem(nKey(),JSON.stringify(a));paintBell()};
 g('nx').onclick=()=>g('nSheet').hidden=true;g('nSheet').onclick=e=>{if(e.target===g('nSheet'))g('nSheet').hidden=true};
 const CHANNEL_ANNOUNCEMENT={id:'flux_channel_2026_11',title:'Мы создали новый Telegram-канал!',body:'Теперь новости, обновления и свежие материалы FluxMod будут выходить в нашем новом канале. Подписывайтесь, чтобы ничего не пропустить!',url:'https://t.me/FluxsMods'};
 let announcementOff=null,currentChannelAnnouncement=null;
 function applyChannelAnnouncement(){
-const v=currentChannelAnnouncement;if(!uid||!v||v.id!==CHANNEL_ANNOUNCEMENT.id)return;
-if(notify({id:v.id,t:'announcement',title:v.title,body:v.body,url:v.url})){
-nat(v.title,v.body||'Подпишитесь на @FluxsMods');
-toast('📢 Новое уведомление: наш Telegram-канал');
-}
+  const v=currentChannelAnnouncement;if(!uid||!v||v.id!==CHANNEL_ANNOUNCEMENT.id)return;
+  if(notify({id:v.id,t:'announcement',title:v.title,body:v.body,url:v.url})){
+    nat(v.title,v.body||'Подпишитесь на @FluxsMods');
+    toast('📢 Новое уведомление: наш Telegram-канал');
+  }
 }
 function watchChannelAnnouncement(){
-if(announcementOff){announcementOff();announcementOff=null}
-announcementOff=onValue(ref(db,'announcements/current'),s=>{
-currentChannelAnnouncement=s.val();applyChannelAnnouncement();
-},()=>{});
+  if(announcementOff){announcementOff();announcementOff=null}
+  announcementOff=onValue(ref(db,'announcements/current'),s=>{
+    currentChannelAnnouncement=s.val();applyChannelAnnouncement();
+  },()=>{});
 }
 watchChannelAnnouncement();
 if(ADMIN_UID&&auth.currentUser&&auth.currentUser.uid===ADMIN_UID){
-get(ref(db,'announcements/current')).then(s=>{
-const v=s.val();if(!v||v.id!==CHANNEL_ANNOUNCEMENT.id)return set(ref(db,'announcements/current'),{...CHANNEL_ANNOUNCEMENT,createdAt:serverTimestamp()});
-}).catch(()=>{});
+  get(ref(db,'announcements/current')).then(s=>{
+    const v=s.val();if(!v||v.id!==CHANNEL_ANNOUNCEMENT.id)return set(ref(db,'announcements/current'),{...CHANNEL_ANNOUNCEMENT,createdAt:serverTimestamp()});
+  }).catch(()=>{});
 }
 onAuthStateChanged(auth,u=>{
-if(u&&u.uid===ADMIN_UID){
-get(ref(db,'announcements/current')).then(s=>{
-const v=s.val();if(!v||v.id!==CHANNEL_ANNOUNCEMENT.id)return set(ref(db,'announcements/current'),{...CHANNEL_ANNOUNCEMENT,createdAt:serverTimestamp()});
-}).catch(()=>{});
-}
+  if(u&&u.uid===ADMIN_UID){
+    get(ref(db,'announcements/current')).then(s=>{
+      const v=s.val();if(!v||v.id!==CHANNEL_ANNOUNCEMENT.id)return set(ref(db,'announcements/current'),{...CHANNEL_ANNOUNCEMENT,createdAt:serverTimestamp()});
+    }).catch(()=>{});
+  }
 });
 function showOk(o){g('okUid').textContent=o.u;g('okKey').textContent=o.k;g('okExp').textContent=o.e?'Действует до '+fmtD(o.e):'';g('okM').hidden=false;vib([15,40,15])}
 g('okCopy').onclick=()=>{cp(g('okKey').textContent);toast('Ключ скопирован')};
 g('okGo').onclick=()=>{g('okM').hidden=true;goTab(3)};
 function watchOrder(id){ordOff&&ordOff();
-ordOff=onValue(ref(db,'zorders/'+id),s=>{const o=s.val();curOrd=o?{...o,id}:null;
-const box=[g('ordS'),g('shopOrdS')],set=h=>box.forEach(b=>b.innerHTML=h);
-if(!o||o.st===5){set('');localStorage.removeItem('zo_'+uid);curOrd=null;return}
-if(o.st===4){if(o.dl<=nowS()){expire(id);return}set('');return}
-if(o.st===0||o.st===1){set(`<div class="status w">Заявка на ${o.plan} дн. отправлена администратору. Вы получите уведомление, когда чек проверят.</div>`);
-if(!g('paySheet').hidden){g('payStep1').hidden=true;g('payStep2').hidden=false}return}
-if(o.st===2){set(`<div class="status o">✓ Оплата подтверждена, ключ выдан — он в Профиле.</div>`);
-if(notify({id,t:'ok',u:o.u,k:o.key,e:o.exp})){closePay();showOk({u:o.u,k:o.key,e:o.exp});nat('Оплата подтверждена','Ключ: '+o.key+' · UID: '+o.u)}
-if(KS)verifyKey(KS.u,KS.k).then(x=>{if(!x.e||x.x)enterKey(x)});
-localStorage.removeItem('zo_'+uid);return}
-if(o.st===3){set(`<div class="status e">Заявка на ${o.plan} дн. отклонена${o.note?': '+esc(o.note):''}. Если вы оплатили — напишите администратору.</div>`);
-if(notify({id,t:'no'})){closePay();toast('Оплата отклонена администратором');nat('Заявка отклонена','Администратор отклонил оплату');vib([30,50,30])}localStorage.removeItem('zo_'+uid)}},()=>{});
-offs.push(()=>{ordOff&&ordOff();ordOff=null})}
+  ordOff=onValue(ref(db,'zorders/'+id),s=>{const o=s.val();curOrd=o?{...o,id}:null;
+    const box=[g('ordS'),g('shopOrdS')],set=h=>box.forEach(b=>b.innerHTML=h);
+    if(!o||o.st===5){set('');localStorage.removeItem('zo_'+uid);curOrd=null;return}
+    if(o.st===4){if(o.dl<=nowS()){expire(id);return}set('');return}
+    if(o.st===0||o.st===1){set(`<div class="status w">Заявка на ${o.plan} дн. отправлена администратору. Вы получите уведомление, когда чек проверят.</div>`);
+      if(!g('paySheet').hidden){g('payStep1').hidden=true;g('payStep2').hidden=false}return}
+    if(o.st===2){set(`<div class="status o">✓ Оплата подтверждена, ключ выдан — он в Профиле.</div>`);
+      if(notify({id,t:'ok',u:o.u,k:o.key,e:o.exp})){closePay();showOk({u:o.u,k:o.key,e:o.exp});nat('Оплата подтверждена','Ключ: '+o.key+' · UID: '+o.u)}
+      if(KS)verifyKey(KS.u,KS.k).then(x=>{if(!x.e||x.x)enterKey(x)});
+      localStorage.removeItem('zo_'+uid);return}
+    if(o.st===3){set(`<div class="status e">Заявка на ${o.plan} дн. отклонена${o.note?': '+esc(o.note):''}. Если вы оплатили — напишите администратору.</div>`);
+      if(notify({id,t:'no'})){closePay();toast('Оплата отклонена администратором');nat('Заявка отклонена','Администратор отклонил оплату');vib([30,50,30])}localStorage.removeItem('zo_'+uid)}},()=>{});
+  offs.push(()=>{ordOff&&ordOff();ordOff=null})}
 setInterval(()=>{const b=g('shopDraft'),o=curOrd;
-if(o&&o.st===4&&o.dl>nowS()){if(!b.firstChild)b.innerHTML='<div class="draft"><span>Незавершённая оплата · осталось <b id="dl"></b></span><button class="btn s" id="dlGo">Продолжить</button></div>';g('dl').textContent=mmss(o.dl-nowS());g('dlGo').onclick=()=>openPay(o)}else b.innerHTML=''},1000);
+  if(o&&o.st===4&&o.dl>nowS()){if(!b.firstChild)b.innerHTML='<div class="draft"><span>Незавершённая оплата · осталось <b id="dl"></b></span><button class="btn s" id="dlGo">Продолжить</button></div>';g('dl').textContent=mmss(o.dl-nowS());g('dlGo').onclick=()=>openPay(o)}else b.innerHTML=''},1000);
 const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ',D='0123456789';
 const rc=(a,n)=>[...crypto.getRandomValues(new Uint8Array(n))].map(x=>a[x%a.length]).join('');
 function mkKey(){return 'FLUX_KEY_'+rc(L,2)+rc(D,3)+rc(L,2)}
 async function issue(userUid,days){
-const now=Date.now(),idx=ref(db,'keysByUid/'+userUid);
-let key=(await get(idx)).val(),cur=key?(await get(ref(db,'keys/'+key))).val():null;
-const forever=!!cur&&cur.expiresAt===0;
-const exp=forever?0:(cur&&cur.expiresAt>now?cur.expiresAt:now)+days*864e5;
-if(cur)await update(ref(db,'keys/'+key),{expiresAt:exp,status:'active'});
-else{key=null;
-for(let i=0;i<6&&!key;i++){const k=mkKey();const t=await runTransaction(ref(db,'keys/'+k),v=>v===null?{uid:userUid,status:'active',expiresAt:exp}:undefined);if(t.committed)key=k}
-if(!key)throw new Error('Не удалось создать ключ');
-await set(idx,key)}
-await set(ref(db,'licenses/'+userUid),{key,exp:exp||9e12,plan:days,ts:serverTimestamp()});
-return {key,exp}}
+  const now=Date.now(),idx=ref(db,'keysByUid/'+userUid);
+  let key=(await get(idx)).val(),cur=key?(await get(ref(db,'keys/'+key))).val():null;
+  const forever=!!cur&&cur.expiresAt===0;
+  const exp=forever?0:(cur&&cur.expiresAt>now?cur.expiresAt:now)+days*864e5;
+  if(cur)await update(ref(db,'keys/'+key),{expiresAt:exp,status:'active'});
+  else{key=null;
+    for(let i=0;i<6&&!key;i++){const k=mkKey();const t=await runTransaction(ref(db,'keys/'+k),v=>v===null?{uid:userUid,status:'active',expiresAt:exp}:undefined);if(t.committed)key=k}
+    if(!key)throw new Error('Не удалось создать ключ');
+    await set(idx,key)}
+  await set(ref(db,'licenses/'+userUid),{key,exp:exp||9e12,plan:days,ts:serverTimestamp()});
+  return {key,exp}}
 const names={};
 async function nameOf(u){if(names[u])return names[u];try{const v=(await get(ref(db,'users/'+u))).val();return names[u]=(v&&v.name)||'Без ника'}catch(e){return 'Пользователь'}}
 var ORD={};
 function paintBadge(){const n=Object.values(ORD||{}).filter(o=>o.st===0).length,b=g('badge');if(b){b.hidden=!n;b.textContent=n}}
 function watchAdmin(){offs.push(onValue(query(ref(db,'zorders'),limitToLast(100)),async s=>{ORD={};s.forEach(x=>{const v=x.val();if(v&&v.u)ORD[x.key]=v});paintBadge();newPend();await paintAdmin()},e=>toast('Заявки: нет доступа · проект '+app.options.projectId+' · ваш UID '+uid.slice(0,8)+'… — он должен совпадать с UID в правилах')))}
 async function paintAdmin(){
-const all=Object.entries(ORD).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
-const pend=all.filter(([,o])=>o.st===0),done=all.filter(([,o])=>o.st===2||o.st===3).slice(0,30);
-for(const [,o] of all)o._n=await nameOf(o.u);
-const card=([id,o],act)=>`<div class="ord"><div class="h"><b>${esc(o._n)}</b><span class="tag ${o.st===2?'o':o.st===3?'e':'w'}">${o.st===2?'выдан':o.st===3?'отклонён':'ожидает'}</span></div>
-<div class="m">${o.plan} дн. · ${PRICES[o.plan]||'?'} ₽ · ${o.bal?'с баланса':'перевод на карту'} · ${(o.paid||o.ts)?fmtS(o.paid||o.ts):''}<br>UID: ${esc(o.u)}${o.key?'<br>Ключ: '+esc(o.key):''}</div>
-${act?`${o.bal?'':`<button class="btn t s w" data-shot="${id}" style="margin-bottom:8px">Посмотреть чек</button>`}<div class="a"><button class="btn s" data-ok="${id}">Принять</button><button class="btn s d" data-no="${id}">Отклонить</button></div>`:''}</div>`;
-g('pend').innerHTML=pend.length?pend.map(x=>card(x,true)).join(''):'<div class="empty">Новых заявок нет</div>';
-g('histClear').hidden=!all.some(([,o])=>o.st===2||o.st===3);g('hist').innerHTML=done.length?done.map(x=>card(x,false)).join(''):'<div class="empty">Пока пусто</div>'}
+  const all=Object.entries(ORD).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
+  const pend=all.filter(([,o])=>o.st===0),done=all.filter(([,o])=>o.st===2||o.st===3).slice(0,30);
+  for(const [,o] of all)o._n=await nameOf(o.u);
+  const card=([id,o],act)=>`<div class="ord"><div class="h"><b>${esc(o._n)}</b><span class="tag ${o.st===2?'o':o.st===3?'e':'w'}">${o.st===2?'выдан':o.st===3?'отклонён':'ожидает'}</span></div>
+  <div class="m">${o.plan} дн. · ${PRICES[o.plan]||'?'} ₽ · ${o.bal?'с баланса':'перевод на карту'} · ${(o.paid||o.ts)?fmtS(o.paid||o.ts):''}<br>UID: ${esc(o.u)}${o.key?'<br>Ключ: '+esc(o.key):''}</div>
+  ${act?`${o.bal?'':`<button class="btn t s w" data-shot="${id}" style="margin-bottom:8px">Посмотреть чек</button>`}<div class="a"><button class="btn s" data-ok="${id}">Принять</button><button class="btn s d" data-no="${id}">Отклонить</button></div>`:''}</div>`;
+  g('pend').innerHTML=pend.length?pend.map(x=>card(x,true)).join(''):'<div class="empty">Новых заявок нет</div>';
+  g('histClear').hidden=!all.some(([,o])=>o.st===2||o.st===3);g('hist').innerHTML=done.length?done.map(x=>card(x,false)).join(''):'<div class="empty">Пока пусто</div>'}
 document.addEventListener('click',async e=>{
-const ok=e.target.closest('[data-ok]'),no=e.target.closest('[data-no]');if(!isAdmin||(!ok&&!no))return;
-const id=(ok||no).dataset.ok||(ok||no).dataset.no,o=ORD[id];if(!o)return;const btn=ok||no;btn.disabled=true;
-try{
-const tx=await runTransaction(ref(db,'zorders/'+id+'/st'),v=>v===0?1:undefined);
-if(!tx.committed){toast('Заявка уже обработана');return}
-if(ok){if(!PRICES[o.plan]){await update(ref(db,'zorders/'+id),{st:3,note:'неверный тариф'});return}
-if(o.bal){const b=await balOf(o.u);if(b<PRICES[o.plan]){await update(ref(db,'zorders/'+id),{st:3,note:'недостаточно средств на балансе'});toast('На балансе пользователя недостаточно средств');return}}
-const r=await issue(o.u,o.plan);await update(ref(db,'zorders/'+id),{st:2,key:r.key,exp:r.exp,at:serverTimestamp()});toast('Ключ выдан: '+r.key);vib([15,40,15]);
-try{if(o.bal)await set(ref(db,'spent/'+o.u+'/'+id),PRICES[o.plan]);
-else{const inv=(await get(ref(db,'refby/'+o.u))).val();if(inv)await set(ref(db,'refbonus/'+inv+'/'+id),PRICES[o.plan]/2)}}
-catch(x){toast('Ключ выдан, но баланс не обновлён: '+errT(x))}}
-else{await update(ref(db,'zorders/'+id),{st:3,at:serverTimestamp()});toast('Заявка отклонена')}
-}catch(x){toast('Ошибка: '+errT(x));update(ref(db,'zorders/'+id),{st:0}).catch(()=>{})}
-btn.disabled=false});
+  const ok=e.target.closest('[data-ok]'),no=e.target.closest('[data-no]');if(!isAdmin||(!ok&&!no))return;
+  const id=(ok||no).dataset.ok||(ok||no).dataset.no,o=ORD[id];if(!o)return;const btn=ok||no;btn.disabled=true;
+  try{
+    const tx=await runTransaction(ref(db,'zorders/'+id+'/st'),v=>v===0?1:undefined);
+    if(!tx.committed){toast('Заявка уже обработана');return}
+    if(ok){if(!PRICES[o.plan]){await update(ref(db,'zorders/'+id),{st:3,note:'неверный тариф'});return}
+      if(o.bal){const b=await balOf(o.u);if(b<PRICES[o.plan]){await update(ref(db,'zorders/'+id),{st:3,note:'недостаточно средств на балансе'});toast('На балансе пользователя недостаточно средств');return}}
+      const r=await issue(o.u,o.plan);await update(ref(db,'zorders/'+id),{st:2,key:r.key,exp:r.exp,at:serverTimestamp()});toast('Ключ выдан: '+r.key);vib([15,40,15]);
+      try{if(o.bal)await set(ref(db,'spent/'+o.u+'/'+id),PRICES[o.plan]);
+        else{const inv=(await get(ref(db,'refby/'+o.u))).val();if(inv)await set(ref(db,'refbonus/'+inv+'/'+id),PRICES[o.plan]/2)}}
+      catch(x){toast('Ключ выдан, но баланс не обновлён: '+errT(x))}}
+    else{await update(ref(db,'zorders/'+id),{st:3,at:serverTimestamp()});toast('Заявка отклонена')}
+  }catch(x){toast('Ошибка: '+errT(x));update(ref(db,'zorders/'+id),{st:0}).catch(()=>{})}
+  btn.disabled=false});
 let lastP=-1;function newPend(){const n=Object.values(ORD).filter(o=>o.st===0).length;if(lastP>=0&&n>lastP){toast('Новая оплата на проверку');nat('Новая оплата','Заявка ждёт проверки');vib([20,40,20])}lastP=n}
 g('pend').onclick=async e=>{const b=e.target.closest('[data-shot]');if(!b)return;b.disabled=true;
-try{const v=(await get(ref(db,'zshots/'+b.dataset.shot))).val();if(!v)toast('Чек не найден');else{g('shotImg').src=v;g('imgV').hidden=false}}catch(x){toast('Ошибка: '+errT(x))}b.disabled=false};
+  try{const v=(await get(ref(db,'zshots/'+b.dataset.shot))).val();if(!v)toast('Чек не найден');else{g('shotImg').src=v;g('imgV').hidden=false}}catch(x){toast('Ошибка: '+errT(x))}b.disabled=false};
 g('histClear').onclick=async()=>{if(!isAdmin)return;
-const ids=Object.entries(ORD).filter(([,o])=>o.st===2||o.st===3).map(([id])=>id);if(!ids.length)return;
-if(!confirm('Удалить из истории '+ids.length+' заявок (выданные и отклонённые)? Ключи и балансы пользователей не изменятся.'))return;
-const b=g('histClear');b.disabled=true;
-try{const u={};ids.forEach(id=>{u['zorders/'+id]=null;u['zshots/'+id]=null});await update(ref(db),u);toast('История очищена');vib(20)}
-catch(x){toast('Ошибка: '+errT(x))}b.disabled=false};
+  const ids=Object.entries(ORD).filter(([,o])=>o.st===2||o.st===3).map(([id])=>id);if(!ids.length)return;
+  if(!confirm('Удалить из истории '+ids.length+' заявок (выданные и отклонённые)? Ключи и балансы пользователей не изменятся.'))return;
+  const b=g('histClear');b.disabled=true;
+  try{const u={};ids.forEach(id=>{u['zorders/'+id]=null;u['zshots/'+id]=null});await update(ref(db),u);toast('История очищена');vib(20)}
+  catch(x){toast('Ошибка: '+errT(x))}b.disabled=false};
 g('ix').onclick=()=>g('imgV').hidden=true;
 let mD=30;
 g('mDays').onclick=e=>{const b=e.target.closest('button');if(!b)return;mD=+b.dataset.d;g('mDays').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))};
 g('mGo').onclick=async()=>{const u=g('mUid').value.trim();if(!isAdmin||u.length<20)return toast('Введите UID пользователя');
-try{const r=await issue(u,mD);g('mUid').value='';toast('Выдан ключ '+r.key)}catch(x){toast('Ошибка: '+errT(x))}};
+  try{const r=await issue(u,mD);g('mUid').value='';toast('Выдан ключ '+r.key)}catch(x){toast('Ошибка: '+errT(x))}};
 const rlRules=(A,adm)=>{const L="data.child('last').val()",C="data.child('claimed').val()",W="data.child('won').val()",nL="newData.child('last').val()",nC="newData.child('claimed').val()",nW="newData.child('won').val()",
-pz=`(${L} % 1000 < 5 ? 100 : (${L} % 1000 < 25 ? 50 : (${L} % 1000 < 145 ? 5 : 0)))`,
-spin=`${nL} === now && (!data.child('last').exists() || ${L} + 86400000 <= now) && ${nC} === ${C} && ${nW} === ${W}`,
-claim=`data.child('last').exists() && ${nL} === ${L} && ${C} !== ${L} && ${nC} === ${L} && ${nW} === (data.child('won').exists() ? ${W} : 0) + ${pz}`;
-return{'$u':{'.read':`auth != null && (auth.uid === $u || auth.uid === '${A}')`,'.write':`${adm} || (auth != null && auth.uid === $u && ((${spin}) || (${claim})))`,
-last:{'.validate':'newData.isNumber()'},claimed:{'.validate':'newData.isNumber()'},won:{'.validate':'newData.isNumber() && newData.val() >= 0'},'$other':{'.validate':false}}}};
+  pz=`(${L} % 1000 < 5 ? 100 : (${L} % 1000 < 25 ? 50 : (${L} % 1000 < 145 ? 5 : 0)))`,
+  spin=`${nL} === now && (!data.child('last').exists() || ${L} + 86400000 <= now) && ${nC} === ${C} && ${nW} === ${W}`,
+  claim=`data.child('last').exists() && ${nL} === ${L} && ${C} !== ${L} && ${nC} === ${L} && ${nW} === (data.child('won').exists() ? ${W} : 0) + ${pz}`;
+  return{'$u':{'.read':`auth != null && (auth.uid === $u || auth.uid === '${A}')`,'.write':`${adm} || (auth != null && auth.uid === $u && ((${spin}) || (${claim})))`,
+    last:{'.validate':'newData.isNumber()'},claimed:{'.validate':'newData.isNumber()'},won:{'.validate':'newData.isNumber() && newData.val() >= 0'},'$other':{'.validate':false}}}};
 function rulesText(a){const A=a||'ВАШ_UID',adm=`auth != null && auth.uid === '${A}'`,pl="(newData.child('plan').val() === 7 || newData.child('plan').val() === 30 || newData.child('plan').val() === 90)";return JSON.stringify({
-'.read':false,
-'.write':false,
-users:{'$uid':{'.read':`auth != null && (auth.uid === $uid || auth.uid === '${A}')`,'.write':'auth != null && auth.uid === $uid',name:{'.validate':'newData.isString() && newData.val().length <= 48'}}},
-announcements:{'.read':true,'.write':adm},
-free:{'.read':true,'.write':adm},
-pproxy:{'.read':adm,users:{'$u':{'.read':`auth != null && (auth.uid === $u || auth.uid === '${A}')`,'.write':adm}},list:{'.read':`auth != null && (auth.uid === '${A}' || root.child('pproxy/users/'+auth.uid+'/exp').val() === 0 || root.child('pproxy/users/'+auth.uid+'/exp').val() > now)`,'.write':adm}},
-reviews:{'.read':true,'.write':adm},
-presence:{'.read':true,'$id':{'.write':true,'.validate':'newData.val() === 1 && $id.length <= 40'}},
-online:{'.read':true,'.write':adm,'.validate':'newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999'},
-roulette:rlRules(A,adm),
-licenses:{'$uid':{'.read':'auth != null && auth.uid === $uid','.write':adm}},
-keys:{'$k':{'.read':true,'.write':adm,'hwid':{'.write':'!data.exists()','.validate':'newData.isString() && newData.val().length <= 32'}}},
-keysByUid:{'$u':{'.read':adm,'.write':adm}},
-zorders:{'.read':adm,'$id':{'.read':true,'.write':`${adm} || (!data.exists() && newData.child('st').val() === 4 && ${pl} && newData.child('u').isString() && newData.child('u').val().length <= 200 && newData.child('dl').val() <= now + 960000 && (newData.child('src').val() === 'key' || (auth != null && newData.child('u').val() === auth.uid))) || (data.child('st').val() === 4 && now < data.child('dl').val() + 30000 && newData.child('u').val() === data.child('u').val() && (newData.child('st').val() === 0 || newData.child('st').val() === 5) && (data.child('src').val() === 'key' || (auth != null && auth.uid === data.child('u').val())))`}},
-zshots:{'$id':{'.read':adm,'.write':`${adm} || (!data.exists() && root.child('zorders/'+$id+'/st').val() === 4 && newData.isString() && newData.val().length < 250000)`}},
-refcodes:{'$c':{'.read':true,'.write':"auth != null && !data.exists() && newData.val() === auth.uid"}},
-refby:{'.read':adm,'$u':{'.read':`auth != null && (auth.uid === $u || auth.uid === '${A}')`,'.write':"auth != null && auth.uid === $u && !data.exists() && newData.isString() && newData.val() !== $u"}},
-refs:{'.read':adm,'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'$j':{'.read':`auth != null && (auth.uid === $j || auth.uid === $i || auth.uid === '${A}')`,'.write':`${adm} || (auth != null && auth.uid === $j && !data.exists() && $i !== $j && root.child('refby/'+$j).val() === $i)`}}},
-refbonus:{'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'.write':adm}},
-spent:{'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'.write':adm}},
-free_stats:{'$fid':{'.read':true,'$f':{'.write':`${adm} || (($f === 'views' || $f === 'downloads') && newData.isNumber() && newData.val() === (data.exists() ? data.val() : 0) + 1)`}}}},null,2).split('\n').slice(1,-1).join('\n')}
+  '.read':false,
+  '.write':false,
+  users:{'$uid':{'.read':`auth != null && (auth.uid === $uid || auth.uid === '${A}')`,'.write':'auth != null && auth.uid === $uid',name:{'.validate':'newData.isString() && newData.val().length <= 48'}}},
+  announcements:{'.read':true,'.write':adm},
+  free:{'.read':true,'.write':adm},
+  pproxy:{'.read':adm,users:{'$u':{'.read':`auth != null && (auth.uid === $u || auth.uid === '${A}')`,'.write':adm}},list:{'.read':`auth != null && (auth.uid === '${A}' || root.child('pproxy/users/'+auth.uid+'/exp').val() === 0 || root.child('pproxy/users/'+auth.uid+'/exp').val() > now)`,'.write':adm}},
+  reviews:{'.read':true,'.write':adm},
+  presence:{'.read':true,'$id':{'.write':true,'.validate':'newData.val() === 1 && $id.length <= 40'}},
+  online:{'.read':true,'.write':adm,'.validate':'newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999'},
+  roulette:rlRules(A,adm),
+  licenses:{'$uid':{'.read':'auth != null && auth.uid === $uid','.write':adm}},
+  keys:{'$k':{'.read':true,'.write':adm,'hwid':{'.write':'!data.exists()','.validate':'newData.isString() && newData.val().length <= 32'}}},
+  keysByUid:{'$u':{'.read':adm,'.write':adm}},
+  zorders:{'.read':adm,'$id':{'.read':true,'.write':`${adm} || (!data.exists() && newData.child('st').val() === 4 && ${pl} && newData.child('u').isString() && newData.child('u').val().length <= 200 && newData.child('dl').val() <= now + 960000 && (newData.child('src').val() === 'key' || (auth != null && newData.child('u').val() === auth.uid))) || (data.child('st').val() === 4 && now < data.child('dl').val() + 30000 && newData.child('u').val() === data.child('u').val() && (newData.child('st').val() === 0 || newData.child('st').val() === 5) && (data.child('src').val() === 'key' || (auth != null && auth.uid === data.child('u').val())))`}},
+  zshots:{'$id':{'.read':adm,'.write':`${adm} || (!data.exists() && root.child('zorders/'+$id+'/st').val() === 4 && newData.isString() && newData.val().length < 250000)`}},
+  refcodes:{'$c':{'.read':true,'.write':"auth != null && !data.exists() && newData.val() === auth.uid"}},
+  refby:{'.read':adm,'$u':{'.read':`auth != null && (auth.uid === $u || auth.uid === '${A}')`,'.write':"auth != null && auth.uid === $u && !data.exists() && newData.isString() && newData.val() !== $u"}},
+  refs:{'.read':adm,'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'$j':{'.read':`auth != null && (auth.uid === $j || auth.uid === $i || auth.uid === '${A}')`,'.write':`${adm} || (auth != null && auth.uid === $j && !data.exists() && $i !== $j && root.child('refby/'+$j).val() === $i)`}}},
+  refbonus:{'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'.write':adm}},
+  spent:{'$i':{'.read':`auth != null && (auth.uid === $i || auth.uid === '${A}')`,'.write':adm}},
+  free_stats:{'$fid':{'.read':true,'$f':{'.write':`${adm} || (($f === 'views' || $f === 'downloads') && newData.isNumber() && newData.val() === (data.exists() ? data.val() : 0) + 1)`}}}},null,2).split('\n').slice(1,-1).join('\n')}
 g('rulesBtn').onclick=()=>{g('rUid').textContent=uid;g('rTxt').textContent=rulesText(ADMIN_UID||uid);g('rsheet').hidden=false};
 g('rx').onclick=()=>g('rsheet').hidden=true;g('rsheet').onclick=e=>{if(e.target===g('rsheet'))g('rsheet').hidden=true};
 g('rCopyU').onclick=()=>{cp(uid);toast('UID скопирован')};
@@ -421,205 +423,206 @@ const IMG_RE=/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/;
 const rootBadge=r=>r==='root'?'<span class="rt r">ROOT</span>':r==='noroot'?'<span class="rt n">NO ROOT</span>':'';
 let fImgData=null,fRootV='';
 function packFreeImg(f){return new Promise((res,rej)=>{const im=new Image,u=URL.createObjectURL(f);
-im.onload=()=>{let w=im.width,h=im.height;const k=Math.min(1,800/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
-const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);URL.revokeObjectURL(u);
-let q=.8,d=c.toDataURL('image/jpeg',q);while(d.length>120000&&q>.3){q-=.1;d=c.toDataURL('image/jpeg',q)}res(d)};
-im.onerror=()=>rej(new Error('Не удалось прочитать изображение'));im.src=u})}
+  im.onload=()=>{let w=im.width,h=im.height;const k=Math.min(1,800/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
+    const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);URL.revokeObjectURL(u);
+    let q=.8,d=c.toDataURL('image/jpeg',q);while(d.length>120000&&q>.3){q-=.1;d=c.toDataURL('image/jpeg',q)}res(d)};
+  im.onerror=()=>rej(new Error('Не удалось прочитать изображение'));im.src=u})}
 const fImgReset=()=>{fImgData=null;g('fImg').value='';g('fImgBox').style.display='none';g('fImgLbl').textContent='Прикрепить изображение';g('fImgLabel').style.borderColor=''};
 g('fImg').onchange=async e=>{const f=e.target.files[0];if(!f)return;
-try{fImgData=await packFreeImg(f)}catch(x){fImgData=null;g('fErr').textContent=x.message;return}
-g('fErr').textContent='';g('fImgPrev').src=fImgData;g('fImgBox').style.display='block';g('fImgLbl').textContent=f.name;g('fImgLabel').style.borderColor='var(--p)'};
+  try{fImgData=await packFreeImg(f)}catch(x){fImgData=null;g('fErr').textContent=x.message;return}
+  g('fErr').textContent='';g('fImgPrev').src=fImgData;g('fImgBox').style.display='block';g('fImgLbl').textContent=f.name;g('fImgLabel').style.borderColor='var(--p)'};
 g('fImgDel').onclick=fImgReset;
 g('fRoot').onclick=e=>{const b=e.target.closest('button');if(!b)return;fRootV=b.dataset.r;g('fRoot').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))};
 function normUrl(u){u=(u||'').trim();
-const m=u.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||u.match(/drive\.google\.com\/open\?id=([\w-]+)/);
-if(m)return 'https://drive.google.com/uc?export=download&id='+m[1];
-if(/dropbox\.com/i.test(u))return u.replace('dl=0','dl=1');
-return u}
+  const m=u.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||u.match(/drive\.google\.com\/open\?id=([\w-]+)/);
+  if(m)return 'https://drive.google.com/uc?export=download&id='+m[1];
+  if(/dropbox\.com/i.test(u))return u.replace('dl=0','dl=1');
+  return u}
 function paintFree(){
-const all=Object.entries(FREE).filter(([,f])=>f&&f.title).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
-g('freeList').innerHTML=all.length?all.map(([id,f])=>{
-const tags=(f.tags||'').split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="pkg-feat">${esc(t)}</span>`).join('');
-const rb=rootBadge(f.root);
-const st=ST[id]||{},views=st.views||0,dls=st.downloads||0;
-return `<div class="pkg" style="margin-bottom:12px;cursor:default" data-view="${esc(id)}">${f.img&&IMG_RE.test(f.img)?`<img class="fimg" src="${f.img}" alt="">`:''}<div class="pkg-top"><div><div class="pkg-title">${esc(f.title)}</div><div class="pkg-sub">${esc(f.desc||'')}</div>${rb?`<div style="margin-top:8px">${rb}</div>`:''}</div><div class="pkg-price"><b style="font-size:18px">${f.ver?'v'+esc(f.ver):''}</b><small>${f.ts?fmtS(f.ts):''}</small></div></div>${tags?`<div class="pkg-feats">${tags}</div>`:''}<div class="free-stats"><span class="free-stat"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg><span id="views-${esc(id)}">${views}</span></span><span class="free-stat"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg><span id="dls-${esc(id)}">${dls}</span></span></div><div style="padding:0 20px 20px"><button class="btn w" data-dl="${esc(id)}">Скачать</button></div></div>`}).join(''):'<div class="empty">Пока пусто — скоро добавим</div>';
-g('fAdm').innerHTML=all.map(([id,f])=>`<div class="ord"><div class="h"><div style="display:flex;align-items:center;gap:10px;min-width:0">${f.img&&IMG_RE.test(f.img)?`<img class="fthumb" src="${f.img}" alt="">`:''}<b>${esc(f.title)}</b>${rootBadge(f.root)}</div><button class="btn d s" data-fdel="${esc(id)}">Удалить</button></div><div class="m">${f.ver?'v'+esc(f.ver)+' · ':''}${esc(f.url||'')}</div></div>`).join('')}
+  const all=Object.entries(FREE).filter(([,f])=>f&&f.title).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
+  g('freeList').innerHTML=all.length?all.map(([id,f])=>{
+    const tags=(f.tags||'').split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="pkg-feat">${esc(t)}</span>`).join('');
+    const rb=rootBadge(f.root);
+    const st=ST[id]||{},views=st.views||0,dls=st.downloads||0;
+    return `<div class="pkg" style="margin-bottom:12px;cursor:default" data-view="${esc(id)}">${f.img&&IMG_RE.test(f.img)?`<img class="fimg" src="${f.img}" alt="">`:''}<div class="pkg-top"><div><div class="pkg-title">${esc(f.title)}</div><div class="pkg-sub">${esc(f.desc||'')}</div>${rb?`<div style="margin-top:8px">${rb}</div>`:''}</div><div class="pkg-price"><b style="font-size:18px">${f.ver?'v'+esc(f.ver):''}</b><small>${f.ts?fmtS(f.ts):''}</small></div></div>${tags?`<div class="pkg-feats">${tags}</div>`:''}<div class="free-stats"><span class="free-stat"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg><span id="views-${esc(id)}">${views}</span></span><span class="free-stat"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg><span id="dls-${esc(id)}">${dls}</span></span></div><div style="padding:0 20px 20px"><button class="btn w" data-dl="${esc(id)}">Скачать</button></div></div>`}).join(''):'<div class="empty">Пока пусто — скоро добавим</div>';
+  g('fAdm').innerHTML=all.map(([id,f])=>`<div class="ord"><div class="h"><div style="display:flex;align-items:center;gap:10px;min-width:0">${f.img&&IMG_RE.test(f.img)?`<img class="fthumb" src="${f.img}" alt="">`:''}<b>${esc(f.title)}</b>${rootBadge(f.root)}</div><button class="btn d s" data-fdel="${esc(id)}">Удалить</button></div><div class="m">${f.ver?'v'+esc(f.ver)+' · ':''}${esc(f.url||'')}</div></div>`).join('')}
 let ST={};const stOff={},stBusy=new Set();
 function subStats(){
-Object.keys(FREE).forEach(id=>{if(stOff[id])return;
-stOff[id]=onValue(ref(db,'free_stats/'+id),s=>{ST[id]=s.val()||{};paintStat(id)},()=>{})});
-Object.keys(stOff).forEach(id=>{if(!(id in FREE)){try{stOff[id]()}catch(e){}delete stOff[id];delete ST[id]}})}
+  Object.keys(FREE).forEach(id=>{if(stOff[id])return;
+    stOff[id]=onValue(ref(db,'free_stats/'+id),s=>{ST[id]=s.val()||{};paintStat(id)},()=>{})});
+  Object.keys(stOff).forEach(id=>{if(!(id in FREE)){try{stOff[id]()}catch(e){}delete stOff[id];delete ST[id]}})}
 const FC='zfree_cache';
 try{const c=JSON.parse(localStorage.getItem(FC)||'null');if(c&&typeof c==='object'&&Object.keys(c).length){FREE=c;paintFree()}}catch(e){}
 const freeSlow=setTimeout(()=>{if(!Object.keys(FREE).length)g('freeList').innerHTML='<div class="empty">Долго грузится… проверьте интернет, список подгрузится сам</div>'},10000);
 onValue(ref(db,'free'),s=>{clearTimeout(freeSlow);FREE=s.val()||{};subStats();paintFree();if(document.querySelector('#p4.on'))trackViews();
-try{const l={};Object.entries(FREE).forEach(([k,v])=>{if(v){const{img,...r}=v;l[k]=r}});localStorage.setItem(FC,JSON.stringify(l))}catch(e){}
-setTimeout(startReviews,400)},()=>{g('freeList').innerHTML='<div class="empty">Раздел временно недоступен</div>'});
+  try{const l={};Object.entries(FREE).forEach(([k,v])=>{if(v){const{img,...r}=v;l[k]=r}});localStorage.setItem(FC,JSON.stringify(l))}catch(e){}
+  setTimeout(startReviews,400)},()=>{g('freeList').innerHTML='<div class="empty">Раздел временно недоступен</div>'});
 function paintStat(id){const s=ST[id]||{},v=g('views-'+id),d=g('dls-'+id);if(v)v.textContent=s.views||0;if(d)d.textContent=s.downloads||0;}
 const lsKey=(t,id)=>'fst2_'+t+'_'+id;
 const isDone=(t,id)=>{try{return !!localStorage.getItem(lsKey(t,id))}catch(e){return false}};
 const markDone=(t,id)=>{try{localStorage.setItem(lsKey(t,id),'1')}catch(e){}};
 async function bump(type,id){
-const k=type+'|'+id;if(isDone(type,id)||stBusy.has(k))return;stBusy.add(k);
-try{await runTransaction(ref(db,'free_stats/'+id+'/'+type),v=>(typeof v==='number'?v:0)+1);markDone(type,id)}
-catch(e){console.warn('stat',type,id,e);if(isAdmin)toast('Счётчик: '+errT(e))}
-stBusy.delete(k)}
+  const k=type+'|'+id;if(isDone(type,id)||stBusy.has(k))return;stBusy.add(k);
+  try{await runTransaction(ref(db,'free_stats/'+id+'/'+type),v=>(typeof v==='number'?v:0)+1);markDone(type,id)}
+  catch(e){console.warn('stat',type,id,e);if(isAdmin)toast('Счётчик: '+errT(e))}
+  stBusy.delete(k)}
 const trackViews=()=>Object.keys(FREE).forEach(id=>bump('views',id));
 function freeDl(id){const f=FREE[id];if(!f||!FREE_RE.test(f.url||''))return toast('Ссылка недоступна');
-let sent=false;
-try{if(window.Android&&Android.openExternalBrowser){Android.openExternalBrowser(f.url);sent=true}}catch(e){}
-if(!sent){const a=document.createElement('a');a.href=f.url;a.target='_blank';a.rel='noopener';a.download='';document.body.appendChild(a);a.click();a.remove()}
-toast('Скачивание…');vib(15);bump('downloads',id)}
+  let sent=false;
+  try{if(window.Android&&Android.openExternalBrowser){Android.openExternalBrowser(f.url);sent=true}}catch(e){}
+  if(!sent){const a=document.createElement('a');a.href=f.url;a.target='_blank';a.rel='noopener';a.download='';document.body.appendChild(a);a.click();a.remove()}
+  toast('Скачивание…');vib(15);bump('downloads',id)}
 g('freeList').onclick=e=>{const b=e.target.closest('[data-dl]');if(b)freeDl(b.dataset.dl)};
 g('fAdm').onclick=async e=>{const b=e.target.closest('[data-fdel]');if(!b||!isAdmin)return;b.disabled=true;
-try{await set(ref(db,'free/'+b.dataset.fdel),null);toast('Удалено')}catch(x){toast('Ошибка: '+errT(x));b.disabled=false}};
+  try{await set(ref(db,'free/'+b.dataset.fdel),null);toast('Удалено')}catch(x){toast('Ошибка: '+errT(x));b.disabled=false}};
 g('fGo').onclick=async()=>{g('fErr').textContent='';if(!isAdmin)return;
-const f={title:g('fTitle').value.trim(),ver:g('fVer').value.trim(),url:normUrl(g('fUrl').value),desc:g('fDesc').value.trim(),tags:g('fTags').value.trim()};
-if(fImgData)f.img=fImgData;if(fRootV)f.root=fRootV;
-if(!f.title)return g('fErr').textContent='Введите название';
-if(!FREE_RE.test(f.url))return g('fErr').textContent='Нужна прямая https-ссылка на файл';
-g('fGo').disabled=true;
-try{f.ts=serverTimestamp();await set(push(ref(db,'free')),f);['fTitle','fVer','fUrl','fDesc','fTags'].forEach(i=>g(i).value='');fImgReset();fRootV='';g('fRoot').querySelectorAll('button').forEach((x,i)=>x.classList.toggle('on',i===0));toast('Добавлено');vib(20)}
-catch(x){g('fErr').textContent=errT(x)}
-g('fGo').disabled=false};
+  const f={title:g('fTitle').value.trim(),ver:g('fVer').value.trim(),url:normUrl(g('fUrl').value),desc:g('fDesc').value.trim(),tags:g('fTags').value.trim()};
+  if(fImgData)f.img=fImgData;if(fRootV)f.root=fRootV;
+  if(!f.title)return g('fErr').textContent='Введите название';
+  if(!FREE_RE.test(f.url))return g('fErr').textContent='Нужна прямая https-ссылка на файл';
+  g('fGo').disabled=true;
+  try{f.ts=serverTimestamp();await set(push(ref(db,'free')),f);['fTitle','fVer','fUrl','fDesc','fTags'].forEach(i=>g(i).value='');fImgReset();fRootV='';g('fRoot').querySelectorAll('button').forEach((x,i)=>x.classList.toggle('on',i===0));toast('Добавлено');vib(20)}
+  catch(x){g('fErr').textContent=errT(x)}
+  g('fGo').disabled=false};
 const PX_RAW=[
-"https://raw.githubusercontent.com/pokupkacom84-creator/Prem-VpnKey/main/Vpn",
-"https://raw.githubusercontent.com/pokupkacom84-creator/Prem-VpnKey/master/Vpn",
-"https://raw.githubusercontent.com/pokupkacom84-creator/Prem-VpnKey/48ef8652b8d2b5c3273c163173fc13c29e5d2240/Vpn"
+  "https://raw.githubusercontent.com/pokupkacom84-creator/Prem-VpnKey/main/Vpn",
+  "https://raw.githubusercontent.com/pokupkacom84-creator/Prem-VpnKey/master/Vpn",
+  "https://raw.githubusercontent.com/pokupkacom84-creator/Prem-VpnKey/48ef8652b8d2b5c3273c163173fc13c29e5d2240/Vpn"
 ];
 const PX_BUY_URL=""; 
 const PX_TTL=5*60*1000;
 const PX_RE=/(?:https?:\/\/t\.me\/|tg:\/\/)(proxy|socks)\?[^\s"'<>]+/gi;
 var PXF={list:[],ts:0,busy:false,err:''},PXV={uid:null,prem:null,list:{},err:'',offU:null,offL:null,users:{},offA:null,allErr:''},pxTab='free';
 function pxParse(text){
-const out=[],seen=new Set();
-for(const m of String(text||'').matchAll(PX_RE)){
-const kind=m[1].toLowerCase(),qs=m[0].slice(m[0].indexOf('?')+1).replace(/[),;]+$/,'');
-const q={};qs.split('&').forEach(kv=>{const i=kv.indexOf('=');if(i>0)q[kv.slice(0,i)]=kv.slice(i+1)});
-const server=(q.server||'').trim(),port=+q.port,secret=q.secret||'';
-if(!/^[A-Za-z0-9.\-]{1,253}$/.test(server)||!(port>=1&&port<=65535))continue;
-if(kind==='proxy'&&!/^[A-Za-z0-9_\-+\/=]{8,}$/.test(secret))continue;
-const key=kind+'|'+server+'|'+port+'|'+secret;if(seen.has(key))continue;seen.add(key);
-out.push({kind,server,port,type:pxType(kind,secret),link:'https://t.me/'+kind+'?'+qs});
-if(out.length>=100)break}
-return out}
+  const out=[],seen=new Set();
+  for(const m of String(text||'').matchAll(PX_RE)){
+    const kind=m[1].toLowerCase(),qs=m[0].slice(m[0].indexOf('?')+1).replace(/[),;]+$/,'');
+    const q={};qs.split('&').forEach(kv=>{const i=kv.indexOf('=');if(i>0)q[kv.slice(0,i)]=kv.slice(i+1)});
+    const server=(q.server||'').trim(),port=+q.port,secret=q.secret||'';
+    if(!/^[A-Za-z0-9.\-]{1,253}$/.test(server)||!(port>=1&&port<=65535))continue;
+    if(kind==='proxy'&&!/^[A-Za-z0-9_\-+\/=]{8,}$/.test(secret))continue;
+    const key=kind+'|'+server+'|'+port+'|'+secret;if(seen.has(key))continue;seen.add(key);
+    out.push({kind,server,port,type:pxType(kind,secret),link:'https://t.me/'+kind+'?'+qs});
+    if(out.length>=100)break}
+  return out}
 function pxType(kind,secret){
-if(kind==='socks')return 'SOCKS5';
-let h='';try{if(/^[0-9a-f]+$/i.test(secret))h=secret.slice(0,2).toLowerCase();else h=atob(secret.replace(/-/g,'+').replace(/_/g,'/')).charCodeAt(0).toString(16).padStart(2,'0')}catch(e){}
-return h==='ee'?'FakeTLS':h==='dd'?'MTProto · Secure':'MTProto'}
+  if(kind==='socks')return 'SOCKS5';
+  let h='';try{if(/^[0-9a-f]+$/i.test(secret))h=secret.slice(0,2).toLowerCase();else h=atob(secret.replace(/-/g,'+').replace(/_/g,'/')).charCodeAt(0).toString(16).padStart(2,'0')}catch(e){}
+  return h==='ee'?'FakeTLS':h==='dd'?'MTProto · Secure':'MTProto'}
 function pxExt(u){try{if(window.Android&&Android.openExternalBrowser){Android.openExternalBrowser(u);return}}catch(e){}
-const a=document.createElement('a');a.href=u;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}
+  const a=document.createElement('a');a.href=u;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}
 function pxOpenTg(link){
-const tg=link.replace(/^https:\/\/t\.me\
-try{if(window.Android&&Android.openExternalBrowser){Android.openExternalBrowser(tg);return}}catch(e){}
-try{const f=document.createElement('iframe');f.style.display='none';f.src=tg;document.body.appendChild(f);setTimeout(()=>f.remove(),3000)}catch(e){}
-setTimeout(()=>toast('Если Telegram не открылся, попробуйте ещё раз.'),1200)
+  const tg=link.replace(/^https:\/\/t\.me\//,'tg://');
+  try{if(window.Android&&Android.openExternalBrowser){Android.openExternalBrowser(tg);return}}catch(e){}
+  try{const f=document.createElement('iframe');f.style.display='none';f.src=tg;document.body.appendChild(f);setTimeout(()=>f.remove(),3000)}catch(e){}
+  // Без fallback в браузер: если Telegram не запустился, остаёмся в приложении.
+  setTimeout(()=>toast('Если Telegram не открылся, попробуйте ещё раз.'),1200)
 }
 function pxCard(p,extra,idAttr){
-return `<div class="pkg" style="margin-bottom:12px;cursor:default"><div class="pkg-top"><div style="min-width:0"><div class="pkg-title" style="word-break:break-all">${esc(p.server)}</div><div class="pkg-sub" style="word-break:break-all">Порт ${p.port} · ${esc(p.type)}</div>${extra.tag?`<span class="pxt">${esc(extra.tag)}</span>`:''}</div></div><div class="pxr"><button class="btn" data-go="${idAttr}" type="button">Подключить</button><button class="btn t" data-cp="${idAttr}" type="button">Копировать</button></div></div>`}
+  return `<div class="pkg" style="margin-bottom:12px;cursor:default"><div class="pkg-top"><div style="min-width:0"><div class="pkg-title" style="word-break:break-all">${esc(p.server)}</div><div class="pkg-sub" style="word-break:break-all">Порт ${p.port} · ${esc(p.type)}</div>${extra.tag?`<span class="pxt">${esc(extra.tag)}</span>`:''}</div></div><div class="pxr"><button class="btn" data-go="${idAttr}" type="button">Подключить</button><button class="btn t" data-cp="${idAttr}" type="button">Копировать</button></div></div>`}
 const pxPrem=()=>{const p=PXV.prem;return !!p&&typeof p.exp==='number'&&(p.exp===0||p.exp>nowS())};
 function paintPx(){
-const f=g('pxFree'),v=g('pxVip');if(!f||!v)return;
-g('pxSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.px===pxTab));
-f.hidden=pxTab!=='free';v.hidden=pxTab!=='vip';
-const L=PXF.list,upd=PXF.ts?new Date(PXF.ts).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}):'';
-f.innerHTML=`<div class="pxs"><span>${PXF.busy?'Обновляем…':L.length?`Найдено: ${L.length}${upd?' · обновлено '+upd:''}`:''}</span><button class="btn t s" data-refresh="1" type="button"${PXF.busy?' disabled':''}>Обновить</button></div>`
-+(PXF.err?`<div class="pxe">${esc(PXF.err)}</div>`:'')
-+(L.length?L.map((p,i)=>pxCard(p,{tag:'Бесплатный'},'f'+i)).join(''):`<div class="empty">${PXF.busy?'Загрузка…':'Список пуст'}</div>`);
-const u=PXV.uid;let h='';
-if(!u){h=`<div class="card"><div style="font-size:18px;font-weight:500;margin-bottom:6px">Нужен вход по почте</div><div class="pxn" style="padding:0 0 14px">Премиум привязан к аккаунту. Войдите по почте и паролю.</div><button class="btn w" data-prof="1" type="button">В профиль</button></div>`}
-else if(isAdmin||pxPrem()){
-const items=Object.entries(PXV.list||{}).filter(([,p])=>p&&p.link).map(([id,p])=>({id,p,x:pxParse(p.link)[0]})).filter(o=>o.x).sort((a,b)=>(a.p.ts||0)-(b.p.ts||0));
-const pr=PXV.prem,till=isAdmin&&!pxPrem()?'Режим администратора':pr&&pr.exp?'Премиум до '+fmtD(pr.exp):'Премиум · бессрочно';
-h=`<div class="pxs"><span>${esc(till)}</span></div>`+(PXV.err?`<div class="pxe">${esc(PXV.err)}</div>`:'')
-+(items.length?items.map(o=>pxCard(o.x,{tag:'Премиум'},'v'+esc(o.id))).join(''):'<div class="empty">Приватные прокси скоро появятся</div>')}
-else{
-const was=PXV.prem&&typeof PXV.prem.exp==='number'&&PXV.prem.exp>0;
-h=`<div class="card"><div style="font-size:18px;font-weight:500;margin-bottom:6px">${was?'Премиум истёк':'Премиум-доступ'}</div><div class="pxn" style="padding:0 0 12px">${was?'Срок доступа закончился.':'Закрытый список прокси доступен после подтверждения оплаты.'} Выберите тариф, оплатите и отправьте UID администратору для подтверждения.</div><div class="keybox" style="font-size:13px;margin-bottom:10px">UID: ${esc(u)}</div><button class="btn t w s" data-cpuid="1" type="button">Копировать UID</button></div>`
-+`<div class="pkg-grid"><div class="pkg"><div class="pkg-top"><div><div class="pkg-title">7 дней</div><div class="pkg-sub">Премиум Telegram proxy</div></div><div class="pkg-price"><b>100 ₽</b></div></div><div class="pxr"><button class="btn w" data-paypx="7" type="button">Оплатить</button></div></div>`
-+`<div class="pkg pop"><div class="pkg-top"><div><div class="pkg-title">30 дней</div><div class="pkg-sub">Премиум Telegram proxy</div></div><div class="pkg-price"><b>350 ₽</b></div></div><div class="pxr"><button class="btn w" data-paypx="30" type="button">Оплатить</button></div></div>`
-+`<div class="pkg"><div class="pkg-top"><div><div class="pkg-title">90 дней</div><div class="pkg-sub">Премиум Telegram proxy</div></div><div class="pkg-price"><b>700 ₽</b></div></div><div class="pxr"><button class="btn w" data-paypx="90" type="button">Оплатить</button></div></div>`
-+`<div class="pxn">После оплаты сохраните квитанцию и отправьте её вместе с UID. Премиум активируется после проверки платежа администратором.</div>`}
-v.innerHTML=h}
+  const f=g('pxFree'),v=g('pxVip');if(!f||!v)return;
+  g('pxSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.px===pxTab));
+  f.hidden=pxTab!=='free';v.hidden=pxTab!=='vip';
+  const L=PXF.list,upd=PXF.ts?new Date(PXF.ts).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}):'';
+  f.innerHTML=`<div class="pxs"><span>${PXF.busy?'Обновляем…':L.length?`Найдено: ${L.length}${upd?' · обновлено '+upd:''}`:''}</span><button class="btn t s" data-refresh="1" type="button"${PXF.busy?' disabled':''}>Обновить</button></div>`
+    +(PXF.err?`<div class="pxe">${esc(PXF.err)}</div>`:'')
+    +(L.length?L.map((p,i)=>pxCard(p,{tag:'Бесплатный'},'f'+i)).join(''):`<div class="empty">${PXF.busy?'Загрузка…':'Список пуст'}</div>`);
+  const u=PXV.uid;let h='';
+  if(!u){h=`<div class="card"><div style="font-size:18px;font-weight:500;margin-bottom:6px">Нужен вход по почте</div><div class="pxn" style="padding:0 0 14px">Премиум привязан к аккаунту. Войдите по почте и паролю.</div><button class="btn w" data-prof="1" type="button">В профиль</button></div>`}
+  else if(isAdmin||pxPrem()){
+    const items=Object.entries(PXV.list||{}).filter(([,p])=>p&&p.link).map(([id,p])=>({id,p,x:pxParse(p.link)[0]})).filter(o=>o.x).sort((a,b)=>(a.p.ts||0)-(b.p.ts||0));
+    const pr=PXV.prem,till=isAdmin&&!pxPrem()?'Режим администратора':pr&&pr.exp?'Премиум до '+fmtD(pr.exp):'Премиум · бессрочно';
+    h=`<div class="pxs"><span>${esc(till)}</span></div>`+(PXV.err?`<div class="pxe">${esc(PXV.err)}</div>`:'')
+      +(items.length?items.map(o=>pxCard(o.x,{tag:'Премиум'},'v'+esc(o.id))).join(''):'<div class="empty">Приватные прокси скоро появятся</div>')}
+  else{
+    const was=PXV.prem&&typeof PXV.prem.exp==='number'&&PXV.prem.exp>0;
+    h=`<div class="card"><div style="font-size:18px;font-weight:500;margin-bottom:6px">${was?'Премиум истёк':'Премиум-доступ'}</div><div class="pxn" style="padding:0 0 12px">${was?'Срок доступа закончился.':'Закрытый список прокси доступен после подтверждения оплаты.'} Выберите тариф, оплатите и отправьте UID администратору для подтверждения.</div><div class="keybox" style="font-size:13px;margin-bottom:10px">UID: ${esc(u)}</div><button class="btn t w s" data-cpuid="1" type="button">Копировать UID</button></div>`
+      +`<div class="pkg-grid"><div class="pkg"><div class="pkg-top"><div><div class="pkg-title">7 дней</div><div class="pkg-sub">Премиум Telegram proxy</div></div><div class="pkg-price"><b>100 ₽</b></div></div><div class="pxr"><button class="btn w" data-paypx="7" type="button">Оплатить</button></div></div>`
+      +`<div class="pkg pop"><div class="pkg-top"><div><div class="pkg-title">30 дней</div><div class="pkg-sub">Премиум Telegram proxy</div></div><div class="pkg-price"><b>350 ₽</b></div></div><div class="pxr"><button class="btn w" data-paypx="30" type="button">Оплатить</button></div></div>`
+      +`<div class="pkg"><div class="pkg-top"><div><div class="pkg-title">90 дней</div><div class="pkg-sub">Премиум Telegram proxy</div></div><div class="pkg-price"><b>700 ₽</b></div></div><div class="pxr"><button class="btn w" data-paypx="90" type="button">Оплатить</button></div></div>`
+      +`<div class="pxn">После оплаты сохраните квитанцию и отправьте её вместе с UID. Премиум активируется после проверки платежа администратором.</div>`}
+  v.innerHTML=h}
 function pxItem(k){
-if(k[0]==='f')return PXF.list[+k.slice(1)];
-const p=(PXV.list||{})[k.slice(1)];return p&&p.link?pxParse(p.link)[0]:null}
+  if(k[0]==='f')return PXF.list[+k.slice(1)];
+  const p=(PXV.list||{})[k.slice(1)];return p&&p.link?pxParse(p.link)[0]:null}
 async function pxFetchFree(){
-if(PXF.busy)return;PXF.busy=true;paintPx();
-let ok=false,why='';
-for(const u of PX_RAW){
-try{const c=new AbortController(),t=setTimeout(()=>c.abort(),9000);
-const r=await fetch(u,{cache:'no-store',signal:c.signal});clearTimeout(t);
-if(!r.ok){why='HTTP '+r.status;continue}
-const list=pxParse(await r.text());
-if(!list.length){why='в файле нет прокси-ссылок';continue}
-PXF.list=list;PXF.ts=Date.now();PXF.err='';ok=true;
-try{localStorage.setItem('px_free',JSON.stringify({ts:PXF.ts,list}))}catch(e){}
-break}catch(e){why=e&&e.name==='AbortError'?'таймаут':'нет сети'}}
-if(!ok)PXF.err=PXF.list.length?'Не удалось обновить — показан сохранённый список':'Не удалось загрузить список ('+why+')';
-PXF.busy=false;paintPx()}
+  if(PXF.busy)return;PXF.busy=true;paintPx();
+  let ok=false,why='';
+  for(const u of PX_RAW){
+    try{const c=new AbortController(),t=setTimeout(()=>c.abort(),9000);
+      const r=await fetch(u,{cache:'no-store',signal:c.signal});clearTimeout(t);
+      if(!r.ok){why='HTTP '+r.status;continue}
+      const list=pxParse(await r.text());
+      if(!list.length){why='в файле нет прокси-ссылок';continue}
+      PXF.list=list;PXF.ts=Date.now();PXF.err='';ok=true;
+      try{localStorage.setItem('px_free',JSON.stringify({ts:PXF.ts,list}))}catch(e){}
+      break}catch(e){why=e&&e.name==='AbortError'?'таймаут':'нет сети'}}
+  if(!ok)PXF.err=PXF.list.length?'Не удалось обновить — показан сохранённый список':'Не удалось загрузить список ('+why+')';
+  PXF.busy=false;paintPx()}
 function pxShow(){paintPx();if(Date.now()-PXF.ts>PX_TTL)pxFetchFree()}
 function pxListSub(){
-const need=!!PXV.uid&&(isAdmin||pxPrem());
-if(need&&!PXV.offL)PXV.offL=onValue(ref(db,'pproxy/list'),s=>{PXV.list=s.val()||{};PXV.err='';paintPx();paintPxAdm()},e=>{PXV.err=pxPrem()||isAdmin?'Не удалось загрузить: '+errT(e):'';paintPx()});
-if(!need&&PXV.offL){PXV.offL();PXV.offL=null;PXV.list={}}}
+  const need=!!PXV.uid&&(isAdmin||pxPrem());
+  if(need&&!PXV.offL)PXV.offL=onValue(ref(db,'pproxy/list'),s=>{PXV.list=s.val()||{};PXV.err='';paintPx();paintPxAdm()},e=>{PXV.err=pxPrem()||isAdmin?'Не удалось загрузить: '+errT(e):'';paintPx()});
+  if(!need&&PXV.offL){PXV.offL();PXV.offL=null;PXV.list={}}}
 function pxSync(){
-const u=auth.currentUser?auth.currentUser.uid:null;
-if(u!==PXV.uid){
-if(PXV.offU){PXV.offU();PXV.offU=null}
-if(PXV.offL){PXV.offL();PXV.offL=null}
-PXV.uid=u;PXV.prem=null;PXV.list={};PXV.err='';
-if(u)PXV.offU=onValue(ref(db,'pproxy/users/'+u),s=>{PXV.prem=s.val();pxListSub();paintPx()},e=>{PXV.prem=null;PXV.err='Не удалось проверить премиум: '+errT(e);paintPx()})}
-if(isAdmin&&!PXV.offA)PXV.offA=onValue(ref(db,'pproxy/users'),s=>{PXV.users=s.val()||{};PXV.allErr='';paintPxAdm()},e=>{PXV.allErr='Нет доступа к pproxy: опубликуйте обновлённые правила (Профиль → Правила)';paintPxAdm()});
-if(!isAdmin&&PXV.offA){PXV.offA();PXV.offA=null;PXV.users={};paintPxAdm()}
-pxListSub();paintPx();paintPxAdm()}
+  const u=auth.currentUser?auth.currentUser.uid:null;
+  if(u!==PXV.uid){
+    if(PXV.offU){PXV.offU();PXV.offU=null}
+    if(PXV.offL){PXV.offL();PXV.offL=null}
+    PXV.uid=u;PXV.prem=null;PXV.list={};PXV.err='';
+    if(u)PXV.offU=onValue(ref(db,'pproxy/users/'+u),s=>{PXV.prem=s.val();pxListSub();paintPx()},e=>{PXV.prem=null;PXV.err='Не удалось проверить премиум: '+errT(e);paintPx()})}
+  if(isAdmin&&!PXV.offA)PXV.offA=onValue(ref(db,'pproxy/users'),s=>{PXV.users=s.val()||{};PXV.allErr='';paintPxAdm()},e=>{PXV.allErr='Нет доступа к pproxy: опубликуйте обновлённые правила (Профиль → Правила)';paintPxAdm()});
+  if(!isAdmin&&PXV.offA){PXV.offA();PXV.offA=null;PXV.users={};paintPxAdm()}
+  pxListSub();paintPx();paintPxAdm()}
 setInterval(()=>{try{pxListSub();paintPx()}catch(e){}},60000);
 function paintPxAdm(){
-const el=g('pAdm'),eu=g('pUsers');if(!el||!eu)return;
-if(!isAdmin){el.innerHTML='';eu.innerHTML='';return}
-const now=nowS();
-eu.innerHTML=(PXV.allErr?`<div class="pxe">${esc(PXV.allErr)}</div>`:'')+Object.entries(PXV.users||{}).filter(([,r])=>r).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0)).map(([u,r])=>{
-const left=!r.exp?'бессрочно':r.exp>now?'до '+fmtS(r.exp):'истёк';
-return `<div class="ord"><div class="h"><b style="font-size:14px;min-width:0;word-break:break-all">${esc(u)}</b><button class="btn d s" data-udel="${esc(u)}" type="button">Отозвать</button></div><div class="m">Премиум: ${left}</div></div>`}).join('');
-const rows=Object.entries(PXV.list||{}).filter(([,p])=>p&&p.link).map(([id,p])=>({id,x:pxParse(p.link)[0],ts:p.ts||0})).filter(o=>o.x).sort((a,b)=>a.ts-b.ts);
-el.innerHTML=rows.map(o=>`<div class="ord"><div class="h"><b style="min-width:0;word-break:break-all">${esc(o.x.server)}</b><button class="btn d s" data-pdel="${esc(o.id)}" type="button">Удалить</button></div><div class="m">Порт ${o.x.port} · ${esc(o.x.type)}</div></div>`).join('')}
+  const el=g('pAdm'),eu=g('pUsers');if(!el||!eu)return;
+  if(!isAdmin){el.innerHTML='';eu.innerHTML='';return}
+  const now=nowS();
+  eu.innerHTML=(PXV.allErr?`<div class="pxe">${esc(PXV.allErr)}</div>`:'')+Object.entries(PXV.users||{}).filter(([,r])=>r).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0)).map(([u,r])=>{
+    const left=!r.exp?'бессрочно':r.exp>now?'до '+fmtS(r.exp):'истёк';
+    return `<div class="ord"><div class="h"><b style="font-size:14px;min-width:0;word-break:break-all">${esc(u)}</b><button class="btn d s" data-udel="${esc(u)}" type="button">Отозвать</button></div><div class="m">Премиум: ${left}</div></div>`}).join('');
+  const rows=Object.entries(PXV.list||{}).filter(([,p])=>p&&p.link).map(([id,p])=>({id,x:pxParse(p.link)[0],ts:p.ts||0})).filter(o=>o.x).sort((a,b)=>a.ts-b.ts);
+  el.innerHTML=rows.map(o=>`<div class="ord"><div class="h"><b style="min-width:0;word-break:break-all">${esc(o.x.server)}</b><button class="btn d s" data-pdel="${esc(o.id)}" type="button">Удалить</button></div><div class="m">Порт ${o.x.port} · ${esc(o.x.type)}</div></div>`).join('')}
 g('pxSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;pxTab=b.dataset.px;paintPx();vib(8)};
 g('p7').onclick=e=>{
-const t=e.target.closest('button');if(!t)return;
-if(t.dataset.refresh)return pxFetchFree();
-if(t.dataset.prof)return goTab(3);
-if(t.dataset.cpuid){cp(PXV.uid||'');toast('UID скопирован');return vib(10)}
-if(t.dataset.buy){pxExt(PX_BUY_URL);return}
-if(t.dataset.paypx){const days=Number(t.dataset.paypx),amount={7:100,30:350,90:700}[days];if(!amount||!PXV.uid)return toast('Войдите в аккаунт');const label='px_'+PXV.uid+'_'+days+'_'+Date.now();const url='https://yoomoney.ru/quickpay/confirm?'+new URLSearchParams({receiver:'4100118891507332','quickpay-form':'button',sum:String(amount),label,paymentType:'AC',targets:'FluxMod Telegram proxy Premium '+days+' days'}).toString();pxExt(url);toast('После оплаты отправьте UID и квитанцию администратору');return}
-const k=t.dataset.go||t.dataset.cp;if(!k)return;
-const p=pxItem(k);if(!p)return toast('Прокси недоступен');
-if(t.dataset.go){toast('Открываем Telegram…');vib(15);pxOpenTg(p.link)}
-else{cp(p.link);toast('Ссылка скопирована');vib(10)}};
+  const t=e.target.closest('button');if(!t)return;
+  if(t.dataset.refresh)return pxFetchFree();
+  if(t.dataset.prof)return goTab(3);
+  if(t.dataset.cpuid){cp(PXV.uid||'');toast('UID скопирован');return vib(10)}
+  if(t.dataset.buy){pxExt(PX_BUY_URL);return}
+  if(t.dataset.paypx){const days=Number(t.dataset.paypx),amount={7:100,30:350,90:700}[days];if(!amount||!PXV.uid)return toast('Войдите в аккаунт');const label='px_'+PXV.uid+'_'+days+'_'+Date.now();const url='https://yoomoney.ru/quickpay/confirm?'+new URLSearchParams({receiver:'4100118891507332','quickpay-form':'button',sum:String(amount),label,paymentType:'AC',targets:'FluxMod Telegram proxy Premium '+days+' days'}).toString();pxExt(url);toast('После оплаты отправьте UID и квитанцию администратору');return}
+  const k=t.dataset.go||t.dataset.cp;if(!k)return;
+  const p=pxItem(k);if(!p)return toast('Прокси недоступен');
+  if(t.dataset.go){toast('Открываем Telegram…');vib(15);pxOpenTg(p.link)}
+  else{cp(p.link);toast('Ссылка скопирована');vib(10)}};
 g('pAdm').onclick=async e=>{const b=e.target.closest('[data-pdel]');if(!b||!isAdmin)return;
-b.disabled=true;try{await set(ref(db,'pproxy/list/'+b.dataset.pdel),null);toast('Удалено')}catch(x){toast('Ошибка: '+errT(x));b.disabled=false}};
+  b.disabled=true;try{await set(ref(db,'pproxy/list/'+b.dataset.pdel),null);toast('Удалено')}catch(x){toast('Ошибка: '+errT(x));b.disabled=false}};
 g('pUsers').onclick=async e=>{const b=e.target.closest('[data-udel]');if(!b||!isAdmin)return;
-b.disabled=true;try{await set(ref(db,'pproxy/users/'+b.dataset.udel),null);toast('Премиум отозван')}catch(x){toast('Ошибка: '+errT(x));b.disabled=false}};
+  b.disabled=true;try{await set(ref(db,'pproxy/users/'+b.dataset.udel),null);toast('Премиум отозван')}catch(x){toast('Ошибка: '+errT(x));b.disabled=false}};
 g('pGo').onclick=async()=>{
-const er=g('pErr');er.textContent='';if(!isAdmin)return;
-const u=g('pUid').value.trim(),days=parseInt(g('pDays').value,10);
-if(!UID_RE.test(u))return er.textContent='Введите UID покупателя';
-g('pGo').disabled=true;
-try{await set(ref(db,'pproxy/users/'+u),{exp:days>0?nowS()+days*864e5:0,ts:serverTimestamp()});
-g('pUid').value='';g('pDays').value='';toast('Премиум выдан');vib(20)}
-catch(x){er.textContent=errT(x)+' — проверьте, что правила БД обновлены'}
-g('pGo').disabled=false};
+  const er=g('pErr');er.textContent='';if(!isAdmin)return;
+  const u=g('pUid').value.trim(),days=parseInt(g('pDays').value,10);
+  if(!UID_RE.test(u))return er.textContent='Введите UID покупателя';
+  g('pGo').disabled=true;
+  try{await set(ref(db,'pproxy/users/'+u),{exp:days>0?nowS()+days*864e5:0,ts:serverTimestamp()});
+    g('pUid').value='';g('pDays').value='';toast('Премиум выдан');vib(20)}
+  catch(x){er.textContent=errT(x)+' — проверьте, что правила БД обновлены'}
+  g('pGo').disabled=false};
 g('pAddL').onclick=async()=>{
-const er=g('pErr2');er.textContent='';if(!isAdmin)return;
-const list=pxParse(g('pLink').value);
-if(!list.length)return er.textContent='Нужны ссылки вида tg://proxy?server=…&port=…&secret=…';
-const have=new Set(Object.values(PXV.list||{}).map(p=>p&&p.link));
-const fresh=list.filter(x=>!have.has(x.link));
-if(!fresh.length)return er.textContent='Эти прокси уже добавлены';
-g('pAddL').disabled=true;
-try{for(const x of fresh)await set(push(ref(db,'pproxy/list')),{link:x.link,ts:serverTimestamp()});
-g('pLink').value='';toast('Добавлено: '+fresh.length);vib(20)}
-catch(x){er.textContent=errT(x)+' — проверьте, что правила БД обновлены'}
-g('pAddL').disabled=false};
+  const er=g('pErr2');er.textContent='';if(!isAdmin)return;
+  const list=pxParse(g('pLink').value);
+  if(!list.length)return er.textContent='Нужны ссылки вида tg://proxy?server=…&port=…&secret=…';
+  const have=new Set(Object.values(PXV.list||{}).map(p=>p&&p.link));
+  const fresh=list.filter(x=>!have.has(x.link));
+  if(!fresh.length)return er.textContent='Эти прокси уже добавлены';
+  g('pAddL').disabled=true;
+  try{for(const x of fresh)await set(push(ref(db,'pproxy/list')),{link:x.link,ts:serverTimestamp()});
+    g('pLink').value='';toast('Добавлено: '+fresh.length);vib(20)}
+  catch(x){er.textContent=errT(x)+' — проверьте, что правила БД обновлены'}
+  g('pAddL').disabled=false};
 try{const c=JSON.parse(localStorage.getItem('px_free')||'null');if(c&&Array.isArray(c.list)){PXF.list=c.list.filter(p=>p&&p.link&&/^https:\/\/t\.me\/(proxy|socks)\?/.test(p.link));PXF.ts=c.ts||0}}catch(e){}
 paintPx();pxFetchFree();
 let REV={},rvImgs=[],rvStarsV=5,rvF='all',rvCat='FluxMod';
@@ -627,34 +630,34 @@ const starsH=n=>`<span class="stars" aria-label="${n} из 5">${[1,2,3,4,5].map(
 const hueOf=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h%360};
 const plR=n=>n%10===1&&n%100!==11?'отзыв':(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?'отзыва':'отзывов';
 function relT(ts){const a=new Date(ts),b=new Date(),d=b-a;
-const dd=Math.round((new Date(b.getFullYear(),b.getMonth(),b.getDate())-new Date(a.getFullYear(),a.getMonth(),a.getDate()))/864e5);
-if(dd<=0){if(d<60000)return 'только что';const m=Math.floor(d/60000);return m<60?m+' мин назад':Math.floor(d/3600000)+' ч назад'}
-if(dd===1)return 'вчера';if(dd<7)return dd+' дн. назад';
-return a.toLocaleDateString('ru',a.getFullYear()!==b.getFullYear()?{day:'numeric',month:'long',year:'numeric'}:{day:'numeric',month:'long'})}
+  const dd=Math.round((new Date(b.getFullYear(),b.getMonth(),b.getDate())-new Date(a.getFullYear(),a.getMonth(),a.getDate()))/864e5);
+  if(dd<=0){if(d<60000)return 'только что';const m=Math.floor(d/60000);return m<60?m+' мин назад':Math.floor(d/3600000)+' ч назад'}
+  if(dd===1)return 'вчера';if(dd<7)return dd+' дн. назад';
+  return a.toLocaleDateString('ru',a.getFullYear()!==b.getFullYear()?{day:'numeric',month:'long',year:'numeric'}:{day:'numeric',month:'long'})}
 function packAvatar(f){return new Promise((res,rej)=>{
-const bad=()=>rej(new Error('Не удалось прочитать изображение'));
-const draw=(src,sw,sh)=>{const k=Math.min(1,900/Math.max(sw,sh)),w=Math.max(1,Math.round(sw*k)),h=Math.max(1,Math.round(sh*k));
-const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(src,0,0,w,h);
-let q=.82,d=c.toDataURL('image/jpeg',q);while(d.length>120000&&q>.3){q-=.08;d=c.toDataURL('image/jpeg',q)}res(d)};
-const u=URL.createObjectURL(f),im=new Image;
-im.onload=()=>{URL.revokeObjectURL(u);try{draw(im,im.naturalWidth||im.width,im.naturalHeight||im.height)}catch(x){bad()}};
-im.onerror=()=>{URL.revokeObjectURL(u);
-if(window.createImageBitmap)createImageBitmap(f).then(b=>{try{draw(b,b.width,b.height)}catch(x){bad()}},bad);else bad()};
-im.src=u})}
+  const bad=()=>rej(new Error('Не удалось прочитать изображение'));
+  const draw=(src,sw,sh)=>{const k=Math.min(1,900/Math.max(sw,sh)),w=Math.max(1,Math.round(sw*k)),h=Math.max(1,Math.round(sh*k));
+    const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(src,0,0,w,h);
+    let q=.82,d=c.toDataURL('image/jpeg',q);while(d.length>120000&&q>.3){q-=.08;d=c.toDataURL('image/jpeg',q)}res(d)};
+  const u=URL.createObjectURL(f),im=new Image;
+  im.onload=()=>{URL.revokeObjectURL(u);try{draw(im,im.naturalWidth||im.width,im.naturalHeight||im.height)}catch(x){bad()}};
+  im.onerror=()=>{URL.revokeObjectURL(u);
+    if(window.createImageBitmap)createImageBitmap(f).then(b=>{try{draw(b,b.width,b.height)}catch(x){bad()}},bad);else bad()};
+  im.src=u})}
 const rvSt=r=>Math.max(1,Math.min(5,+r.stars||5)),rvPics=r=>{const a=Array.isArray(r.imgs)?r.imgs:(r.imgs&&typeof r.imgs==='object'?Object.values(r.imgs):[]);if(r.img)a.unshift(r.img);return a.filter(x=>typeof x==='string'&&IMG_RE.test(x)).slice(0,4)},rvPh=r=>rvPics(r).length>0;
 const rvPass=r=>rvF==='all'||(rvF==='ph'?rvPh(r):rvF==='5'?rvSt(r)===5:rvF==='4'?rvSt(r)===4:rvSt(r)<=3);
 function paintReviews(){
-const all=Object.entries(REV).filter(([,r])=>r&&r.nick&&r.text&&(r.category||'FluxMod')===rvCat).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
-const n=all.length,avg=n?all.reduce((s,[,r])=>s+rvSt(r),0)/n:0,cnt=[0,0,0,0,0,0];all.forEach(([,r])=>cnt[rvSt(r)]++);
-g('rvChips').hidden=!n;
-g('rvHero').innerHTML=n?`<div class="ra"><b>${avg.toFixed(1).replace('.',',')}</b>${starsH(Math.round(avg))}<small>${n} ${plR(n)}</small></div><div class="rbars">${[5,4,3,2,1].map(s=>`<div class="rbar"><span>${s}</span><i><b style="width:${Math.round(cnt[s]/n*100)}%"></b></i><em>${cnt[s]}</em></div>`).join('')}</div>`:'';
-const shown=all.filter(([,r])=>rvPass(r));
-g('rvList').innerHTML=n?(shown.length?shown.map(([id,r])=>{const long=r.text.length>220;
-return `<div class="rv"><div class="h"><div class="av" style="background:hsl(${hueOf(r.nick)} 45% 40%);color:#fff">${esc(r.nick.trim().charAt(0).toUpperCase()||'?')}</div><div style="min-width:0;flex:1"><div class="n">${esc(r.nick)}</div><div class="sub">${starsH(rvSt(r))}<span>${r.ts?relT(r.ts):''}</span></div></div></div><div class="tx${long?' cl':''}">${esc(r.text)}</div>${long?'<button class="more" data-more>Читать полностью</button>':''}${rvPh(r)?`<div class="rvg n${rvPics(r).length}">${rvPics(r).map(u=>`<img class="rvph" src="${u}" alt="Фото к отзыву" data-zoom="1">`).join('')}</div>`:''}${r.reply?`<div class="rrep"><div class="rt2">Ответ администрации</div>${esc(r.reply)}</div>`:''}</div>`}).join(''):'<div class="empty">Нет отзывов по этому фильтру</div>'):'<div class="empty">Отзывов пока нет</div>';
-g('rvAdm').innerHTML=all.map(([id,r])=>`<div class="ord"><div class="h"><div style="display:flex;align-items:center;gap:10px;min-width:0">${rvPh(r)?`<img class="fthumb" src="${rvPics(r)[0]}" alt="">`:''}<b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.nick)}</b>${starsH(rvSt(r))}</div><button class="btn d s" data-rdel="${esc(id)}">Удалить</button></div><div class="m">${esc(r.text)}</div><label class="tf" style="height:44px;margin-bottom:8px"><input data-rin="${esc(id)}" placeholder="Ответ администрации" maxlength="300" value="${esc(r.reply||'')}"></label><button class="btn t s w" data-rsave="${esc(id)}">Сохранить ответ</button></div>`).join('')}
+  const all=Object.entries(REV).filter(([,r])=>r&&r.nick&&r.text&&(r.category||'FluxMod')===rvCat).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
+  const n=all.length,avg=n?all.reduce((s,[,r])=>s+rvSt(r),0)/n:0,cnt=[0,0,0,0,0,0];all.forEach(([,r])=>cnt[rvSt(r)]++);
+  g('rvChips').hidden=!n;
+  g('rvHero').innerHTML=n?`<div class="ra"><b>${avg.toFixed(1).replace('.',',')}</b>${starsH(Math.round(avg))}<small>${n} ${plR(n)}</small></div><div class="rbars">${[5,4,3,2,1].map(s=>`<div class="rbar"><span>${s}</span><i><b style="width:${Math.round(cnt[s]/n*100)}%"></b></i><em>${cnt[s]}</em></div>`).join('')}</div>`:'';
+  const shown=all.filter(([,r])=>rvPass(r));
+  g('rvList').innerHTML=n?(shown.length?shown.map(([id,r])=>{const long=r.text.length>220;
+    return `<div class="rv"><div class="h"><div class="av" style="background:hsl(${hueOf(r.nick)} 45% 40%);color:#fff">${esc(r.nick.trim().charAt(0).toUpperCase()||'?')}</div><div style="min-width:0;flex:1"><div class="n">${esc(r.nick)}</div><div class="sub">${starsH(rvSt(r))}<span>${r.ts?relT(r.ts):''}</span></div></div></div><div class="tx${long?' cl':''}">${esc(r.text)}</div>${long?'<button class="more" data-more>Читать полностью</button>':''}${rvPh(r)?`<div class="rvg n${rvPics(r).length}">${rvPics(r).map(u=>`<img class="rvph" src="${u}" alt="Фото к отзыву" data-zoom="1">`).join('')}</div>`:''}${r.reply?`<div class="rrep"><div class="rt2">Ответ администрации</div>${esc(r.reply)}</div>`:''}</div>`}).join(''):'<div class="empty">Нет отзывов по этому фильтру</div>'):'<div class="empty">Отзывов пока нет</div>';
+  g('rvAdm').innerHTML=all.map(([id,r])=>`<div class="ord"><div class="h"><div style="display:flex;align-items:center;gap:10px;min-width:0">${rvPh(r)?`<img class="fthumb" src="${rvPics(r)[0]}" alt="">`:''}<b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.nick)}</b>${starsH(rvSt(r))}</div><button class="btn d s" data-rdel="${esc(id)}">Удалить</button></div><div class="m">${esc(r.text)}</div><label class="tf" style="height:44px;margin-bottom:8px"><input data-rin="${esc(id)}" placeholder="Ответ администрации" maxlength="300" value="${esc(r.reply||'')}"></label><button class="btn t s w" data-rsave="${esc(id)}">Сохранить ответ</button></div>`).join('')}
 let rvOn=false;
 function startReviews(){if(rvOn)return;rvOn=true;
-onValue(query(ref(db,'reviews'),limitToLast(40)),s=>{REV=s.val()||{};paintReviews()},()=>{g('rvList').innerHTML='<div class="empty">Раздел временно недоступен</div>'})}
+  onValue(query(ref(db,'reviews'),limitToLast(40)),s=>{REV=s.val()||{};paintReviews()},()=>{g('rvList').innerHTML='<div class="empty">Раздел временно недоступен</div>'})}
 g('rvList').innerHTML='<div class="empty">Загрузка…</div>';
 setTimeout(startReviews,8000);
 g('rvChips').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;rvF=b.dataset.f;g('rvChips').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===b));paintReviews();vib(8)};
@@ -663,241 +666,247 @@ rvPaintStars();
 g('rvStars').onclick=e=>{const b=e.target.closest('button');if(!b)return;rvStarsV=+b.dataset.s;rvPaintStars();vib(8)};
 const rvImgReset=()=>{rvImgs=[];g('rvImg').value='';rvThumbs()};
 function rvThumbs(){g('rvThumbs').innerHTML=rvImgs.map((u,i)=>`<div class="rth"><img src="${u}" alt=""><button type="button" data-rmimg="${i}" aria-label="Убрать">×</button></div>`).join('');
-g('rvAvLbl').textContent=rvImgs.length?`Добавлено ${rvImgs.length} из 4 — добавить ещё`:'Фото отзыва (до 4, необязательно)';g('rvAvLabel').style.borderColor=rvImgs.length?'var(--p)':''}
+  g('rvAvLbl').textContent=rvImgs.length?`Добавлено ${rvImgs.length} из 4 — добавить ещё`:'Фото отзыва (до 4, необязательно)';g('rvAvLabel').style.borderColor=rvImgs.length?'var(--p)':''}
 g('rvImg').onchange=async e=>{const fs=[...e.target.files];e.target.value='';const er=g('rvErr');er.textContent='';
-if(!fs.length){er.textContent='Фото не получено — выберите снова';return}
-const room=4-rvImgs.length;if(room<=0){er.textContent='Максимум 4 фото';return}
-const take=fs.slice(0,room);let bad=0;
-for(let i=0;i<take.length;i++){g('rvAvLbl').textContent='Обработка '+(i+1)+' из '+take.length+'…';
-try{rvImgs.push(await packAvatar(take[i]))}catch(x){bad++}}
-rvThumbs();
-if(bad)er.textContent='Не прочиталось фото: '+bad+' (нужен JPG/PNG/WebP)';
-else if(fs.length>room)er.textContent='Максимум 4 фото — лишние пропущены'};
+  if(!fs.length){er.textContent='Фото не получено — выберите снова';return}
+  const room=4-rvImgs.length;if(room<=0){er.textContent='Максимум 4 фото';return}
+  const take=fs.slice(0,room);let bad=0;
+  for(let i=0;i<take.length;i++){g('rvAvLbl').textContent='Обработка '+(i+1)+' из '+take.length+'…';
+    try{rvImgs.push(await packAvatar(take[i]))}catch(x){bad++}}
+  rvThumbs();
+  if(bad)er.textContent='Не прочиталось фото: '+bad+' (нужен JPG/PNG/WebP)';
+  else if(fs.length>room)er.textContent='Максимум 4 фото — лишние пропущены'};
 g('rvThumbs').onclick=e=>{const b=e.target.closest('[data-rmimg]');if(!b)return;rvImgs.splice(+b.dataset.rmimg,1);rvThumbs();g('rvErr').textContent=''};
 g('rvGo').onclick=async()=>{g('rvErr').textContent='';if(!isAdmin)return;
-const r={nick:g('rvNick').value.trim(),text:g('rvText').value.trim(),stars:rvStarsV,category:g('rvCategory').value},rp=g('rvReply').value.trim();
-if(!r.nick)return g('rvErr').textContent='Введите ник';
-if(!r.text)return g('rvErr').textContent='Введите текст отзыва';
-if(rp)r.reply=rp;if(rvImgs.length)r.imgs=rvImgs.slice(0,4);
-let ts=serverTimestamp();const dv=g('rvDate').value;
-if(dv){const now=new Date(),today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
-if(dv>today)return g('rvErr').textContent='Дата не может быть в будущем';
-const[y,m,d]=dv.split('-').map(Number);ts=new Date(y,m-1,d,now.getHours(),now.getMinutes()).getTime()}
-r.ts=ts;g('rvGo').disabled=true;
-try{await set(push(ref(db,'reviews')),r);['rvNick','rvText','rvReply','rvDate'].forEach(i=>g(i).value='');rvImgReset();rvStarsV=5;rvPaintStars();toast('Отзыв опубликован');vib(20)}
-catch(x){g('rvErr').textContent=errT(x)}
-g('rvGo').disabled=false};
+  const r={nick:g('rvNick').value.trim(),text:g('rvText').value.trim(),stars:rvStarsV,category:g('rvCategory').value},rp=g('rvReply').value.trim();
+  if(!r.nick)return g('rvErr').textContent='Введите ник';
+  if(!r.text)return g('rvErr').textContent='Введите текст отзыва';
+  if(rp)r.reply=rp;if(rvImgs.length)r.imgs=rvImgs.slice(0,4);
+  let ts=serverTimestamp();const dv=g('rvDate').value;
+  if(dv){const now=new Date(),today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+    if(dv>today)return g('rvErr').textContent='Дата не может быть в будущем';
+    const[y,m,d]=dv.split('-').map(Number);ts=new Date(y,m-1,d,now.getHours(),now.getMinutes()).getTime()}
+  r.ts=ts;g('rvGo').disabled=true;
+  try{await set(push(ref(db,'reviews')),r);['rvNick','rvText','rvReply','rvDate'].forEach(i=>g(i).value='');rvImgReset();rvStarsV=5;rvPaintStars();toast('Отзыв опубликован');vib(20)}
+  catch(x){g('rvErr').textContent=errT(x)}
+  g('rvGo').disabled=false};
 const zClose=()=>{g('zv').hidden=true;g('zv').classList.remove('z');g('zImg').removeAttribute('src');if(window.__zReset)window.__zReset()};
 g('p5').onclick=e=>{const b=e.target.closest('[data-rvcat]');if(!b)return;rvCat=b.dataset.rvcat;g('p5').querySelectorAll('[data-rvcat]').forEach(x=>x.classList.toggle('on',x===b));paintReviews()};
 g('rvList').onclick=e=>{
-const m=e.target.closest('[data-more]');if(m){const c=m.previousElementSibling.classList.toggle('cl');m.textContent=c?'Читать полностью':'Свернуть';return}
-const i=e.target.closest('[data-zoom]');if(!i)return;g('zImg').src=i.src;g('zv').classList.remove('z');g('zv').hidden=false;g('zb').scrollTo(0,0);vib(8)};
+  const m=e.target.closest('[data-more]');if(m){const c=m.previousElementSibling.classList.toggle('cl');m.textContent=c?'Читать полностью':'Свернуть';return}
+  const i=e.target.closest('[data-zoom]');if(!i)return;g('zImg').src=i.src;g('zv').classList.remove('z');g('zv').hidden=false;g('zb').scrollTo(0,0);vib(8)};
 g('zx').onclick=zClose;
 (()=>{const zb=g('zb'),im=g('zImg'),pts=new Map();
-let sc=1,tx=0,ty=0,gs={},lastTap=0,lastX=0,lastY=0;
-const apply=()=>{im.style.transform=`translate(${tx}px,${ty}px) scale(${sc})`};
-const clamp=()=>{const mx=Math.max(0,(im.offsetWidth*sc-zb.clientWidth)/2),my=Math.max(0,(im.offsetHeight*sc-zb.clientHeight)/2);
-tx=Math.max(-mx,Math.min(mx,tx));ty=Math.max(-my,Math.min(my,ty))};
-const reset=()=>{sc=1;tx=ty=0;pts.clear();im.style.transition='';apply()};window.__zReset=reset;
-const rel=(x,y)=>{const r=zb.getBoundingClientRect();return{x:x-r.left-r.width/2,y:y-r.top-r.height/2}};
-const two=()=>{const a=[...pts.values()],m=rel((a[0].x+a[1].x)/2,(a[0].y+a[1].y)/2);return{d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)||1,mx:m.x,my:m.y}};
-const zoomAt=(fx,fy,ns)=>{tx=fx-(fx-tx)*ns/sc;ty=fy-(fy-ty)*ns/sc;sc=ns;clamp();
-im.style.transition='transform .2s';apply();setTimeout(()=>{im.style.transition=''},220)};
-zb.addEventListener('pointerdown',e=>{if(e.target.closest('.zx'))return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-if(pts.size===2){const t=two();gs={two:1,d:t.d,s:sc,mx:t.mx,my:t.my,tx,ty}}
-else{gs={x:e.clientX,y:e.clientY,tx,ty,t:Date.now(),mv:0}}});
-zb.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-if(pts.size>=2&&gs.two){const t=two(),ns=Math.max(1,Math.min(5,gs.s*t.d/gs.d));
-tx=t.mx-(gs.mx-gs.tx)*ns/gs.s;ty=t.my-(gs.my-gs.ty)*ns/gs.s;sc=ns;clamp();apply()}
-else if(pts.size===1&&!gs.two){gs.mv=Math.max(gs.mv,Math.hypot(e.clientX-gs.x,e.clientY-gs.y));
-if(sc>1){tx=gs.tx+e.clientX-gs.x;ty=gs.ty+e.clientY-gs.y;clamp();apply()}}});
-const up=e=>{if(!pts.has(e.pointerId))return;pts.delete(e.pointerId);
-if(pts.size===1){const p=[...pts.values()][0];gs={x:p.x,y:p.y,tx,ty,t:Date.now(),mv:99}}
-else if(pts.size===0){
-if(sc<1.02){sc=1;tx=ty=0;apply()}
-if(!gs.two&&gs.mv<10&&Date.now()-gs.t<300&&e.target===im){const n=Date.now();
-if(n-lastTap<300&&Math.hypot(e.clientX-lastX,e.clientY-lastY)<40){lastTap=0;if(sc>1)zoomAt(0,0,1),tx=ty=0,apply();else{const f=rel(e.clientX,e.clientY);zoomAt(f.x,f.y,2.5)}}
-else{lastTap=n;lastX=e.clientX;lastY=e.clientY}}
-gs={}}};
-zb.addEventListener('pointerup',up);zb.addEventListener('pointercancel',up);
-zb.onclick=e=>{if(e.target===zb&&sc===1)zClose()};
+  let sc=1,tx=0,ty=0,gs={},lastTap=0,lastX=0,lastY=0;
+  const apply=()=>{im.style.transform=`translate(${tx}px,${ty}px) scale(${sc})`};
+  const clamp=()=>{const mx=Math.max(0,(im.offsetWidth*sc-zb.clientWidth)/2),my=Math.max(0,(im.offsetHeight*sc-zb.clientHeight)/2);
+    tx=Math.max(-mx,Math.min(mx,tx));ty=Math.max(-my,Math.min(my,ty))};
+  const reset=()=>{sc=1;tx=ty=0;pts.clear();im.style.transition='';apply()};window.__zReset=reset;
+  const rel=(x,y)=>{const r=zb.getBoundingClientRect();return{x:x-r.left-r.width/2,y:y-r.top-r.height/2}};
+  const two=()=>{const a=[...pts.values()],m=rel((a[0].x+a[1].x)/2,(a[0].y+a[1].y)/2);return{d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)||1,mx:m.x,my:m.y}};
+  const zoomAt=(fx,fy,ns)=>{tx=fx-(fx-tx)*ns/sc;ty=fy-(fy-ty)*ns/sc;sc=ns;clamp();
+    im.style.transition='transform .2s';apply();setTimeout(()=>{im.style.transition=''},220)};
+  zb.addEventListener('pointerdown',e=>{if(e.target.closest('.zx'))return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size===2){const t=two();gs={two:1,d:t.d,s:sc,mx:t.mx,my:t.my,tx,ty}}
+    else{gs={x:e.clientX,y:e.clientY,tx,ty,t:Date.now(),mv:0}}});
+  zb.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size>=2&&gs.two){const t=two(),ns=Math.max(1,Math.min(5,gs.s*t.d/gs.d));
+      tx=t.mx-(gs.mx-gs.tx)*ns/gs.s;ty=t.my-(gs.my-gs.ty)*ns/gs.s;sc=ns;clamp();apply()}
+    else if(pts.size===1&&!gs.two){gs.mv=Math.max(gs.mv,Math.hypot(e.clientX-gs.x,e.clientY-gs.y));
+      if(sc>1){tx=gs.tx+e.clientX-gs.x;ty=gs.ty+e.clientY-gs.y;clamp();apply()}}});
+  const up=e=>{if(!pts.has(e.pointerId))return;pts.delete(e.pointerId);
+    if(pts.size===1){const p=[...pts.values()][0];gs={x:p.x,y:p.y,tx,ty,t:Date.now(),mv:99}}
+    else if(pts.size===0){
+      if(sc<1.02){sc=1;tx=ty=0;apply()}
+      if(!gs.two&&gs.mv<10&&Date.now()-gs.t<300&&e.target===im){const n=Date.now();
+        if(n-lastTap<300&&Math.hypot(e.clientX-lastX,e.clientY-lastY)<40){lastTap=0;if(sc>1)zoomAt(0,0,1),tx=ty=0,apply();else{const f=rel(e.clientX,e.clientY);zoomAt(f.x,f.y,2.5)}}
+        else{lastTap=n;lastX=e.clientX;lastY=e.clientY}}
+      gs={}}};
+  zb.addEventListener('pointerup',up);zb.addEventListener('pointercancel',up);
+  zb.onclick=e=>{if(e.target===zb&&sc===1)zClose()};
 })();
 (()=>{const w=g('shots'),d=g('sdots'),n=w.children.length;
-w.querySelectorAll('.ph.full').forEach(p=>{p.querySelector('.bgb').style.backgroundImage='url("'+p.querySelector('img').src+'")'});
-d.innerHTML=Array.from({length:n},(_,i)=>`<i${i?'':' class="on"'}></i>`).join('');
-const mark=()=>{const o=w.children[0].offsetLeft;let i=0,best=1e9;[...w.children].forEach((c,k)=>{const dd=Math.abs(c.offsetLeft-o-w.scrollLeft);if(dd<best){best=dd;i=k}});[...d.children].forEach((x,k)=>x.classList.toggle('on',k===i))};
-w.addEventListener('scroll',mark,{passive:true});
-w.onclick=e=>{const i=e.target.closest('[data-zoom]');if(!i)return;g('zImg').src=i.src;g('zv').classList.remove('z');g('zv').hidden=false;g('zb').scrollTo(0,0);vib(8)};
+  w.querySelectorAll('.ph.full').forEach(p=>{p.querySelector('.bgb').style.backgroundImage='url("'+p.querySelector('img').src+'")'});
+  d.innerHTML=Array.from({length:n},(_,i)=>`<i${i?'':' class="on"'}></i>`).join('');
+  const mark=()=>{const o=w.children[0].offsetLeft;let i=0,best=1e9;[...w.children].forEach((c,k)=>{const dd=Math.abs(c.offsetLeft-o-w.scrollLeft);if(dd<best){best=dd;i=k}});[...d.children].forEach((x,k)=>x.classList.toggle('on',k===i))};
+  w.addEventListener('scroll',mark,{passive:true});
+  w.onclick=e=>{const i=e.target.closest('[data-zoom]');if(!i)return;g('zImg').src=i.src;g('zv').classList.remove('z');g('zv').hidden=false;g('zb').scrollTo(0,0);vib(8)};
 })();
 window.__back=()=>{
-if(!g('zv').hidden){zClose();return true}
-if(!g('paySheet').hidden){closePay();return true}
-for(const id of ['okM','nSheet','imgV','rsheet']){const e=g(id);if(e&&!e.hidden){e.hidden=true;return true}}
-if(!g('reg').hidden){showLogin();return true}
-if(!document.querySelector('#p0.on')&&g('auth').hidden){goTab(0);return true}
-return false};
+  if(!g('zv').hidden){zClose();return true}
+  if(!g('paySheet').hidden){closePay();return true}
+  for(const id of ['okM','nSheet','imgV','rsheet']){const e=g(id);if(e&&!e.hidden){e.hidden=true;return true}}
+  if(!g('reg').hidden){showLogin();return true}
+  if(!document.querySelector('#p0.on')&&g('auth').hidden){goTab(0);return true}
+  return false};
 document.addEventListener('contextmenu',e=>{if(!e.target.closest('input,textarea,.keybox,pre.rules'))e.preventDefault()});
 const RL_SEG=[100,0,5,0,50,0,5,0];
 const RL_P=t=>{const r=t%1000;return r<5?100:r<25?50:r<145?5:0};
 const rlReady=()=>isAdmin||!RL.last||nowS()>=RL.last+864e5;
 const hms=ms=>{const t=Math.max(0,Math.ceil(ms/1000));return[Math.floor(t/3600),Math.floor(t%3600/60),t%60].map(x=>String(x).padStart(2,'0')).join(':')};
 function rlBuild(){const pt=(a,r)=>{const t=a*Math.PI/180;return[(r*Math.sin(t)).toFixed(2),(-r*Math.cos(t)).toFixed(2)]};let h='';
-RL_SEG.forEach((v,i)=>{const p1=pt(i*45-22.5,96),p2=pt(i*45+22.5,96);
-const f=v===100?'#f5d58a':v===50?'var(--p)':v===5?'var(--pc)':'var(--s3)',c=v===100?'#3b2f00':v===50?'var(--onp)':v===5?'var(--onpc)':'var(--onv)';
-h+=`<path d="M0 0L${p1[0]} ${p1[1]}A96 96 0 0 1 ${p2[0]} ${p2[1]}Z" style="fill:${f};stroke:var(--bg);stroke-width:1.5"/>`;
-h+=`<text transform="rotate(${i*45}) translate(0 -64)" text-anchor="middle" dominant-baseline="middle" style="fill:${c};font-size:${v?15:11}px;font-weight:500">${v?v+' ₽':'пусто'}</text>`});
-h+='<circle r="22" style="fill:var(--bg);stroke:var(--s3);stroke-width:3"/><text text-anchor="middle" dominant-baseline="central" style="fill:var(--p);font-size:18px;font-weight:700">F</text>';
-g('rlSvg').innerHTML=h}
+  RL_SEG.forEach((v,i)=>{const p1=pt(i*45-22.5,96),p2=pt(i*45+22.5,96);
+    const f=v===100?'#f5d58a':v===50?'var(--p)':v===5?'var(--pc)':'var(--s3)',c=v===100?'#3b2f00':v===50?'var(--onp)':v===5?'var(--onpc)':'var(--onv)';
+    h+=`<path d="M0 0L${p1[0]} ${p1[1]}A96 96 0 0 1 ${p2[0]} ${p2[1]}Z" style="fill:${f};stroke:var(--bg);stroke-width:1.5"/>`;
+    h+=`<text transform="rotate(${i*45}) translate(0 -64)" text-anchor="middle" dominant-baseline="middle" style="fill:${c};font-size:${v?15:11}px;font-weight:500">${v?v+' ₽':'пусто'}</text>`});
+  h+='<circle r="22" style="fill:var(--bg);stroke:var(--s3);stroke-width:3"/><text text-anchor="middle" dominant-baseline="central" style="fill:var(--p);font-size:18px;font-weight:700">F</text>';
+  g('rlSvg').innerHTML=h}
 function rlPaint(){const c=g('rlCard');if(!c||c.hidden)return;
-g('rlWon').textContent='Выиграно: '+(+RL.won||0)+' ₽';
-g('rlCard').querySelector('.rls').textContent=isAdmin?'Админ: без ограничения по времени':'Крутите раз в 24 часа — выигрыш падает на баланс';
-if(rlBusy)return;const b=g('rlGo');
-if(rlReady()){b.disabled=false;b.textContent='Крутить'}else{b.disabled=true;b.textContent='Следующая через '+hms(RL.last+864e5-nowS())}}
+  g('rlWon').textContent='Выиграно: '+(+RL.won||0)+' ₽';
+  g('rlCard').querySelector('.rls').textContent=isAdmin?'Админ: без ограничения по времени':'Крутите раз в 24 часа — выигрыш падает на баланс';
+  if(rlBusy)return;const b=g('rlGo');
+  if(rlReady()){b.disabled=false;b.textContent='Крутить'}else{b.disabled=true;b.textContent='Следующая через '+hms(RL.last+864e5-nowS())}}
 async function rlClaim(){const s=(await get(ref(db,'roulette/'+uid))).val()||{};if(!s.last||s.claimed===s.last)return;
-await update(ref(db,'roulette/'+uid),{claimed:s.last,won:(+s.won||0)+RL_P(s.last)})}
+  await update(ref(db,'roulette/'+uid),{claimed:s.last,won:(+s.won||0)+RL_P(s.last)})}
 g('rlGo').onclick=async()=>{if(!uid||KS||rlBusy||!rlReady())return;
-rlBusy=true;const b=g('rlGo'),res=g('rlRes');b.disabled=true;b.textContent='Крутим…';res.className='rlr';res.textContent='';vib(15);
-try{
-await update(ref(db,'roulette/'+uid),{last:serverTimestamp()});
-const t=(await get(ref(db,'roulette/'+uid+'/last'))).val(),p=RL_P(t);
-const ix=RL_SEG.map((v,i)=>v===p?i:-1).filter(i=>i>=0),i=ix[Math.floor(Math.random()*ix.length)];
-rlRot=Math.ceil(rlRot/360)*360+1800+((360-i*45)%360)+(Math.random()-.5)*26;
-g('rlSvg').style.transform='rotate('+rlRot+'deg)';
-await new Promise(r=>setTimeout(r,4700));
-await rlClaim();
-if(p){res.className='rlr win';res.textContent='Выигрыш: '+p+' ₽ — уже на балансе';vib([30,40,60])}
-else res.textContent='В этот раз пусто — попробуйте завтра';
-}catch(x){res.textContent=errT(x)}
-rlBusy=false;rlPaint()};
+  rlBusy=true;const b=g('rlGo'),res=g('rlRes');b.disabled=true;b.textContent='Крутим…';res.className='rlr';res.textContent='';vib(15);
+  try{
+    await update(ref(db,'roulette/'+uid),{last:serverTimestamp()});
+    const t=(await get(ref(db,'roulette/'+uid+'/last'))).val(),p=RL_P(t);
+    const ix=RL_SEG.map((v,i)=>v===p?i:-1).filter(i=>i>=0),i=ix[Math.floor(Math.random()*ix.length)];
+    rlRot=Math.ceil(rlRot/360)*360+1800+((360-i*45)%360)+(Math.random()-.5)*26;
+    g('rlSvg').style.transform='rotate('+rlRot+'deg)';
+    await new Promise(r=>setTimeout(r,4700));
+    await rlClaim();
+    if(p){res.className='rlr win';res.textContent='Выигрыш: '+p+' ₽ — уже на балансе';vib([30,40,60])}
+    else res.textContent='В этот раз пусто — попробуйте завтра';
+  }catch(x){res.textContent=errT(x)}
+  rlBusy=false;rlPaint()};
 rlBuild();setInterval(rlPaint,1000);
 g('rvAdm').onclick=async e=>{if(!isAdmin)return;const d=e.target.closest('[data-rdel]'),s=e.target.closest('[data-rsave]');
-if(d){d.disabled=true;try{await set(ref(db,'reviews/'+d.dataset.rdel),null);toast('Удалено')}catch(x){toast('Ошибка: '+errT(x));d.disabled=false}return}
-if(s){const id=s.dataset.rsave,v=(g('rvAdm').querySelector('[data-rin="'+id+'"]')||{}).value?.trim()||'';s.disabled=true;
-try{await set(ref(db,'reviews/'+id+'/reply'),v||null);toast(v?'Ответ сохранён':'Ответ удалён')}catch(x){toast('Ошибка: '+errT(x))}s.disabled=false}};
+  if(d){d.disabled=true;try{await set(ref(db,'reviews/'+d.dataset.rdel),null);toast('Удалено')}catch(x){toast('Ошибка: '+errT(x));d.disabled=false}return}
+  if(s){const id=s.dataset.rsave,v=(g('rvAdm').querySelector('[data-rin="'+id+'"]')||{}).value?.trim()||'';s.disabled=true;
+    try{await set(ref(db,'reviews/'+id+'/reply'),v||null);toast(v?'Ответ сохранён':'Ответ удалён')}catch(x){toast('Ошибка: '+errT(x))}s.disabled=false}};
 const A32='ABCDEFGHJKMNPQRSTUVWXYZ23456789',CODE_RE=/^ZEN-[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{7}$/;
 const h32=t=>{let h=2166136261;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0};
 function codeFor(u,n){let a=h32(u+'|'+n),b=h32('z|'+u+'|'+n),r='';for(let i=0;i<4;i++){r+=A32[a%31];a=Math.floor(a/31)}for(let i=0;i<3;i++){r+=A32[b%31];b=Math.floor(b/31)}return 'ZEN-'+r}
 function normCode(t){t=(t||'').trim().toUpperCase().replace(/\s/g,'');if(/^[A-Z2-9]{7}$/.test(t))t='ZEN-'+t;return CODE_RE.test(t)?t:null}
 async function ensureCode(u){const k='zrc_'+u,c0=localStorage.getItem(k);if(c0)return c0;
-for(let i=0;i<8;i++){const c=codeFor(u,i),cur=(await get(ref(db,'refcodes/'+c))).val();
-if(cur===u){localStorage.setItem(k,c);return c}
-if(!cur){try{await set(ref(db,'refcodes/'+c),u);localStorage.setItem(k,c);return c}catch(e){}}}
-return null}
+  for(let i=0;i<8;i++){const c=codeFor(u,i),cur=(await get(ref(db,'refcodes/'+c))).val();
+    if(cur===u){localStorage.setItem(k,c);return c}
+    if(!cur){try{await set(ref(db,'refcodes/'+c),u);localStorage.setItem(k,c);return c}catch(e){}}}
+  return null}
 async function ensureReferralCredit(invitee,inviter){
-if(!invitee||!inviter||invitee===inviter)return false;
-const creditRef=ref(db,'refs/'+inviter+'/'+invitee);
-const existing=await get(creditRef);
-if(existing.exists())return false;
-await set(creditRef,{ts:serverTimestamp(),source:'referral'});
-return true
+  if(!invitee||!inviter||invitee===inviter)return false;
+  const creditRef=ref(db,'refs/'+inviter+'/'+invitee);
+  const existing=await get(creditRef);
+  if(existing.exists())return false;
+  await set(creditRef,{ts:serverTimestamp(),source:'referral'});
+  return true
 }
 async function applyRef(raw,u){u=u||uid;if(!u||KS)return{e:'Войдите по почте'};
-const c=normCode(raw);if(!c)return{e:'Неверный формат кода'};
-const already=(await get(ref(db,'refby/'+u))).val();
-if(already){try{await ensureReferralCredit(u,already)}catch(e){}return{e:'Вы уже использовали код'}}
-const inv=(await get(ref(db,'refcodes/'+c))).val();
-if(!inv)return{e:'Код не найден'};if(inv===u)return{e:'Нельзя использовать свой код'};
-await set(ref(db,'refby/'+u),inv);
-await ensureReferralCredit(u,inv);
-return{ok:1}}
+  const c=normCode(raw);if(!c)return{e:'Неверный формат кода'};
+  const already=(await get(ref(db,'refby/'+u))).val();
+  if(already){try{await ensureReferralCredit(u,already)}catch(e){}return{e:'Вы уже использовали код'}}
+  const inv=(await get(ref(db,'refcodes/'+c))).val();
+  if(!inv)return{e:'Код не найден'};if(inv===u)return{e:'Нельзя использовать свой код'};
+  await set(ref(db,'refby/'+u),inv);
+  await ensureReferralCredit(u,inv);
+  return{ok:1}}
 async function balOf(u){const [a,b,c,d]=await Promise.all([get(ref(db,'refs/'+u)),get(ref(db,'refbonus/'+u)),get(ref(db,'spent/'+u)),get(ref(db,'roulette/'+u+'/won')).catch(()=>null)]);
-const sum=x=>{let t=0;x.forEach(y=>{t+=+y.val()||0});return t};return a.size*REF_BONUS+sum(b)-sum(c)+(+((d&&d.val())||0))}
+  const sum=x=>{let t=0;x.forEach(y=>{t+=+y.val()||0});return t};return a.size*REF_BONUS+sum(b)-sum(c)+(+((d&&d.val())||0))}
 let RB={n:0,b:0,s:0,r:0},refCode=null,RL={},rlRot=0,rlBusy=false,rlClaiming=false;
 const bal=()=>RB.n*REF_BONUS+RB.b-RB.s+(RB.r||0);
 function stopRef(){RB={n:0,b:0,s:0,r:0};RL={};rlRot=0;g('rlCard').hidden=true;g('rlSvg').style.transform='';refCode=null;g('refCard').hidden=true;g('shopBal').hidden=true;
-const hb=g('homeBalCard');if(hb)hb.hidden=true;
-const sb=g('shopBalDisplay');if(sb)sb.hidden=true;
+  const hb=g('homeBalCard');if(hb)hb.hidden=true;
+  const sb=g('shopBalDisplay');if(sb)sb.hidden=true;
 }
 function paintBal(){
-const b=bal();
-g('refBal').textContent=b+' ₽';g('refN').textContent=RB.n;g('refBuy').textContent=RB.b+' ₽';
-const hb=g('homeBalCard'),ha=g('homeBalAmt');
-if(hb&&ha){hb.hidden=(!uid||KS||b<=0);ha.textContent=b+' ₽'}
-const sb=g('shopBalDisplay'),sa=g('shopBalAmt');
-if(sb&&sa){sb.hidden=(!uid||KS||b<=0);sa.textContent=b+' ₽'}
-updBalBtn();
+  const b=bal();
+  g('refBal').textContent=b+' ₽';g('refN').textContent=RB.n;g('refBuy').textContent=RB.b+' ₽';
+  // Баланс в главном
+  const hb=g('homeBalCard'),ha=g('homeBalAmt');
+  if(hb&&ha){hb.hidden=(!uid||KS||b<=0);ha.textContent=b+' ₽'}
+  // Баланс в магазине
+  const sb=g('shopBalDisplay'),sa=g('shopBalAmt');
+  if(sb&&sa){sb.hidden=(!uid||KS||b<=0);sa.textContent=b+' ₽'}
+  updBalBtn();
 }
 function updBalBtn(){const b=g('shopBal'),p=PRICES[shopPlan];
-if(!uid||KS||!p||bal()<p){b.hidden=true;return}
-b.hidden=false;b.textContent='Оплатить с баланса ('+bal()+' ₽)'}
+  if(!uid||KS||!p||bal()<p){b.hidden=true;return}
+  b.hidden=false;b.textContent='Оплатить с баланса ('+bal()+' ₽)'}
 function loadCode(){const retry=()=>setTimeout(()=>{if(uid&&!KS&&!refCode)loadCode()},15000);
-ensureCode(uid).then(c=>{refCode=c;g('refCode').textContent=c||'…';if(!c)retry()}).catch(()=>{g('refCode').textContent='…';retry()})}
+  ensureCode(uid).then(c=>{refCode=c;g('refCode').textContent=c||'…';if(!c)retry()}).catch(()=>{g('refCode').textContent='…';retry()})}
 async function repairAllReferralCredits(){
-if(!isAdmin)throw new Error('Недостаточно прав');
-const [bySnap,refsSnap]=await Promise.all([get(ref(db,'refby')),get(ref(db,'refs'))]);
-const by=bySnap.val()||{},all=refsSnap.val()||{},updates={};
-let added=0,skipped=0;
-for(const [invitee,inviter] of Object.entries(by)){
-if(!invitee||!inviter||invitee===inviter){skipped++;continue}
-if(all[inviter]&&all[inviter][invitee]){skipped++;continue}
-updates['refs/'+inviter+'/'+invitee]={ts:Date.now(),source:'referral_recovery'};
-added++;
-}
-if(added)await update(ref(db),updates);
-return{added,skipped,total:Object.keys(by).length}
+  if(!isAdmin)throw new Error('Недостаточно прав');
+  const [bySnap,refsSnap]=await Promise.all([get(ref(db,'refby')),get(ref(db,'refs'))]);
+  const by=bySnap.val()||{},all=refsSnap.val()||{},updates={};
+  let added=0,skipped=0;
+  for(const [invitee,inviter] of Object.entries(by)){
+    if(!invitee||!inviter||invitee===inviter){skipped++;continue}
+    if(all[inviter]&&all[inviter][invitee]){skipped++;continue}
+    updates['refs/'+inviter+'/'+invitee]={ts:Date.now(),source:'referral_recovery'};
+    added++;
+  }
+  if(added)await update(ref(db),updates);
+  return{added,skipped,total:Object.keys(by).length}
 }
 function startRef(){if(KS||!uid)return;g('refCard').hidden=false;g('rlCard').hidden=false;rlPaint();g('refCode').textContent='…';
-const oldRepair=g('refRepair');if(!isAdmin&&oldRepair)oldRepair.remove();
-if(isAdmin&&!g('refRepair')){
-const b=document.createElement('button');b.id='refRepair';b.className='btn t w';b.style.marginTop='12px';b.textContent='Восстановить начисления всем приглашавшим';
-b.onclick=async()=>{if(!confirm('Проверить все введённые коды и начислить недостающие 10 ₽ пригласившим? Повторного начисления уже учтённых приглашений не будет.'))return;b.disabled=true;try{const r=await repairAllReferralCredits();toast('Готово: начислено '+r.added+' приглашений из '+r.total);const snap=await get(ref(db,'refs/'+uid));RB.n=snap.size;paintBal()}catch(e){toast('Ошибка восстановления: '+errT(e))}b.disabled=false};
-g('refCard').appendChild(b);
-}
-g('refEnter').hidden=false;
-g('refErr').textContent='';
-loadCode();
-offs.push(onValue(ref(db,'refby/'+uid),s=>{const inviter=s.val();g('refEnter').hidden=!!inviter;if(inviter)ensureReferralCredit(uid,inviter).catch(()=>{})},()=>{g('refEnter').hidden=false}));
-offs.push(onValue(ref(db,'refs/'+uid),s=>{RB.n=s.numChildren();paintBal()},()=>{}));
-offs.push(onValue(ref(db,'refbonus/'+uid),s=>{let t=0;s.forEach(x=>{t+=+x.val()||0});RB.b=t;paintBal()},()=>{}));
-offs.push(onValue(ref(db,'spent/'+uid),s=>{let t=0;s.forEach(x=>{t+=+x.val()||0});RB.s=t;paintBal()},()=>{}));
-offs.push(onValue(ref(db,'roulette/'+uid),s=>{RL=s.val()||{};RB.r=+RL.won||0;paintBal();rlPaint();
-if(RL.last&&RL.claimed!==RL.last&&!rlBusy&&!rlClaiming){rlClaiming=true;rlClaim().catch(()=>{}).finally(()=>{rlClaiming=false})}},()=>{}))}
+  const oldRepair=g('refRepair');if(!isAdmin&&oldRepair)oldRepair.remove();
+  if(isAdmin&&!g('refRepair')){
+    const b=document.createElement('button');b.id='refRepair';b.className='btn t w';b.style.marginTop='12px';b.textContent='Восстановить начисления всем приглашавшим';
+    b.onclick=async()=>{if(!confirm('Проверить все введённые коды и начислить недостающие 10 ₽ пригласившим? Повторного начисления уже учтённых приглашений не будет.'))return;b.disabled=true;try{const r=await repairAllReferralCredits();toast('Готово: начислено '+r.added+' приглашений из '+r.total);const snap=await get(ref(db,'refs/'+uid));RB.n=snap.size;paintBal()}catch(e){toast('Ошибка восстановления: '+errT(e))}b.disabled=false};
+    g('refCard').appendChild(b);
+  }
+  g('refEnter').hidden=false;
+  g('refErr').textContent='';
+  loadCode();
+  offs.push(onValue(ref(db,'refby/'+uid),s=>{const inviter=s.val();g('refEnter').hidden=!!inviter;if(inviter)ensureReferralCredit(uid,inviter).catch(()=>{})},()=>{g('refEnter').hidden=false}));
+  offs.push(onValue(ref(db,'refs/'+uid),s=>{RB.n=s.numChildren();paintBal()},()=>{}));
+  offs.push(onValue(ref(db,'refbonus/'+uid),s=>{let t=0;s.forEach(x=>{t+=+x.val()||0});RB.b=t;paintBal()},()=>{}));
+  offs.push(onValue(ref(db,'spent/'+uid),s=>{let t=0;s.forEach(x=>{t+=+x.val()||0});RB.s=t;paintBal()},()=>{}));
+  offs.push(onValue(ref(db,'roulette/'+uid),s=>{RL=s.val()||{};RB.r=+RL.won||0;paintBal();rlPaint();
+    if(RL.last&&RL.claimed!==RL.last&&!rlBusy&&!rlClaiming){rlClaiming=true;rlClaim().catch(()=>{}).finally(()=>{rlClaiming=false})}},()=>{}))}
 g('refCopy').onclick=()=>{if(!refCode)return;cp(refCode);toast('Код скопирован')};
 g('refShare').onclick=async()=>{if(!refCode)return;
-const t='Скорее покупай FluxMod для Standoff 2! Зарегистрируйся и введи мой код приглашения: '+refCode+' — чтобы купить чит по самой выгодной цене. А главное — FluxMod работает без root!';
-try{if(navigator.share){await navigator.share({text:t});return}}catch(e){if(e&&e.name==='AbortError')return}
-cp(t);toast('Текст приглашения скопирован')};
+  const t='Скорее покупай FluxMod для Standoff 2! Зарегистрируйся и введи мой код приглашения: '+refCode+' — чтобы купить чит по самой выгодной цене. А главное — FluxMod работает без root!';
+  try{if(navigator.share){await navigator.share({text:t});return}}catch(e){if(e&&e.name==='AbortError')return}
+  cp(t);toast('Текст приглашения скопирован')};
 g('refApply').onclick=async()=>{g('refErr').textContent='';const v=g('refIn').value;if(!v.trim())return;
-g('refApply').disabled=true;
-try{const r=await applyRef(v);if(r.ok){g('refIn').value='';toast('Код принят: пригласившему начислено +'+REF_BONUS+' ₽');vib(20)}else g('refErr').textContent=r.e}
-catch(x){g('refErr').textContent=errT(x)}
-g('refApply').disabled=false};
+  g('refApply').disabled=true;
+  try{const r=await applyRef(v);if(r.ok){g('refIn').value='';toast('Код принят: пригласившему начислено +'+REF_BONUS+' ₽');vib(20)}else g('refErr').textContent=r.e}
+  catch(x){g('refErr').textContent=errT(x)}
+  g('refApply').disabled=false};
 g('shopBal').onclick=async()=>{if(!uid||KS)return;const p=shopPlan;
-if(bal()<PRICES[p])return toast('Недостаточно средств на балансе');
-if(curOrd&&(curOrd.st===0||curOrd.st===1))return toast('Предыдущая заявка ещё проверяется');
-g('shopBal').disabled=true;
-try{const r=push(ref(db,'zorders')),id=r.key;
-await set(r,{u:uid,src:'mail',plan:p,m:'card',st:4,ts:serverTimestamp(),dl:nowS()+PAY_MS});
-await update(ref(db,'zorders/'+id),{st:0,bal:1,paid:serverTimestamp()});
-localStorage.setItem('zo_'+uid,id);watchOrder(id);toast('Заявка отправлена — ключ выдаст администратор');vib(20)}
-catch(x){toast('Ошибка: '+errT(x))}
-g('shopBal').disabled=false};
+  if(bal()<PRICES[p])return toast('Недостаточно средств на балансе');
+  if(curOrd&&(curOrd.st===0||curOrd.st===1))return toast('Предыдущая заявка ещё проверяется');
+  g('shopBal').disabled=true;
+  try{const r=push(ref(db,'zorders')),id=r.key;
+    await set(r,{u:uid,src:'mail',plan:p,m:'card',st:4,ts:serverTimestamp(),dl:nowS()+PAY_MS});
+    await update(ref(db,'zorders/'+id),{st:0,bal:1,paid:serverTimestamp()});
+    localStorage.setItem('zo_'+uid,id);watchOrder(id);toast('Заявка отправлена — ключ выдаст администратор');vib(20)}
+  catch(x){toast('Ошибка: '+errT(x))}
+  g('shopBal').disabled=false};
 try{const q=normCode(new URLSearchParams(location.search).get('ref'));if(q){g('arc').value=q;g('arc').dispatchEvent(new Event('input'))}}catch(e){}
 let shopPlan=30;
 document.querySelectorAll('.pkg[data-plan]').forEach(p=>p.onclick=()=>{
-shopPlan=+p.dataset.plan;
-document.querySelectorAll('.pkg[data-plan]').forEach(x=>x.classList.remove('pop'));
-p.classList.add('pop');
-vib(8);updBalBtn();
+  shopPlan=+p.dataset.plan;
+  document.querySelectorAll('.pkg[data-plan]').forEach(x=>x.classList.remove('pop'));
+  p.classList.add('pop');
+  vib(8);updBalBtn();
 });
 g('shopPay').onclick=async()=>{g('shopPay').disabled=true;await startPurchase(shopPlan);g('shopPay').disabled=false};
+// Кнопка «Перейти в Профиль» из блока активации
 g('goProfile').onclick=()=>goTab(3);
+// Обновляем кнопку menuBtn с учётом статуса ключа
 function updateMenuBtn(){
-const btn=g('menuBtn'),t=g('menuBtnT');
-if(LIC.active){
-t.textContent='Запустить меню FluxMod';
-btn.style.background='';btn.style.color='';
-}else{
-t.textContent='Купить ключ — от 150 ₽';
-btn.style.background='var(--pc)';btn.style.color='var(--onpc)';
-}
+  const btn=g('menuBtn'),t=g('menuBtnT');
+  if(LIC.active){
+    t.textContent='Запустить меню FluxMod';
+    btn.style.background='';btn.style.color='';
+  }else{
+    t.textContent='Купить ключ — от 150 ₽';
+    btn.style.background='var(--pc)';btn.style.color='var(--onpc)';
+  }
 }
 updateMenuBtn();
+// Одна кнопка: есть ключ — запускаем меню, нет — в магазин
 g('menuBtn').onclick=()=>{
-if(!LIC.active){goTab(1);return}
-if(!window.FluxNative||!FluxNative.launch)return toast('Меню запускается только из приложения');
-try{FluxNative.launch(uid||'');toast('Введите ключ в окне меню')}catch(e){toast('Не удалось запустить меню')}
+  if(!LIC.active){goTab(1);return}
+  if(!window.FluxNative||!FluxNative.launch)return toast('Меню запускается только из приложения');
+  try{FluxNative.launch(uid||'');toast('Введите ключ в окне меню')}catch(e){toast('Не удалось запустить меню')}
 };
+// Когда ключ активируется — обновляем кнопку
 const _origPaintLic=paintLic;
 setInterval(()=>updateMenuBtn(),5000);
 </script>
