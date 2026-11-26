@@ -399,7 +399,7 @@ function rulesText(a){const A=a||'ВАШ_UID',adm=`auth != null && auth.uid === 
   pproxy:{'.read':adm,users:{'$u':{'.read':`auth != null && (auth.uid === $u || auth.uid === '${A}')`,'.write':adm}},list:{'.read':`auth != null && (auth.uid === '${A}' || root.child('pproxy/users/'+auth.uid+'/exp').val() === 0 || root.child('pproxy/users/'+auth.uid+'/exp').val() > now)`,'.write':adm}},
   pxorders:{'.read':adm,'$id':{'.read':true,'.write':`${adm} || (!data.exists() && newData.child('st').val() === 4 && (newData.child('plan').val()===7||newData.child('plan').val()===30||newData.child('plan').val()===90) && newData.child('u').isString() && newData.child('u').val().length<=200 && newData.child('dl').val()<=now+960000 && auth!=null && newData.child('u').val()===auth.uid) || (data.child('st').val()===4 && now<data.child('dl').val()+30000 && newData.child('u').val()===data.child('u').val() && (newData.child('st').val()===0||newData.child('st').val()===5) && auth!=null && auth.uid===data.child('u').val())`}},
   pxshots:{'$id':{'.read':adm,'.write':`${adm} || (!data.exists() && root.child('pxorders/'+$id+'/st').val()===4 && newData.isString() && newData.val().length<250000)`}},
-  reviews:{'.read':true,'.write':adm},
+  reviews:{'.read':true,'$reviewId':{'.write':`${adm} || (auth != null && !data.exists() && $reviewId === 'proxy_'+auth.uid && newData.child('uid').val() === auth.uid && newData.child('category').val() === 'Telegram Proxy' && newData.child('nick').isString() && newData.child('nick').val().length > 0 && newData.child('nick').val().length <= 24 && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 700 && newData.child('stars').isNumber() && newData.child('stars').val() >= 1 && newData.child('stars').val() <= 5 && (root.child('pproxy/users/'+auth.uid+'/exp').val() === 0 || root.child('pproxy/users/'+auth.uid+'/exp').val() > now))`}},
   presence:{'.read':true,'$id':{'.write':true,'.validate':'newData.val() === 1 && $id.length <= 40'}},
   online:{'.read':true,'.write':adm,'.validate':'newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999'},
   roulette:rlRules(A,adm),
@@ -536,7 +536,9 @@ function paintPx(){
   else if(isAdmin||pxPrem()){
     const items=Object.entries(PXV.list||{}).filter(([,p])=>p&&p.link).map(([id,p])=>({id,p,x:pxParse(p.link)[0]})).filter(o=>o.x).sort((a,b)=>(a.p.ts||0)-(b.p.ts||0));
     const pr=PXV.prem,till=isAdmin&&!pxPrem()?'Режим администратора':pr&&pr.exp?'Премиум до '+fmtD(pr.exp):'Премиум · бессрочно';
+    const ownReview=uid&&Object.values(REV||{}).find(r=>r&&r.uid===uid&&r.category==='Telegram Proxy');
     h=`<div class="pxs"><span>${esc(till)}</span></div>`+(PXV.err?`<div class="pxe">${esc(PXV.err)}</div>`:'')
+      +(!isAdmin&&pxPrem()?`<div class="card" style="padding:18px;margin:12px 0"><div style="font-size:17px;font-weight:600;margin-bottom:5px">Как вам Premium Proxy?</div><div class="pxn" style="margin-bottom:12px">После покупки можно оставить отзыв о скорости и стабильности серверов.</div>${ownReview?`<div class="status o">Вы уже оставили отзыв. Спасибо!</div>`:`<label class="tf" style="margin-bottom:8px"><input id="pxRvNick" maxlength="24" placeholder="Ваш ник"></label><div id="pxRvStars" style="display:flex;gap:8px;margin:8px 0 12px">${[1,2,3,4,5].map(i=>`<button type="button" data-pxrvstar="${i}" aria-label="${i} из 5" style="border:0;background:none;color:${i<=5?'#e6a23c':'var(--onv)'};font-size:28px;padding:0 2px">★</button>`).join('')}</div><textarea id="pxRvText" maxlength="700" placeholder="Расскажите о своём опыте использования..." style="width:100%;min-height:90px;resize:vertical"></textarea><div class="err" id="pxRvErr"></div><button class="btn w" id="pxRvSend" type="button" style="margin-top:8px">Опубликовать отзыв</button>`}</div>`:'')
       +(items.length?items.map(o=>pxCard(o.x,{tag:'Премиум'},'v'+esc(o.id))).join(''):'<div class="empty">Приватные прокси скоро появятся</div>')}
   else{
     const was=PXV.prem&&typeof PXV.prem.exp==='number'&&PXV.prem.exp>0;
@@ -609,8 +611,20 @@ function paintPxAdm(){
   const rows=Object.entries(PXV.list||{}).filter(([,p])=>p&&p.link).map(([id,p])=>({id,x:pxParse(p.link)[0],ts:p.ts||0})).filter(o=>o.x).sort((a,b)=>a.ts-b.ts);
   el.innerHTML=rows.map(o=>`<div class="ord"><div class="h"><b style="min-width:0;word-break:break-all">${esc(o.x.server)}</b><button class="btn d s" data-pdel="${esc(o.id)}" type="button">Удалить</button></div><div class="m">Порт ${o.x.port} · ${esc(o.x.type)}</div></div>`).join('')}
 g('pxSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;pxTab=b.dataset.px;paintPx();vib(8)};
-g('p7').onclick=e=>{
+let pxRvStars=5;
+g('p7').onclick=async e=>{
   const t=e.target.closest('button');if(!t)return;
+  if(t.dataset.pxrvstar){pxRvStars=+t.dataset.pxrvstar;g('pxRvStars').querySelectorAll('[data-pxrvstar]').forEach(b=>b.style.color=+b.dataset.pxrvstar<=pxRvStars?'#e6a23c':'var(--onv)');return}
+  if(t.id==='pxRvSend'){
+    const nick=g('pxRvNick')?.value.trim(),text=g('pxRvText')?.value.trim(),er=g('pxRvErr');
+    if(!uid||!pxPrem())return er.textContent='Отзыв доступен только покупателям с активным доступом';
+    if(!nick)return er.textContent='Введите ник';
+    if(!text)return er.textContent='Напишите отзыв';
+    t.disabled=true;
+    try{await set(ref(db,'reviews/proxy_'+uid),{uid,nick,text,stars:pxRvStars,category:'Telegram Proxy',ts:Date.now(),verified:true,plan:pxCurOrd?.plan||0});REV['proxy_'+uid]={uid,nick,text,stars:pxRvStars,category:'Telegram Proxy',ts:Date.now(),verified:true};paintReviews();paintPx();toast('Спасибо! Отзыв опубликован');vib(20)}
+    catch(x){er.textContent='Не удалось отправить: '+errT(x);t.disabled=false}
+    return
+  }
   if(t.dataset.refresh)return pxFetchFree();
   if(t.dataset.prof)return goTab(3);
   if(t.dataset.cpuid){cp(PXV.uid||'');toast('UID скопирован');return vib(10)}
@@ -790,7 +804,7 @@ function paintReviews(){
   g('rvAdm').innerHTML=all.map(([id,r])=>`<div class="ord"><div class="h"><div style="display:flex;align-items:center;gap:10px;min-width:0">${rvPh(r)?`<img class="fthumb" src="${rvPics(r)[0]}" alt="">`:''}<b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.nick)}</b>${starsH(rvSt(r))}</div><button class="btn d s" data-rdel="${esc(id)}">Удалить</button></div><div class="m">${esc(r.text)}</div><label class="tf" style="height:44px;margin-bottom:8px"><input data-rin="${esc(id)}" placeholder="Ответ администрации" maxlength="300" value="${esc(r.reply||'')}"></label><button class="btn t s w" data-rsave="${esc(id)}">Сохранить ответ</button></div>`).join('')}
 let rvOn=false;
 function startReviews(){if(rvOn)return;rvOn=true;
-  onValue(query(ref(db,'reviews'),limitToLast(40)),s=>{REV=s.val()||{};paintReviews()},()=>{g('rvList').innerHTML='<div class="empty">Раздел временно недоступен</div>'})}
+  onValue(query(ref(db,'reviews'),limitToLast(40)),s=>{REV=s.val()||{};paintReviews();paintPx()},()=>{g('rvList').innerHTML='<div class="empty">Раздел временно недоступен</div>'})}
 g('rvList').innerHTML='<div class="empty">Загрузка…</div>';
 setTimeout(startReviews,8000);
 g('rvChips').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;rvF=b.dataset.f;g('rvChips').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===b));paintReviews();vib(8)};
