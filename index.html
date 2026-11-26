@@ -343,7 +343,7 @@ async function issue(userUid,days){
   return {key,exp}}
 const names={};
 async function nameOf(u){if(names[u])return names[u];try{const v=(await get(ref(db,'users/'+u))).val();return names[u]=(v&&v.name)||'Без ника'}catch(e){return 'Пользователь'}}
-var ORD={};
+var ORD={},PXORD={};
 function paintBadge(){const n=Object.values(ORD||{}).filter(o=>o.st===0).length+Object.values(PXORD||{}).filter(o=>o.st===0).length,b=g('badge');if(b){b.hidden=!n;b.textContent=n}}
 function watchAdmin(){offs.push(onValue(query(ref(db,'zorders'),limitToLast(100)),async s=>{ORD={};s.forEach(x=>{const v=x.val();if(v&&v.u)ORD[x.key]=v});paintBadge();newPend();await paintAdmin()},e=>toast('Заявки: нет доступа · проект '+app.options.projectId+' · ваш UID '+uid.slice(0,8)+'… — он должен совпадать с UID в правилах')))}
 async function paintAdmin(){
@@ -650,7 +650,7 @@ g('p7').onclick=async e=>{
 
 // ========== PROXY PURCHASE SYSTEM ==========
 const PX_PRICES={7:100,30:350,90:700};
-let pxCurOrd=null,pxPayCur=null,pxShotData=null,pxPayTimerInt=null,pxOrdOff=null,pxLastP=-1,PXORD={};
+let pxCurOrd=null,pxPayCur=null,pxShotData=null,pxPayTimerInt=null,pxOrdOff=null,pxLastP=-1;
 
 function pxYmUrl(o,t){return 'https://yoomoney.ru/quickpay/confirm?'+new URLSearchParams({receiver:WALLET,'quickpay-form':'button',sum:String(PX_PRICES[o.plan]),label:o.id,paymentType:t,targets:'FluxMod Proxy Premium '+o.plan+' дн.'}).toString()}
 function openPxYm(t){if(!pxPayCur)return;const u=pxYmUrl(pxPayCur,t);try{if(window.Android&&Android.openExternalBrowser){Android.openExternalBrowser(u);return}}catch(e){}window.open(u,'_blank')}
